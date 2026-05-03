@@ -11,6 +11,7 @@
 
 - Q: 这个 supervisor(监督器) 除了自动重启，还必须满足哪些要求？ → A: 它必须提供可解释的生命周期治理，并且必须包含声明式子任务、监督树、策略引擎、控制平面、状态平面、事件模型、指标、审计、关闭协议、结构化并发和可复现测试。
 - Q: 是否立即采纳 `research-adoption-notes.md` 中“应直接采纳”的 8 条？ → A: 立即采纳 control plane(控制面) 和 data plane(数据面) 分离、逆序关闭、readiness(就绪)、`spawn_blocking`(阻塞任务启动) 隔离、reconcile(状态对账)、event journal(事件日志缓冲区)、`RunSummary`(运行摘要)、指标标签低基数和 `Service trait`(服务特征) 适配层。
+- Q: 任务上下文类型是否使用缩写形式？ → A: 不使用缩写，统一使用全称 `TaskContext`(任务上下文)。
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
 
@@ -131,7 +132,7 @@
 - **FR-001**: 系统必须为每个 child(子任务) 提供声明式 `ChildSpec`(子任务规格)，并包含 `id`、`name`、`kind`、`restart_policy`、`shutdown_policy`、`health_policy`、`readiness_policy`、`backoff_policy`、`dependencies`、`tags` 和 `criticality`。
 - **FR-002**: 系统必须防止被监督后台工作以分散且无人管理的 spawn(启动任务) 表达；受生命周期治理的工作必须通过 child(子任务) 规格进入系统。
 - **FR-003**: 系统必须支持 `TaskFactory`(任务工厂) 模型，使每次重启都构造新的任务尝试；必须跨重启保留的状态需要显式放入共享状态、持久化存储或状态仓库。
-- **FR-004**: 系统必须支持 `TaskCtx`(任务上下文)，其中包含 child(子任务) 身份、supervisor path(监督器路径)、generation(代次)、attempt(尝试次数)、cancellation token(取消令牌)、event sink(事件接收点) 和 heartbeat(心跳) 接口。
+- **FR-004**: 系统必须支持 `TaskContext`(任务上下文)，其中包含 child(子任务) 身份、supervisor path(监督器路径)、generation(代次)、attempt(尝试次数)、cancellation token(取消令牌)、event sink(事件接收点) 和 heartbeat(心跳) 接口。
 - **FR-005**: 系统必须支持 `SupervisorTree`(监督树)，其中 root supervisor(根监督器) 可以包含子 supervisor(监督器) 和 worker(工作任务)。
 - **FR-006**: 系统必须为每个受监督节点分配稳定路径，例如 `/root/market/binance_ws`。
 - **FR-007**: 系统必须把 `OneForOne`(一对一)、`OneForAll`(一对全部) 和 `RestForOne`(从失败处开始) 作为核心 supervision strategy(监督策略)。
@@ -186,7 +187,7 @@
 - **SupervisorPath(监督器路径)**: 稳定树路径，用于事件、指标、日志、快照和控制命令。
 - **ChildId(子任务标识)**: child(子任务) 在父 supervisor(监督器) 内的稳定唯一标识。
 - **TaskFactory(任务工厂)**: 每次启动或重启时构造新任务尝试的工厂。
-- **TaskCtx(任务上下文)**: 传给任务尝试的上下文，包含身份、路径、代次、尝试次数、取消、心跳和事件接收点。
+- **TaskContext(任务上下文)**: 传给任务尝试的上下文，包含身份、路径、代次、尝试次数、取消、心跳和事件接收点。
 - **ChildRuntime(子任务运行态)**: 当前运行态记录，包含状态、代次、尝试次数、心跳、join handle(等待句柄)、取消令牌、重启计数和最近失败。
 - **Registry(任务注册表)**: 当前运行时索引，保存 child(子任务) 规格和运行态。
 - **SupervisionStrategy(监督策略)**: 重启范围决定，包含 `OneForOne`(一对一)、`OneForAll`(一对全部) 和 `RestForOne`(从失败处开始)。

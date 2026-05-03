@@ -14,7 +14,7 @@
 
 ## Decision(决定): 使用 `TaskFactory`(任务工厂)，不克隆任务实例
 
-**Rationale(理由)**: 每次重启都必须构造带新 `TaskCtx`(任务上下文) 的 fresh future(新异步任务)。需要跨重启保留的状态必须通过 `Arc`(原子引用计数)、存储或调用者拥有的 state repository(状态仓库) 显式表达。这样可以让重启语义诚实，避免隐藏状态丢失。
+**Rationale(理由)**: 每次重启都必须构造带新 `TaskContext`(任务上下文) 的 fresh future(新异步任务)。需要跨重启保留的状态必须通过 `Arc`(原子引用计数)、存储或调用者拥有的 state repository(状态仓库) 显式表达。这样可以让重启语义诚实，避免隐藏状态丢失。
 
 **Alternatives considered(已考虑方案)**:
 

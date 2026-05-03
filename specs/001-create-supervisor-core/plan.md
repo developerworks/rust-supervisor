@@ -58,7 +58,7 @@ src/
     ├── backoff/
     ├── spec.rs                          # ChildSpec(子任务规格) 和 SupervisorSpec(监督器规格)
     ├── id.rs                            # ChildId(子任务标识)、SupervisorPath(监督器路径)、Generation(代次)、Attempt(尝试次数)
-    ├── task.rs                          # TaskFactory(任务工厂)、TaskCtx(任务上下文)、TaskResult(任务结果)
+    ├── task.rs                          # TaskFactory(任务工厂)、TaskContext(任务上下文)、TaskResult(任务结果)
     ├── runtime.rs                       # Tokio(异步运行时) JoinSet(任务集合) 绑定
     ├── child_runner.rs                  # 单个 child(子任务) 生命周期循环
     ├── tree.rs                          # supervisor tree(监督树) 和重启范围

@@ -61,12 +61,12 @@
 
 - [ ] T016 [US1] 在 `tests/supervisor_lifecycle.rs` 中添加 `ChildSpec`(子任务规格) 和 `TaskFactory`(任务工厂) 契约测试。
 - [ ] T017 [P] [US1] 在 `src/supervision/spec.rs` 中添加 `ChildSpec`(子任务规格) 校验单元测试。
-- [ ] T018 [P] [US1] 在 `src/supervision/task.rs` 中添加 `TaskCtx`(任务上下文) fresh-attempt(新尝试) 单元测试。
+- [ ] T018 [P] [US1] 在 `src/supervision/task.rs` 中添加 `TaskContext`(任务上下文) fresh-attempt(新尝试) 单元测试。
 
 ### Implementation for User Story 1(用户故事一的实现)
 
 - [ ] T019 [US1] 在 `src/supervision/spec.rs` 中实现 `ChildSpec`、`SupervisorSpec`、child kind(子任务种类)、tags(标签)、dependencies(依赖) 和 criticality(关键程度)。
-- [ ] T020 [US1] 在 `src/supervision/task.rs` 中实现 `TaskFactory`、`TaskCtx`、`TaskResult` 和 boxed task future(装箱任务异步值) 别名。
+- [ ] T020 [US1] 在 `src/supervision/task.rs` 中实现 `TaskFactory`、`TaskContext`、`TaskResult` 和 boxed task future(装箱任务异步值) 别名。
 - [ ] T021 [US1] 在 `src/supervision/registry.rs` 中实现 single-child registry(单子任务注册表) 和 `ChildRuntime` 启动状态。
 - [ ] T022 [US1] 在 `src/supervision/runtime.rs` 和 `src/supervision/child_runner.rs` 中实现最小 `Supervisor::start` worker(工作任务) 启动路径。
 - [ ] T023 [US1] 在 `src/supervision/event.rs` 中发送 `ChildStarting` 和 `ChildRunning` 事件。
@@ -165,7 +165,7 @@
 ### Implementation for User Story 5(用户故事五的实现)
 
 - [ ] T054 [US5] 在 `src/supervision/shutdown.rs` 中实现 `ShutdownPolicy`、shutdown cause(关闭原因)、graceful timeout(优雅关闭超时) 和 abort wait(强制终止等待)。
-- [ ] T055 [US5] 在 `src/supervision/task.rs` 中把 `CancellationToken`(取消令牌) 接入 `TaskCtx`(任务上下文) 和 child token(子令牌)。
+- [ ] T055 [US5] 在 `src/supervision/task.rs` 中把 `CancellationToken`(取消令牌) 接入 `TaskContext`(任务上下文) 和 child token(子令牌)。
 - [ ] T056 [US5] 在 `src/supervision/runtime.rs` 中实现 `JoinSet`(任务集合) 任务所有权和 draining(排空)。
 - [ ] T057 [US5] 在 `src/supervision/control.rs` 和 `src/supervision/shutdown.rs` 中实现 `shutdown_tree` 控制流。
 - [ ] T058 [US5] 在 `src/supervision/event.rs` 和 `src/supervision/snapshot.rs` 中发送 `ShutdownRequested` 和 `ShutdownCompleted` 事件，并输出终态快照。
@@ -254,7 +254,7 @@
 
 ```bash
 Task(任务): "T017 在 src/supervision/spec.rs 中添加 ChildSpec 校验单元测试"
-Task(任务): "T018 在 src/supervision/task.rs 中添加 TaskCtx fresh-attempt 单元测试"
+Task(任务): "T018 在 src/supervision/task.rs 中添加 TaskContext fresh-attempt 单元测试"
 ```
 
 ### User Story 2(用户故事二)

@@ -48,10 +48,10 @@
 ### TaskFactory(任务工厂)
 
 - 每个 generation/attempt(代次和尝试) 构建一个新的 task future(任务异步值)。
-- 接收 `TaskCtx`(任务上下文)。
+- 接收 `TaskContext`(任务上下文)。
 - 不把跨重启持久任务状态存进 supervisor(监督器)。
 
-### TaskCtx(任务上下文)
+### TaskContext(任务上下文)
 
 - `child_id`
 - `path`
@@ -63,7 +63,7 @@
 
 **Validation rules(校验规则)**:
 
-- 新 attempt(尝试) 必须获得新的 `TaskCtx`(任务上下文)。
+- 新 attempt(尝试) 必须获得新的 `TaskContext`(任务上下文)。
 - parent cancellation(父取消) 必须取消 child token(子令牌)。
 - child cancellation(子取消) 不得取消 parent token(父令牌)。
 
@@ -298,7 +298,7 @@ Declared
 
 - `SupervisorSpec`(监督器规格) 拥有有序 `ChildSpec`(子任务规格) 值。
 - `ChildSpec`(子任务规格) 启动后变成 `ChildRuntime`(子任务运行态)。
-- `TaskFactory`(任务工厂) 使用 `TaskCtx`(任务上下文) 构建 attempt(尝试)。
+- `TaskFactory`(任务工厂) 使用 `TaskContext`(任务上下文) 构建 attempt(尝试)。
 - `ChildRuntime`(子任务运行态) 发送 `SupervisorEvent`(监督器事件)，并更新 `SupervisorSnapshot`(监督器快照)。
 - `PolicyEngine`(策略引擎) 读取 `TaskExit`(任务退出)、`TaskFailureKind`(任务失败类别)、策略和计数器，并生成 `RestartDecision`(重启决策)。
 - `ControlCommand`(控制命令) 产生 audit event(审计事件)，并可以改变 registry(注册表) 或 shutdown state(关闭状态)。

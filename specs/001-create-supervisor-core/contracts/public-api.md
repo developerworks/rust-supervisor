@@ -27,7 +27,7 @@ pub type BoxTaskFuture =
     Pin<Box<dyn Future<Output = TaskResult> + Send + 'static>>;
 
 pub trait TaskFactory: Send + Sync + 'static {
-    fn build(&self, ctx: TaskCtx) -> BoxTaskFuture;
+    fn build(&self, ctx: TaskContext) -> BoxTaskFuture;
 }
 ```
 
