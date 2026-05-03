@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git"
+  short_description: "按当前仓库惯例整理提交边界、中文提交信息与提交后状态核对"
+  default_prompt: "Use $write-project-commit to inspect git status, isolate the correct path set, and draft or execute a commit in this repository's Chinese message style."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Design Patterns"
+  short_description: "Decision aid for Rust patterns and idioms"
+  default_prompt: "Use $rust-design-patterns to choose and review an idiomatic Rust design pattern."

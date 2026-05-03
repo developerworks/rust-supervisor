@@ -1,0 +1,7 @@
+interface:
+  display_name: "Rust Patterns"
+  short_description: "Production Rust implementation patterns"
+  default_prompt: "Use $rust-patterns to review or implement production Rust code with idiomatic ownership, error handling, and async boundaries."
+
+policy:
+  allow_implicit_invocation: true

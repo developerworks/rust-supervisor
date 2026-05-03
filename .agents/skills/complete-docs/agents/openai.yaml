@@ -1,0 +1,7 @@
+interface:
+  display_name: "Docs"
+  short_description: "补齐 Rust rustdoc、README 与架构文档"
+  default_prompt: "Use $complete-docs to supplement rustdoc, doctests, README, or architecture documentation while keeping navigation and code reality aligned."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "ACP 协议开发"
+  short_description: "基于官方 ACP 资料辅助设计、实现、调试与验收"
+  default_prompt: "Use $agent-client-protocol to help me design, implement, debug, review, or validate ACP-compatible software from the official Agent Client Protocol perspective."
+
+policy:
+  allow_implicit_invocation: true

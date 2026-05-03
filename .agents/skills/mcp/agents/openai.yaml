@@ -1,0 +1,7 @@
+interface:
+  display_name: "MCP"
+  short_description: "Explain MCP docs, spec, extensions, registry, SEPs, and community"
+  default_prompt: "Use $mcp to explain Model Context Protocol from a standards-aware perspective, including architecture, specification, extensions, registry, SEPs, and community governance."
+
+policy:
+  allow_implicit_invocation: true

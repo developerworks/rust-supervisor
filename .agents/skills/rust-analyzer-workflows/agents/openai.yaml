@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust Analyzer Workflows"
+  short_description: "Use rust-analyzer for semantic Rust navigation, LSP queries, and SSR-based refactors"
+  default_prompt: "Use $rust-analyzer-workflows to inspect this Rust workspace with the rust-analyzer CLI and LSP, then navigate symbols or apply SSR refactors safely."

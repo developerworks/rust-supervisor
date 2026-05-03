@@ -1,0 +1,7 @@
+interface:
+  display_name: "Rust Testing Code Review"
+  short_description: "Review Rust tests and test infrastructure"
+  default_prompt: "Use $rust-testing-code-review to review Rust unit tests, integration tests, async tests, and test infrastructure."
+
+policy:
+  allow_implicit_invocation: true
