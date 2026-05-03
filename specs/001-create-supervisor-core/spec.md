@@ -9,24 +9,23 @@
 
 ### Session(会话) 2026-05-04
 
-- Q: 这个 supervisor(监督器) 除了自动重启，还必须满足哪些要求？ → A: 它必须提供可解释的生命周期治理，并且必须包含声明式子任务、监督树、策略引擎、控制平面、状态平面、事件模型、指标、审计、关闭协议、结构化并发和可复现测试。
-- Q: 是否立即采纳 `research-adoption-notes.md` 中“应直接采纳”的 8 条？ → A: 立即采纳 control plane(控制面) 和 data plane(数据面) 分离、逆序关闭、readiness(就绪)、`spawn_blocking`(阻塞任务启动) 隔离、reconcile(状态对账)、event journal(事件日志缓冲区)、`RunSummary`(运行摘要)、指标标签低基数和 `Service trait`(服务特征) 适配层。
+- **Q(问题)**: 这个 supervisor(监督器) 除了自动重启，还必须满足哪些要求？
+- **A(回答)**: 它必须提供可解释的生命周期治理，并且必须包含声明式子任务、监督树、策略引擎、控制平面、状态平面、事件模型、指标、审计、两阶段关闭、结构化并发和可复现测试。
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
 
 ### User Story 1(用户故事一) - 声明并运行子任务 (Priority(优先级): P1)
 
-维护者需要用声明式 `ChildSpec`(子任务规格) 定义每个 child(子任务)：`id`、`name`、`kind`、`restart_policy`、`shutdown_policy`、`health_policy`、`readiness_policy`、`backoff_policy`、`dependencies`、`tags` 和 `criticality`。业务代码不应该分散调用 `tokio::spawn`，而应该把任务生命周期交给 supervisor(监督器)。
+维护者需要用声明式 `ChildSpec`(子任务规格) 定义每个 child(子任务)：`id`、`name`、`kind`、`restart_policy`、`shutdown_policy`、`health_policy`、`backoff_policy`、`dependencies`、`tags` 和 `criticality`。业务代码不应该分散调用 `tokio::spawn`，而应该把任务生命周期交给 supervisor(监督器)。
 
 **Why this priority(为什么是这个优先级)**: 声明式子任务是 supervisor(监督器) 的入口。没有稳定规格，系统就无法统一治理启动、关闭、重启、健康检查、状态查询和审计。
 
-**Independent Test(独立测试)**: 测试定义一个 child(子任务) 规格并启动 supervisor(监督器)，然后验证 child(子任务) 进入运行状态，按 readiness(就绪) 契约产生 `ChildStarting`、`ChildRunning` 和 `ChildReady` 事件，并且可以通过快照查询到稳定路径和当前状态。
+**Independent Test(独立测试)**: 测试定义一个 child(子任务) 规格并启动 supervisor(监督器)，然后验证 child(子任务) 进入运行状态，产生 `ChildStarting` 和 `ChildRunning` 事件，并且可以通过快照查询到稳定路径和当前状态。
 
 **Acceptance Scenarios(验收场景)**:
 
 1. **Given(假设)** 一个包含完整 `ChildSpec`(子任务规格) 的 worker(工作任务)，**When(当)** supervisor(监督器) 启动它，**Then(则)** child(子任务) 按规格启动，并记录带稳定路径的生命周期事件。
 2. **Given(假设)** 业务代码试图绕过 supervisor(监督器) 直接分散启动后台任务，**When(当)** 维护者审查任务定义，**Then(则)** 该行为不满足本功能规格，因为后台任务必须通过 `ChildSpec`(子任务规格) 接入治理。
-3. **Given(假设)** 一个 child(子任务) 需要缓存预热、连接建立或订阅恢复，**When(当)** 它还没有显式报告 readiness(就绪)，**Then(则)** supervisor(监督器) 不得把它标记为 ready(已就绪)。
 
 ---
 
@@ -42,7 +41,6 @@
 
 1. **Given(假设)** 一个包含子 supervisor(监督器) 和 worker(工作任务) 的树，**When(当)** root(根节点) 启动，**Then(则)** 所有节点按声明顺序启动，并在快照中显示父子关系。
 2. **Given(假设)** 一个 child(子任务) 失败并触发上报，**When(当)** 父 supervisor(监督器) 收到事件，**Then(则)** 事件的 `Where`(何处) 信息明确包含 supervisor path(监督器路径)、child id(子任务标识) 和 parent id(父标识)。
-3. **Given(假设)** 一个 supervisor(监督器) 正在关闭包含多个 child(子任务) 的树，**When(当)** 关闭流程开始，**Then(则)** 系统必须按声明顺序的逆序关闭 child(子任务)。
 
 ---
 
@@ -79,7 +77,7 @@
 
 ### User Story 5(用户故事五) - 关闭时不留下孤儿任务 (Priority(优先级): P5)
 
-操作者需要 root shutdown(根关闭) 触发 shutdown protocol(关闭协议)。该协议对外保持 cancel-then-abort(先取消后强制终止) 边界，对内包含 request stop(请求停止)、graceful drain(优雅排空)、abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账) 四个阶段。父 token(令牌) 取消必须传播到 child token(子令牌)，child token(子令牌) 取消不能反向取消父 token(令牌)。关闭完成后不能留下 orphan task(孤儿任务)。
+操作者需要 root shutdown(根关闭) 触发两阶段关闭。第一阶段发送 `CancellationToken`(取消令牌) 并等待 graceful timeout(优雅关闭超时)，第二阶段才 abort(强制终止)。父 token(令牌) 取消必须传播到 child token(子令牌)，child token(子令牌) 取消不能反向取消父 token(令牌)。关闭完成后不能留下 orphan task(孤儿任务)。
 
 **Why this priority(为什么是这个优先级)**: supervisor(监督器) 必须可靠收尾。关闭不清晰会导致资源泄漏、任务悬挂和不可解释的退出结果。
 
@@ -89,8 +87,7 @@
 
 1. **Given(假设)** 多个正在运行的 child(子任务)，**When(当)** 操作者请求 root shutdown(根关闭)，**Then(则)** 每个 child(子任务) 的取消令牌被触发，并在完成后报告关闭完成。
 2. **Given(假设)** 一个 child(子任务) 超过 graceful timeout(优雅关闭超时)，**When(当)** 第一阶段等待结束，**Then(则)** supervisor(监督器) 进入第二阶段强制终止该 child(子任务)，并报告超时原因。
-3. **Given(假设)** root shutdown(根关闭) 已完成，**When(当)** 操作者检查运行时任务集合，**Then(则)** 不存在 orphan task(孤儿任务)，所有 child(子任务) 都处于 terminal(终态) 或 quarantined(隔离) 状态，并且 registry(注册表)、snapshot(快照)、metrics(指标) 和 event journal(事件日志缓冲区) 已完成 reconcile(状态对账)。
-4. **Given(假设)** 一个 child(子任务) 使用 `spawn_blocking`(阻塞任务启动)，**When(当)** root shutdown(根关闭) 超时，**Then(则)** supervisor(监督器) 不得假设 `abort`(强制终止) 一定有效，必须按独立 `TaskKind`(任务类型)、关闭策略和升级策略处理。
+3. **Given(假设)** root shutdown(根关闭) 已完成，**When(当)** 操作者检查运行时任务集合，**Then(则)** 不存在 orphan task(孤儿任务)，所有 child(子任务) 都处于 terminal(终态) 或 quarantined(隔离) 状态。
 
 ---
 
@@ -106,7 +103,6 @@
 
 1. **Given(假设)** 任意一次状态迁移，**When(当)** 事件被发布，**Then(则)** 事件包含 `When`(何时)、`Where`(何处)、`What`(发生内容)、sequence(序号)、correlation id(关联标识) 和策略决定。
 2. **Given(假设)** 一个 child attempt(子任务尝试) 开始，**When(当)** 任务运行，**Then(则)** 该 attempt(尝试) 有自己的 tracing span(追踪范围)，状态迁移有 tracing event(追踪事件)。
-3. **Given(假设)** supervisor(监督器) 发生 meltdown(熔断) 或关闭超时，**When(当)** 操作者读取诊断输出，**Then(则)** 系统提供 `RunSummary`(运行摘要)，并包含最近 event journal(事件日志缓冲区) 中的关键生命周期事件。
 
 ### Edge Cases(边界情况)
 
@@ -120,15 +116,12 @@
 - 生命周期事件消费者落后或溢出时，状态快照仍然必须准确，并记录 `supervisor_event_lag_total`。
 - 测试退避、超时、心跳和熔断窗口时，测试不得依赖真实 sleep(睡眠)，必须能用 paused time(暂停时间) 推进。
 - 高频业务消息不得每条都经过 supervisor(监督器)。supervisor(监督器) 只管理生命周期、健康、控制命令和低频事件。
-- control plane(控制面) 不得承载业务 data plane(数据面) 消息处理；业务任务只能通过生命周期、状态、事件和控制命令与 supervisor(监督器) 交互。
-- blocking task(阻塞任务) 关闭超时时，supervisor(监督器) 必须记录不可立即终止的边界，并按策略升级，而不能把它当作普通 async task(异步任务)。
-- 指标标签不得包含错误全文、动态路径碎片、用户输入或其它无界值。
 
 ## Requirements(需求) *(mandatory(必填))*
 
 ### Functional Requirements(功能需求)
 
-- **FR-001**: 系统必须为每个 child(子任务) 提供声明式 `ChildSpec`(子任务规格)，并包含 `id`、`name`、`kind`、`restart_policy`、`shutdown_policy`、`health_policy`、`readiness_policy`、`backoff_policy`、`dependencies`、`tags` 和 `criticality`。
+- **FR-001**: 系统必须为每个 child(子任务) 提供声明式 `ChildSpec`(子任务规格)，并包含 `id`、`name`、`kind`、`restart_policy`、`shutdown_policy`、`health_policy`、`backoff_policy`、`dependencies`、`tags` 和 `criticality`。
 - **FR-002**: 系统必须防止被监督后台工作以分散且无人管理的 spawn(启动任务) 表达；受生命周期治理的工作必须通过 child(子任务) 规格进入系统。
 - **FR-003**: 系统必须支持 `TaskFactory`(任务工厂) 模型，使每次重启都构造新的任务尝试；必须跨重启保留的状态需要显式放入共享状态、持久化存储或状态仓库。
 - **FR-004**: 系统必须支持 `TaskCtx`(任务上下文)，其中包含 child(子任务) 身份、supervisor path(监督器路径)、generation(代次)、attempt(尝试次数)、cancellation token(取消令牌)、event sink(事件接收点) 和 heartbeat(心跳) 接口。
@@ -147,7 +140,7 @@
 - **FR-017**: 系统必须允许测试关闭 jitter(抖动)，使退避断言保持确定。
 - **FR-018**: 系统必须支持基于 heartbeat(心跳) 的健康检查，而不能只检查任务是否仍在运行。
 - **FR-019**: 系统必须在 `stale_after` 内没有收到 heartbeat(心跳) 时把 child(子任务) 标记为 unhealthy(不健康)；默认 heartbeat interval(心跳间隔) 为 1 秒，默认 stale threshold(过期阈值) 为 3 秒。
-- **FR-020**: 系统必须支持 cancel-then-abort shutdown boundary(先取消后强制终止的关闭边界)：先取消并等待 graceful timeout(优雅关闭超时)，超时后才 abort(强制终止)，并且内部流程必须满足 FR-045 的四阶段要求。
+- **FR-020**: 系统必须支持 two-phase shutdown(两阶段关闭)：先取消并等待 graceful timeout(优雅关闭超时)，超时后才 abort(强制终止)。
 - **FR-021**: 系统必须把取消从父 token(令牌) 传播到 child token(子令牌)，并且不得要求 child token(子令牌) 取消父 token(令牌)。
 - **FR-022**: 系统必须保证 root shutdown(根关闭) 后不留下 orphan task(孤儿任务)。
 - **FR-023**: 系统必须提供 `SupervisorHandle`(监督器句柄) 命令：`add_child`、`remove_child`、`restart_child`、`pause_child`、`resume_child`、`quarantine_child`、`shutdown_tree`、`snapshot` 和 `subscribe_events`。
@@ -168,14 +161,6 @@
 - **FR-038**: 系统不得把 actor-model(参与者模型) 要求引入用户可见模型；监督必须用 children(子任务)、trees(树)、policies(策略)、outcomes(结果)、events(事件)、handles(句柄)、snapshots(快照) 和 commands(命令) 表达。
 - **FR-039**: 系统不得添加第三方 compatibility exports(兼容导出)，也不得复制参考 crate(库) 的公开 API(接口) 形状。
 - **FR-040**: 系统必须只把 `supertrees` 当作概念输入，不能把它作为生产核心依赖。
-- **FR-041**: 系统必须明确分离 control plane(控制面) 和 data plane(数据面)。supervisor(监督器) 只管理生命周期、状态、事件、重启、关闭和控制命令，业务消息处理必须留在 data plane(数据面)。
-- **FR-042**: 系统必须按声明顺序启动 child(子任务)，并按声明顺序的逆序关闭 child(子任务)。
-- **FR-043**: 系统必须把 readiness(就绪) 建模为一等生命周期信号。需要预热、连接建立或订阅恢复的 child(子任务) 必须显式报告 ready(已就绪)，默认立即就绪只能作为明确策略存在。
-- **FR-044**: 系统必须单独建模 `spawn_blocking`(阻塞任务启动) 和其它 blocking task(阻塞任务)。blocking task(阻塞任务) 必须有独立 `TaskKind`(任务类型)、关闭策略和升级策略，并且不得复用普通 async task(异步任务) 可强制终止的假设。
-- **FR-045**: 系统的关闭协议必须包含 request stop(请求停止)、graceful drain(优雅排空)、abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账) 四个内部阶段。reconcile(状态对账) 必须统一更新 registry(注册表)、snapshot(快照)、metrics(指标) 和 event journal(事件日志缓冲区)。
-- **FR-046**: 系统必须维护固定容量 event journal(事件日志缓冲区)，并在 meltdown(熔断)、关闭超时或父级升级时生成 `RunSummary`(运行摘要)，用于解释最近生命周期事件、失败原因、重启次数、关闭原因和最终状态。
-- **FR-047**: 系统必须限制 metrics label(指标标签) 为低基数值。指标标签可以使用 supervisor path(监督器路径)、child id(子任务标识)、state(状态)、decision(决定) 和 failure category(失败类别)，不得包含错误全文、动态路径碎片、用户输入或其它无界值。
-- **FR-048**: 系统可以在 `TaskFactory`(任务工厂) 内核之上提供 `Service trait`(服务特征) 和 `service_fn`(函数适配器) 人体工学层，但该适配层不得替换 `TaskFactory`(任务工厂) 内核，也不得引入第三方 compatibility exports(兼容导出)。
 
 ### Key Entities(关键实体) *(include if feature involves data(涉及数据时填写))*
 
@@ -194,9 +179,7 @@
 - **BackoffPolicy(退避策略)**: 重启延迟规则，包含指数增长、最大延迟、抖动和稳定后重置。
 - **MeltdownPolicy(熔断策略)**: child-level(子任务级) 和 supervisor-level(监督器级) 熔断阈值及重置窗口。
 - **HealthPolicy(健康策略)**: heartbeat interval(心跳间隔) 和 stale-after threshold(过期阈值)，用于检测不健康任务。
-- **ReadinessPolicy(就绪策略)**: 定义 child(子任务) 何时可以从 running(运行中) 进入 ready(已就绪)，并支持默认立即就绪和显式就绪两种策略。
 - **ShutdownPolicy(关闭策略)**: graceful timeout(优雅关闭超时) 和 abort-after-timeout(超时后强制终止) 行为。
-- **TaskKind(任务类型)**: 区分 async worker(异步工作任务)、blocking worker(阻塞工作任务) 和 supervisor(监督器)，并决定关闭和升级边界。
 - **TaskExit(任务退出)**: 退出分类，例如已完成、已失败、已取消、已超时、不健康或已恐慌。
 - **TaskFailureKind(任务失败类别)**: 策略引擎使用的类型化错误类别。
 - **RestartDecision(重启决策)**: 策略结果，例如不重启、延迟后重启、隔离、向父级升级或关闭整棵树。
@@ -204,23 +187,20 @@
 - **ControlCommand(控制命令)**: 可审计的运行时命令，包含请求者、原因、目标路径和结果。
 - **SupervisorSnapshot(监督器快照)**: 最新状态视图，包含树、children(子任务集合)、健康状态、计数器和终态。
 - **SupervisorEvent(监督器事件)**: 完整生命周期记录，携带 `When`(何时)、`Where`(何处)、`What`(发生内容)、策略决定、序号和 correlation id(关联标识)。
-- **EventJournal(事件日志缓冲区)**: 固定容量生命周期事件缓冲区，用于 meltdown(熔断)、关闭超时和父级升级后的诊断回放。
-- **RunSummary(运行摘要)**: 运行结束或故障升级时产生的摘要，包含开始时间、结束时间、关闭原因、重启次数、失败列表、最近事件和最终状态。
-- **Service(服务特征)**: 建立在 `TaskFactory`(任务工厂) 之上的可选人体工学适配层，用于让调用者以服务对象或 `service_fn`(函数适配器) 形式接入监督器。
 
 ## Constitution Alignment(宪章对齐) *(mandatory(必填))*
 
 ### Supervision Contract(监督契约)
 
-- **Lifecycle impact(生命周期影响)**: 本功能定义声明、启动、运行、就绪、暂停、恢复、健康检查、失败、重启、隔离、升级、关闭、强制终止、状态对账和报告 child(子任务) 工作的生命周期治理。
+- **Lifecycle impact(生命周期影响)**: 本功能定义声明、启动、运行、暂停、恢复、健康检查、失败、重启、隔离、升级、关闭、强制终止和报告 child(子任务) 工作的生命周期治理。
 - **Failure behavior(失败行为)**: 失败必须类型化，必须关联 child path(子任务路径) 和 attempt(尝试次数)，必须经过重启、退避、熔断、关键程度和策略评估，并必须作为可查询事件发送。
-- **Shutdown behavior(关闭行为)**: 关闭是一等 shutdown protocol(关闭协议)。父取消必须传播到 child token(子令牌)，系统必须等待 graceful timeout(优雅关闭超时)，只有超时后才 abort(强制终止)，root shutdown(根关闭) 必须证明没有 orphan task(孤儿任务)，并且必须在 request stop(请求停止)、graceful drain(优雅排空)、abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账) 四个内部阶段后完成。
+- **Shutdown behavior(关闭行为)**: 关闭是一等 two-phase protocol(两阶段协议)。父取消必须传播到 child token(子令牌)，系统必须等待 graceful timeout(优雅关闭超时)，只有超时后才 abort(强制终止)，root shutdown(根关闭) 必须证明没有 orphan task(孤儿任务)。
 
 ### Rust Boundary and Observability Requirements(Rust 边界和可观察性需求)
 
 - **Module ownership(模块所有权)**: 计划必须把声明式规格、身份、任务工厂和上下文、运行时绑定、child runner(子任务运行器)、树编排、策略引擎、健康、控制平面、注册表、事件模型、快照存储、可观察性、关闭、错误类型和测试支持拆成独立所有权边界。
 - **Compatibility exports(兼容导出)**: None(无)。
-- **Diagnostics(诊断)**: 每次生命周期迁移都必须能通过快照状态、事件流、event journal(事件日志缓冲区)、`RunSummary`(运行摘要)、tracing span(追踪范围)、tracing event(追踪事件)、指标更新和命令审计记录解释。
+- **Diagnostics(诊断)**: 每次生命周期迁移都必须能通过快照状态、事件流、tracing span(追踪范围)、tracing event(追踪事件)、指标更新和命令审计记录解释。
 - **Dependency impact(依赖影响)**: 计划确认 Tokio(异步运行时) 运行时原语、取消、tracing(结构化追踪)、metrics(指标) 和事件 fan-out(扇出) 支持生命周期契约后，可以使用它们。actor framework(参与者框架) 和复制第三方 supervisor(监督器) API(接口) 不在范围内。
 
 ### Chinese Writing(中文写作)
@@ -245,11 +225,6 @@
 - **SC-010**: 所有 backoff(退避)、timeout(超时)、heartbeat(心跳) 和 meltdown(熔断) 测试都必须使用确定的 test time(测试时间)，不得依赖真实 sleep(睡眠)。
 - **SC-011**: 100% 控制命令审计日志必须说明请求者、原因、目标路径、接受时间、command id(命令标识) 和结果。
 - **SC-012**: 公开模型必须包含 supervisor tree(监督树)、child spec(子任务规格)、task factory(任务工厂)、policy(策略)、health(健康)、shutdown(关闭)、event(事件)、snapshot(快照)、metrics(指标)、audit(审计) 和 handle(句柄) 概念，并且不得出现 actor-model(参与者模型) 术语。
-- **SC-013**: root shutdown(根关闭) 必须按声明顺序的逆序关闭 child(子任务)，并在完成后证明 registry(注册表)、snapshot(快照)、metrics(指标) 和 event journal(事件日志缓冲区) 的最终状态一致。
-- **SC-014**: 需要显式 readiness(就绪) 的 child(子任务) 在报告 ready(已就绪) 前，不得在 snapshot(快照) 或 event(事件) 中显示为 ready(已就绪)。
-- **SC-015**: blocking task(阻塞任务) 在关闭超时后必须产生说明不可立即终止边界的事件和策略决定，并且必须按升级策略处理。
-- **SC-016**: 指标导出检查必须验证所有 metrics label(指标标签) 均为低基数值，并拒绝错误全文、用户输入和无界动态值。
-- **SC-017**: meltdown(熔断)、关闭超时或父级升级发生时，系统必须生成 `RunSummary`(运行摘要)，并包含最近 event journal(事件日志缓冲区) 中的关键事件。
 
 ## Assumptions(假设)
 
@@ -260,7 +235,5 @@
 - child-level fuse(子任务级熔断) 和 supervisor-level fuse(监督器级熔断) 都存在；quarantine(隔离) 是 child-level(子任务级) 终态治理状态，meltdown(熔断) 是升级信号。
 - 状态快照和生命周期事件是两种不同产物：快照回答当前状态，事件回答历史顺序。
 - `When`(何时)、`Where`(何处) 和 `What`(发生内容) 是标准事件词汇，不能被模糊日志术语替代。
-- 默认 child(子任务) 可以采用 immediate readiness(立即就绪)，但任何需要预热、建连或恢复订阅的 child(子任务) 必须选择 explicit readiness(显式就绪)。
-- `TaskFactory`(任务工厂) 是监督器内核入口；`Service trait`(服务特征) 和 `service_fn`(函数适配器) 只是可选适配层。
 - 参考 crate(库) 只提供概念来源，不需要也不允许第三方 API(接口) compatibility surface(兼容表面)。
 - 第一版实现面向一个进程和一个 Tokio(异步运行时)。distributed supervision(分布式监督)、cross-process messaging(跨进程消息) 和 remote control(远程控制) 不在本功能范围内。
