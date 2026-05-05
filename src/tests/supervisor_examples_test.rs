@@ -15,6 +15,10 @@ fn example_suite_contains_learning_programs() {
         "restart_policy_lab.rs",
         "shutdown_tree.rs",
         "observability_probe.rs",
+        "supervisor_tree_story.rs",
+        "runtime_control_story.rs",
+        "policy_failure_matrix.rs",
+        "diagnostic_replay.rs",
     ] {
         let text = fs::read_to_string(root.join("examples").join(example)).expect("read example");
         assert!(text.contains("rust_supervisor::"));

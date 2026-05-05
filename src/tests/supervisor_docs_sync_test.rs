@@ -13,7 +13,13 @@ fn docs_reference_current_config_and_examples() {
         "README.md",
         "README.zh.md",
         "manual/zh/index.md",
+        "manual/zh/getting-started.md",
+        "manual/zh/configuration.md",
+        "manual/zh/examples.md",
         "manual/en/index.md",
+        "manual/en/getting-started.md",
+        "manual/en/configuration.md",
+        "manual/en/examples.md",
         "docs/zh/index.md",
         "docs/en/index.md",
     ]
@@ -24,5 +30,15 @@ fn docs_reference_current_config_and_examples() {
 
     assert!(docs.contains("rust-config-tree(集中配置树) v0.1.9"));
     assert!(docs.contains("supervisor_quickstart"));
+    assert!(docs.contains("supervisor_tree_story"));
+    assert!(docs.contains("runtime_control_story"));
+    assert!(docs.contains("policy_failure_matrix"));
+    assert!(docs.contains("diagnostic_replay"));
     assert!(docs.contains("Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务)"));
+}
+
+/// Verifies that the public documentation sync target remains callable by name.
+#[test]
+fn documentation_sync_matches_public_api() {
+    docs_reference_current_config_and_examples();
 }
