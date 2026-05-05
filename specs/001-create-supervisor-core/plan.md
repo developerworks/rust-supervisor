@@ -56,7 +56,6 @@ specs/001-create-supervisor-core/
 ```text
 src/
 ├── lib.rs
-├── main.rs
 ├── id/
 │   ├── mod.rs
 │   ├── types.rs
@@ -244,21 +243,21 @@ Layer 5(测试和学习层):
 
 | Workstream(工作流) | Scope(范围) | Primary Files(主文件) | Independent Tests(独立测试) | Blockers To Remove(需要消除的卡点) |
 |---|---|---|---|---|
-| WS1 Contract Foundation(契约基础) | id,error,event,state | `src/id/`,`src/error/`,`src/event/`,`src/state/` | `src/id/tests/*_test.rs`,`src/tests/supervisor_api_test.rs` | 稳定公开契约,避免后续反复改名. |
-| WS2 Configuration(集中配置) | rust-config-tree(集中配置树),YAML(数据序列化格式),`ConfigState`(配置状态) | `src/config/`,`examples/config/supervisor.yaml` | `src/tests/supervisor_config_test.rs`,`src/tests/supervisor_yaml_config_test.rs` | 禁止模块局部默认值和硬编码可调常量. |
-| WS3 Declaration And Task(声明和任务) | `ChildSpec`,`SupervisorSpec`,`TaskFactory`,`TaskContext` | `src/spec/`,`src/task/` | `src/spec/tests/*_test.rs`,`src/task/tests/*_test.rs` | 先稳定 trait(特征) 和上下文,再接运行时. |
-| WS4 Policy And Time(策略和时间) | policy,backoff,meltdown,deterministic time(确定性时间) | `src/policy/`,`src/test_support/` | `src/policy/tests/*_test.rs`,`src/tests/supervisor_policy_test.rs` | 退避和熔断值必须来自配置. |
-| WS5 Runtime Tree(运行时树) | runtime,tree,registry,child runner | `src/runtime/`,`src/tree/`,`src/registry/`,`src/child_runner/` | `src/tests/supervisor_lifecycle_test.rs`,`src/tests/supervisor_tree_test.rs` | 避免多个工作流同时写 `runtime/`,先定义接口再集成. |
-| WS6 Control And Shutdown(控制和关闭) | handle,commands,health,shutdown,blocking worker(阻塞工作任务) | `src/control/`,`src/health/`,`src/shutdown/` | `src/tests/supervisor_control_test.rs`,`src/tests/supervisor_shutdown_test.rs`,`src/tests/supervisor_blocking_test.rs` | 四阶段关闭和阻塞边界必须先写测试. |
-| WS7 Observability Diagnostics(可观测性和诊断) | observe,journal,summary,metrics,audit | `src/observe/`,`src/journal/`,`src/summary/` | `src/tests/supervisor_observe_test.rs`,`src/tests/supervisor_diagnostics_test.rs` | observability(可观测性) 只能消费事实,不能控制生命周期. |
-| WS8 Docs Examples Release(文档示例和发布) | examples,manual,docs,SBOM,release readiness(发布就绪) | `examples/`,`manual/`,`docs/`,`scripts/`,`README.md`,`CHANGELOG.md` | `src/tests/supervisor_examples_test.rs`,`src/tests/supervisor_docs_sync_test.rs`,`src/tests/supervisor_release_test.rs` | 文档和示例必须跟公开契约同步. |
-| WS9 Quality Governance(质量治理) | coding standard(编码标准),cognitive complexity(认知复杂度),maintainability(可维护性),lead agent supervision(主代理监督) | `scripts/check-coding-standard.sh`,`scripts/check-maintainability.sh`,`specs/001-create-supervisor-core/tasks.md` | `src/tests/supervisor_coding_standard_test.rs`,`src/tests/supervisor_complexity_test.rs`,`src/tests/supervisor_maintainability_test.rs` | 主代理必须持续审查子代理输出并纠偏. |
+| WS1 Contract Foundation(契约基础) | id,error,event,state | `src/id/`,`src/error/`,`src/event/`,`src/state/` | `src/tests/source_layout_test.rs`,`src/tests/module_boundary_test.rs`,`src/tests/import_rule_test.rs`,`src/tests/module_dependency_test.rs` | 稳定公开契约,避免后续反复改名. |
+| WS2 Configuration(集中配置) | rust-config-tree(集中配置树),YAML(数据序列化格式),`ConfigState`(配置状态) | `src/config/`,`examples/config/supervisor.yaml` | `src/tests/config_boundary_test.rs`,`src/config/tests/yaml_config_test.rs`,`src/tests/supervisor_config_test.rs` | 禁止模块局部默认值和硬编码可调常量. |
+| WS3 Declaration And Task(声明和任务) | `ChildSpec`,`SupervisorSpec`,`TaskFactory`,`TaskContext` | `src/spec/`,`src/task/` | `src/spec/tests/spec_test.rs`,`src/task/tests/task_test.rs`,`src/readiness/tests/readiness_test.rs`,`src/tests/supervisor_start_test.rs` | 先稳定 trait(特征) 和上下文,再接运行时. |
+| WS4 Policy And Time(策略和时间) | policy,backoff,meltdown,deterministic time(确定性时间) | `src/policy/`,`src/test_support/` | `src/policy/tests/policy_test.rs`,`src/policy/tests/backoff_test.rs`,`src/policy/tests/meltdown_test.rs`,`src/tests/supervisor_policy_test.rs` | 退避和熔断值必须来自配置. |
+| WS5 Runtime Tree(运行时树) | runtime,tree,registry,child runner | `src/runtime/`,`src/tree/`,`src/registry/`,`src/child_runner/` | `src/tree/tests/tree_test.rs`,`src/registry/tests/registry_test.rs`,`src/tests/supervisor_tree_test.rs` | 避免多个工作流同时写 `runtime/`,先定义接口再集成. |
+| WS6 Control And Shutdown(控制和关闭) | handle,commands,health,shutdown,blocking worker(阻塞工作任务) | `src/control/`,`src/health/`,`src/shutdown/` | `src/control/tests/control_test.rs`,`src/health/tests/health_test.rs`,`src/shutdown/tests/shutdown_test.rs`,`src/tests/supervisor_control_test.rs`,`src/tests/supervisor_shutdown_test.rs` | 四阶段关闭和阻塞边界必须先写测试. |
+| WS7 Observability Diagnostics(可观测性和诊断) | observe,journal,summary,metrics,audit | `src/observe/`,`src/journal/`,`src/summary/` | `src/observe/tests/observe_test.rs`,`src/journal/tests/journal_test.rs`,`src/summary/tests/summary_test.rs`,`src/tests/observability_smoke_test.rs` | observability(可观测性) 只能消费事实,不能控制生命周期. |
+| WS8 Docs Examples Release(文档示例和发布) | examples,manual,docs,SBOM,release readiness(发布就绪) | `examples/`,`manual/`,`docs/`,`README.md`,`CHANGELOG.md`,`Cargo.toml`,`artifacts/sbom/` | `src/tests/supervisor_examples_test.rs`,`src/tests/supervisor_docs_sync_test.rs`,`src/tests/bilingual_docs_test.rs`,`src/tests/release_readiness_test.rs`,`src/tests/sbom_test.rs` | 文档和示例必须跟公开契约同步. |
+| WS9 Quality Governance(质量治理) | coding standard(编码标准),cognitive complexity(认知复杂度),maintainability(可维护性),lead agent supervision(主代理监督) | `scripts/`,`artifacts/validation/`,`specs/001-create-supervisor-core/tasks.md` | `src/tests/coding_standard_test.rs`,`src/tests/complexity_test.rs`,`src/tests/maintainability_test.rs`,`src/tests/parallel_governance_test.rs` | 主代理必须持续审查子代理输出并纠偏. |
 
 ## Blocker Elimination Plan(卡点消除计划)
 
 | Blocker(卡点) | Elimination Action(消除动作) | Evidence(证据) |
 |---|---|---|
-| shared file bottleneck(共享文件瓶颈) | 按 module ownership(模块所有权) 拆分 `state.rs`,`event.rs`,`runtime.rs`,`observe.rs` 的写入范围. | tasks(任务) 中每个 `[P]` 任务写不同主文件. |
+| shared file bottleneck(共享文件瓶颈) | 按 module ownership(模块所有权) 拆分 `src/state/`,`src/event/`,`src/runtime/` 和 `src/observe/` 的写入范围. | tasks(任务) 中每个 `[P]` 任务写不同主文件或不同目录边界. |
 | unstable contract(不稳定契约) | 先完成 `id`,`error`,`event`,`state`,`spec`,`task` 契约测试. | foundational test(基础测试) 先于 runtime(运行时) 实现. |
 | blocking dependency(阻塞依赖) | 让 WS2,WS3,WS4,WS7,WS8 在接口稳定后并行,把 runtime integration(运行时集成) 放到合并任务. | dependency graph(依赖图) 显示前置和可并行任务. |
 | manual gate(人工门禁) | implementation phase(实现阶段) 使用 unattended implementation(无人值守实现) 和 task completion ledger(任务完成台账). | tasks(任务) 包含 ledger(台账),supervision record(监督记录) 和 completion check(完成检查). |
