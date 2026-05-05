@@ -1,5 +1,7 @@
 # Contract(契约): Target process IPC(目标进程进程间通信)
 
+**Owner(所有者)**: 目标侧 IPC server(进程间通信服务端) 由 `/Users/0x00/Documents/rust-supervisor` 实现. IPC client(进程间通信客户端) 由 `/Users/0x00/Documents/rust-supervisor-relay` 实现. `/Users/0x00/Documents/rust-supervisor-ui` 不直接访问本契约.
+
 ## Transport(传输)
 
 - 传输使用 Unix domain socket(Unix 域套接字).
@@ -21,10 +23,10 @@
 
 ### Methods(方法)
 
-- `hello`: sidecar(侧车进程) 建立 IPC(进程间通信) 后声明协议版本和目标身份.
+- `hello`: relay(中继) 建立 IPC(进程间通信) 后声明协议版本和目标身份.
 - `snapshot`: 读取 DashboardSnapshot(看板快照).
-- `events.subscribe`: 订阅目标进程主动推送的 EventRecord(事件记录).
-- `logs.tail`: 订阅 LogRecord(日志记录) 和最近日志.
+- `events.subscribe`: 在已认证客户端会话触发目标绑定后, 订阅目标进程主动推送的 EventRecord(事件记录).
+- `logs.tail`: 在已认证客户端会话触发目标绑定后, 订阅 LogRecord(日志记录) 和最近日志.
 - `command.restart_child`: 重启 child task(子任务).
 - `command.pause_child`: 暂停 child task(子任务).
 - `command.resume_child`: 恢复 child task(子任务).
@@ -67,7 +69,7 @@
 
 ## Server push(服务端主动推送)
 
-目标进程和 sidecar(侧车进程) 建立 IPC(进程间通信) 后, 目标进程必须主动发送事件, 日志和可用状态变化.
+目标进程和 relay(中继) 建立 IPC(进程间通信) 后, 只有 relay(中继) 代表已认证 dashboard session(看板会话) 建立 `events.subscribe` 或 `logs.tail` subscription(订阅) 时, 目标进程才必须主动发送事件, 日志和可用状态变化. dynamic registration(动态注册) 本身不得触发本节 server push(服务端主动推送).
 
 ```json
 {
@@ -102,7 +104,7 @@
 
 ### Command rules(命令规则)
 
-- `requested_by` 必须由 sidecar(侧车进程) 从 RemoteIdentity(远程身份) 派生.
+- `requested_by` 必须由 relay(中继) 从 RemoteIdentity(远程身份) 派生.
 - 目标进程不得信任客户端直接提供的 `requested_by`.
 - `reason` 必须非空.
 - `command.shutdown_tree`, `command.remove_child` 和 `command.add_child` 必须要求 `confirmed=true`.
