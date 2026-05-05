@@ -4,13 +4,13 @@
 
 The configuration entry point is `rust_supervisor::config::loader::load_config_state`. It accepts only the YAML primary configuration file. The repository example path is `examples/config/supervisor.yaml`.
 
-The current configuration shape contains `policy`, `shutdown`, and `observability` groups. They map into `PolicyConfig`, `ShutdownConfig`, and `ObservabilityConfig`.
+The current configuration shape contains `supervisor`, `policy`, `shutdown`, and `observability` groups. They map into `SupervisorRootConfig`, `PolicyConfig`, `ShutdownConfig`, and `ObservabilityConfig`.
 
 ## Configuration State
 
 `SupervisorConfig` is the deserialized file shape. `ConfigState` is the validated immutable state. Runtime modules must not keep separate runtime tunable constants.
 
-`ConfigState::to_supervisor_spec` derives `SupervisorSpec`. The implementation fills policy defaults, shutdown budgets, health timing, and observability capacity from configuration values.
+`ConfigState::to_supervisor_spec` derives `SupervisorSpec`. The implementation fills the supervision strategy, policy defaults, shutdown budgets, health timing, and observability capacity from configuration values.
 
 ## Error Boundary
 
@@ -19,6 +19,7 @@ Configuration loading returns `SupervisorError::FatalConfig` when startup must b
 - The file extension is not YAML.
 - The file cannot be read.
 - YAML cannot be parsed into `SupervisorConfig`.
+- The supervision strategy is not one of `OneForOne`, `OneForAll`, or `RestForOne`.
 - A required numeric value is zero.
 - The initial backoff is greater than the maximum backoff.
 - The jitter ratio is outside the accepted range.
@@ -26,6 +27,8 @@ Configuration loading returns `SupervisorError::FatalConfig` when startup must b
 ## Example Configuration
 
 ```yaml
+supervisor:
+  strategy: OneForAll
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000

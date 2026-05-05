@@ -9,6 +9,8 @@ use std::time::Duration;
 /// Configuration file shape loaded from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SupervisorConfig {
+    /// Root supervisor declaration values.
+    pub supervisor: SupervisorRootConfig,
     /// Runtime policy values.
     pub policy: PolicyConfig,
     /// Shutdown budget values.
@@ -20,12 +22,21 @@ pub struct SupervisorConfig {
 /// Immutable validated configuration state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigState {
+    /// Root supervisor declaration values.
+    pub supervisor: SupervisorRootConfig,
     /// Runtime policy values.
     pub policy: PolicyConfig,
     /// Shutdown budget values.
     pub shutdown: ShutdownConfig,
     /// Observability switches and capacities.
     pub observability: ObservabilityConfig,
+}
+
+/// Root supervisor configuration.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SupervisorRootConfig {
+    /// Restart scope strategy for child failures.
+    pub strategy: crate::spec::supervisor::SupervisionStrategy,
 }
 
 /// Restart, backoff, and fuse configuration.
@@ -79,6 +90,7 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         validate_shutdown(&config.shutdown)?;
         validate_observability(&config.observability)?;
         Ok(Self {
+            supervisor: config.supervisor,
             policy: config.policy,
             shutdown: config.shutdown,
             observability: config.observability,
@@ -102,6 +114,8 @@ impl ConfigState {
     ///
     /// ```
     /// let yaml = r#"
+    /// supervisor:
+    ///   strategy: OneForAll
     /// policy:
     ///   child_restart_limit: 10
     ///   child_restart_window_ms: 60000
@@ -122,12 +136,14 @@ impl ConfigState {
     /// "#;
     /// let state = rust_supervisor::config::yaml::parse_config_state(yaml).unwrap();
     /// let spec = state.to_supervisor_spec().unwrap();
+    /// assert_eq!(spec.strategy, rust_supervisor::spec::supervisor::SupervisionStrategy::OneForAll);
     /// assert_eq!(spec.supervisor_failure_limit, 30);
     /// ```
     pub fn to_supervisor_spec(
         &self,
     ) -> Result<crate::spec::supervisor::SupervisorSpec, crate::error::types::SupervisorError> {
         let mut spec = crate::spec::supervisor::SupervisorSpec::root(Vec::new());
+        spec.strategy = self.supervisor.strategy;
         spec.config_version = self.config_version();
         spec.supervisor_failure_limit = self.policy.supervisor_failure_limit;
         spec.control_channel_capacity = self.observability.event_journal_capacity;
@@ -160,7 +176,8 @@ impl ConfigState {
     /// Returns a deterministic version string for diagnostics.
     fn config_version(&self) -> String {
         format!(
-            "policy-{}-{}-shutdown-{}-observe-{}",
+            "supervisor-{:?}-policy-{}-{}-shutdown-{}-observe-{}",
+            self.supervisor.strategy,
             self.policy.child_restart_limit,
             self.policy.supervisor_failure_limit,
             self.shutdown.graceful_timeout_ms,

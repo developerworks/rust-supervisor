@@ -4,6 +4,7 @@
 
 use rust_supervisor::config::loader::load_config_state;
 use rust_supervisor::config::yaml::parse_config_state;
+use rust_supervisor::spec::supervisor::SupervisionStrategy;
 use std::fs;
 use std::path::Path;
 
@@ -27,6 +28,8 @@ fn yaml_config_loads_into_config_state() {
     let spec = loaded.to_supervisor_spec().expect("derive supervisor spec");
 
     assert_eq!(state, loaded);
+    assert_eq!(loaded.supervisor.strategy, SupervisionStrategy::OneForAll);
+    assert_eq!(spec.strategy, loaded.supervisor.strategy);
     assert_eq!(
         spec.supervisor_failure_limit,
         loaded.policy.supervisor_failure_limit

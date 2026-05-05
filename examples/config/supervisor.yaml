@@ -1,3 +1,5 @@
+supervisor:
+  strategy: OneForAll
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000

@@ -13,6 +13,7 @@
 - 修正 `README.md`, `manual/en` 和 `docs/en` 为英文正文, 中文内容保留在 `README.zh.md`, `manual/zh` 和 `docs/zh`.
 - 调整 `examples/*.rs` 注释样式, 每一行非空代码的上方都有注释, 不使用右侧内联注释.
 - 修复 runtime control loop(运行时控制循环) 只处理显式控制命令的问题, 现在 child exit(子任务退出) 会自动进入 policy(策略) 决策并执行 `OneForOne`, `OneForAll` 和 `RestForOne` 监督范围重启.
+- 修复 YAML(数据序列化格式) 配置没有暴露 supervision strategy(监督策略) 的问题, `ConfigState::to_supervisor_spec` 现在从 `supervisor.strategy` 派生 `SupervisorSpec.strategy`.
 - 生成 SBOM(软件物料清单): `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`.
 
 ## 验证结果
@@ -22,6 +23,7 @@
 - `cargo test`: 通过, 包含全部集成测试, 模块测试和 52 个 doctest(文档测试).
 - `cargo clippy --all-targets --all-features -- -D warnings`: 通过.
 - `cargo test --test supervisor_auto_restart_test -- --nocapture --test-threads=1`: 通过, 覆盖 `OneForOne`, `OneForAll` 和 `RestForOne` 自动重启.
+- `cargo test --test config_boundary_test --test supervisor_config_test --test yaml_config_test -- --nocapture`: 通过, 覆盖 YAML(数据序列化格式) 中 `supervisor.strategy` 的加载,派生和非法值拒绝.
 - `cargo check --examples`: 通过.
 - 示例注释位置检查: 通过, `examples/*.rs` 每一行非空代码上方都有注释.
 - `cargo doc --no-deps`: 通过.

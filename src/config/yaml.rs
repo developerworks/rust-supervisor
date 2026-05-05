@@ -20,6 +20,8 @@ use crate::error::types::SupervisorError;
 ///
 /// ```
 /// let yaml = r#"
+/// supervisor:
+///   strategy: RestForOne
 /// policy:
 ///   child_restart_limit: 10
 ///   child_restart_window_ms: 60000
@@ -39,6 +41,7 @@ use crate::error::types::SupervisorError;
 ///   audit_enabled: true
 /// "#;
 /// let state = rust_supervisor::config::yaml::parse_config_state(yaml).unwrap();
+/// assert_eq!(state.supervisor.strategy, rust_supervisor::spec::supervisor::SupervisionStrategy::RestForOne);
 /// assert_eq!(state.policy.child_restart_limit, 10);
 /// ```
 pub fn parse_config_state(yaml: &str) -> Result<ConfigState, SupervisorError> {
