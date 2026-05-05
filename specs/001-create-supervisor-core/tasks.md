@@ -11,6 +11,8 @@
 - `[P]` 表示任务可以并行执行,因为它修改不同文件或不同目录,并且不依赖未完成任务.
 - `[US1]` 到 `[US8]` 表示任务所属用户故事.
 - 每个任务都写出明确文件路径.
+- 每个任务只能归属一个 primary workstream(主工作流).跨工作流协作只能写入 dependency(依赖),review gate(审查门禁) 或 handoff note(交接说明),不得重复分配同一个任务.
+- 每个源码实现任务必须在自己的 file boundary(文件边界) 内同步补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),不得把所有源码文档集中到一个后置大任务.
 - 所有测试文件必须以 `_test.rs` 结尾.
 - integration test(集成测试) 放在 `src/tests/*_test.rs`.
 - unit test(单元测试) 放在 `src/<module>/tests/*_test.rs`.
@@ -59,7 +61,7 @@
 - [ ] T021 [P] 在 `src/policy/decision.rs` 中实现 `SupervisionStrategy`,`RestartPolicy`,`RestartDecision` 和 `TaskFailureKind` 到策略输入的基础类型,覆盖 FR-007,FR-008,FR-009 和 FR-012.
 - [ ] T022 [P] 在 `src/config/state.rs` 和 `src/config/loader.rs` 中实现 `SupervisorConfig`(监督器配置),`ConfigState`(配置状态) 和配置版本基础结构,覆盖 FR-050.
 - [ ] T023 [P] 在 `src/test_support/assertions.rs` 和 `src/test_support/factory.rs` 中实现 paused time(暂停时间),fake task factory(假任务工厂),event collection(事件收集) 和 deterministic jitter(确定性抖动) 支持,覆盖 FR-017,FR-036 和 SC-010.
-- [ ] T024 在 `src/tests/foundational_gate_test.rs` 中串联基础质量门禁,确认 source layout(源码布局),module boundary(模块边界),import rule(导入规则),naming(命名),configuration boundary(配置边界) 和 glossary(词汇表) 全部可独立运行.
+- [ ] T024 在 `src/tests/foundational_gate_test.rs` 中串联基础质量门禁,确认 source layout(源码布局),module boundary(模块边界),import rule(导入规则),naming(命名),configuration boundary(配置边界) 和 glossary(词汇表) 全部可独立运行,覆盖 FR-056,FR-057,FR-063,FR-066,FR-067,FR-077,SC-024,SC-025,SC-031,SC-034,SC-035 和 SC-045.
 
 **Checkpoint(检查点)**: 基础契约,源码布局和质量门禁已经可用,用户故事实现可以开始.
 
@@ -287,7 +289,14 @@
 - [ ] T121 [P] [US8] 在 `Cargo.toml` 中补齐 crates.io(软件包发布平台) 发布元数据,package include/exclude(打包包含或排除) 和 docs.rs(文档托管平台) 元数据,覆盖 FR-058.
 - [ ] T122 [P] [US8] 在 `docs/zh/quality-gates.md` 和 `docs/en/quality-gates.md` 中记录源码布局,模块入口,导入规则,测试命名,认知复杂度和可维护性门禁,覆盖 FR-054 和 FR-061.
 - [ ] T123 [P] [US8] 在 `docs/zh/parallel-governance.md` 和 `docs/en/parallel-governance.md` 中记录 parallel workstream(并行工作流),unattended implementation(无人值守实现),task completion ledger(任务完成台账),blocker elimination record(卡点消除记录) 和 lead agent supervision(主代理监督),覆盖 FR-070 到 FR-076.
-- [ ] T124 [US8] 在所有 `src/<module>/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),public function doc(公共函数文档),private function doc(私有函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T124 [P] [US8] 在 `src/id/`,`src/error/`,`src/event/` 和 `src/state/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T125 [P] [US8] 在 `src/config/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T126 [P] [US8] 在 `src/spec/`,`src/task/` 和 `src/readiness/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T127 [P] [US8] 在 `src/policy/` 和 `src/test_support/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T128 [P] [US8] 在 `src/tree/`,`src/registry/`,`src/runtime/` 和 `src/child_runner/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T129 [P] [US8] 在 `src/control/`,`src/health/` 和 `src/shutdown/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T130 [P] [US8] 在 `src/observe/`,`src/journal/` 和 `src/summary/` 源码文件中补齐英文 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),function doc(函数文档),source comment(源码注释) 和 public doctest(公共文档测试),覆盖 FR-055.
+- [ ] T131 [US8] 在 `artifacts/validation/documentation-ownership.md` 中记录每个 `src/<module>/` 源码文件的 documentation owner(文档负责人),对应实现任务,验收检查和剩余缺口,确认源码文档已经由 T124-T130 的独立 file boundary(文件边界) 完成,覆盖 FR-055.
 
 **Checkpoint(检查点)**: 用户故事八可以独立验证编码规范,发布准备和并行治理.
 
@@ -297,18 +306,18 @@
 
 **Purpose(目的)**: 运行全量验证,修正文档漂移,确认所有任务完成证据.
 
-- [ ] T125 [P] 运行 `cargo fmt --check`,并把结果记录到 `artifacts/validation/cargo-fmt.md` 对应验收项.
-- [ ] T126 [P] 运行 `cargo check`,并把结果记录到 `artifacts/validation/cargo-check.md` 对应验收项.
-- [ ] T127 [P] 运行 `cargo test`,并把所有 `_test.rs` 测试目标结果记录到 `artifacts/validation/cargo-test.md`.
-- [ ] T128 [P] 运行 `cargo doc --no-deps`,并把英文 rustdoc(代码文档注释) 生成结果记录到 `artifacts/validation/cargo-doc.md`.
-- [ ] T129 [P] 运行 `scripts/check-coding-standard.sh`,并把源码布局,模块入口,导入规则和文档门禁结果记录到 `artifacts/validation/coding-standard.md`.
-- [ ] T130 [P] 运行 `scripts/check-maintainability.sh`,并把 module dependency map(模块依赖图),cognitive complexity(认知复杂度),maintainability profile(可维护性画像) 和 parallelization(并行化) 门禁结果记录到 `artifacts/validation/maintainability.md`.
-- [ ] T131 [P] 运行 `scripts/generate-sbom.sh` 和 `scripts/validate-sbom.sh`,并把 `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json` 校验结果记录到 `artifacts/validation/sbom.md`.
-- [ ] T132 [P] 运行 `cargo package --list`,并把 package contents(打包内容) 检查结果记录到 `artifacts/validation/cargo-package-list.md`.
-- [ ] T133 [P] 运行 `cargo publish --dry-run`,并把 crates.io readiness(发布就绪) 结果记录到 `artifacts/validation/cargo-publish-dry-run.md`.
-- [ ] T134 更新 `specs/001-create-supervisor-core/quickstart.md`,记录最终验证命令和通过条件.
-- [ ] T135 更新 `specs/001-create-supervisor-core/contracts/public-api.md`,`specs/001-create-supervisor-core/data-model.md` 和 `specs/001-create-supervisor-core/glossary.md`,确保代码,契约,数据模型和词汇表同步.
-- [ ] T136 在 `specs/001-create-supervisor-core/tasks.md` 中完成 task completion ledger(任务完成台账) 的最终证据记录,确认没有 pending task(待处理任务),in-progress task(进行中任务),失败检查或未记录完成证据.
+- [ ] T132 运行 `cargo fmt --check`,并把结果记录到 `artifacts/validation/cargo-fmt.md` 对应验收项,覆盖 FR-061 和 SC-029.
+- [ ] T133 运行 `cargo check`,并把结果记录到 `artifacts/validation/cargo-check.md` 对应验收项,覆盖 FR-058,FR-061,SC-026 和 SC-029.
+- [ ] T134 运行 `cargo test`,并把所有 `_test.rs` 测试目标结果记录到 `artifacts/validation/cargo-test.md`,覆盖 SC-001 到 SC-045.
+- [ ] T135 运行 `cargo doc --no-deps`,并把英文 rustdoc(代码文档注释) 生成结果记录到 `artifacts/validation/cargo-doc.md`,覆盖 FR-055 和 SC-023.
+- [ ] T136 运行 `scripts/check-coding-standard.sh`,并把源码布局,模块入口,导入规则和文档门禁结果记录到 `artifacts/validation/coding-standard.md`,覆盖 FR-055,FR-056,FR-057,FR-063,FR-064,FR-077,SC-023,SC-024,SC-025,SC-031,SC-032 和 SC-045.
+- [ ] T137 运行 `scripts/check-maintainability.sh`,并把 module dependency map(模块依赖图),cognitive complexity(认知复杂度),maintainability profile(可维护性画像) 和 parallelization(并行化) 门禁结果记录到 `artifacts/validation/maintainability.md`,覆盖 FR-060,FR-061,FR-068,FR-069,FR-070,SC-028,SC-029,SC-036,SC-037,SC-038 和 SC-041.
+- [ ] T138 运行 `scripts/generate-sbom.sh` 和 `scripts/validate-sbom.sh`,并把 `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json` 校验结果记录到 `artifacts/validation/sbom.md`,覆盖 FR-062 和 SC-030.
+- [ ] T139 运行 `cargo package --list`,并把 package contents(打包内容) 检查结果记录到 `artifacts/validation/cargo-package-list.md`,覆盖 FR-058,FR-059 和 SC-026.
+- [ ] T140 运行 `cargo publish --dry-run`,并把 crates.io readiness(发布就绪) 结果记录到 `artifacts/validation/cargo-publish-dry-run.md`,覆盖 FR-058,FR-059 和 SC-026.
+- [ ] T141 更新 `specs/001-create-supervisor-core/quickstart.md`,记录最终验证命令和通过条件,覆盖 FR-054 和 SC-022.
+- [ ] T142 更新 `specs/001-create-supervisor-core/contracts/public-api.md`,`specs/001-create-supervisor-core/data-model.md` 和 `specs/001-create-supervisor-core/glossary.md`,确保代码,契约,数据模型和词汇表同步,覆盖 FR-054,FR-066,SC-022 和 SC-034.
+- [ ] T143 在 `specs/001-create-supervisor-core/tasks.md` 中完成 task completion ledger(任务完成台账) 的最终证据记录,确认没有 pending task(待处理任务),in-progress task(进行中任务),失败检查或未记录完成证据,覆盖 FR-071 到 FR-076 和 SC-039 到 SC-044.
 
 ---
 
@@ -334,17 +343,30 @@
 - US7(用户故事七) 可以并行编写示例和文档,配置派生会依赖 `ConfigState`(配置状态) 基础.
 - US8(用户故事八) 可以并行实现脚本和文档,最终门禁依赖所有源码和文档产物.
 
-### Parallel Workstream Mapping(并行工作流映射)
+### Primary Workstream Ownership(主工作流所有权)
 
-- WS1 Contract Foundation(契约基础): T009-T024,T025-T038.
-- WS2 Configuration(集中配置): T005,T014,T022,T095-T102.
-- WS3 Declaration And Task(声明和任务): T025-T033,T071-T077.
-- WS4 Policy And Time(策略和时间): T049-T060.
-- WS5 Runtime Tree(运行时树): T034-T038,T039-T048,T067-T070,T078-T081.
-- WS6 Control And Shutdown(控制和关闭): T061-T081.
-- WS7 Observability Diagnostics(可观测性和诊断): T082-T094.
-- WS8 Docs Examples Release(文档示例和发布): T007,T008,T097-T110,T121-T123,T131-T135.
-- WS9 Quality Governance(质量治理): T009-T015,T111-T124,T129-T136.
+- WS0 Setup(初始化): T001-T004.
+- WS1 Contract Foundation(契约基础): T009-T013,T015-T021,T024,T124.
+- WS2 Configuration(集中配置): T005,T014,T022,T095,T096,T100-T102,T125.
+- WS3 Declaration And Task(声明和任务): T025-T033,T126.
+- WS4 Policy And Time(策略和时间): T023,T049-T060,T127.
+- WS5 Runtime Tree(运行时树): T034-T048,T128.
+- WS6 Control And Shutdown(控制和关闭): T061-T081,T129.
+- WS7 Observability Diagnostics(可观测性和诊断): T082-T094,T130.
+- WS8 Docs Examples Release(文档示例和发布): T007,T008,T097-T099,T103-T110,T121-T123,T138-T142.
+- WS9 Quality Governance(质量治理): T006,T111-T120,T131-T137,T143.
+
+### Cross-Workstream Handoffs(跨工作流交接)
+
+- T014 由 WS2 Configuration(集中配置) 拥有,WS1 Contract Foundation(契约基础) 只消费它的检查结果.
+- T022 由 WS2 Configuration(集中配置) 拥有,WS1 Contract Foundation(契约基础) 只依赖 `ConfigState`(配置状态) 契约.
+- T023 由 WS4 Policy And Time(策略和时间) 拥有,WS1 Contract Foundation(契约基础) 只使用 test time(测试时间) 支持.
+- T067-T070 由 WS6 Control And Shutdown(控制和关闭) 拥有,WS5 Runtime Tree(运行时树) 只提供 runtime(运行时) 接入点.
+- T076-T077 由 WS6 Control And Shutdown(控制和关闭) 拥有,WS3 Declaration And Task(声明和任务) 只审查 `TaskContext`(任务上下文) 和 `TaskKind`(任务类型) 契约兼容性.
+- T097-T099,T103-T110 由 WS8 Docs Examples Release(文档示例和发布) 拥有,WS2 Configuration(集中配置) 只提供配置加载契约.
+- T124-T130 由各自源码模块的 primary workstream(主工作流) 拥有,WS9 Quality Governance(质量治理) 只通过 T131 汇总 documentation ownership(文档所有权) 证据.
+- T121-T123,T138-T142 由 WS8 Docs Examples Release(文档示例和发布) 拥有,WS9 Quality Governance(质量治理) 只消费验证结果.
+- T131-T137,T143 由 WS9 Quality Governance(质量治理) 拥有,其它工作流只提供各自完成证据.
 
 ### Parallel Opportunities(并行机会)
 
@@ -355,6 +377,7 @@
 - 每个用户故事中的 `[P]` 实现任务可以并行,因为它们写入不同模块目录.
 - US7(用户故事七) 的 examples(示例程序),manual(手册),docs(文档) 和 config(配置) 任务可以在契约稳定后并行.
 - US8(用户故事八) 的 scripts(脚本),release metadata(发布元数据),quality docs(质量文档) 和 governance docs(治理文档) 可以并行.
+- T132-T140 是 final validation(最终验证) 命令,默认按顺序运行.只有在显式设置独立 `CARGO_TARGET_DIR`(Cargo 目标目录) 并记录证据时,才允许并行运行会共享 Cargo(构建工具) 输出目录的命令.
 
 ---
 
@@ -406,7 +429,7 @@ Task(任务): "T123 在 docs/zh/parallel-governance.md 和 docs/en/parallel-gove
 2. lead agent(主代理) 按 WS1-WS9 分派 subagent workstream(子代理工作流),每个 subagent(子代理) 只修改自己的 primary files(主文件).
 3. lead agent(主代理) 持续读取 task completion ledger(任务完成台账),调度可执行 pending task(待处理任务),不得在单个任务完成后停止等待人工继续.
 4. lead agent(主代理) 对每个 subagent output(子代理输出) 执行 clean review record(清洁审查记录) 或 correction record(纠偏记录).
-5. 所有任务完成后,运行 T125-T136 的最终验证.
+5. 所有任务完成后,运行 T132-T143 的最终验证和完成证据记录.
 
 ---
 
