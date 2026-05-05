@@ -1,7 +1,7 @@
 [book]
-title = "rust-supervisor Manual"
+title = "rust-tokio-supervisor Manual"
 authors = ["developerworks"]
-description = "English manual for rust-supervisor."
+description = "English manual for rust-tokio-supervisor."
 language = "en"
 src = "."
 

@@ -1,8 +1,10 @@
-# rust-supervisor
+# rust-tokio-supervisor
 
-`rust-supervisor` is a Rust task supervision core for Tokio services. It provides declarative supervisor trees, child lifecycle governance, restart policies, four-stage shutdown, current state queries, event journal storage, and observability signals.
+`rust-tokio-supervisor` is the crates.io package for the rust-supervisor project. It is a Rust task supervision core for Tokio services. It provides declarative supervisor trees, child lifecycle governance, restart policies, four-stage shutdown, current state queries, event journal storage, and observability signals.
 
 Terminology: rust-config-tree v0.1.9 is the centralized configuration loader, and Shutdown Without Orphaned Tasks is the formal shutdown term.
+
+Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 
 ## Capability Boundary
 

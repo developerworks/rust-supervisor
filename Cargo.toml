@@ -1,12 +1,12 @@
 [package]
-name = "rust-supervisor"
+name = "rust-tokio-supervisor"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "A Rust supervisor core with declarative task supervision, restart policy, shutdown coordination, and observability."
 license = "MIT"
 repository = "https://github.com/developerworks/rust-supervisor"
-documentation = "https://docs.rs/rust-supervisor"
+documentation = "https://docs.rs/rust-tokio-supervisor"
 readme = "README.md"
 keywords = ["supervisor", "tokio", "lifecycle", "observability", "runtime"]
 categories = ["asynchronous", "concurrency", "config"]

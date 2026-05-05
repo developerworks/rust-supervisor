@@ -1,6 +1,8 @@
-# rust-supervisor
+# rust-tokio-supervisor
 
-`rust-supervisor` 是 Rust(编程语言) 任务监督核心库. 它用声明式配置描述 supervisor(监督器) 树, 用 typed failure(类型化失败) 驱动 restart policy(重启策略), 用 four-stage shutdown(四阶段关闭) 避免 orphan task(孤儿任务), 并把生命周期事实同步到 event journal(事件日志缓冲区), metrics(指标), tracing(结构化追踪) 和 audit event(审计事件).
+`rust-tokio-supervisor` 是 rust-supervisor 项目在 crates.io(发布注册表) 上使用的 package name(包名). 它是 Rust(编程语言) 任务监督核心库. 它用声明式配置描述 supervisor(监督器) 树, 用 typed failure(类型化失败) 驱动 restart policy(重启策略), 用 four-stage shutdown(四阶段关闭) 避免 orphan task(孤儿任务), 并把生命周期事实同步到 event journal(事件日志缓冲区), metrics(指标), tracing(结构化追踪) 和 audit event(审计事件).
+
+发布包名是 `rust-tokio-supervisor`. Library crate name(库包名) 是 `rust_supervisor`.
 
 ## 设计原则
 

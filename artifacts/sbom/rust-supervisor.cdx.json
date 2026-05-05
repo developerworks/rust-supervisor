@@ -4,7 +4,7 @@
   "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000001",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-05-05T09:09:25Z",
+    "timestamp": "2026-05-05T11:12:56Z",
     "tools": [
       {
         "vendor": "rust-supervisor",
@@ -14,9 +14,9 @@
     ],
     "component": {
       "type": "library",
-      "name": "rust-supervisor",
+      "name": "rust-tokio-supervisor",
       "version": "0.1.0",
-      "purl": "pkg:cargo/rust-supervisor@0.1.0",
+      "purl": "pkg:cargo/rust-tokio-supervisor@0.1.0",
       "licenses": [
         {
           "license": {
@@ -2981,7 +2981,7 @@
   "properties": [
     {
       "name": "cargo.lock.cksum",
-      "value": "1112947306-36925"
+      "value": "1542142219-36931"
     }
   ]
 }

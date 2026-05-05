@@ -720,7 +720,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-supervisor"
+name = "rust-tokio-supervisor"
 version = "0.1.0"
 dependencies = [
  "metrics",

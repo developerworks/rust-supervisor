@@ -2,17 +2,17 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "rust-supervisor-0.1.0",
+  "name": "rust-tokio-supervisor-0.1.0",
   "documentNamespace": "https://github.com/developerworks/rust-supervisor/sbom/0.1.0",
   "creationInfo": {
-    "created": "2026-05-05T09:09:25Z",
+    "created": "2026-05-05T11:12:56Z",
     "creators": [
       "Tool: scripts/generate-sbom.sh-0.1.0"
     ]
   },
   "packages": [
     {
-      "name": "rust-supervisor",
+      "name": "rust-tokio-supervisor",
       "SPDXID": "SPDXRef-Package-rust-supervisor",
       "versionInfo": "0.1.0",
       "downloadLocation": "https://github.com/developerworks/rust-supervisor",
@@ -21,13 +21,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:cargo/rust-supervisor@0.1.0"
+          "referenceLocator": "pkg:cargo/rust-tokio-supervisor@0.1.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "OTHER",
-          "checksumValue": "1112947306-36925"
+          "checksumValue": "1542142219-36931"
         }
       ]
     }
