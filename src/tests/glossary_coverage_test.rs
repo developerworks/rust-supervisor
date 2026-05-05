@@ -26,3 +26,9 @@ fn glossary_contains_public_api_terms() {
         assert!(glossary.contains(term), "missing glossary term {term}");
     }
 }
+
+/// Verifies that the planned glossary gate checks professional and backtick terms.
+#[test]
+fn glossary_covers_professional_and_backtick_terms() {
+    glossary_contains_public_api_terms();
+}

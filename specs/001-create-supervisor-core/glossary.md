@@ -278,6 +278,10 @@
 | `supervisor_event_lag_total` | 事件滞后总数指标 | 订阅者滞后或丢弃事件计数器. | 不得阻塞生命周期治理. |
 | `supervisor_config_version` | 监督器配置版本指标 | 当前配置版本指标. | 来源于 `ConfigState`. |
 | `examples/config/supervisor.yaml` | 示例配置文件 | quickstart(快速开始) 的 YAML(数据序列化格式) 配置路径. | 不得改成 TOML(配置格式) 主配置. |
+| `supervisor_tree_story` | 监督树故事示例 | 覆盖多子任务声明,树顺序和重启范围的 example(示例程序). | 用于学习复杂树声明. |
+| `runtime_control_story` | 运行时控制故事示例 | 覆盖运行中控制命令和事件订阅的 example(示例程序). | 用于学习操作员控制流. |
+| `policy_failure_matrix` | 策略失败矩阵示例 | 覆盖任务退出分类,重启策略和熔断跟踪的 example(示例程序). | 用于学习策略决策. |
+| `diagnostic_replay` | 诊断回放示例 | 覆盖事件日志,指标样本和运行摘要的 example(示例程序). | 用于学习诊断回放. |
 | `src/tests/*_test.rs` | 集成测试路径模式 | integration test(集成测试) 文件位置和后缀. | 所有集成测试必须匹配. |
 | `tests/*_test.rs` | 模块测试路径模式 | 模块自身 tests(测试) 目录中的单元测试文件模式. | 所有单元测试必须匹配. |
 | `_test.rs` | 测试文件后缀 | 所有测试文件必须使用的后缀. | 不得使用其它后缀. |

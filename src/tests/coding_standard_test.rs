@@ -5,6 +5,34 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Documentation files that must not use Chinese punctuation.
+const DOCUMENTATION_FILES: &[&str] = &[
+    "README.md",
+    "README.zh.md",
+    "manual/zh/index.md",
+    "manual/zh/getting-started.md",
+    "manual/zh/configuration.md",
+    "manual/zh/supervisor-tree.md",
+    "manual/zh/task-model.md",
+    "manual/zh/policies.md",
+    "manual/zh/runtime-control.md",
+    "manual/zh/shutdown.md",
+    "manual/zh/observability.md",
+    "manual/zh/examples.md",
+    "manual/zh/quality-gates.md",
+    "manual/en/index.md",
+    "manual/en/getting-started.md",
+    "manual/en/configuration.md",
+    "manual/en/supervisor-tree.md",
+    "manual/en/task-model.md",
+    "manual/en/policies.md",
+    "manual/en/runtime-control.md",
+    "manual/en/shutdown.md",
+    "manual/en/observability.md",
+    "manual/en/examples.md",
+    "manual/en/quality-gates.md",
+];
+
 /// Verifies that Rust source files start with module documentation.
 #[test]
 fn rust_source_files_have_module_documentation() {
@@ -35,6 +63,20 @@ fn rust_test_files_use_test_suffix() {
     }
 }
 
+/// Verifies that public documentation avoids Chinese punctuation.
+#[test]
+fn coding_standard_is_enforced() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    for relative in DOCUMENTATION_FILES {
+        let text = fs::read_to_string(root.join(relative)).expect("read documentation file");
+        assert!(
+            !contains_chinese_punctuation(&text),
+            "Chinese punctuation is not allowed in {relative}"
+        );
+    }
+}
+
 /// Collects Rust files under a directory.
 fn rust_files(root: PathBuf) -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -54,4 +96,10 @@ fn collect_rust_files(path: &Path, files: &mut Vec<PathBuf>) {
     for entry in fs::read_dir(path).expect("read directory") {
         collect_rust_files(&entry.expect("read entry").path(), files);
     }
+}
+
+/// Returns whether text contains disallowed Chinese punctuation.
+fn contains_chinese_punctuation(text: &str) -> bool {
+    text.chars()
+        .any(|character| "，。；：！？、（）【】《》“”‘’".contains(character))
 }

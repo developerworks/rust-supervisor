@@ -15,11 +15,17 @@ require_pair() {
     require_file "docs/en/$1"
 }
 
-example_count=$(find examples -maxdepth 1 -name '*.rs' -type f | wc -l | tr -d ' ')
-[ "$example_count" -ge 5 ] || fail "expected at least five Rust examples"
+require_manual_pair() {
+    require_file "manual/zh/$1"
+    require_file "manual/en/$1"
+}
 
-require_file manual/zh/index.md
-require_file manual/en/index.md
+example_count=$(find examples -maxdepth 1 -name '*.rs' -type f | wc -l | tr -d ' ')
+[ "$example_count" -ge 9 ] || fail "expected at least nine Rust examples"
+
+for page in index.md getting-started.md configuration.md supervisor-tree.md task-model.md policies.md runtime-control.md shutdown.md observability.md examples.md quality-gates.md; do
+    require_manual_pair "$page"
+done
 require_file docs/zh/index.md
 require_file docs/en/index.md
 require_pair quality-gates.md

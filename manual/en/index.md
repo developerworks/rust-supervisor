@@ -1,26 +1,24 @@
-# Manual(手册) 入口
+# rust-supervisor 手册
 
-## 目标
+## 项目定位
 
-本手册与 `manual/zh/index.md` 同构. 它面向需要接入 `rust-supervisor` 的维护者, 覆盖 supervisor(监督器) 树, child(子任务), restart policy(重启策略), current_state(当前状态), event journal(事件日志缓冲区), RunSummary(运行摘要) 和 four-stage shutdown(四阶段关闭).
+`rust-supervisor` 是 Rust(编程语言) 任务监督核心库. 它面向 Tokio(异步运行时) 服务, 用声明式模型管理 child(子任务) 的启动, 停止, 重启, 隔离, 状态查询, 事件记录, 健康检查和 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
 
-## 配置
+本项目没有旧接口负担. 使用者应该通过拥有模块路径读取公开类型, 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
 
-主配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式). `ConfigState`(配置状态) 是所有运行时可调值的唯一入口, `SupervisorSpec`(监督器规格) 从同一个配置状态派生.
-Shutdown terminology uses Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
+## 阅读路径
 
-## 运行
+- [快速开始](getting-started.md): 从 YAML(数据序列化格式)配置启动最小 supervisor(监督器).
+- [配置模型](configuration.md): 理解 `SupervisorConfig`, `ConfigState` 和配置拒绝启动边界.
+- [监督树](supervisor-tree.md): 理解 `SupervisorSpec`, `SupervisorTree` 和注册表关系.
+- [任务模型](task-model.md): 理解 `ChildSpec`, `TaskFactory`, `TaskContext` 和 readiness(就绪).
+- [策略模型](policies.md): 理解重启, 退避, 熔断, 隔离和任务退出分类.
+- [运行时控制](runtime-control.md): 理解 `SupervisorHandle` 的控制命令和幂等语义.
+- [关闭协议](shutdown.md): 理解四阶段关闭和 blocking worker(阻塞工作任务)边界.
+- [可观测性](observability.md): 理解事件, 日志, 追踪, 指标, 审计和运行摘要.
+- [示例程序](examples.md): 逐个运行 `examples/` 下的学习示例.
+- [质量门禁](quality-gates.md): 运行格式化, 编译, 测试, 文档, SBOM(软件物料清单)和发布检查.
 
-```bash
-cargo run --example supervisor_quickstart
-```
+## 能力边界
 
-该示例展示 load config(加载配置), build spec(构建规格), start supervisor(启动监督器), query current_state(查询当前状态) 和 shutdown tree(关闭整棵树).
-
-## 关闭
-
-shutdown(关闭) 过程包含 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账). 关闭顺序必须是声明顺序的逆序.
-
-## 观测
-
-observability(可观测性) 管线必须把同一个 lifecycle fact(生命周期事实) 投递到 SupervisorEvent(监督器事件), structured log(结构化日志), tracing(结构化追踪), metrics(指标), audit event(审计事件) 和 event journal(事件日志缓冲区).
+supervisor core(监督器核心) 只管理 lifecycle governance(生命周期治理). 高频业务消息属于 data plane(数据面), 不应该每条都经过 supervisor(监督器). control plane(控制面) 只处理生命周期命令, 当前状态, 事件和治理决策.

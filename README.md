@@ -49,7 +49,16 @@ cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
 cargo run --example shutdown_tree
 cargo run --example observability_probe
+cargo run --example supervisor_tree_story
+cargo run --example runtime_control_story
+cargo run --example policy_failure_matrix
+cargo run --example diagnostic_replay
 ```
+
+## 手册
+
+- `manual/zh/index.md`: 中文手册入口, 覆盖配置, 监督树, 任务模型, 策略, 运行时控制, 关闭, 可观测性, 示例和质量门禁.
+- `manual/en/index.md`: 同构手册入口, 与中文手册保持相同页面结构.
 
 ## 质量门禁
 
