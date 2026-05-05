@@ -1,0 +1,42 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000001",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-05-05T07:42:15Z",
+    "tools": [
+      {
+        "vendor": "rust-supervisor",
+        "name": "scripts/generate-sbom.sh",
+        "version": "0.1.0"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "name": "rust-supervisor",
+      "version": "0.1.0",
+      "purl": "pkg:cargo/rust-supervisor@0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/developerworks/rust-supervisor"
+        }
+      ]
+    }
+  },
+  "components": [],
+  "properties": [
+    {
+      "name": "cargo.lock.cksum",
+      "value": "1112947306-36925"
+    }
+  ]
+}

@@ -2,10 +2,213 @@
 name = "rust-supervisor"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
+description = "A Rust supervisor core with declarative task supervision, restart policy, shutdown coordination, and observability."
+license = "MIT"
 repository = "https://github.com/developerworks/rust-supervisor"
+documentation = "https://docs.rs/rust-supervisor"
+readme = "README.md"
+keywords = ["supervisor", "tokio", "lifecycle", "observability", "runtime"]
+categories = ["asynchronous", "concurrency", "config"]
+include = [
+    "/src/**",
+    "/examples/**",
+    "/manual/**",
+    "/docs/**",
+    "/artifacts/sbom/**",
+    "/artifacts/validation/**",
+    "/README.md",
+    "/README.zh.md",
+    "/ASSUMPTIONS.md",
+    "/FINAL_REPORT.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+    "/Cargo.toml",
+    "/Cargo.lock",
+]
+
+[lib]
+name = "rust_supervisor"
+path = "src/lib.rs"
 
 [dependencies]
-rust-config-tree = "0.1.7"
+metrics = "0.24"
+rand = "0.10"
+rust-config-tree = "0.1.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+thiserror = "2"
 tokio = { version = "1.52.1", features = ["full"] }
+tokio-util = "0.7"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[[test]]
+name = "source_layout_test"
+path = "src/tests/source_layout_test.rs"
+
+[[test]]
+name = "module_boundary_test"
+path = "src/tests/module_boundary_test.rs"
+
+[[test]]
+name = "import_rule_test"
+path = "src/tests/import_rule_test.rs"
+
+[[test]]
+name = "naming_contract_test"
+path = "src/tests/naming_contract_test.rs"
+
+[[test]]
+name = "module_dependency_test"
+path = "src/tests/module_dependency_test.rs"
+
+[[test]]
+name = "config_boundary_test"
+path = "src/tests/config_boundary_test.rs"
+
+[[test]]
+name = "glossary_coverage_test"
+path = "src/tests/glossary_coverage_test.rs"
+
+[[test]]
+name = "foundational_gate_test"
+path = "src/tests/foundational_gate_test.rs"
+
+[[test]]
+name = "supervisor_start_test"
+path = "src/tests/supervisor_start_test.rs"
+
+[[test]]
+name = "supervisor_tree_test"
+path = "src/tests/supervisor_tree_test.rs"
+
+[[test]]
+name = "supervisor_policy_test"
+path = "src/tests/supervisor_policy_test.rs"
+
+[[test]]
+name = "supervisor_control_test"
+path = "src/tests/supervisor_control_test.rs"
+
+[[test]]
+name = "supervisor_shutdown_test"
+path = "src/tests/supervisor_shutdown_test.rs"
+
+[[test]]
+name = "supervisor_event_shape_test"
+path = "src/tests/supervisor_event_shape_test.rs"
+
+[[test]]
+name = "observability_smoke_test"
+path = "src/tests/observability_smoke_test.rs"
+
+[[test]]
+name = "supervisor_config_test"
+path = "src/tests/supervisor_config_test.rs"
+
+[[test]]
+name = "supervisor_examples_test"
+path = "src/tests/supervisor_examples_test.rs"
+
+[[test]]
+name = "supervisor_docs_sync_test"
+path = "src/tests/supervisor_docs_sync_test.rs"
+
+[[test]]
+name = "bilingual_docs_test"
+path = "src/tests/bilingual_docs_test.rs"
+
+[[test]]
+name = "coding_standard_test"
+path = "src/tests/coding_standard_test.rs"
+
+[[test]]
+name = "complexity_test"
+path = "src/tests/complexity_test.rs"
+
+[[test]]
+name = "maintainability_test"
+path = "src/tests/maintainability_test.rs"
+
+[[test]]
+name = "release_readiness_test"
+path = "src/tests/release_readiness_test.rs"
+
+[[test]]
+name = "sbom_test"
+path = "src/tests/sbom_test.rs"
+
+[[test]]
+name = "parallel_governance_test"
+path = "src/tests/parallel_governance_test.rs"
+
+[[test]]
+name = "spec_test"
+path = "src/spec/tests/spec_test.rs"
+
+[[test]]
+name = "task_test"
+path = "src/task/tests/task_test.rs"
+
+[[test]]
+name = "readiness_test"
+path = "src/readiness/tests/readiness_test.rs"
+
+[[test]]
+name = "tree_test"
+path = "src/tree/tests/tree_test.rs"
+
+[[test]]
+name = "registry_test"
+path = "src/registry/tests/registry_test.rs"
+
+[[test]]
+name = "policy_test"
+path = "src/policy/tests/policy_test.rs"
+
+[[test]]
+name = "backoff_test"
+path = "src/policy/tests/backoff_test.rs"
+
+[[test]]
+name = "meltdown_test"
+path = "src/policy/tests/meltdown_test.rs"
+
+[[test]]
+name = "task_exit_test"
+path = "src/child_runner/tests/task_exit_test.rs"
+
+[[test]]
+name = "control_test"
+path = "src/control/tests/control_test.rs"
+
+[[test]]
+name = "health_test"
+path = "src/health/tests/health_test.rs"
+
+[[test]]
+name = "shutdown_test"
+path = "src/shutdown/tests/shutdown_test.rs"
+
+[[test]]
+name = "blocking_task_test"
+path = "src/task/tests/blocking_task_test.rs"
+
+[[test]]
+name = "observe_test"
+path = "src/observe/tests/observe_test.rs"
+
+[[test]]
+name = "journal_test"
+path = "src/journal/tests/journal_test.rs"
+
+[[test]]
+name = "summary_test"
+path = "src/summary/tests/summary_test.rs"
+
+[[test]]
+name = "yaml_config_test"
+path = "src/config/tests/yaml_config_test.rs"
