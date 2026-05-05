@@ -24,10 +24,14 @@ check_no_compatibility_language() {
 
 require_file README.md
 require_file README.zh.md
+require_file .github/dependabot.yml
+require_file .github/workflows/pages.yml
 require_file ASSUMPTIONS.md
 require_file FINAL_REPORT.md
 require_file CHANGELOG.md
 require_file LICENSE
+require_file book.toml
+require_file manual/theme/left-aligned.css
 require_file examples/config/supervisor.yaml
 require_file examples/supervisor_quickstart.rs
 require_file examples/config_tree_supervisor.rs
@@ -38,8 +42,13 @@ require_file examples/supervisor_tree_story.rs
 require_file examples/runtime_control_story.rs
 require_file examples/policy_failure_matrix.rs
 require_file examples/diagnostic_replay.rs
+require_file scripts/publish-pages.sh
 require_file manual/zh/index.md
 require_file manual/en/index.md
+require_file manual/zh/book.toml
+require_file manual/en/book.toml
+require_file manual/zh/SUMMARY.md
+require_file manual/en/SUMMARY.md
 require_file manual/zh/getting-started.md
 require_file manual/en/getting-started.md
 require_file manual/zh/configuration.md
