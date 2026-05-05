@@ -3,11 +3,13 @@
 //! This module validates supervisor declarations, derives runtime options, and
 //! returns a [`crate::control::handle::SupervisorHandle`].
 
+use crate::config::state::ConfigState;
 use crate::control::handle::SupervisorHandle;
 use crate::error::types::SupervisorError;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
 use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
+use std::path::Path;
 use tokio::sync::{broadcast, mpsc};
 
 /// Supervisor runtime entry point.
@@ -27,6 +29,40 @@ impl Supervisor {
     pub async fn start(spec: SupervisorSpec) -> Result<SupervisorHandle, SupervisorError> {
         let shutdown_policy = shutdown_policy_from_spec(&spec);
         Self::start_with_policy(spec, shutdown_policy).await
+    }
+
+    /// Starts a supervisor runtime from validated configuration state.
+    ///
+    /// # Arguments
+    ///
+    /// - `state`: Validated configuration state owned by the caller.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] only after configuration has produced a
+    /// valid supervisor specification.
+    pub async fn start_from_config_state(
+        state: ConfigState,
+    ) -> Result<SupervisorHandle, SupervisorError> {
+        let spec = state.to_supervisor_spec()?;
+        Self::start(spec).await
+    }
+
+    /// Starts a supervisor runtime from a YAML configuration file.
+    ///
+    /// # Arguments
+    ///
+    /// - `path`: Path to the YAML configuration file.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] only after the configuration file has
+    /// loaded and validated successfully.
+    pub async fn start_from_config_file(
+        path: impl AsRef<Path>,
+    ) -> Result<SupervisorHandle, SupervisorError> {
+        let state = crate::config::loader::load_config_state(path)?;
+        Self::start_from_config_state(state).await
     }
 
     /// Starts a supervisor runtime with an explicit shutdown policy.

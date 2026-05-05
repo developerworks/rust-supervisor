@@ -32,9 +32,11 @@ name = "rust_supervisor"
 path = "src/lib.rs"
 
 [dependencies]
+confique = { version = "0.4.0", features = ["yaml"] }
 metrics = "0.24"
 rand = "0.10"
 rust-config-tree = "0.1.9"
+schemars = { version = "1", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
@@ -216,3 +218,23 @@ path = "src/summary/tests/summary_test.rs"
 [[test]]
 name = "yaml_config_test"
 path = "src/config/tests/yaml_config_test.rs"
+
+[[test]]
+name = "configurable_schema_test"
+path = "src/config/tests/configurable_schema_test.rs"
+
+[[test]]
+name = "configurable_confique_test"
+path = "src/config/tests/configurable_confique_test.rs"
+
+[[test]]
+name = "configurable_template_test"
+path = "src/config/tests/configurable_template_test.rs"
+
+[[test]]
+name = "no_baked_in_tree_split_test"
+path = "src/config/tests/no_baked_in_tree_split_test.rs"
+
+[[test]]
+name = "invalid_config_rejected_test"
+path = "src/config/tests/invalid_config_rejected_test.rs"

@@ -14,11 +14,23 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Produce `RestartDecision` values from typed failures, backoff, jitter, fuse rules, and the policy engine.
 - Control a running tree through `SupervisorHandle` operations such as `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state`, and `subscribe_events`.
 - Load the primary YAML configuration from `examples/config/supervisor.yaml`.
+- Reuse `rust_supervisor::config::configurable::SupervisorConfig` for YAML loading, template generation, and JSON Schema generation.
 - Emit structured logs, tracing spans, metrics, audit events, event journal entries, and `RunSummary` diagnostics.
 
 ## No Compatibility
 
 No Compatibility: this crate is a new project with no legacy API aliases. Consumers should import public types from their owning module paths, for example `rust_supervisor::runtime::supervisor::Supervisor`.
+
+## Configuration Schema
+
+`SupervisorConfig` is the public root configuration struct. It supports `confique::Config`, `schemars::JsonSchema`, `serde::Serialize`, and `serde::Deserialize`, so users can reuse one model for YAML loading, template generation, and schema generation.
+
+The official YAML files stay single-file by default:
+
+- `examples/config/supervisor.yaml`: complete runnable configuration.
+- `examples/config/supervisor.template.yaml`: complete single-file template.
+
+This crate does not bake in `x-tree-split`. Projects that want split configuration files can wrap or reuse `SupervisorConfig` in their own crate and decide their own tree split layout.
 
 ## Quick Start
 
@@ -34,9 +46,7 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 
 #[tokio::main]
 async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
-    let state = load_config_state("examples/config/supervisor.yaml")?;
-    let spec = state.to_supervisor_spec()?;
-    let handle = Supervisor::start(spec).await?;
+    let handle = Supervisor::start_from_config_file("examples/config/supervisor.yaml").await?;
     let current = handle.current_state().await?;
     println!("{current:#?}");
     handle.shutdown_tree("operator", "quickstart complete").await?;

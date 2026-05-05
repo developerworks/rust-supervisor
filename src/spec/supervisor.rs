@@ -6,12 +6,13 @@
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::Duration;
 
 /// Strategy used when a child exits and a restart scope is needed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SupervisionStrategy {
     /// Restart only the failed child.
     OneForOne,

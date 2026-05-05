@@ -61,7 +61,11 @@ src/
 │   ├── state.rs
 │   ├── yaml.rs
 │   └── tests/
+│       ├── configurable_confique_test.rs
 │       ├── configurable_schema_test.rs
+│       ├── configurable_template_test.rs
+│       ├── invalid_config_rejected_test.rs
+│       ├── no_baked_in_tree_split_test.rs
 │       └── yaml_config_test.rs
 ├── runtime/
 │   └── supervisor.rs

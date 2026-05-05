@@ -1,23 +1,13 @@
 //! Immutable configuration state for supervisor runtime values.
 //!
-//! All runtime tunable values enter the system through this module after YAML
-//! loading and validation.
+//! Raw YAML input belongs to [`crate::config::configurable`]. This module owns
+//! semantic validation and conversion into supervisor runtime declarations.
 
+use crate::config::configurable::{
+    ObservabilityConfig, PolicyConfig, ShutdownConfig, SupervisorConfig, SupervisorRootConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-
-/// Configuration file shape loaded from YAML.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SupervisorConfig {
-    /// Root supervisor declaration values.
-    pub supervisor: SupervisorRootConfig,
-    /// Runtime policy values.
-    pub policy: PolicyConfig,
-    /// Shutdown budget values.
-    pub shutdown: ShutdownConfig,
-    /// Observability switches and capacities.
-    pub observability: ObservabilityConfig,
-}
 
 /// Immutable validated configuration state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,56 +20,6 @@ pub struct ConfigState {
     pub shutdown: ShutdownConfig,
     /// Observability switches and capacities.
     pub observability: ObservabilityConfig,
-}
-
-/// Root supervisor configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SupervisorRootConfig {
-    /// Restart scope strategy for child failures.
-    pub strategy: crate::spec::supervisor::SupervisionStrategy,
-}
-
-/// Restart, backoff, and fuse configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PolicyConfig {
-    /// Maximum child restarts within the child restart window.
-    pub child_restart_limit: u32,
-    /// Child restart window in milliseconds.
-    pub child_restart_window_ms: u64,
-    /// Maximum supervisor failures within the supervisor failure window.
-    pub supervisor_failure_limit: u32,
-    /// Supervisor failure window in milliseconds.
-    pub supervisor_failure_window_ms: u64,
-    /// Initial backoff in milliseconds.
-    pub initial_backoff_ms: u64,
-    /// Maximum backoff in milliseconds.
-    pub max_backoff_ms: u64,
-    /// Jitter ratio expressed as a fraction between zero and one.
-    pub jitter_ratio: f64,
-    /// Heartbeat interval in milliseconds.
-    pub heartbeat_interval_ms: u64,
-    /// Stale heartbeat threshold in milliseconds.
-    pub stale_after_ms: u64,
-}
-
-/// Shutdown coordination configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ShutdownConfig {
-    /// Graceful drain timeout in milliseconds.
-    pub graceful_timeout_ms: u64,
-    /// Abort wait timeout in milliseconds.
-    pub abort_wait_ms: u64,
-}
-
-/// Observability configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ObservabilityConfig {
-    /// Event journal capacity.
-    pub event_journal_capacity: usize,
-    /// Whether metrics recording is enabled.
-    pub metrics_enabled: bool,
-    /// Whether command audit recording is enabled.
-    pub audit_enabled: bool,
 }
 
 impl TryFrom<SupervisorConfig> for ConfigState {
@@ -197,25 +137,31 @@ impl ConfigState {
 ///
 /// Returns `Ok(())` when policy values are usable.
 fn validate_policy(policy: &PolicyConfig) -> Result<(), crate::error::types::SupervisorError> {
-    validate_positive(policy.child_restart_limit, "child_restart_limit")?;
-    validate_positive(policy.supervisor_failure_limit, "supervisor_failure_limit")?;
-    validate_positive(policy.child_restart_window_ms, "child_restart_window_ms")?;
+    validate_positive(policy.child_restart_limit, "policy.child_restart_limit")?;
+    validate_positive(
+        policy.supervisor_failure_limit,
+        "policy.supervisor_failure_limit",
+    )?;
+    validate_positive(
+        policy.child_restart_window_ms,
+        "policy.child_restart_window_ms",
+    )?;
     validate_positive(
         policy.supervisor_failure_window_ms,
-        "supervisor_failure_window_ms",
+        "policy.supervisor_failure_window_ms",
     )?;
-    validate_positive(policy.initial_backoff_ms, "initial_backoff_ms")?;
-    validate_positive(policy.max_backoff_ms, "max_backoff_ms")?;
-    validate_positive(policy.heartbeat_interval_ms, "heartbeat_interval_ms")?;
-    validate_positive(policy.stale_after_ms, "stale_after_ms")?;
+    validate_positive(policy.initial_backoff_ms, "policy.initial_backoff_ms")?;
+    validate_positive(policy.max_backoff_ms, "policy.max_backoff_ms")?;
+    validate_positive(policy.heartbeat_interval_ms, "policy.heartbeat_interval_ms")?;
+    validate_positive(policy.stale_after_ms, "policy.stale_after_ms")?;
     if policy.initial_backoff_ms > policy.max_backoff_ms {
         return Err(crate::error::types::SupervisorError::fatal_config(
-            "initial_backoff_ms must be less than or equal to max_backoff_ms",
+            "policy.initial_backoff_ms must be less than or equal to policy.max_backoff_ms",
         ));
     }
     if !(0.0..=1.0).contains(&policy.jitter_ratio) {
         return Err(crate::error::types::SupervisorError::fatal_config(
-            "jitter_ratio must be between 0 and 1",
+            "policy.jitter_ratio must be between 0 and 1",
         ));
     }
     Ok(())
@@ -233,8 +179,8 @@ fn validate_policy(policy: &PolicyConfig) -> Result<(), crate::error::types::Sup
 fn validate_shutdown(
     shutdown: &ShutdownConfig,
 ) -> Result<(), crate::error::types::SupervisorError> {
-    validate_positive(shutdown.graceful_timeout_ms, "graceful_timeout_ms")?;
-    validate_positive(shutdown.abort_wait_ms, "abort_wait_ms")
+    validate_positive(shutdown.graceful_timeout_ms, "shutdown.graceful_timeout_ms")?;
+    validate_positive(shutdown.abort_wait_ms, "shutdown.abort_wait_ms")
 }
 
 /// Validates observability configuration invariants.
@@ -251,7 +197,7 @@ fn validate_observability(
 ) -> Result<(), crate::error::types::SupervisorError> {
     validate_positive(
         observability.event_journal_capacity as u64,
-        "event_journal_capacity",
+        "observability.event_journal_capacity",
     )
 }
 

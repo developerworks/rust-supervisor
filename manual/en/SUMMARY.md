@@ -2,7 +2,7 @@
 
 - [Home](index.md)
 - [Getting Started](getting-started.md)
-- [Configuration](configuration.md)
+- [Configuration and Schema](configuration.md)
 - [Supervisor Tree](supervisor-tree.md)
 - [Task Model](task-model.md)
 - [Policies](policies.md)

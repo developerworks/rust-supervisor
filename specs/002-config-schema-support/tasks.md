@@ -20,8 +20,8 @@
 
 **Purpose(目的)**: 准备依赖和测试入口,让后续测试任务可以编译并运行。
 
-- [ ] T001 在 `Cargo.toml` 和 `Cargo.lock` 中加入直接依赖 `confique = { version = "0.4.0", features = ["yaml"] }` 和 `schemars = { version = "1", features = ["derive"] }`。
-- [ ] T002 在 `Cargo.toml` 中注册 `src/config/tests/configurable_schema_test.rs`,`src/config/tests/configurable_confique_test.rs`,`src/config/tests/configurable_template_test.rs`,`src/config/tests/no_baked_in_tree_split_test.rs` 和 `src/config/tests/invalid_config_rejected_test.rs`。
+- [X] T001 在 `Cargo.toml` 和 `Cargo.lock` 中加入直接依赖 `confique = { version = "0.4.0", features = ["yaml"] }` 和 `schemars = { version = "1", features = ["derive"] }`。
+- [X] T002 在 `Cargo.toml` 中注册 `src/config/tests/configurable_schema_test.rs`,`src/config/tests/configurable_confique_test.rs`,`src/config/tests/configurable_template_test.rs`,`src/config/tests/no_baked_in_tree_split_test.rs` 和 `src/config/tests/invalid_config_rejected_test.rs`。
 
 ---
 
@@ -31,9 +31,9 @@
 
 **Critical(关键要求)**: 本阶段完成前,任何用户故事实现不能开始。
 
-- [ ] T003 在 `src/config/configurable.rs` 中创建 configurable boundary(可配置边界) 模块骨架,并写入英文 module rustdoc(模块代码文档)。
-- [ ] T004 在 `src/config/mod.rs` 中声明 `pub mod configurable;`,`pub mod loader;`,`pub mod state;`,`pub mod yaml;`,并删除任何重新导出。
-- [ ] T005 在 `src/config/state.rs` 中保留 `ConfigState`(配置状态),`TryFrom<SupervisorConfig>`(转换),validation(校验) 和 `to_supervisor_spec`(派生监督器规格) 的所有权说明。
+- [X] T003 在 `src/config/configurable.rs` 中创建 configurable boundary(可配置边界) 模块骨架,并写入英文 module rustdoc(模块代码文档)。
+- [X] T004 在 `src/config/mod.rs` 中声明 `pub mod configurable;`,`pub mod loader;`,`pub mod state;`,`pub mod yaml;`,并删除任何重新导出。
+- [X] T005 在 `src/config/state.rs` 中保留 `ConfigState`(配置状态),`TryFrom<SupervisorConfig>`(转换),validation(校验) 和 `to_supervisor_spec`(派生监督器规格) 的所有权说明。
 
 **Checkpoint(检查点)**: raw configuration input(原始配置输入) 和 validated config state(已校验配置状态) 的模块边界已经清楚,用户故事实现可以开始。
 
@@ -47,18 +47,18 @@
 
 ### Tests for User Story 1(用户故事一的测试)
 
-- [ ] T006 [P] [US1] 在 `src/config/tests/configurable_schema_test.rs` 中添加 `schemars::schema_for!(SupervisorConfig)` 覆盖 `supervisor`,`policy`,`shutdown`,`observability` 的测试。
-- [ ] T007 [P] [US1] 在 `src/config/tests/configurable_confique_test.rs` 中添加 `SupervisorConfig: confique::Config` 和 nested configuration struct(嵌套配置结构体) trait bound(特征约束) 测试。
-- [ ] T008 [P] [US1] 在 `src/config/tests/yaml_config_test.rs` 中添加从 `SupervisorConfig`(监督器配置) 到 `ConfigState`(配置状态) 再到 `SupervisorSpec`(监督器规格) 的回归测试。
+- [X] T006 [P] [US1] 在 `src/config/tests/configurable_schema_test.rs` 中添加 `schemars::schema_for!(SupervisorConfig)` 覆盖所有公开可配置字段的测试。
+- [X] T007 [P] [US1] 在 `src/config/tests/configurable_confique_test.rs` 中添加 `SupervisorConfig: confique::Config` 和 nested configuration struct(嵌套配置结构体) trait bound(特征约束) 测试。
+- [X] T008 [P] [US1] 在 `src/config/tests/yaml_config_test.rs` 中添加从 `SupervisorConfig`(监督器配置) 到 `ConfigState`(配置状态) 再到 `SupervisorSpec`(监督器规格) 的回归测试。
 
 ### Implementation for User Story 1(用户故事一的实现)
 
-- [ ] T009 [US1] 在 `src/config/configurable.rs` 中集中定义 `SupervisorConfig`,`SupervisorRootConfig`,`PolicyConfig`,`ShutdownConfig`,`ObservabilityConfig`,并统一派生 `Debug`,`Clone`,`PartialEq`,`Serialize`,`Deserialize`,`confique::Config`,`schemars::JsonSchema`。
-- [ ] T010 [US1] 在 `src/config/state.rs` 中移除 raw configuration input(原始配置输入) 结构体定义,并改为使用 `crate::config::configurable::SupervisorConfig` 和相关嵌套结构体。
-- [ ] T011 [P] [US1] 在 `src/config/loader.rs` 中改用 `crate::config::configurable::SupervisorConfig` 作为 YAML(数据序列化格式) 输入模型。
-- [ ] T012 [P] [US1] 在 `src/config/yaml.rs` 中改用 `crate::config::configurable::SupervisorConfig` 作为 YAML(数据序列化格式) 输入模型。
-- [ ] T013 [US1] 在 `src/spec/supervisor.rs` 中让 `SupervisionStrategy`(监督策略) 支持 `schemars::JsonSchema`,并保持 `Serialize`(序列化) 和 `Deserialize`(反序列化)。
-- [ ] T014 [US1] 在 `src/config/configurable.rs`,`src/config/state.rs`,`src/config/loader.rs`,`src/config/yaml.rs` 中补齐英文 rustdoc(代码文档),并保证导入全部使用绝对路径。
+- [X] T009 [US1] 在 `src/config/configurable.rs` 中集中定义 `SupervisorConfig`,`SupervisorRootConfig`,`PolicyConfig`,`ShutdownConfig`,`ObservabilityConfig`,并统一派生 `Debug`,`Clone`,`PartialEq`,`Serialize`,`Deserialize`,`confique::Config`,`schemars::JsonSchema`。
+- [X] T010 [US1] 在 `src/config/state.rs` 中移除 raw configuration input(原始配置输入) 结构体定义,并改为使用 `crate::config::configurable::SupervisorConfig` 和相关嵌套结构体。
+- [X] T011 [P] [US1] 在 `src/config/loader.rs` 中改用 `crate::config::configurable::SupervisorConfig` 作为 YAML(数据序列化格式) 输入模型。
+- [X] T012 [P] [US1] 在 `src/config/yaml.rs` 中改用 `crate::config::configurable::SupervisorConfig` 作为 YAML(数据序列化格式) 输入模型。
+- [X] T013 [US1] 在 `src/spec/supervisor.rs` 中让 `SupervisionStrategy`(监督策略) 支持 `schemars::JsonSchema`,并保持 `Serialize`(序列化) 和 `Deserialize`(反序列化)。
+- [X] T014 [US1] 在 `src/config/configurable.rs`,`src/config/state.rs`,`src/config/loader.rs`,`src/config/yaml.rs` 中补齐英文 rustdoc(代码文档),并保证导入全部使用绝对路径。
 
 **Checkpoint(检查点)**: User Story 1(用户故事一) 已经可用,公开配置模型可以独立生成 schema(结构模式) 并进入已校验状态。
 
@@ -72,18 +72,18 @@
 
 ### Tests for User Story 2(用户故事二的测试)
 
-- [ ] T015 [P] [US2] 在 `src/config/tests/configurable_template_test.rs` 中添加 `rust_config_tree::template_targets_for_paths::<SupervisorConfig>` 默认只产生一个 root YAML template target(根 YAML 模板目标) 的测试。
-- [ ] T016 [P] [US2] 在 `src/config/tests/no_baked_in_tree_split_test.rs` 中添加官方 schema(结构模式),官方 template(模板) 和 `examples/config/supervisor.template.yaml` 不包含 `x-tree-split`(树形拆分扩展) 的测试。
+- [X] T015 [P] [US2] 在 `src/config/tests/configurable_template_test.rs` 中添加 `rust_config_tree::template_targets_for_paths::<SupervisorConfig>` 默认只产生一个 root YAML template target(根 YAML 模板目标) 的测试。
+- [X] T016 [P] [US2] 在 `src/config/tests/no_baked_in_tree_split_test.rs` 中添加官方 schema(结构模式),官方 template(模板),`examples/config/supervisor.template.yaml` 不包含 `x-tree-split`(树形拆分扩展),并且使用者 wrapper(包装结构体) 可以自行声明 `x-tree-split`(树形拆分扩展) 的测试。
 
 ### Implementation for User Story 2(用户故事二的实现)
 
-- [ ] T017 [US2] 在 `src/config/configurable.rs` 中为 `SupervisorConfig`(监督器配置) 提供 `rust-config-tree`(配置树库) template generation(模板生成) 所需的 schema metadata(结构模式元数据),并确保不内置 `x-tree-split`(树形拆分扩展)。
-- [ ] T018 [P] [US2] 在 `examples/config/supervisor.yaml` 中提供完整单文件 YAML(数据序列化格式) 示例配置。
-- [ ] T019 [P] [US2] 在 `examples/config/supervisor.template.yaml` 中提供完整单文件 YAML(数据序列化格式) 官方模板。
-- [ ] T020 [P] [US2] 在 `README.md` 中说明 schema-ready configuration model(可生成结构模式的配置模型),单文件 template(模板) 和使用者自主管理 `x-tree-split`(树形拆分扩展) 的边界。
-- [ ] T021 [P] [US2] 在 `README.zh.md` 中说明 schema-ready configuration model(可生成结构模式的配置模型),单文件 template(模板) 和使用者自主管理 `x-tree-split`(树形拆分扩展) 的边界。
-- [ ] T022 [P] [US2] 在 `manual/en/configuration.md` 和 `manual/en/SUMMARY.md` 中补齐英文手册的配置模板和 tree split decision(树形拆分决策) 边界。
-- [ ] T023 [P] [US2] 在 `manual/zh/configuration.md` 和 `manual/zh/SUMMARY.md` 中补齐中文手册的配置模板和 tree split decision(树形拆分决策) 边界。
+- [X] T017 [US2] 在 `src/config/configurable.rs` 中为 `SupervisorConfig`(监督器配置) 提供 `rust-config-tree`(配置树库) template generation(模板生成) 所需的 schema metadata(结构模式元数据),并确保不内置 `x-tree-split`(树形拆分扩展)。
+- [X] T018 [P] [US2] 在 `examples/config/supervisor.yaml` 中提供完整单文件 YAML(数据序列化格式) 示例配置。
+- [X] T019 [P] [US2] 在 `examples/config/supervisor.template.yaml` 中提供完整单文件 YAML(数据序列化格式) 官方模板。
+- [X] T020 [P] [US2] 在 `README.md` 中说明 schema-ready configuration model(可生成结构模式的配置模型),单文件 template(模板) 和使用者自主管理 `x-tree-split`(树形拆分扩展) 的边界。
+- [X] T021 [P] [US2] 在 `README.zh.md` 中说明 schema-ready configuration model(可生成结构模式的配置模型),单文件 template(模板) 和使用者自主管理 `x-tree-split`(树形拆分扩展) 的边界。
+- [X] T022 [P] [US2] 在 `manual/en/configuration.md` 和 `manual/en/SUMMARY.md` 中补齐英文手册的配置模板和 tree split decision(树形拆分决策) 边界。
+- [X] T023 [P] [US2] 在 `manual/zh/configuration.md` 和 `manual/zh/SUMMARY.md` 中补齐中文手册的配置模板和 tree split decision(树形拆分决策) 边界。
 
 **Checkpoint(检查点)**: User Story 2(用户故事二) 已经可用,官方配置模板保持单文件,并且没有强制使用者的拆分布局。
 
@@ -97,15 +97,15 @@
 
 ### Tests for User Story 3(用户故事三的测试)
 
-- [ ] T024 [P] [US3] 在 `src/config/tests/invalid_config_rejected_test.rs` 中添加缺失必填项,非法 enum value(枚举值),零值 capacity(容量),零值 timeout(超时),越界 `jitter_ratio`(抖动比例) 和反向 backoff(退避) 的 `FatalConfig`(致命配置错误) 测试。
-- [ ] T025 [P] [US3] 在 `src/tests/supervisor_config_test.rs` 中添加 `Supervisor::start_from_config_state` 和 `Supervisor::start_from_config_file` 不返回 `SupervisorHandle`(监督器句柄) 的启动拒绝测试。
+- [X] T024 [P] [US3] 在 `src/config/tests/invalid_config_rejected_test.rs` 中添加缺失必填项,非法 enum value(枚举值),零值 capacity(容量),零值 timeout(超时),越界 `jitter_ratio`(抖动比例) 和反向 backoff(退避) 的 `FatalConfig`(致命配置错误) 测试。
+- [X] T025 [P] [US3] 在 `src/tests/supervisor_config_test.rs` 中添加 `Supervisor::start_from_config_state` 和 `Supervisor::start_from_config_file` 不返回 `SupervisorHandle`(监督器句柄) 的启动拒绝测试。
 
 ### Implementation for User Story 3(用户故事三的实现)
 
-- [ ] T026 [US3] 在 `src/config/state.rs` 中增强 semantic validation(语义校验),确保正数约束,backoff(退避) 顺序,jitter ratio(抖动比例),shutdown budget(关闭预算) 和 capacity(容量) 的错误包含字段或 section(配置分区)。
-- [ ] T027 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_state`,并在创建 channel(通道) 前调用 `ConfigState::to_supervisor_spec`。
-- [ ] T028 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_file`,并复用 `crate::config::loader::load_config_state` 和 `Supervisor::start_from_config_state`。
-- [ ] T029 [US3] 在 `src/config/loader.rs` 和 `src/config/yaml.rs` 中统一 syntax validation(语法校验),structural validation(结构校验) 和 semantic validation(语义校验) 的 `FatalConfig`(致命配置错误) 消息格式。
+- [X] T026 [US3] 在 `src/config/state.rs` 中增强 semantic validation(语义校验),确保正数约束,backoff(退避) 顺序,jitter ratio(抖动比例),shutdown budget(关闭预算) 和 capacity(容量) 的错误包含字段或 section(配置分区)。
+- [X] T027 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_state`,并在创建 channel(通道) 前调用 `ConfigState::to_supervisor_spec`。
+- [X] T028 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_file`,并复用 `crate::config::loader::load_config_state` 和 `Supervisor::start_from_config_state`。
+- [X] T029 [US3] 在 `src/config/loader.rs` 和 `src/config/yaml.rs` 中统一 syntax validation(语法校验),structural validation(结构校验) 和 semantic validation(语义校验) 的 `FatalConfig`(致命配置错误) 消息格式。
 
 **Checkpoint(检查点)**: User Story 3(用户故事三) 已经可用,非法配置无法进入运行时启动阶段。
 
@@ -115,14 +115,14 @@
 
 **Purpose(目的)**: 同步文档,验证 crate(包) 发布约束和最终质量门。
 
-- [ ] T030 [P] 在 `src/tests/supervisor_docs_sync_test.rs` 中增加 README(说明文档),manual(手册),examples(示例程序) 和 `SupervisorConfig`(监督器配置) 字段一致性检查。
-- [ ] T031 [P] 在 `src/tests/release_readiness_test.rs` 中增加 `confique`(配置库),`schemars`(结构模式库),README(说明文档) 和 examples(示例程序) 的发布清单检查。
-- [ ] T032 [P] 在 `specs/002-config-schema-support/contracts/public-api.md` 中根据最终实现同步公开 API(接口) 契约。
-- [ ] T033 [P] 在 `specs/002-config-schema-support/quickstart.md` 中根据最终实现同步验证命令和示例代码。
-- [ ] T034 运行 `cargo fmt --all --check`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
-- [ ] T035 运行 `cargo test`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
-- [ ] T036 运行 `cargo clippy --all-targets --all-features -- -D warnings`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
-- [ ] T037 运行 `cargo package --allow-dirty`,并把 crate.io(crate 发布站点) 发布约束结果记录到 `artifacts/validation/002-config-schema-support.md`。
+- [X] T030 [P] 在 `src/tests/supervisor_docs_sync_test.rs` 中增加 README(说明文档),manual(手册),examples(示例程序) 和 `SupervisorConfig`(监督器配置) 字段一致性检查。
+- [X] T031 [P] 在 `src/tests/release_readiness_test.rs` 中增加 `confique`(配置库),`schemars`(结构模式库),README(说明文档) 和 examples(示例程序) 的发布清单检查。
+- [X] T032 [P] 在 `specs/002-config-schema-support/contracts/public-api.md` 中根据最终实现同步公开 API(接口) 契约。
+- [X] T033 [P] 在 `specs/002-config-schema-support/quickstart.md` 中根据最终实现同步验证命令和示例代码。
+- [X] T034 运行 `cargo fmt --all --check`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
+- [X] T035 运行 `cargo test`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
+- [X] T036 运行 `cargo clippy --all-targets --all-features -- -D warnings`,并把结果记录到 `artifacts/validation/002-config-schema-support.md`。
+- [X] T037 运行 `cargo package --allow-dirty`,并把 crate.io(crate 发布站点) 发布约束结果记录到 `artifacts/validation/002-config-schema-support.md`。
 
 ---
 

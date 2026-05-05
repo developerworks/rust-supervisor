@@ -27,3 +27,21 @@ fn release_metadata_and_files_are_present() {
         assert!(root.join(file).is_file(), "missing release file {file}");
     }
 }
+
+/// Verifies that configuration schema support is represented in release files.
+#[test]
+fn release_files_include_config_schema_support() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cargo = fs::read_to_string(root.join("Cargo.toml")).expect("read Cargo.toml");
+    let readme = fs::read_to_string(root.join("README.md")).expect("read README.md");
+
+    assert!(cargo.contains("confique = "));
+    assert!(cargo.contains("schemars = "));
+    assert!(root.join("examples/config/supervisor.yaml").is_file());
+    assert!(
+        root.join("examples/config/supervisor.template.yaml")
+            .is_file()
+    );
+    assert!(readme.contains("SupervisorConfig"));
+    assert!(readme.contains("x-tree-split"));
+}

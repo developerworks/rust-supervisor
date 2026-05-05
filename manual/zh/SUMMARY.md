@@ -2,7 +2,7 @@
 
 - [首页](index.md)
 - [快速开始](getting-started.md)
-- [配置](configuration.md)
+- [配置模型和结构模式](configuration.md)
 - [监督树](supervisor-tree.md)
 - [任务模型](task-model.md)
 - [策略](policies.md)

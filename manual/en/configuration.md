@@ -1,4 +1,4 @@
-# Configuration
+# Configuration and Schema
 
 ## Entry Point
 
@@ -8,9 +8,17 @@ The current configuration shape contains `supervisor`, `policy`, `shutdown`, and
 
 ## Configuration State
 
-`SupervisorConfig` is the deserialized file shape. `ConfigState` is the validated immutable state. Runtime modules must not keep separate runtime tunable constants.
+`rust_supervisor::config::configurable::SupervisorConfig` is the public root configuration struct. It supports `confique::Config`, `schemars::JsonSchema`, `serde::Serialize`, and `serde::Deserialize`. Users can reuse the same model for YAML loading, template generation, and JSON Schema generation.
+
+`ConfigState` is the validated immutable state. Runtime modules must not keep separate runtime tunable constants.
 
 `ConfigState::to_supervisor_spec` derives `SupervisorSpec`. The implementation fills the supervision strategy, policy defaults, shutdown budgets, health timing, and observability capacity from configuration values.
+
+## Template Boundary
+
+The official template is `examples/config/supervisor.template.yaml`. It remains a single YAML file by default and covers `supervisor`, `policy`, `shutdown`, and `observability`.
+
+This crate does not add `x-tree-split` to the public configuration structs, official schema, or official template. Projects that want split configuration files can wrap or reuse `SupervisorConfig` in their own crate and decide their own tree split layout.
 
 ## Error Boundary
 
@@ -23,6 +31,8 @@ Configuration loading returns `SupervisorError::FatalConfig` when startup must b
 - A required numeric value is zero.
 - The initial backoff is greater than the maximum backoff.
 - The jitter ratio is outside the accepted range.
+
+`Supervisor::start_from_config_file` rejects invalid configuration before it creates runtime channels or spawns the control loop.
 
 ## Example Configuration
 

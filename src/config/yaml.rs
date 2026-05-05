@@ -3,7 +3,8 @@
 //! The module exposes an explicit YAML parsing boundary for callers that already
 //! hold configuration text in memory.
 
-use crate::config::state::{ConfigState, SupervisorConfig};
+use crate::config::configurable::SupervisorConfig;
+use crate::config::state::ConfigState;
 use crate::error::types::SupervisorError;
 
 /// Parses a YAML string into validated configuration state.

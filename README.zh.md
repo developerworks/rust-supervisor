@@ -10,20 +10,29 @@
 - 不提供 compatibility wrapper(兼容包装函数), deprecated facade(废弃门面) 或 migration layer(迁移层).
 - `current_state`(当前状态) 只回答当前真实状态, 不承担 lifecycle event history(生命周期事件历史) 职责.
 - 配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式), 运行时可调常量不得散落到模块内部.
+- `SupervisorConfig`(监督器配置) 是公开 root configuration struct(根配置结构体), 它同时支持 `confique::Config`(配置派生), `schemars::JsonSchema`(结构模式生成特征), `Serialize`(序列化) 和 `Deserialize`(反序列化).
 - shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账).
 - 关闭术语统一使用 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
+
+## 配置结构模式
+
+`rust_supervisor::config::configurable::SupervisorConfig` 是 crate user(crate 使用者) 可以复用的配置入口. 它用于 YAML(数据序列化格式) 加载, template generation(模板生成) 和 schema generation(结构模式生成). 使用者不需要为 template(模板) 或 schema(结构模式) 维护第二套模型.
+
+官方配置文件保持单文件:
+
+- `examples/config/supervisor.yaml`: 完整可运行配置.
+- `examples/config/supervisor.template.yaml`: 完整单文件模板.
+
+本 crate(包) 不默认写入 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
 
 ## 最小使用方式
 
 ```rust
-use rust_supervisor::config::loader::load_config_state;
 use rust_supervisor::runtime::supervisor::Supervisor;
 
 #[tokio::main]
 async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
-    let state = load_config_state("examples/config/supervisor.yaml")?;
-    let spec = state.to_supervisor_spec()?;
-    let handle = Supervisor::start(spec).await?;
+    let handle = Supervisor::start_from_config_file("examples/config/supervisor.yaml").await?;
     let current = handle.current_state().await?;
     println!("{current:#?}");
     handle.shutdown_tree("operator", "quickstart complete").await?;

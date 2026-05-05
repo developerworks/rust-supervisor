@@ -3,7 +3,8 @@
 //! This module keeps parsing and validation centralized so runtime modules never
 //! invent local defaults.
 
-use crate::config::state::{ConfigState, SupervisorConfig};
+use crate::config::configurable::SupervisorConfig;
+use crate::config::state::ConfigState;
 use crate::error::types::SupervisorError;
 use std::fs;
 use std::path::Path;

@@ -1,0 +1,19 @@
+supervisor:
+  strategy: OneForAll
+policy:
+  child_restart_limit: 10
+  child_restart_window_ms: 60000
+  supervisor_failure_limit: 30
+  supervisor_failure_window_ms: 60000
+  initial_backoff_ms: 100
+  max_backoff_ms: 5000
+  jitter_ratio: 0.10
+  heartbeat_interval_ms: 1000
+  stale_after_ms: 3000
+shutdown:
+  graceful_timeout_ms: 5000
+  abort_wait_ms: 1000
+observability:
+  event_journal_capacity: 256
+  metrics_enabled: true
+  audit_enabled: true

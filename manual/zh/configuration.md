@@ -1,16 +1,24 @@
-# 配置模型
+# 配置模型和结构模式
 
 ## 配置入口
 
 配置入口是 `rust_supervisor::config::loader::load_config_state`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.
 
-当前配置形状包含四组数据: `supervisor`, `policy`, `shutdown` 和 `observability`. 它们分别进入 `SupervisorRootConfig`, `PolicyConfig`, `ShutdownConfig` 和 `ObservabilityConfig`.
+当前配置形状包含四组数据: `supervisor`, `policy`, `shutdown` 和 `observability`. 它们分别进入 `SupervisorRootConfig`(监督器根配置), `PolicyConfig`(策略配置), `ShutdownConfig`(关闭配置) 和 `ObservabilityConfig`(可观测性配置).
 
 ## 配置状态
 
-`SupervisorConfig`(监督器配置) 是文件反序列化后的形状. `ConfigState`(配置状态) 是校验后的不可变状态. 运行时不应该在其它模块里保存运行时可调常量.
+`rust_supervisor::config::configurable::SupervisorConfig` 是公开 root configuration struct(根配置结构体). 它支持 `confique::Config`(配置派生), `schemars::JsonSchema`(结构模式生成特征), `Serialize`(序列化) 和 `Deserialize`(反序列化). 使用者可以用同一个模型完成 YAML(数据序列化格式) 加载, template generation(模板生成) 和 schema generation(结构模式生成).
+
+`ConfigState`(配置状态) 是校验后的不可变状态. 运行时不应该在其它模块里保存运行时可调常量.
 
 `ConfigState::to_supervisor_spec` 会派生 `SupervisorSpec`(监督器规格). 当前实现用配置值填充 supervision strategy(监督策略),策略默认值,关闭预算,健康检查时间和可观测性容量.
+
+## 模板边界
+
+官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它默认保持单个 YAML(数据序列化格式) 文件, 并覆盖 `supervisor`, `policy`, `shutdown` 和 `observability`.
+
+本 crate(包) 不会在公开配置结构体, 官方 schema(结构模式) 或官方 template(模板) 中添加 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
 
 ## 错误边界
 
@@ -23,6 +31,8 @@
 - 数值为零.
 - 初始退避大于最大退避.
 - jitter(抖动)比例不在零到一之间.
+
+`Supervisor::start_from_config_file` 会在创建 runtime channel(运行时通道) 或派生 control loop(控制循环) 之前拒绝非法配置.
 
 ## 示例配置
 

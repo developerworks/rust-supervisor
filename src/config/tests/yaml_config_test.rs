@@ -1,5 +1,7 @@
 //! Tests for YAML configuration loading and validation.
 
+use rust_supervisor::config::configurable::SupervisorConfig;
+use rust_supervisor::config::state::ConfigState;
 use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::spec::supervisor::SupervisionStrategy;
 
@@ -40,6 +42,18 @@ fn yaml_config_loads_required_runtime_tunables() {
     assert_eq!(state.policy.supervisor_failure_limit, 30);
     assert_eq!(state.shutdown.graceful_timeout_ms, 1000);
     assert_eq!(state.observability.event_journal_capacity, 64);
+}
+
+/// Verifies that raw configuration input converts into validated state.
+#[test]
+fn supervisor_config_converts_into_config_state_and_spec() {
+    let config: SupervisorConfig = serde_yaml::from_str(valid_yaml()).expect("deserialize config");
+    let state = ConfigState::try_from(config).expect("validate config");
+    let spec = state.to_supervisor_spec().expect("derive supervisor spec");
+
+    assert_eq!(state.supervisor.strategy, SupervisionStrategy::RestForOne);
+    assert_eq!(spec.strategy, SupervisionStrategy::RestForOne);
+    assert_eq!(spec.supervisor_failure_limit, 30);
 }
 
 /// Verifies that missing runtime tunables are rejected.
