@@ -47,7 +47,39 @@ fn module_mod_rs_contains_only_public_modules() {
     }
 }
 
+/// Verifies that `SupervisionStrategy` has one source owner.
+#[test]
+fn supervision_strategy_has_single_source_definition() {
+    let mut definitions = Vec::new();
+    collect_supervision_strategy_definitions(&source_root(), &mut definitions);
+
+    assert_eq!(
+        definitions,
+        vec![source_root().join("spec").join("supervisor.rs")]
+    );
+}
+
 /// Reports whether a line is a simple public module declaration.
 fn is_pub_mod(line: &str) -> bool {
     line.starts_with("pub mod ") && line.ends_with(';') && !line.contains('{')
+}
+
+/// Collects files that define the `SupervisionStrategy` enum.
+fn collect_supervision_strategy_definitions(path: &Path, definitions: &mut Vec<PathBuf>) {
+    let pattern = ["pub enum", "SupervisionStrategy"].join(" ");
+    for entry in fs::read_dir(path).expect("read source directory") {
+        let path = entry.expect("read source entry").path();
+        if path.is_dir() {
+            collect_supervision_strategy_definitions(&path, definitions);
+            continue;
+        }
+        if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("read source file");
+        if text.contains(&pattern) {
+            definitions.push(path);
+        }
+    }
+    definitions.sort();
 }

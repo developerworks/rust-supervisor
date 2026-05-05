@@ -22,7 +22,7 @@ cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
 ```
 
-`restart_policy_lab` shows the basic shapes of `TaskFailure`, `TaskFailureKind`, `RestartPolicy`, `SupervisionStrategy`, and `RestartDecision`.
+`restart_policy_lab` shows the basic shapes of `TaskFailure`, `TaskFailureKind`, `RestartPolicy`, the canonical `spec::supervisor::SupervisionStrategy`, and `RestartDecision`.
 
 ## Shutdown Tree
 

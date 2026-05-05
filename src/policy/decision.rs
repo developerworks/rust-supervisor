@@ -8,17 +8,6 @@ use crate::policy::backoff::BackoffPolicy;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-/// Restart scope selected after a child failure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SupervisionStrategy {
-    /// Restart only the failed child.
-    OneForOne,
-    /// Restart every child in the same supervisor scope.
-    OneForAll,
-    /// Restart the failed child and all later declared siblings.
-    RestForOne,
-}
-
 /// Rule that decides whether a task exit is restartable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RestartPolicy {

@@ -58,7 +58,7 @@
 - [X] T018 [P] 在 `src/event/time.rs` 中实现 event sequence(事件序号),correlation id(关联标识) 和 `When`(何时) 基础类型,覆盖 FR-028 和 FR-029.
 - [X] T019 [P] 在 `src/event/payload.rs` 中实现 `Where`(何处),`What`(发生内容) 和基础 `SupervisorEvent`(监督器事件) 类型,覆盖 FR-028,FR-030 和 FR-031.
 - [X] T020 [P] 在 `src/state/child.rs` 和 `src/state/supervisor.rs` 中实现 `ChildState`(子任务状态) 和 `SupervisorState`(监督器状态) 基础模型,覆盖 FR-025,FR-026 和 SC-009.
-- [X] T021 [P] 在 `src/policy/decision.rs` 中实现 `SupervisionStrategy`,`RestartPolicy`,`RestartDecision` 和 `TaskFailureKind` 到策略输入的基础类型,覆盖 FR-007,FR-008,FR-009 和 FR-012.
+- [X] T021 [P] 在 `src/spec/supervisor.rs` 中实现唯一 `SupervisionStrategy`(监督策略),并在 `src/policy/decision.rs` 中实现 `RestartPolicy`,`RestartDecision` 和 `TaskFailureKind` 到策略输入的基础类型,覆盖 FR-007,FR-008,FR-009 和 FR-012.
 - [X] T022 [P] 在 `src/config/state.rs` 和 `src/config/loader.rs` 中实现 `SupervisorConfig`(监督器配置),`ConfigState`(配置状态) 和配置版本基础结构,覆盖 FR-050.
 - [X] T023 [P] 在 `src/test_support/assertions.rs` 和 `src/test_support/factory.rs` 中实现 paused time(暂停时间),fake task factory(假任务工厂),event collection(事件收集) 和 deterministic jitter(确定性抖动) 支持,覆盖 FR-017,FR-036 和 SC-010.
 - [X] T024 在 `src/tests/foundational_gate_test.rs` 中串联基础质量门禁,确认 source layout(源码布局),module boundary(模块边界),import rule(导入规则),naming(命名),configuration boundary(配置边界) 和 glossary(词汇表) 全部可独立运行,覆盖 FR-056,FR-057,FR-063,FR-066,FR-067,FR-077,SC-024,SC-025,SC-031,SC-034,SC-035 和 SC-045.
@@ -131,7 +131,7 @@
 
 ### Tests for User Story 3(用户故事三的测试)
 
-- [X] T049 [P] [US3] 在 `src/policy/tests/policy_test.rs` 中添加 `SupervisionStrategy`,`RestartPolicy`,`RestartDecision` 和 policy engine(策略引擎) 测试,覆盖 FR-007,FR-008,FR-009 和 FR-012.
+- [X] T049 [P] [US3] 在 `src/policy/tests/policy_test.rs` 中添加 `RestartPolicy`,`RestartDecision` 和 policy engine(策略引擎) 测试,并在 `src/tests/module_boundary_test.rs` 中确认 `SupervisionStrategy`(监督策略) 只有一个源码定义,覆盖 FR-007,FR-008,FR-009 和 FR-012.
 - [X] T050 [P] [US3] 在 `src/policy/tests/backoff_test.rs` 中添加 exponential backoff(指数退避),deterministic jitter(确定性抖动),disabled jitter(关闭抖动) 和 reset-after(稳定后重置) 测试,覆盖 FR-016 和 FR-017.
 - [X] T051 [P] [US3] 在 `src/policy/tests/meltdown_test.rs` 中添加 child-level fuse(子任务级熔断) 和 supervisor-level fuse(监督器级熔断) 测试,覆盖 FR-013,FR-014 和 FR-015.
 - [X] T052 [P] [US3] 在 `src/child_runner/tests/task_exit_test.rs` 中添加 `TaskExit`(任务退出) 分类测试,覆盖 FR-010 和 FR-011.
@@ -139,7 +139,7 @@
 
 ### Implementation for User Story 3(用户故事三的实现)
 
-- [X] T054 [P] [US3] 在 `src/policy/decision.rs` 中实现 `SupervisionStrategy`,`RestartPolicy`,`RestartDecision` 和 policy engine(策略引擎),覆盖 FR-007,FR-008 和 FR-012.
+- [X] T054 [P] [US3] 在 `src/spec/supervisor.rs` 中维护唯一 `SupervisionStrategy`(监督策略),并在 `src/policy/decision.rs` 中实现 `RestartPolicy`,`RestartDecision` 和 policy engine(策略引擎),覆盖 FR-007,FR-008 和 FR-012.
 - [X] T055 [P] [US3] 在 `src/policy/backoff.rs` 中实现指数退避,jitter(抖动),关闭 jitter(抖动),确定性 jitter(抖动) 和 reset-after(稳定后重置),覆盖 FR-016 和 FR-017.
 - [X] T056 [P] [US3] 在 `src/policy/meltdown.rs` 中实现 child-level fuse(子任务级熔断),supervisor-level fuse(监督器级熔断) 和计数器重置,覆盖 FR-013,FR-014 和 FR-015.
 - [X] T057 [P] [US3] 在 `src/child_runner/attempt.rs` 中实现任务结果,取消,超时,unhealthy(不健康) 和 panic(恐慌) 到 `TaskExit` 的分类,覆盖 FR-010 和 FR-011.

@@ -22,7 +22,7 @@ cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
 ```
 
-`restart_policy_lab` 展示 `TaskFailure`(任务失败), `TaskFailureKind`(任务失败类别), `RestartPolicy`(重启策略), `SupervisionStrategy`(监督策略)和 `RestartDecision`(重启决策)的基本形状.
+`restart_policy_lab` 展示 `TaskFailure`(任务失败), `TaskFailureKind`(任务失败类别), `RestartPolicy`(重启策略), canonical `spec::supervisor::SupervisionStrategy`(规范归属的监督策略) 和 `RestartDecision`(重启决策) 的基本形状.
 
 ## 关闭树
 

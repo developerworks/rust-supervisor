@@ -3,7 +3,9 @@
 // Import typed task failure values.
 use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
 // Import policy decision types.
-use rust_supervisor::policy::decision::{RestartDecision, RestartPolicy, SupervisionStrategy};
+use rust_supervisor::policy::decision::{RestartDecision, RestartPolicy};
+// Import the canonical supervision strategy declaration type.
+use rust_supervisor::spec::supervisor::SupervisionStrategy;
 // Import duration values for restart delay examples.
 use std::time::Duration;
 
