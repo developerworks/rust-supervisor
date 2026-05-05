@@ -5,6 +5,7 @@
 use rust_supervisor::policy::meltdown::{MeltdownOutcome, MeltdownPolicy, MeltdownTracker};
 use std::time::{Duration, Instant};
 
+/// Verifies that child-level fuse fires after the restart limit.
 #[test]
 fn child_fuse_fires_after_restart_limit() {
     let policy = MeltdownPolicy::new(
@@ -24,6 +25,7 @@ fn child_fuse_fires_after_restart_limit() {
     );
 }
 
+/// Verifies that a stable window clears meltdown counters.
 #[test]
 fn stable_window_clears_counters() {
     let policy = MeltdownPolicy::new(

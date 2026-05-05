@@ -1,4 +1,4 @@
-//! quickstart(快速开始) example(示例).
+//! Demonstrates the minimal supervisor quickstart flow.
 
 // Import the YAML configuration loader.
 use rust_supervisor::config::loader::load_config_state;
@@ -11,6 +11,7 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 // Use the Tokio runtime for the asynchronous example.
 #[tokio::main]
 // Return typed supervisor errors from the example.
+/// Runs the supervisor quickstart example.
 async fn main() -> ExampleResult {
     // Load centralized YAML configuration.
     let state = load_config_state("examples/config/supervisor.yaml")?;

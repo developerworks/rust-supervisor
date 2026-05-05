@@ -10,6 +10,7 @@ use rust_supervisor::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
 use std::time::{Duration, Instant};
 
 // Run the policy failure matrix example.
+/// Runs the policy failure matrix example.
 fn main() {
     // Build the reusable backoff policy.
     let backoff = BackoffPolicy::new(

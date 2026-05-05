@@ -84,8 +84,11 @@ pub enum MeltdownOutcome {
 pub struct MeltdownTracker {
     /// Policy that defines counter windows and limits.
     pub policy: MeltdownPolicy,
+    /// Child failure timestamps retained inside the child restart window.
     child_failures: VecDeque<Instant>,
+    /// Supervisor failure timestamps retained inside the supervisor window.
     supervisor_failures: VecDeque<Instant>,
+    /// Latest failure timestamp used for stable-window cleanup.
     last_failure: Option<Instant>,
 }
 

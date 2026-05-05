@@ -21,6 +21,7 @@ use std::sync::Arc;
 type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 
 // Run the supervisor tree declaration example.
+/// Runs the supervisor tree declaration example.
 fn main() -> ExampleResult {
     // Build the market feed child.
     let mut market_feed = worker("market_feed", "Market Feed");
@@ -73,6 +74,7 @@ fn main() -> ExampleResult {
 }
 
 // Build a worker child specification.
+/// Builds one worker child specification.
 fn worker(id: &str, name: &str) -> ChildSpec {
     // Capture the task name for the async task.
     let task_name = name.to_owned();
@@ -111,6 +113,7 @@ fn worker(id: &str, name: &str) -> ChildSpec {
 }
 
 // Collect child names from tree nodes.
+/// Collects child names from tree nodes.
 fn child_names(nodes: Vec<&rust_supervisor::tree::builder::SupervisorTreeNode>) -> Vec<String> {
     // Convert node references into owned child names.
     nodes

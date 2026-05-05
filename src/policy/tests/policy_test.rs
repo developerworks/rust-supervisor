@@ -8,6 +8,7 @@ use rust_supervisor::policy::decision::{
 };
 use std::time::Duration;
 
+/// Verifies that transient failures restart after computed backoff.
 #[test]
 fn transient_failure_restarts_after_backoff() {
     let engine = PolicyEngine::new();
@@ -35,6 +36,7 @@ fn transient_failure_restarts_after_backoff() {
     );
 }
 
+/// Verifies that fatal configuration failures request tree shutdown.
 #[test]
 fn fatal_config_shuts_down_tree() {
     let engine = PolicyEngine::new();

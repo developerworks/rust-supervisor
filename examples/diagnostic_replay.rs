@@ -34,6 +34,7 @@ use rust_supervisor::summary::builder::RunSummaryBuilder;
 use uuid::Uuid;
 
 // Run the diagnostic replay example.
+/// Runs the diagnostic replay example.
 fn main() {
     // Build the child identifier.
     let child_id = ChildId::new("market_feed");
@@ -186,6 +187,7 @@ fn main() {
 }
 
 // Build a deterministic supervisor event.
+/// Builds one deterministic supervisor event.
 fn event(
     // Receive the event sequence number.
     sequence: u64,

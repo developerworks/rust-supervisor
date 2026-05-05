@@ -1,4 +1,4 @@
-//! restart policy(重启策略) lab(实验) example(示例).
+//! Demonstrates typed restart policy decisions for learning.
 
 // Import typed task failure values.
 use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
@@ -10,6 +10,7 @@ use rust_supervisor::spec::supervisor::SupervisionStrategy;
 use std::time::Duration;
 
 // Run the restart policy learning example.
+/// Runs the restart policy learning example.
 fn main() {
     // Build a typed panic failure.
     let failure = TaskFailure::new(TaskFailureKind::Panic, "panic", "worker panicked");

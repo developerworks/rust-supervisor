@@ -46,6 +46,17 @@
 | `OneForOne` | 一对一 | 只重启失败 child(子任务) 的策略. | 不影响 sibling(同级任务). |
 | `OneForAll` | 一对全部 | 任意 child(子任务) 失败后重启整个范围的策略. | 必须先停止整组,再按定义顺序启动. |
 | `RestForOne` | 从失败处开始 | 重启失败 child(子任务) 以及之后定义的 child(子任务). | 不影响失败节点之前的 child(子任务). |
+| `GroupStrategy` | 分组策略 | 基于 child tag(子任务标签) 限定重启范围的策略覆盖. | 优先级高于 supervisor-wide strategy(监督器全局策略). |
+| `ChildStrategyOverride` | 子任务级覆盖 | 针对单个 child(子任务) 的策略,预算和升级覆盖. | 优先级高于 group strategy(分组策略). |
+| `RestartBudget` | 重启预算 | 策略执行计划使用的最大重启次数和统计窗口. | 不替代 `RestartPolicy`,只约束策略治理. |
+| `EscalationPolicy` | 升级策略 | 本地重启治理无法继续时的后续动作. | 包含 `EscalateToParent`,`ShutdownTree` 和 `QuarantineScope`. |
+| `EscalateToParent` | 升级到父级 | 把失败交给父 supervisor(监督器) 处理. | 用于本地范围无法继续治理的场景. |
+| `ShutdownTree` | 关闭整棵树 | 关闭当前 supervisor tree(监督树). | 既可以是控制命令结果,也可以是升级策略动作. |
+| `QuarantineScope` | 隔离范围 | 隔离本次计划选中的 child scope(子任务范围). | 用于阻止同一范围继续自动重启. |
+| `DynamicSupervisorPolicy` | 动态监督器策略 | 控制运行时 dynamic child manifest(动态子任务清单文本) 添加的开关和数量上限. | `add_child` 必须先执行该策略. |
+| `StrategyExecutionPlan` | 策略执行计划 | child exit(子任务退出) 后合并策略,分组,覆盖,预算和升级规则得到的计划. | runtime control loop(运行时控制循环) 必须消费它. |
+| `restart_execution_plan` | 重启执行计划函数 | 根据 `SupervisorTree` 和 `SupervisorSpec` 构造 `StrategyExecutionPlan`. | 策略选择逻辑必须集中在这里. |
+| `restart_plan` | 重启计划事件 | runtime lifecycle event(运行时生命周期事件) 中记录策略执行计划的事件名. | 用于观察选中的 strategy(策略),group(分组) 和 scope(范围). |
 | `RestartPolicy` | 重启策略 | 决定任务退出后是否重启的策略. | 包含 `Permanent`,`Transient` 和 `Temporary`. |
 | `Permanent` | 永久 | 正常退出或异常退出后都重启. | 适合核心协调类 worker(工作任务). |
 | `Transient` | 瞬时 | 异常退出,panic(恐慌),timeout(超时) 或 unhealthy(不健康) 后重启. | 适合网络连接类 worker(工作任务). |

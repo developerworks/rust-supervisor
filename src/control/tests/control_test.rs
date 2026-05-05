@@ -5,7 +5,7 @@
 use rust_supervisor::control::command::{CommandResult, ManagedChildState};
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::runtime::supervisor::Supervisor;
-use rust_supervisor::spec::supervisor::SupervisorSpec;
+use rust_supervisor::spec::supervisor::{DynamicSupervisorPolicy, SupervisorSpec};
 
 /// Verifies that repeated child state commands are idempotent.
 #[tokio::test]
@@ -62,4 +62,46 @@ async fn add_child_and_shutdown_tree_return_results() {
         }
     );
     assert!(matches!(shutdown, CommandResult::Shutdown { .. }));
+}
+
+/// Verifies that dynamic child additions obey the configured child limit.
+#[tokio::test]
+async fn add_child_respects_dynamic_supervisor_limit() {
+    let mut spec = SupervisorSpec::root(Vec::new());
+    spec.dynamic_supervisor_policy = DynamicSupervisorPolicy::limited(1);
+    let handle = Supervisor::start(spec).await.unwrap();
+
+    let added = handle
+        .add_child(SupervisorPath::root(), "worker-one", "operator", "scale")
+        .await
+        .unwrap();
+    let rejected = handle
+        .add_child(SupervisorPath::root(), "worker-two", "operator", "scale")
+        .await
+        .unwrap_err();
+    let state = handle.current_state().await.unwrap();
+
+    assert!(matches!(added, CommandResult::ChildAdded { .. }));
+    assert!(rejected.to_string().contains("child limit"));
+    assert!(matches!(
+        state,
+        CommandResult::CurrentState {
+            state: rust_supervisor::control::command::CurrentState { child_count: 1, .. }
+        }
+    ));
+}
+
+/// Verifies that dynamic child additions can be disabled by specification.
+#[tokio::test]
+async fn add_child_rejects_disabled_dynamic_supervisor() {
+    let mut spec = SupervisorSpec::root(Vec::new());
+    spec.dynamic_supervisor_policy.enabled = false;
+    let handle = Supervisor::start(spec).await.unwrap();
+
+    let rejected = handle
+        .add_child(SupervisorPath::root(), "worker", "operator", "scale")
+        .await
+        .unwrap_err();
+
+    assert!(rejected.to_string().contains("child limit"));
 }

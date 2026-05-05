@@ -76,6 +76,7 @@ impl<T> TaskFactory for T
 where
     T: Service,
 {
+    /// Builds a task future through the service implementation.
     fn build(&self, ctx: TaskContext) -> BoxTaskFuture {
         self.call(ctx)
     }
@@ -92,6 +93,7 @@ where
     F: Fn(TaskContext) -> Fut + Send + Sync + 'static,
     Fut: Future<Output = TaskResult> + Send + 'static,
 {
+    /// Calls the stored function and boxes its returned future.
     fn call(&self, ctx: TaskContext) -> BoxTaskFuture {
         Box::pin((self.function)(ctx))
     }

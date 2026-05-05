@@ -22,7 +22,9 @@ pub struct ShutdownResult {
 pub struct ShutdownCoordinator {
     /// Policy that defines shutdown timing and abort behavior.
     pub policy: ShutdownPolicy,
+    /// Current phase of the shutdown state machine.
     phase: ShutdownPhase,
+    /// Optional cause recorded when shutdown has been requested.
     cause: Option<ShutdownCause>,
 }
 

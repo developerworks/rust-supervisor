@@ -39,6 +39,7 @@ impl ChildId {
 }
 
 impl Display for ChildId {
+    /// Formats the child identifier as its stable string value.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(&self.value)
     }
@@ -76,6 +77,7 @@ impl SupervisorId {
 }
 
 impl Default for SupervisorId {
+    /// Creates the default supervisor identifier.
     fn default() -> Self {
         Self::new()
     }
@@ -150,6 +152,7 @@ impl SupervisorPath {
 }
 
 impl Display for SupervisorPath {
+    /// Formats the supervisor path as an absolute slash path.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         if self.segments.is_empty() {
             formatter.write_str("/")

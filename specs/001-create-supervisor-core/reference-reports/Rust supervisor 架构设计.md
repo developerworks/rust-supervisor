@@ -42,11 +42,11 @@ Rust supervisor 架构设计, 要求:
 
 第 13 条，必须支持退避策略。默认策略应该是 exponential backoff with jitter（带随机抖动的指数退避），例如初始 100ms，最大 5s，jitter 为 10%，`reset_after` 为 60s。测试环境必须允许关闭 jitter，否则单元测试无法稳定断言。
 
-第 14 条，必须支持健康检查。健康检查不应该只看任务是否还在运行，因为一个任务可能活着但已经卡死。每个任务应该通过 `TaskCtx` 定期发送 heartbeat（心跳），supervisor 根据 `heartbeat_interval` 和 `stale_after` 判断任务是否 unhealthy（不健康）。
+第 14 条,必须支持健康检查.健康检查不应该只看任务是否还在运行,因为一个任务可能活着但已经卡死.每个任务应该通过 `TaskContext` 定期发送 heartbeat(心跳),supervisor 根据 `heartbeat_interval` 和 `stale_after` 判断任务是否 unhealthy(不健康).
 
 第 15 条，必须支持两阶段关闭。第一阶段发送 `CancellationToken（取消令牌）` 并等待 graceful timeout（优雅关闭超时）；第二阶段才调用 abort。`CancellationToken` 支持 child token（子取消令牌），父 token 取消会取消子 token，子 token 取消不会反向取消父 token，这适合监督树的关闭传播。([Docs.rs][8])
 
-第 16 条，必须支持运行时控制平面。`SupervisorHandle` 应该提供 `add_child`、`remove_child`、`restart_child`、`pause_child`、`resume_child`、`quarantine_child`、`shutdown_tree`、`snapshot` 和 `subscribe_events`。这些命令必须是幂等的，例如对已经停止的任务重复 shutdown 应该返回当前状态，而不是报不可恢复错误。
+第 16 条,必须支持运行时控制平面.`SupervisorHandle` 应该提供 `add_child`,`remove_child`,`restart_child`,`pause_child`,`resume_child`,`quarantine_child`,`shutdown_tree`,`current_state` 和 `subscribe_events`.这些命令必须是幂等的,例如对已经停止的任务重复 shutdown 应该返回当前状态,而不是报不可恢复错误.
 
 第 17 条，必须支持状态平面。`watch channel（观察通道）` 适合保存最新状态，因为 Tokio 的 `watch` 只保留最后一次发送的值，接收者可以等待新值变化；完整生命周期事件则应该使用 `broadcast` 或自定义 event bus（事件总线），因为状态快照和事件流不是同一个东西。([Docs.rs][9])
 
@@ -71,7 +71,7 @@ src/supervisor/
   mod.rs
   spec.rs          # ChildSpec、SupervisorSpec、声明式配置
   id.rs            # ChildId、SupervisorPath、Generation、Attempt
-  task.rs          # TaskFactory、TaskCtx、TaskResult
+  task.rs          # TaskFactory,TaskContext,TaskResult
   runtime.rs       # Tokio 运行时绑定，JoinSet、spawn、join、abort
   child_runner.rs  # 单个 child 的生命周期循环
   tree.rs          # 监督树，父子关系，启动和停止顺序
@@ -80,7 +80,7 @@ src/supervisor/
   control.rs       # SupervisorHandle、ControlCommand
   registry.rs      # 当前运行状态，ChildRuntime
   event.rs         # SupervisorEvent，When/Where/What
-  snapshot.rs      # SupervisorSnapshot，watch 状态输出
+  state.rs         # SupervisorState, watch 当前状态输出
   observe.rs       # tracing、metrics、subscriber
   shutdown.rs      # 两阶段关闭，grace/abort
   error.rs         # SupervisorError、TaskFailureKind
@@ -96,11 +96,11 @@ use tokio_util::sync::CancellationToken;
 pub type BoxTaskFuture = Pin<Box<dyn Future<Output = TaskResult> + Send + 'static>>;
 
 pub trait TaskFactory: Send + Sync + 'static {
-    fn build(&self, ctx: TaskCtx) -> BoxTaskFuture;
+    fn build(&self, ctx: TaskContext) -> BoxTaskFuture;
 }
 
 #[derive(Clone)]
-pub struct TaskCtx {
+pub struct TaskContext {
     pub child_id: ChildId,
     pub path: SupervisorPath,
     pub generation: Generation,
@@ -202,7 +202,7 @@ Application
     │
     ▼
 SupervisorHandle
-    │  control command: add / restart / pause / shutdown / snapshot
+    │  control command: add / restart / pause / shutdown / current_state
     ▼
 ControlLoop
     │
@@ -218,11 +218,11 @@ ControlLoop
     │       ├── audit log
     │       └── subscriber
     │
-    ├── SnapshotStore
-    │       └── watch::Sender<SupervisorSnapshot>
+    ├── StateStore
+    │       └── watch::Sender<SupervisorState>
     │
     └── ChildRunner
-            ├── create TaskCtx
+            ├── create TaskContext
             ├── spawn task
             ├── wait exit / panic / timeout / cancellation
             ├── classify failure

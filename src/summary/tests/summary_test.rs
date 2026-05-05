@@ -11,6 +11,7 @@ use rust_supervisor::state::supervisor::SupervisorState;
 use rust_supervisor::summary::builder::RunSummaryBuilder;
 use uuid::Uuid;
 
+/// Builds one deterministic summary event.
 fn event(sequence: u64, what: What) -> SupervisorEvent {
     SupervisorEvent::new(
         When::new(EventTime::deterministic(
@@ -28,6 +29,7 @@ fn event(sequence: u64, what: What) -> SupervisorEvent {
     )
 }
 
+/// Verifies summary collection of failures, restarts, and final decisions.
 #[test]
 fn summary_collects_failures_restarts_and_final_decision() {
     let mut journal = EventJournal::new(8);

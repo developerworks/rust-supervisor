@@ -6,7 +6,7 @@
 
 ## 控制命令
 
-- `add_child`: 添加新的 child(子任务), 并接入注册表和状态.
+- `add_child`: 当 `DynamicSupervisorPolicy`(动态监督器策略) 允许新增 child(子任务) 时, 接受 dynamic child manifest(动态子任务清单文本).
 - `remove_child`: 先关闭目标 child(子任务), 再移除注册表记录.
 - `restart_child`: 请求目标 child(子任务)重启.
 - `pause_child`: 暂停目标 child(子任务)治理.
@@ -19,6 +19,10 @@
 ## 幂等语义
 
 重复控制命令不应该制造不可恢复错误. 已暂停的 child(子任务)再次暂停时返回当前状态. 已隔离的 child(子任务)再次隔离时返回当前状态. 已完成 shutdown(关闭)后再次关闭时返回已有关闭结果.
+
+## 动态添加
+
+运行时会在接受 manifest(清单文本) 前执行 dynamic addition(动态添加) 治理. 当 dynamic supervision(动态监督) 被禁用, 或 declared child count(声明子任务数量) 加 dynamic child count(动态子任务数量) 已经达到配置上限时, `add_child`(添加子任务) 会被拒绝. `current_state`(当前状态) 的 `child_count`(子任务数量) 包含已经接受的 dynamic manifest(动态清单文本).
 
 ## 审计数据
 

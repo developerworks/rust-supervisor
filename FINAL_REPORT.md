@@ -15,6 +15,8 @@
 - 修复 runtime control loop(运行时控制循环) 只处理显式控制命令的问题, 现在 child exit(子任务退出) 会自动进入 policy(策略) 决策并执行 `OneForOne`, `OneForAll` 和 `RestForOne` 监督范围重启.
 - 修复 YAML(数据序列化格式) 配置没有暴露 supervision strategy(监督策略) 的问题, `ConfigState::to_supervisor_spec` 现在从 `supervisor.strategy` 派生 `SupervisorSpec.strategy`.
 - 修复 `SupervisionStrategy`(监督策略) 在 spec(规格) 和 policy(策略) 模块重复定义的问题, 现在唯一源码定义归属 `src/spec/supervisor.rs`.
+- 补齐 group strategy(分组策略), dynamic supervisor(动态监督器), escalation policy(升级策略), per-child override(子任务级覆盖), restart budget(重启预算) 和 strategy execution plan(策略执行计划), 运行时重启现在按执行计划选择监督范围.
+- 补强 coding standard(编码规范) 测试, 覆盖 Rust(编程语言) 注释语言, 函数文档, 字段文档和 example(示例) 行级前置注释.
 - 生成 SBOM(软件物料清单): `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`.
 
 ## 验证结果
@@ -23,6 +25,7 @@
 - `cargo check`: 通过.
 - `cargo test`: 通过, 包含全部集成测试, 模块测试和 52 个 doctest(文档测试).
 - `cargo clippy --all-targets --all-features -- -D warnings`: 通过.
+- `cargo test --test coding_standard_test -- --nocapture`: 通过, 覆盖新增编码规范检查.
 - `cargo test --test supervisor_auto_restart_test -- --nocapture --test-threads=1`: 通过, 覆盖 `OneForOne`, `OneForAll` 和 `RestForOne` 自动重启.
 - `cargo test --test config_boundary_test --test supervisor_config_test --test yaml_config_test -- --nocapture`: 通过, 覆盖 YAML(数据序列化格式) 中 `supervisor.strategy` 的加载,派生和非法值拒绝.
 - `cargo test --test module_boundary_test --test supervisor_examples_test -- --nocapture`: 通过, 覆盖 `SupervisionStrategy`(监督策略) 单一源码定义和示例入口.

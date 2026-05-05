@@ -147,6 +147,9 @@ cargo test rest_for_one_restarts_failed_and_later_children
 
 - `OneForAll`(一对全部) 先停止所有 sibling(同级任务),再按定义顺序重启.
 - `RestForOne`(从失败处开始) 不重启失败 child(子任务) 之前定义的 child(子任务).
+- `GroupStrategy`(分组策略) 只重启匹配 child tag(子任务标签) 的 group(分组) 范围.
+- `ChildStrategyOverride`(子任务级覆盖) 优先于 group strategy(分组策略) 和 supervisor-wide strategy(监督器全局策略).
+- runtime control loop(运行时控制循环) 通过 `StrategyExecutionPlan`(策略执行计划) 执行重启,事件名使用 `restart_plan`(重启计划).
 
 ### Runtime Control(运行时控制)
 
@@ -156,7 +159,7 @@ cargo test supervisor_handle_operations_are_idempotent
 
 预期行为:
 
-- `add_child` 可以把新 child(子任务) 接入 registry(注册表),current state(当前状态) 和 event stream(事件流).
+- `add_child` 会先通过 `DynamicSupervisorPolicy`(动态监督器策略) 校验,通过后接受 child manifest(子任务清单文本) 并更新 current state(当前状态) 计数.
 - `remove_child` 会先关闭 child(子任务),再删除 registry(注册表) 记录.
 - `restart_child` 会记录 attempt(尝试次数),generation(代次),backoff(退避) 和 restart decision(重启决策).
 - `pause_child` 会让 child(子任务) 进入 `Paused`(已暂停).

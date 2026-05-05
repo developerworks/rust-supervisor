@@ -17,9 +17,9 @@ use crate::registry::store::RegistryStore;
 use crate::shutdown::coordinator::ShutdownCoordinator;
 use crate::shutdown::stage::{ShutdownCause, ShutdownPolicy};
 use crate::spec::child::RestartPolicy as ChildRestartPolicy;
-use crate::spec::supervisor::{SupervisionStrategy, SupervisorSpec};
+use crate::spec::supervisor::SupervisorSpec;
 use crate::tree::builder::SupervisorTree;
-use crate::tree::order::{restart_scope, startup_order};
+use crate::tree::order::{restart_execution_plan, startup_order};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -51,13 +51,21 @@ pub enum RuntimeCommand {
 /// Mutable state owned by the control loop.
 #[derive(Debug)]
 pub struct RuntimeControlState {
+    /// Shutdown state machine used by tree-level shutdown commands.
     shutdown: ShutdownCoordinator,
+    /// Runtime child states set by explicit control commands.
     children: HashMap<ChildId, ManagedChildState>,
+    /// Dynamic child manifests accepted after startup.
     manifests: Vec<String>,
+    /// Registry that owns declared child runtime records.
     registry: RegistryStore,
+    /// Built supervisor tree used for order and scope planning.
     tree: SupervisorTree,
-    strategy: SupervisionStrategy,
+    /// Supervisor specification that owns strategy and dynamic policies.
+    spec: SupervisorSpec,
+    /// Policy engine used to convert task exits into restart decisions.
     policy_engine: PolicyEngine,
+    /// Sender used by spawned child attempts to report runtime messages.
     command_sender: mpsc::Sender<RuntimeCommand>,
 }
 
@@ -87,7 +95,7 @@ impl RuntimeControlState {
             manifests: Vec::new(),
             registry,
             tree,
-            strategy: spec.strategy,
+            spec,
             policy_engine: PolicyEngine::new(),
             command_sender,
         })
@@ -127,6 +135,7 @@ impl RuntimeControlState {
     ) -> Result<CommandResult, SupervisorError> {
         match command {
             ControlCommand::AddChild { child_manifest, .. } => {
+                self.ensure_dynamic_child_allowed()?;
                 self.manifests.push(child_manifest.clone());
                 Ok(CommandResult::ChildAdded { child_manifest })
             }
@@ -158,7 +167,7 @@ impl RuntimeControlState {
             }
             ControlCommand::CurrentState { .. } => Ok(CommandResult::CurrentState {
                 state: CurrentState {
-                    child_count: self.registry.declaration_order().len(),
+                    child_count: self.dynamic_child_count(),
                     shutdown_completed: self.shutdown.phase()
                         == crate::shutdown::stage::ShutdownPhase::Completed,
                 },
@@ -329,7 +338,7 @@ impl RuntimeControlState {
         }
     }
 
-    /// Restarts every child selected by the current supervision strategy.
+    /// Restarts every child selected by the current execution plan.
     ///
     /// # Arguments
     ///
@@ -346,13 +355,55 @@ impl RuntimeControlState {
         delay: Duration,
         event_sender: &broadcast::Sender<String>,
     ) {
-        let scope = restart_scope(&self.tree, self.strategy, &failed_child);
-        let scope_label = child_scope_label(&scope);
-        let _ignored =
-            event_sender.send(format!("restart_scope:{:?}:{scope_label}", self.strategy));
-        for child_id in scope {
+        let plan = restart_execution_plan(&self.tree, &self.spec, &failed_child);
+        let scope_label = child_scope_label(&plan.scope);
+        let group_label = plan.group.as_deref().unwrap_or("supervisor");
+        let _ignored = event_sender.send(format!(
+            "restart_plan:{:?}:{group_label}:{scope_label}",
+            plan.strategy
+        ));
+        for child_id in plan.scope {
             self.spawn_child_attempt(child_id, true, delay);
         }
+    }
+
+    /// Ensures that the dynamic supervisor accepts another child manifest.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when another dynamic child can be added.
+    fn ensure_dynamic_child_allowed(&self) -> Result<(), SupervisorError> {
+        let current_child_count = self.dynamic_child_count();
+        if self
+            .spec
+            .dynamic_supervisor_policy
+            .allows_addition(current_child_count)
+        {
+            return Ok(());
+        }
+        Err(SupervisorError::InvalidTransition {
+            message: "dynamic supervisor child limit reached".to_owned(),
+        })
+    }
+
+    /// Counts declared and dynamic child records.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the number of declared children plus accepted dynamic manifests.
+    fn dynamic_child_count(&self) -> usize {
+        self.registry
+            .declaration_order()
+            .len()
+            .saturating_add(self.manifests.len())
     }
 
     /// Spawns one child attempt and reports the exit back to this control loop.

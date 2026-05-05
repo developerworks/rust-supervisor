@@ -10,6 +10,7 @@ use rust_supervisor::task::factory::{TaskResult, service_fn};
 use rust_supervisor::tree::builder::SupervisorTree;
 use std::sync::Arc;
 
+/// Verifies that registry indexes tree nodes by child and path.
 #[test]
 fn registry_indexes_tree_nodes_by_child_and_path() {
     let child = worker("worker");
@@ -24,6 +25,7 @@ fn registry_indexes_tree_nodes_by_child_and_path() {
     assert!(store.child_by_path(&tree.nodes[0].path).is_some());
 }
 
+/// Builds one worker child specification for registry tests.
 fn worker(id: &str) -> ChildSpec {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     ChildSpec::worker(

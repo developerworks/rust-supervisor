@@ -17,7 +17,7 @@
    报告这里很关键.阻塞任务不能假设 `abort(强制终止)` 一定有效,所以它应该有独立 `TaskKind(任务类型)`,关闭策略和升级策略.
 
 5. 四阶段关闭模型.
-   当前规格已经采用四阶段关闭模型.报告补的 `reconcile(状态对账)` 很有价值,关闭后必须统一更新注册表,状态视图,指标和事件.
+   当前规格已经采用四阶段关闭模型.报告补的 `reconcile(状态对账)` 很有价值,关闭后必须统一更新注册表,当前状态,指标和事件.
 
 6. `event journal(事件日志缓冲区)` 和 `RunSummary(运行摘要)`.
    当前规格已经明确"最近 N 条事件缓冲"和"熔断后输出运行摘要".这对事故排查很有用.
@@ -32,7 +32,7 @@
    当前规格已经把它改成必须能力.所有策略默认值,可观测性选项和关闭预算都必须来自 `ConfigState(配置状态)`.主配置必须使用 YAML(数据序列化格式),示例路径必须使用 `examples/config/supervisor.yaml`.
 
 10. 代码命名规则.
-    当前规格已经删除所有 `*Snapshot` 命名方式,并统一采用 `ConfigState(配置状态)`,`SupervisorState(监督器状态视图)`,`ChildState(子任务状态视图)`,`current_state(当前状态)` 和 `state_view(状态视图)`.
+    当前规格已经删除所有 `*Snapshot` 和 `*View` 代码命名方式,并统一采用 `ConfigState(配置状态)`,`SupervisorState(监督器状态)`,`ChildState(子任务状态)`,`current_state(当前状态)` 和 `state(状态)`.
 
 11. 禁止 compatibility method(兼容方法).
     当前规格已经明确这是全新开发项目.不得提供旧接口别名,迁移层,历史行为保留开关,废弃 facade(门面),兼容包装函数或第三方 API(接口) 形状复制.

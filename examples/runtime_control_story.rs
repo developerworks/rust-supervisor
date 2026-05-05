@@ -15,6 +15,7 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 // Use the Tokio runtime for the asynchronous example.
 #[tokio::main]
 // Return typed supervisor errors from the example.
+/// Runs the runtime control story example.
 async fn main() -> ExampleResult {
     // Load centralized YAML configuration.
     let state = load_config_state("examples/config/supervisor.yaml")?;
@@ -111,6 +112,7 @@ async fn main() -> ExampleResult {
 }
 
 // Print a command result with a label.
+/// Prints one labeled command result.
 fn print_result(label: &str, result: CommandResult) {
     // Print the structured command result.
     println!("{label}={result:#?}");

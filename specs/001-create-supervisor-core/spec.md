@@ -312,7 +312,7 @@
 - **Supervisor(监督器)**: 运行时治理节点,负责 child(子任务) 注册,策略评估,状态跟踪,事件发送,重启编排和关闭协调.
 - **SupervisorTree(监督树)**: 分层结构,其中 root(根节点) 和子 supervisor(监督器) 治理 worker(工作任务) 和嵌套监督范围.
 - **ChildSpec(子任务规格)**: 声明式 child(子任务) 配置,包含身份,任务种类,策略,依赖,标签,关键程度和 factory(工厂).
-- **SupervisorSpec(监督器规格)**: 声明式 supervisor(监督器) 配置,包含策略,children(子任务集合),fuse policy(熔断策略),默认策略和路径前缀.
+- **SupervisorSpec(监督器规格)**: 声明式 supervisor(监督器) 配置,包含策略,children(子任务集合),fuse policy(熔断策略),默认策略,路径前缀,group strategy(分组策略),per-child override(子任务级覆盖),restart budget(重启预算),escalation policy(升级策略) 和 dynamic supervisor policy(动态监督器策略).
 - **SupervisorPath(监督器路径)**: 稳定树路径,用于事件,指标,日志,current state(当前状态) 和控制命令.
 - **ChildId(子任务标识)**: child(子任务) 在父 supervisor(监督器) 内的稳定唯一标识.
 - **TaskFactory(任务工厂)**: 每次启动或重启时构造新任务尝试的工厂.
@@ -320,6 +320,12 @@
 - **ChildRuntime(子任务运行态)**: 当前运行态记录,包含状态,代次,尝试次数,心跳,join handle(等待句柄),取消令牌,重启计数和最近失败.
 - **Registry(任务注册表)**: 当前运行时索引,保存 child(子任务) 规格和运行态.
 - **SupervisionStrategy(监督策略)**: 重启范围决定,包含 `OneForOne`(一对一),`OneForAll`(一对全部) 和 `RestForOne`(从失败处开始).
+- **GroupStrategy(分组策略)**: 基于 child tag(子任务标签) 约束重启范围的策略覆盖,用于让同一个 supervisor(监督器) 内不同 group(分组) 拥有不同重启范围.
+- **ChildStrategyOverride(子任务级覆盖)**: 指定单个 child(子任务) 的 strategy(策略),restart budget(重启预算) 和 escalation policy(升级策略),优先级高于 group strategy(分组策略).
+- **RestartBudget(重启预算)**: 重启计划可使用的最大重启次数和计数窗口,用于约束策略执行而不是替代 restart policy(重启策略).
+- **EscalationPolicy(升级策略)**: 本地重启治理无法继续时的后续动作,包含 parent escalation(父级升级),tree shutdown(整棵树关闭) 和 scope quarantine(范围隔离).
+- **DynamicSupervisorPolicy(动态监督器策略)**: 控制运行时动态添加 child manifest(子任务清单文本) 的开关和数量上限.
+- **StrategyExecutionPlan(策略执行计划)**: child exit(子任务退出) 后由策略,分组,覆盖,预算和升级规则合并得到的单次执行计划.
 - **RestartPolicy(重启策略)**: 退出到重启的规则,包含 `Permanent`(永久),`Transient`(瞬时) 和 `Temporary`(临时).
 - **BackoffPolicy(退避策略)**: 重启延迟规则,包含指数增长,最大延迟,抖动和稳定后重置.
 - **MeltdownPolicy(熔断策略)**: child-level(子任务级) 和 supervisor-level(监督器级) 熔断阈值及重置窗口.

@@ -1,4 +1,4 @@
-//! rust-config-tree(集中配置树) configuration(配置) example(示例).
+//! Demonstrates loading centralized YAML configuration into a supervisor spec.
 
 // Import the YAML configuration loader.
 use rust_supervisor::config::loader::load_config_state;
@@ -7,6 +7,7 @@ use rust_supervisor::config::loader::load_config_state;
 type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 
 // Return typed supervisor errors from the example.
+/// Runs the centralized configuration example.
 fn main() -> ExampleResult {
     // Load centralized YAML configuration.
     let state = load_config_state("examples/config/supervisor.yaml")?;

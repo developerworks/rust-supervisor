@@ -9,6 +9,8 @@ use rust_supervisor::observe::metrics::MetricsFacade;
 use rust_supervisor::observe::pipeline::ObservabilityPipeline;
 use uuid::Uuid;
 
+/// Builds a deterministic supervisor event for observability tests.
+/// Builds one deterministic observability event.
 fn event(sequence: u64, what: What) -> SupervisorEvent {
     let child_id = ChildId::new("worker");
     SupervisorEvent::new(
@@ -27,6 +29,8 @@ fn event(sequence: u64, what: What) -> SupervisorEvent {
     )
 }
 
+/// Verifies that metric labels reject unbounded keys.
+/// Verifies that unbounded metric label keys are rejected.
 #[test]
 fn metrics_facade_rejects_unbounded_label_keys() {
     let facade = MetricsFacade::new();
@@ -39,6 +43,8 @@ fn metrics_facade_rejects_unbounded_label_keys() {
     );
 }
 
+/// Verifies fan-out, subscriber lag, metrics, and journal recording.
+/// Verifies that the pipeline fans out signals and accounts for lag.
 #[test]
 fn pipeline_fans_out_signals_and_accounts_for_lag() {
     let mut pipeline = ObservabilityPipeline::new(8, 1);

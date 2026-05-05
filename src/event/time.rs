@@ -85,6 +85,7 @@ impl EventSequenceSource {
 }
 
 impl Default for EventSequenceSource {
+    /// Creates the default event sequence source.
     fn default() -> Self {
         Self::new()
     }
@@ -135,6 +136,7 @@ impl CorrelationId {
 }
 
 impl Default for CorrelationId {
+    /// Creates the default correlation identifier.
     fn default() -> Self {
         Self::new()
     }

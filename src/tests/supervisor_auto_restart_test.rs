@@ -7,7 +7,7 @@ use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
-use rust_supervisor::spec::supervisor::{SupervisionStrategy, SupervisorSpec};
+use rust_supervisor::spec::supervisor::{GroupStrategy, SupervisionStrategy, SupervisorSpec};
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -81,6 +81,41 @@ async fn rest_for_one_restarts_failed_child_and_following_children() {
 
     handle
         .shutdown_tree("test", "rest_for_one complete")
+        .await
+        .expect("shutdown supervisor");
+}
+
+/// Verifies that a group strategy limits runtime restarts to group members.
+#[tokio::test]
+async fn group_strategy_restarts_only_group_members_after_failure() {
+    let gate = Arc::new(AtomicBool::new(false));
+    let first_attempts = Arc::new(AtomicUsize::new(0));
+    let second_attempts = Arc::new(AtomicUsize::new(0));
+    let third_attempts = Arc::new(AtomicUsize::new(0));
+    let fourth_attempts = Arc::new(AtomicUsize::new(0));
+    let first = counted_worker("first", false, first_attempts.clone(), gate.clone());
+    let mut second = counted_worker("second", true, second_attempts.clone(), gate.clone());
+    let mut third = counted_worker("third", false, third_attempts.clone(), gate.clone());
+    let fourth = counted_worker("fourth", false, fourth_attempts.clone(), gate.clone());
+    second.tags.push("pipeline".to_owned());
+    third.tags.push("pipeline".to_owned());
+    let mut spec = SupervisorSpec::root(vec![first, second, third, fourth]);
+    spec.strategy = SupervisionStrategy::OneForAll;
+    spec.group_strategies = vec![GroupStrategy::new(
+        "pipeline",
+        SupervisionStrategy::OneForAll,
+    )];
+    let handle = Supervisor::start(spec).await.expect("start supervisor");
+    assert_eq!(current_child_count(&handle).await, 4);
+
+    gate.store(true, Ordering::SeqCst);
+    wait_for_count(&second_attempts, 2).await;
+    wait_for_count(&third_attempts, 2).await;
+    assert_eq!(first_attempts.load(Ordering::SeqCst), 1);
+    assert_eq!(fourth_attempts.load(Ordering::SeqCst), 1);
+
+    handle
+        .shutdown_tree("test", "group_strategy complete")
         .await
         .expect("shutdown supervisor");
 }

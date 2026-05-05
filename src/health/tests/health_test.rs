@@ -6,6 +6,8 @@ use rust_supervisor::health::heartbeat::{HealthPolicy, Heartbeat};
 use rust_supervisor::id::types::ChildId;
 use std::time::{Duration, Instant};
 
+/// Verifies that heartbeat stale detection uses monotonic time.
+/// Verifies stale heartbeat detection against monotonic time.
 #[test]
 fn stale_detection_uses_monotonic_time() {
     let policy = HealthPolicy::new(Duration::from_secs(1), Duration::from_secs(3));

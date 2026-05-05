@@ -6,6 +6,7 @@ use rust_supervisor::shutdown::coordinator::ShutdownCoordinator;
 use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use std::time::Duration;
 
+/// Verifies that repeated shutdown requests are idempotent.
 #[test]
 fn shutdown_request_is_idempotent() {
     let policy = ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1), true);
@@ -19,6 +20,7 @@ fn shutdown_request_is_idempotent() {
     assert_eq!(second.cause.reason, "deploy");
 }
 
+/// Verifies that shutdown phases advance to completion.
 #[test]
 fn shutdown_phase_advances_to_completed() {
     let policy = ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1), true);

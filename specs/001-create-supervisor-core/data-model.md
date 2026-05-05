@@ -52,12 +52,20 @@
 - `default_readiness_policy`: 默认 readiness(就绪) 策略.
 - `default_shutdown_policy`: 默认 four-stage shutdown(四阶段关闭) 策略.
 - `config_version`: 派生该规格的配置版本.
+- `restart_budget`: supervisor-level(监督器级) 默认重启预算,可为空.
+- `escalation_policy`: supervisor-level(监督器级) 默认升级策略,可为空.
+- `group_strategies`: 基于 child tag(子任务标签) 的 group strategy(分组策略) 集合.
+- `child_strategy_overrides`: 单个 child(子任务) 的 per-child override(子任务级覆盖) 集合.
+- `dynamic_supervisor_policy`: 控制 dynamic child manifest(动态子任务清单文本) 添加的策略.
 
 **Validation rules(校验规则)**:
 
 - `path` 必须从 `/root` 开始.
 - 同一个 supervisor(监督器) 内的 child id(子任务标识) 必须唯一.
 - child(子任务) 顺序必须稳定,因为 `RestForOne`(从失败处开始) 依赖定义顺序.
+- 每个配置过 group strategy(分组策略) 的 group(分组) 必须至少匹配一个 child tag(子任务标签).
+- 同一个 child(子任务) 不得同时属于多个配置过 group strategy(分组策略) 的 group(分组).
+- child strategy override(子任务级覆盖) 必须引用已声明 child(子任务),并且同一个 child(子任务) 只能出现一次.
 
 ### ChildSpec(子任务规格)
 
@@ -178,6 +186,46 @@
 - `OneForOne`: 只重启失败 child(子任务).
 - `OneForAll`: 停止范围内所有 child(子任务),再按定义顺序重启.
 - `RestForOne`: 停止失败 child(子任务) 和其后 child(子任务),再按定义顺序重启.
+
+### GroupStrategy(分组策略)
+
+- `group`: child tag(子任务标签),用于选择组内 child(子任务).
+- `strategy`: 组内使用的 `SupervisionStrategy`(监督策略).
+- `restart_budget`: 可选 group-level(分组级) 重启预算.
+- `escalation_policy`: 可选 group-level(分组级) 升级策略.
+
+### ChildStrategyOverride(子任务级覆盖)
+
+- `child_id`: 被覆盖的 child(子任务).
+- `strategy`: 子任务失败时使用的 `SupervisionStrategy`(监督策略).
+- `restart_budget`: 可选 child-level(子任务级) 重启预算.
+- `escalation_policy`: 可选 child-level(子任务级) 升级策略.
+
+### RestartBudget(重启预算)
+
+- `max_restarts`: 窗口内最大重启次数.
+- `window`: 统计重启次数的窗口.
+
+### EscalationPolicy(升级策略)
+
+- `EscalateToParent`(升级到父级): 把失败交给父 supervisor(监督器) 治理.
+- `ShutdownTree`(关闭整棵树): 停止当前 supervisor tree(监督树).
+- `QuarantineScope`(隔离范围): 隔离选中的重启范围.
+
+### DynamicSupervisorPolicy(动态监督器策略)
+
+- `enabled`: 是否允许运行时添加 dynamic child manifest(动态子任务清单文本).
+- `child_limit`: 声明 child(子任务) 加动态 manifest(清单文本) 的可选总数上限.
+
+### StrategyExecutionPlan(策略执行计划)
+
+- `failed_child`: 触发计划的 child(子任务).
+- `strategy`: 本次执行选中的监督策略.
+- `scope`: 本次要重启的 child id(子任务标识) 列表.
+- `group`: 约束本次计划的 group(分组),可为空.
+- `restart_budget`: 本次计划选中的重启预算,可为空.
+- `escalation_policy`: 本次计划选中的升级策略,可为空.
+- `dynamic_supervisor_enabled`: 本次规格下 dynamic supervisor(动态监督器) 是否启用.
 
 ### RestartPolicy(重启策略)
 

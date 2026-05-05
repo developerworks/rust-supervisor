@@ -41,6 +41,7 @@ pub enum PolicyFailureKind {
 }
 
 impl From<TaskFailureKind> for PolicyFailureKind {
+    /// Maps a task failure kind into a policy failure kind.
     fn from(value: TaskFailureKind) -> Self {
         match value {
             TaskFailureKind::Error => Self::Recoverable,

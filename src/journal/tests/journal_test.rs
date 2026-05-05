@@ -8,6 +8,8 @@ use rust_supervisor::id::types::{Attempt, Generation, SupervisorPath};
 use rust_supervisor::journal::ring::EventJournal;
 use uuid::Uuid;
 
+/// Builds a deterministic event for journal tests.
+/// Builds one deterministic journal event.
 fn event(sequence: u64) -> SupervisorEvent {
     SupervisorEvent::new(
         When::new(EventTime::deterministic(
@@ -25,6 +27,8 @@ fn event(sequence: u64) -> SupervisorEvent {
     )
 }
 
+/// Verifies recent event retention and dropped event accounting.
+/// Verifies that the journal keeps recent events and counts dropped entries.
 #[test]
 fn journal_keeps_recent_events_and_counts_dropped_entries() {
     let mut journal = EventJournal::new(2);

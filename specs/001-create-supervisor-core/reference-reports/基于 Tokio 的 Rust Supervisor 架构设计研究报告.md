@@ -88,7 +88,7 @@ flowchart TD
 
 关闭与重启应分为 4 个阶段. 第一阶段是 `request stop(请求停止)`: 向子树发出取消信号. 第二阶段是 `graceful drain(优雅排空)`: 等待任务在截止时间内完成清理. 第三阶段是 `abort stragglers(中止拖尾任务)`: 仅对可中止的异步任务使用 `AbortHandle(中止句柄)` 或 `JoinHandle::abort(任务中止)`; 对 `spawn_blocking(阻塞任务启动)` 的工作, 必须通过更外层隔离, 例如专用线程池、外部进程或幂等作业协议来兜底. 第四阶段是 `reconcile(状态对账)`: 更新注册表、指标、事件日志与 `RunSummary(运行摘要)`。citeturn29search0turn29search14turn28search7
 
-配置与热更新建议采用 `versioned snapshot(版本化快照)` 路线. 配置读取用 `Serde(序列化框架)` 的 `Deserialize(反序列化)` 建模, 文件监听用 `notify(文件系统通知)` 的 `recommended_watcher(推荐监听器)`; 若平台事件不稳定, 则回退到 `poll watcher(轮询监听器)`. 新配置通过 `ArcSwap(原子 Arc 存储)` 发布, 读路径保持无锁. 日志级别的热更新可直接利用 `tracing-subscriber(追踪订阅器)` 的 `with_filter_reloading(过滤器热重载)`。对于树结构的变更, 建议执行 `diff(差异比较)` 后进行“原地调整”或“子树滚动替换”, 而不要追求 `Erlang(函数式并发语言)` 那类 `VM-level hot code swap(虚拟机级热代码替换)`。后者在 OTP 里有专门的更新机制, 而在 Rust/Tokio 世界更稳妥的等价物通常是“版本化配置 + 子树滚动重建”。citeturn34search2turn34search14turn34search3turn34search6turn34search12turn34search7turn34search10turn32search17turn45search8
+配置与热更新建议采用 `versioned config state(版本化配置状态)` 路线. 配置读取用 `Serde(序列化框架)` 的 `Deserialize(反序列化)` 建模, 文件监听用 `notify(文件系统通知)` 的 `recommended_watcher(推荐监听器)`; 若平台事件不稳定, 则回退到 `poll watcher(轮询监听器)`. 新配置通过 `ArcSwap(原子 Arc 存储)` 发布, 读路径保持无锁. 日志级别的热更新可直接利用 `tracing-subscriber(追踪订阅器)` 的 `with_filter_reloading(过滤器热重载)`. 对于树结构的变更, 建议执行 `diff(差异比较)` 后进行原地调整或子树滚动替换, 而不要追求 `Erlang(函数式并发语言)` 那类 `VM-level hot code swap(虚拟机级热代码替换)`. 后者在 OTP 里有专门的更新机制, 而在 Rust/Tokio 世界更稳妥的等价物通常是版本化配置 + 子树滚动重建. citeturn34search2turn34search14turn34search3turn34search6turn34search12turn34search7turn34search10turn32search17turn45search8
 
 ## 关键数据结构与 API 草案
 
@@ -103,7 +103,7 @@ flowchart TD
 | 重启预算 | 全局统一预算 | 节点预算 + 组预算 | 双层预算 | 既防单点抖动, 也防子树级重启风暴 |
 | Readiness(就绪) | 启动即就绪 | 显式标记就绪 | 显式标记, 默认立即就绪 | 吸收 `supervised` 经验, 适合缓存预热、连接建立 |
 | Health(健康检查) | 只拉模式 | 推拉结合 | 推拉结合 | 推模式降低耦合, 拉模式利于探针与诊断 |
-| 热更新 | 直接可变共享状态 | 版本化快照 | 版本化快照 | 更可测, 与 `ArcSwap(原子 Arc 存储)` 契合 |
+| 热更新 | 直接可变共享状态 | 版本化配置状态 | 版本化配置状态 | 更可测, 与 `ArcSwap(原子 Arc 存储)` 契合 |
 | 关闭语义 | 只取消 | 取消 + 排空 + 强制中止 | 三段式 | 符合 Tokio 官方优雅关闭建议 |
 | 观测模型 | 日志附加字段 | 统一事件模型 | 统一事件模型 | 便于 `When/Where/What(何时/何地/何事)` 语义一致 |
 
@@ -121,7 +121,7 @@ flowchart TD
 | `FailureBudget` | `max_restarts`, `window`, `escalate_to_parent` | 重启风暴保护 |
 | `ServiceExit` | `Completed`, `Error`, `Panicked`, `Cancelled`, `TimedOut` | 任务出口分类 |
 | `RunSummary` | `started_at`, `ended_at`, `shutdown_cause`, `restarts`, `failures` | 运行摘要与诊断输出 |
-| `ConfigSnapshot<C>` | `version`, `loaded_at`, `checksum`, `data` | 热更新配置快照 |
+| `ConfigState<C>` | `version`, `loaded_at`, `checksum`, `data` | 热更新配置状态 |
 | `SupervisorEvent` | `when`, `where_`, `what`, `severity`, `trace` | 统一观测事件 |
 
 建议的 `trait(特征)` 大致如下. 这个草案刻意保持小而完整, 以避免像某些全功能运行时那样把所有策略都耦合到一个巨型接口里。

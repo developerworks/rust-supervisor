@@ -96,6 +96,7 @@ impl RunSummaryBuilder {
 }
 
 impl Default for RunSummaryBuilder {
+    /// Creates the default run summary builder.
     fn default() -> Self {
         Self::new(32)
     }

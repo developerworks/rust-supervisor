@@ -6,6 +6,7 @@ use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
 
+/// Verifies that service functions build fresh task futures.
 #[tokio::test]
 async fn service_fn_builds_fresh_task_future() {
     let service = service_fn(|ctx| async move {
@@ -27,6 +28,7 @@ async fn service_fn_builds_fresh_task_future() {
     assert!(*ready.borrow());
 }
 
+/// Verifies that task context exposes cancellation state.
 #[test]
 fn task_context_exposes_cancellation_state() {
     let (ctx, _heartbeat) = TaskContext::new(

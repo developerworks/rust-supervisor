@@ -85,6 +85,7 @@ pub struct ObservabilityConfig {
 impl TryFrom<SupervisorConfig> for ConfigState {
     type Error = crate::error::types::SupervisorError;
 
+    /// Converts a deserialized supervisor config into validated state.
     fn try_from(config: SupervisorConfig) -> Result<Self, Self::Error> {
         validate_policy(&config.policy)?;
         validate_shutdown(&config.shutdown)?;

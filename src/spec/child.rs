@@ -170,6 +170,7 @@ pub struct ChildSpec {
 }
 
 impl Debug for ChildSpec {
+    /// Formats the child specification without printing the task factory.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ChildSpec")

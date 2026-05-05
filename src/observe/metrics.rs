@@ -202,6 +202,7 @@ impl MetricsFacade {
 }
 
 impl Default for MetricsFacade {
+    /// Creates the default metrics facade.
     fn default() -> Self {
         Self::new()
     }

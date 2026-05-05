@@ -3,6 +3,8 @@
 use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::spec::supervisor::SupervisionStrategy;
 
+/// Returns a valid YAML configuration document.
+/// Returns a valid YAML configuration document for parser tests.
 fn valid_yaml() -> &'static str {
     r#"
 supervisor:
@@ -27,6 +29,8 @@ observability:
 "#
 }
 
+/// Verifies that all required runtime tunables load from YAML.
+/// Verifies that YAML loading fills every required runtime tunable.
 #[test]
 fn yaml_config_loads_required_runtime_tunables() {
     let state = parse_config_state(valid_yaml()).expect("valid YAML should load");
@@ -38,6 +42,8 @@ fn yaml_config_loads_required_runtime_tunables() {
     assert_eq!(state.observability.event_journal_capacity, 64);
 }
 
+/// Verifies that missing runtime tunables are rejected.
+/// Verifies that missing required YAML values are rejected.
 #[test]
 fn yaml_config_rejects_missing_required_tunables() {
     let result = parse_config_state("policy: {}\n");
@@ -45,6 +51,8 @@ fn yaml_config_rejects_missing_required_tunables() {
     assert!(result.is_err());
 }
 
+/// Verifies that invalid backoff ranges are rejected.
+/// Verifies that the initial backoff cannot exceed the maximum backoff.
 #[test]
 fn yaml_config_rejects_invalid_backoff_range() {
     let yaml = valid_yaml().replace("initial_backoff_ms: 10", "initial_backoff_ms: 2000");
@@ -53,6 +61,8 @@ fn yaml_config_rejects_invalid_backoff_range() {
     assert!(result.is_err());
 }
 
+/// Verifies that unknown supervision strategies are rejected.
+/// Verifies that unknown supervision strategy names are rejected.
 #[test]
 fn yaml_config_rejects_invalid_supervision_strategy() {
     let yaml = valid_yaml().replace("strategy: RestForOne", "strategy: RestartEverything");

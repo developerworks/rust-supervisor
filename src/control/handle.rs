@@ -12,7 +12,9 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 /// Cloneable handle used to control a running supervisor.
 #[derive(Debug, Clone)]
 pub struct SupervisorHandle {
+    /// Sender side used to submit runtime control commands.
     command_sender: mpsc::Sender<RuntimeCommand>,
+    /// Broadcast sender used to create lifecycle event subscriptions.
     event_sender: broadcast::Sender<String>,
 }
 

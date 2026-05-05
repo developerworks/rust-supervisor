@@ -40,6 +40,7 @@ impl CommandId {
 }
 
 impl Default for CommandId {
+    /// Creates the default command identifier.
     fn default() -> Self {
         Self::new()
     }
