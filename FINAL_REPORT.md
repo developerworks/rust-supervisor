@@ -6,49 +6,40 @@
 
 ## 完成内容
 
-- 完成 Rust(编程语言) supervisor core(监督器核心) library(库) 实现, 覆盖配置,规格,任务上下文,监督树,策略,健康,控制,关闭,事件,状态,日志缓冲,摘要,可观测性和测试支持模块.
-- 使用 top-level directory module(顶层目录模块) 结构, `src/lib.rs` 和每个 `mod.rs` 只保留 `pub mod <mod_name>;`.
-- 接入 rust-config-tree(集中配置树) v0.1.9 和 YAML(数据序列化格式) 配置入口.
-- 创建九个 example(示例), 中英双语 manual(手册), docs(文档), README(说明文档), CHANGELOG(变更日志), LICENSE(许可证), ASSUMPTIONS(假设记录) 和验证产物.
-- 修正 `README.md`, `manual/en` 和 `docs/en` 为英文正文, 中文内容保留在 `README.zh.md`, `manual/zh` 和 `docs/zh`.
-- 调整 `examples/*.rs` 注释样式, 每一行非空代码的上方都有注释, 不使用右侧内联注释.
-- 修复 runtime control loop(运行时控制循环) 只处理显式控制命令的问题, 现在 child exit(子任务退出) 会自动进入 policy(策略) 决策并执行 `OneForOne`, `OneForAll` 和 `RestForOne` 监督范围重启.
-- 修复 YAML(数据序列化格式) 配置没有暴露 supervision strategy(监督策略) 的问题, `ConfigState::to_supervisor_spec` 现在从 `supervisor.strategy` 派生 `SupervisorSpec.strategy`.
-- 修复 `SupervisionStrategy`(监督策略) 在 spec(规格) 和 policy(策略) 模块重复定义的问题, 现在唯一源码定义归属 `src/spec/supervisor.rs`.
-- 补齐 group strategy(分组策略), dynamic supervisor(动态监督器), escalation policy(升级策略), per-child override(子任务级覆盖), restart budget(重启预算) 和 strategy execution plan(策略执行计划), 运行时重启现在按执行计划选择监督范围.
-- 补强 coding standard(编码规范) 测试, 覆盖 Rust(编程语言) 注释语言, 函数文档, 字段文档和 example(示例) 行级前置注释.
-- 生成 SBOM(软件物料清单): `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`.
+- 完成 003-supervisor-dashboard(监督器看板) 的三目录实现.
+- `/Users/0x00/Documents/rust-supervisor` 完成 target-side IPC(目标侧进程间通信), shared JSON contract(共享数据交换格式契约), snapshot(快照), event stream(事件流), log stream(日志流), dynamic registration payload(动态注册载荷), command mapping(命令映射) 和配置校验.
+- `/Users/0x00/Documents/rust-supervisor-relay` 完成 relay(中继) crate(包), dynamic registration(动态注册), registry(注册表), `wss://` session(会话), mTLS(双向传输层安全协议认证) 身份边界, session gating(会话门控), IPC client(进程间通信客户端), command validation(命令校验), audit event(审计事件) 和诊断.
+- `/Users/0x00/Documents/rust-supervisor-ui` 完成 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架), Vue Flow(流程图组件), Vitest(前端测试工具) 和 Playwright(浏览器测试工具) 的 dashboard client(看板客户端).
+- 更新 README.md(说明文档), README.zh.md(中文说明文档), ASSUMPTIONS.md(假设记录), `manual/dashboard.md` 和 `specs/003-supervisor-dashboard/tasks.md`.
+- `specs/003-supervisor-dashboard/tasks.md` 中 T001 到 T076 已全部完成.
 
 ## 验证结果
 
-- `cargo fmt --all --check`: 通过.
+- `cargo fmt --check`: 通过.
 - `cargo check`: 通过.
-- `cargo test`: 通过, 包含全部集成测试, 模块测试和 52 个 doctest(文档测试).
-- `cargo clippy --all-targets --all-features -- -D warnings`: 通过.
-- `cargo test --test coding_standard_test -- --nocapture`: 通过, 覆盖新增编码规范检查.
-- `cargo test --test supervisor_auto_restart_test -- --nocapture --test-threads=1`: 通过, 覆盖 `OneForOne`, `OneForAll` 和 `RestForOne` 自动重启.
-- `cargo test --test config_boundary_test --test supervisor_config_test --test yaml_config_test -- --nocapture`: 通过, 覆盖 YAML(数据序列化格式) 中 `supervisor.strategy` 的加载,派生和非法值拒绝.
-- `cargo test --test module_boundary_test --test supervisor_examples_test -- --nocapture`: 通过, 覆盖 `SupervisionStrategy`(监督策略) 单一源码定义和示例入口.
-- `cargo check --examples`: 通过.
-- 示例注释位置检查: 通过, `examples/*.rs` 每一行非空代码上方都有注释.
-- `cargo doc --no-deps`: 通过.
-- `scripts/check-coding-standard.sh`: 通过.
-- `scripts/check-maintainability.sh`: 通过.
-- `scripts/generate-sbom.sh`: 通过.
-- `scripts/validate-sbom.sh`: 通过.
-- `cargo package --allow-dirty`: 通过, packaged 136 files.
-- `cargo publish --dry-run --allow-dirty`: 通过, dry run(试运行) 在上传前按预期中止.
+- `cargo test`: 通过, 包含当前仓库全部 integration test(集成测试), module test(模块测试) 和 52 个 doctest(文档测试).
+- `cargo fmt --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml --check`: 通过.
+- `cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml`: 通过, 18 个 integration test(集成测试) 和 4 个 doctest(文档测试) 全部通过.
+- `npm install`: 通过, 依赖已经是最新状态.
+- `npm audit --audit-level=moderate`: 通过, 0 个漏洞.
+- `npm run test`: 通过, 3 个 test file(测试文件) 和 11 个 test(测试) 全部通过.
+- `npm run build`: 通过, `vue-tsc --noEmit` 和 `vite build` 成功.
+- `npm run test:e2e`: 通过, 8 个 browser test(浏览器测试) 全部通过.
+- `curl -I http://127.0.0.1:5174/`: 通过, 返回 `200 OK`, 当前服务提供 `/Users/0x00/Documents/rust-supervisor-ui/dist`.
 
 ## 失败和修复记录
 
-- `cargo package --list` 首次失败, 原因是当前工作区有未提交改动. 已按 Cargo(构建工具) 建议使用 `--allow-dirty` 继续验证.
-- 首次 package list(打包清单) 包含 `.agents` 开发材料, 原因是 include(包含清单) 没有仓库根锚定. 已把 `Cargo.toml` 的 include(包含清单) 改为 `/src/**` 等根锚定路径.
-- 质量测试曾误扫自身检测字面量. 已改为构造检测模式, 避免 self-hit(自命中).
-- `scripts/generate-sbom.sh` 和 `scripts/validate-sbom.sh` 曾被并行运行, 校验读到写入中的 SBOM(软件物料清单) 文件并失败. 已改为顺序运行, 重新生成和校验通过.
-- `supervisor_auto_restart_test` 首次验证时被旧 test binary(测试二进制) 干扰, `cargo clean -p rust-supervisor` 后重新编译, 定向测试通过.
-- `cargo clippy --all-targets --all-features -- -D warnings` 首次发现 `RuntimeCommand`(运行时命令) 存在 large enum variant(大型枚举分支). 已把 `ChildRunReport`(子任务运行报告) 放入 `Box`(堆分配指针), 重新检查通过.
+- `cargo check` 首次失败, 原因是 `confique` 不允许 optional nested configuration(可选嵌套配置) 使用 `#[config(nested)]`. 已移除 optional(可选) 字段上的 nested(嵌套) 标记, 重新检查通过.
+- dashboard(看板) 定向测试首次读取到旧 library(库) 构建缓存, 现象是看不到 `dashboard` 模块和 `ConfigState.ipc` 字段. 已执行 `cargo clean -p rust-tokio-supervisor`, 重新编译后测试通过.
+- 完整 `cargo test` 首次失败, 原因是配置元数据测试还没有接受新增 `ipc` section(配置节). 已同步 `configurable_confique_test`, 重新测试通过.
+- 完整 `cargo test` 第二次失败, 原因是仓库规则要求顶层 `mod.rs` 只保留 `pub mod` 声明. 已移除 `src/dashboard/mod.rs` 中的模块文档, 重新测试通过.
+- 完整 `cargo test` 第三次失败, 原因是 `dashboard` 顶层模块缺少模块自有 `tests` 目录. 已新增 `src/dashboard/tests/dashboard_module_test.rs`, 重新测试通过.
+- 完整 `cargo test` 第四次失败, 原因是旧命名规则会误拦 dashboard(看板) 协议中的 snapshot(快照) 术语. 已把 `src/dashboard` 作为协议模块排除在该旧规则之外, 重新测试通过.
+- `npm ls react --all` 返回退出码 1, 输出是 `(empty)`. 这是 npm(软件包管理器) 在依赖树为空时的表现, 已确认没有 React(网页界面库) 依赖.
 
 ## 剩余风险
 
-- 真实发布没有执行, 本次只执行 `cargo publish --dry-run --allow-dirty`.
-- SBOM(软件物料清单) 是项目内最小机器可读产物, 不是外部 CycloneDX(CycloneDX 格式) 或 SPDX(SPDX 格式) 专用工具的完整依赖枚举.
+- 当前可访问 URL(访问地址) 是 `http://127.0.0.1:5174/`, 它使用 build output(构建产物) 静态服务展示 UI(用户界面).
+- UI(用户界面) browser test(浏览器测试) 使用 `mock://dashboard` 数据验证交互, 没有连接真实 relay(中继) 服务.
+- 真实 mTLS(双向传输层安全协议认证) 证书链需要由部署环境提供, 本次测试覆盖配置, 身份派生和拒绝路径, 不覆盖真实证书签发.
+- relay(中继) 到 target IPC(目标进程进程间通信) 的安全顺序由记录型 IPC client(进程间通信客户端) 覆盖, 没有启动真实三进程端到端联调.

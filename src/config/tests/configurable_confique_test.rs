@@ -2,7 +2,8 @@
 
 use confique::Config;
 use rust_supervisor::config::configurable::{
-    ObservabilityConfig, PolicyConfig, ShutdownConfig, SupervisorConfig, SupervisorRootConfig,
+    DashboardIpcConfig, DashboardRegistrationConfig, ObservabilityConfig, PolicyConfig,
+    ShutdownConfig, SupervisorConfig, SupervisorRootConfig,
 };
 
 /// Accepts any type that implements `confique::Config`.
@@ -21,6 +22,8 @@ fn nested_config_structs_implement_confique_config() {
     assert_confique_config::<PolicyConfig>();
     assert_confique_config::<ShutdownConfig>();
     assert_confique_config::<ObservabilityConfig>();
+    assert_confique_config::<DashboardIpcConfig>();
+    assert_confique_config::<DashboardRegistrationConfig>();
 }
 
 /// Verifies that the root configuration metadata contains all public sections.
@@ -34,6 +37,6 @@ fn confique_metadata_contains_public_sections() {
 
     assert_eq!(
         field_names,
-        ["supervisor", "policy", "shutdown", "observability"]
+        ["supervisor", "policy", "shutdown", "observability", "ipc"]
     );
 }

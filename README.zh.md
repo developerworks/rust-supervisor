@@ -11,8 +11,19 @@
 - `current_state`(当前状态) 只回答当前真实状态, 不承担 lifecycle event history(生命周期事件历史) 职责.
 - 配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式), 运行时可调常量不得散落到模块内部.
 - `SupervisorConfig`(监督器配置) 是公开 root configuration struct(根配置结构体), 它同时支持 `confique::Config`(配置派生), `schemars::JsonSchema`(结构模式生成特征), `Serialize`(序列化) 和 `Deserialize`(反序列化).
+- dashboard IPC(看板进程间通信) 只属于 target process(目标进程) 本机入口. 当前仓库只实现 Unix domain socket(Unix 域套接字), snapshot(快照), event record(事件记录), log record(日志记录), command mapping(命令映射) 和 shared contract(共享契约).
 - shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账).
 - 关闭术语统一使用 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
+
+## Dashboard(看板) 三目录边界
+
+dashboard(看板) 功能固定拆成三个目录.
+
+- `/Users/0x00/Documents/rust-supervisor`: 目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, snapshot(快照) 生成和共享契约.
+- `/Users/0x00/Documents/rust-supervisor-relay`: relay(中继), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
+- `/Users/0x00/Documents/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
+
+target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `ipc.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
 
 ## 配置结构模式
 
@@ -24,6 +35,25 @@
 - `examples/config/supervisor.template.yaml`: 完整单文件模板.
 
 本 crate(包) 不默认写入 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
+
+dashboard IPC(看板进程间通信) 的可选配置如下.
+
+```yaml
+ipc:
+  enabled: true
+  target_id: payments-worker-a
+  path: /run/rust-supervisor/payments-worker-a.sock
+  permissions: "0600"
+  bind_mode: create_new
+  registration:
+    enabled: true
+    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    display_name: "payments worker a"
+    authorization_scope: "payments:operate"
+    lease_seconds: 30
+```
+
+当 `ipc.enabled=true` 时, `ipc.path` 和 `ipc.registration.relay_registration_path` 必须是 absolute path(绝对路径). registration(注册) 使用 dynamic registration(动态注册). relay config(中继配置) 不允许写死 target list(目标列表).
 
 ## 最小使用方式
 
@@ -72,6 +102,17 @@ scripts/check-maintainability.sh
 scripts/generate-sbom.sh
 scripts/validate-sbom.sh
 cargo publish --dry-run
+```
+
+dashboard(看板) 的验证需要覆盖三个目录.
+
+```bash
+cargo test
+cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui install
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run build
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e
 ```
 
 ## 文档入口

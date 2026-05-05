@@ -4,7 +4,8 @@
 //! semantic validation and conversion into supervisor runtime declarations.
 
 use crate::config::configurable::{
-    ObservabilityConfig, PolicyConfig, ShutdownConfig, SupervisorConfig, SupervisorRootConfig,
+    DashboardIpcConfig, ObservabilityConfig, PolicyConfig, ShutdownConfig, SupervisorConfig,
+    SupervisorRootConfig,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -20,6 +21,8 @@ pub struct ConfigState {
     pub shutdown: ShutdownConfig,
     /// Observability switches and capacities.
     pub observability: ObservabilityConfig,
+    /// Optional target-side dashboard IPC configuration.
+    pub ipc: Option<DashboardIpcConfig>,
 }
 
 impl TryFrom<SupervisorConfig> for ConfigState {
@@ -30,11 +33,13 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         validate_policy(&config.policy)?;
         validate_shutdown(&config.shutdown)?;
         validate_observability(&config.observability)?;
+        validate_ipc(config.ipc.as_ref())?;
         Ok(Self {
             supervisor: config.supervisor,
             policy: config.policy,
             shutdown: config.shutdown,
             observability: config.observability,
+            ipc: config.ipc,
         })
     }
 }
@@ -199,6 +204,23 @@ fn validate_observability(
         observability.event_journal_capacity as u64,
         "observability.event_journal_capacity",
     )
+}
+
+/// Validates dashboard IPC configuration invariants.
+///
+/// # Arguments
+///
+/// - `ipc`: Optional target-side dashboard IPC configuration.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when IPC is absent, disabled, or semantically valid.
+fn validate_ipc(
+    ipc: Option<&DashboardIpcConfig>,
+) -> Result<(), crate::error::types::SupervisorError> {
+    crate::dashboard::config::validate_dashboard_ipc_config(ipc)
+        .map(|_| ())
+        .map_err(|error| crate::error::types::SupervisorError::fatal_config(error.to_string()))
 }
 
 /// Validates that a runtime configuration number is positive.

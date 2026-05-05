@@ -17,3 +17,15 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
+ipc:
+  enabled: true
+  target_id: payments-worker-a
+  path: /run/rust-supervisor/payments-worker-a.sock
+  permissions: "0600"
+  bind_mode: create_new
+  registration:
+    enabled: true
+    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    display_name: "payments worker a"
+    authorization_scope: "payments:operate"
+    lease_seconds: 30

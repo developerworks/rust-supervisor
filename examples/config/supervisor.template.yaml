@@ -17,3 +17,15 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
+ipc:
+  enabled: false
+  target_id: example-target
+  path: /run/rust-supervisor/example-target.sock
+  permissions: "0600"
+  bind_mode: create_new
+  registration:
+    enabled: false
+    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    display_name: "example target"
+    authorization_scope: "example:operate"
+    lease_seconds: 30

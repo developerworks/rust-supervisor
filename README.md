@@ -16,6 +16,17 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Load the primary YAML configuration from `examples/config/supervisor.yaml`.
 - Reuse `rust_supervisor::config::configurable::SupervisorConfig` for YAML loading, template generation, and JSON Schema generation.
 - Emit structured logs, tracing spans, metrics, audit events, event journal entries, and `RunSummary` diagnostics.
+- Enable target-side dashboard IPC through the optional `ipc` configuration section. The target process owns only local Unix domain socket IPC, snapshot generation, event conversion, command mapping, and shared JSON contracts.
+
+## Dashboard Boundary
+
+The supervisor dashboard feature uses three directories.
+
+- `/Users/0x00/Documents/rust-supervisor`: target process IPC and shared contracts.
+- `/Users/0x00/Documents/rust-supervisor-relay`: relay server, dynamic registration, `wss://`, mTLS, session gating, and command audit.
+- `/Users/0x00/Documents/rust-supervisor-ui`: Vue, shadcn-vue, Tailwind dashboard client.
+
+The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots and can request `events.subscribe` or `logs.tail`, but those subscriptions must be triggered by an established remote dashboard session.
 
 ## No Compatibility
 
@@ -31,6 +42,25 @@ The official YAML files stay single-file by default:
 - `examples/config/supervisor.template.yaml`: complete single-file template.
 
 This crate does not bake in `x-tree-split`. Projects that want split configuration files can wrap or reuse `SupervisorConfig` in their own crate and decide their own tree split layout.
+
+The optional dashboard IPC section has this shape:
+
+```yaml
+ipc:
+  enabled: true
+  target_id: payments-worker-a
+  path: /run/rust-supervisor/payments-worker-a.sock
+  permissions: "0600"
+  bind_mode: create_new
+  registration:
+    enabled: true
+    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    display_name: "payments worker a"
+    authorization_scope: "payments:operate"
+    lease_seconds: 30
+```
+
+When `ipc.enabled=true`, `ipc.path` and `ipc.registration.relay_registration_path` must be absolute local paths. Registration uses dynamic registration. The relay configuration must not hard-code target lists.
 
 ## Quick Start
 
@@ -88,6 +118,17 @@ scripts/check-maintainability.sh
 scripts/generate-sbom.sh
 scripts/validate-sbom.sh
 cargo publish --dry-run
+```
+
+Dashboard validation spans all three directories:
+
+```bash
+cargo test
+cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui install
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run build
+npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e
 ```
 
 Engineering gate details are documented in `docs/en/quality-gates.md` and `docs/zh/quality-gates.md`. Parallel implementation governance is documented in `docs/en/parallel-governance.md` and `docs/zh/parallel-governance.md`.

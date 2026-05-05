@@ -23,6 +23,8 @@ pub struct SupervisorConfig {
     /// Observability switches and capacities.
     #[config(nested)]
     pub observability: ObservabilityConfig,
+    /// Optional target-side dashboard IPC configuration.
+    pub ipc: Option<DashboardIpcConfig>,
 }
 
 impl rust_config_tree::ConfigSchema for SupervisorConfig {
@@ -90,4 +92,46 @@ pub struct ObservabilityConfig {
     pub metrics_enabled: bool,
     /// Whether command audit recording is enabled.
     pub audit_enabled: bool,
+}
+
+/// Optional target-side dashboard IPC configuration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
+pub struct DashboardIpcConfig {
+    /// Whether the target process opens the local IPC endpoint.
+    pub enabled: bool,
+    /// Stable target process identifier sent to relay and UI.
+    pub target_id: Option<String>,
+    /// Local Unix domain socket path used by the target process.
+    pub path: Option<PathBuf>,
+    /// Socket file permission string such as `0600`.
+    pub permissions: Option<String>,
+    /// Socket bind behavior when the path already exists.
+    pub bind_mode: Option<DashboardIpcBindMode>,
+    /// Dynamic registration settings used after IPC is ready.
+    pub registration: Option<DashboardRegistrationConfig>,
+}
+
+/// Socket bind behavior for target-side dashboard IPC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardIpcBindMode {
+    /// Fail when the socket path already exists.
+    CreateNew,
+    /// Remove a stale socket path before binding.
+    ReplaceStale,
+}
+
+/// Dynamic registration settings for a target process.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
+pub struct DashboardRegistrationConfig {
+    /// Whether the target process registers with relay after IPC is ready.
+    pub enabled: bool,
+    /// Local relay registration socket path.
+    pub relay_registration_path: Option<PathBuf>,
+    /// Human-readable name shown in the dashboard.
+    pub display_name: Option<String>,
+    /// Authorization scope required for remote operators.
+    pub authorization_scope: Option<String>,
+    /// Registration lease duration in seconds.
+    pub lease_seconds: Option<u64>,
 }

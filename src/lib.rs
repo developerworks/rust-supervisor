@@ -7,6 +7,7 @@
 pub mod child_runner;
 pub mod config;
 pub mod control;
+pub mod dashboard;
 pub mod error;
 pub mod event;
 pub mod health;

@@ -12,6 +12,7 @@ keywords = ["supervisor", "tokio", "lifecycle", "observability", "runtime"]
 categories = ["asynchronous", "concurrency", "config"]
 include = [
     "/src/**",
+    "/tests/**",
     "/examples/**",
     "/manual/**",
     "/docs/**",
@@ -238,3 +239,7 @@ path = "src/config/tests/no_baked_in_tree_split_test.rs"
 [[test]]
 name = "invalid_config_rejected_test"
 path = "src/config/tests/invalid_config_rejected_test.rs"
+
+[[test]]
+name = "dashboard_module_test"
+path = "src/dashboard/tests/dashboard_module_test.rs"
