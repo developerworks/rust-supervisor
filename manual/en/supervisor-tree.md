@@ -1,21 +1,21 @@
-# 监督树
+# Supervisor Tree
 
-## 声明模型
+## Declaration Model
 
-`SupervisorSpec`(监督器规格) 描述一个 supervisor(监督器)节点. 它包含 `path`, `strategy`, `children`, `config_version`, 默认重启策略, 默认退避策略, 默认健康策略, 默认关闭策略和 supervisor-level fuse(监督器级熔断)限制.
+`SupervisorSpec` describes one supervisor node. It contains `path`, `strategy`, `children`, `config_version`, default restart policy, default backoff policy, default health policy, default shutdown policy, and supervisor-level fuse limits.
 
-`ChildSpec`(子任务规格) 描述一个 child(子任务). 它包含 `id`, `name`, `kind`, `factory`, `restart_policy`, `shutdown_policy`, `health_policy`, `readiness_policy`, `backoff_policy`, `dependencies`, `tags` 和 `criticality`.
+`ChildSpec` describes one child. It contains `id`, `name`, `kind`, `factory`, `restart_policy`, `shutdown_policy`, `health_policy`, `readiness_policy`, `backoff_policy`, `dependencies`, `tags`, and `criticality`.
 
-## 树构建
+## Tree Building
 
-`SupervisorTree::build` 会校验 `SupervisorSpec`(监督器规格), 再把 children(子任务集合)转换成带路径的节点. 每个 child(子任务)路径来自父路径和 `ChildId`(子任务标识).
+`SupervisorTree::build` validates `SupervisorSpec` and converts children into path-aware nodes. Each child path is derived from the parent path and `ChildId`.
 
-`SupervisorPath::root` 表示根路径. `SupervisorPath::join` 用于拼接子路径. `SupervisorPath::parent` 用于查找父级路径.
+`SupervisorPath::root` returns the root path. `SupervisorPath::join` appends a child path segment. `SupervisorPath::parent` returns the parent path when it exists.
 
-## 启动和关闭顺序
+## Startup And Shutdown Order
 
-`startup_order` 按声明顺序返回节点. `shutdown_order` 按声明顺序的逆序返回节点. 这个顺序是 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务) 的基础.
+`startup_order` returns nodes in declaration order. `shutdown_order` returns nodes in reverse declaration order. This ordering is the basis for Shutdown Without Orphaned Tasks.
 
-## 注册表
+## Registry
 
-`RegistryStore`(注册表存储)按 child id(子任务标识), supervisor path(监督器路径) 和声明顺序保存 `ChildRuntime`(子任务运行态). 运行时控制和当前状态查询不应该绕过注册表直接访问内部状态.
+`RegistryStore` stores `ChildRuntime` values by child identifier, supervisor path, and declaration order. Runtime control and current state queries should go through the registry instead of bypassing it.

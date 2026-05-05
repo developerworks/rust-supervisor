@@ -9,7 +9,9 @@
 - 完成 Rust(编程语言) supervisor core(监督器核心) library(库) 实现, 覆盖配置,规格,任务上下文,监督树,策略,健康,控制,关闭,事件,状态,日志缓冲,摘要,可观测性和测试支持模块.
 - 使用 top-level directory module(顶层目录模块) 结构, `src/lib.rs` 和每个 `mod.rs` 只保留 `pub mod <mod_name>;`.
 - 接入 rust-config-tree(集中配置树) v0.1.9 和 YAML(数据序列化格式) 配置入口.
-- 创建五个 example(示例), 中英双语 manual(手册), docs(文档), README(说明文档), CHANGELOG(变更日志), LICENSE(许可证), ASSUMPTIONS(假设记录) 和验证产物.
+- 创建九个 example(示例), 中英双语 manual(手册), docs(文档), README(说明文档), CHANGELOG(变更日志), LICENSE(许可证), ASSUMPTIONS(假设记录) 和验证产物.
+- 修正 `README.md`, `manual/en` 和 `docs/en` 为英文正文, 中文内容保留在 `README.zh.md`, `manual/zh` 和 `docs/zh`.
+- 调整 `examples/*.rs` 注释样式, 每一行非空代码的上方都有注释, 不使用右侧内联注释.
 - 生成 SBOM(软件物料清单): `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`.
 
 ## 验证结果
@@ -18,7 +20,7 @@
 - `cargo check`: 通过.
 - `cargo test`: 通过, 包含全部集成测试, 模块测试和 52 个 doctest(文档测试).
 - `cargo check --examples`: 通过.
-- 五个 `cargo run --example <name>`: 通过.
+- 示例注释位置检查: 通过, `examples/*.rs` 每一行非空代码上方都有注释.
 - `cargo doc --no-deps`: 通过.
 - `scripts/check-coding-standard.sh`: 通过.
 - `scripts/check-maintainability.sh`: 通过.

@@ -1,29 +1,29 @@
-# 配置模型
+# Configuration
 
-## 配置入口
+## Entry Point
 
-配置入口是 `rust_supervisor::config::loader::load_config_state`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.
+The configuration entry point is `rust_supervisor::config::loader::load_config_state`. It accepts only the YAML primary configuration file. The repository example path is `examples/config/supervisor.yaml`.
 
-当前配置形状包含三组数据: `policy`, `shutdown` 和 `observability`. 它们分别进入 `PolicyConfig`, `ShutdownConfig` 和 `ObservabilityConfig`.
+The current configuration shape contains `policy`, `shutdown`, and `observability` groups. They map into `PolicyConfig`, `ShutdownConfig`, and `ObservabilityConfig`.
 
-## 配置状态
+## Configuration State
 
-`SupervisorConfig`(监督器配置) 是文件反序列化后的形状. `ConfigState`(配置状态) 是校验后的不可变状态. 运行时不应该在其它模块里保存运行时可调常量.
+`SupervisorConfig` is the deserialized file shape. `ConfigState` is the validated immutable state. Runtime modules must not keep separate runtime tunable constants.
 
-`ConfigState::to_supervisor_spec` 会派生 `SupervisorSpec`(监督器规格). 当前实现用配置值填充策略默认值, 关闭预算, 健康检查时间和可观测性容量.
+`ConfigState::to_supervisor_spec` derives `SupervisorSpec`. The implementation fills policy defaults, shutdown budgets, health timing, and observability capacity from configuration values.
 
-## 错误边界
+## Error Boundary
 
-配置加载失败会返回 `SupervisorError::FatalConfig`. 这些情况会拒绝启动:
+Configuration loading returns `SupervisorError::FatalConfig` when startup must be rejected:
 
-- 配置文件不是 YAML(数据序列化格式).
-- 文件无法读取.
-- YAML(数据序列化格式)无法解析成 `SupervisorConfig`.
-- 数值为零.
-- 初始退避大于最大退避.
-- jitter(抖动)比例不在零到一之间.
+- The file extension is not YAML.
+- The file cannot be read.
+- YAML cannot be parsed into `SupervisorConfig`.
+- A required numeric value is zero.
+- The initial backoff is greater than the maximum backoff.
+- The jitter ratio is outside the accepted range.
 
-## 示例配置
+## Example Configuration
 
 ```yaml
 policy:

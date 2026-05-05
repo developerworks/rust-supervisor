@@ -1,24 +1,26 @@
-# rust-supervisor 手册
+# rust-supervisor Manual
 
-## 项目定位
+## Project Scope
 
-`rust-supervisor` 是 Rust(编程语言) 任务监督核心库. 它面向 Tokio(异步运行时) 服务, 用声明式模型管理 child(子任务) 的启动, 停止, 重启, 隔离, 状态查询, 事件记录, 健康检查和 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
+`rust-supervisor` is a Rust task supervision core for Tokio services. It uses declarative models to manage child startup, stop, restart, quarantine, state query, event recording, health checks, and Shutdown Without Orphaned Tasks.
 
-本项目没有旧接口负担. 使用者应该通过拥有模块路径读取公开类型, 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
+The configuration boundary uses rust-config-tree v0.1.9 with YAML files. Runtime tunable values must enter the system through this centralized configuration path.
 
-## 阅读路径
+This project has no legacy interface burden. Users should import public types from owning module paths, such as `rust_supervisor::runtime::supervisor::Supervisor`.
 
-- [快速开始](getting-started.md): 从 YAML(数据序列化格式)配置启动最小 supervisor(监督器).
-- [配置模型](configuration.md): 理解 `SupervisorConfig`, `ConfigState` 和配置拒绝启动边界.
-- [监督树](supervisor-tree.md): 理解 `SupervisorSpec`, `SupervisorTree` 和注册表关系.
-- [任务模型](task-model.md): 理解 `ChildSpec`, `TaskFactory`, `TaskContext` 和 readiness(就绪).
-- [策略模型](policies.md): 理解重启, 退避, 熔断, 隔离和任务退出分类.
-- [运行时控制](runtime-control.md): 理解 `SupervisorHandle` 的控制命令和幂等语义.
-- [关闭协议](shutdown.md): 理解四阶段关闭和 blocking worker(阻塞工作任务)边界.
-- [可观测性](observability.md): 理解事件, 日志, 追踪, 指标, 审计和运行摘要.
-- [示例程序](examples.md): 逐个运行 `examples/` 下的学习示例.
-- [质量门禁](quality-gates.md): 运行格式化, 编译, 测试, 文档, SBOM(软件物料清单)和发布检查.
+## Reading Path
 
-## 能力边界
+- [Getting Started](getting-started.md): start a minimal supervisor from YAML configuration.
+- [Configuration](configuration.md): understand `SupervisorConfig`, `ConfigState`, and startup rejection boundaries.
+- [Supervisor Tree](supervisor-tree.md): understand `SupervisorSpec`, `SupervisorTree`, and registry ownership.
+- [Task Model](task-model.md): understand `ChildSpec`, `TaskFactory`, `TaskContext`, and readiness.
+- [Policies](policies.md): understand restart decisions, backoff, fuse rules, quarantine, and task exit classification.
+- [Runtime Control](runtime-control.md): understand `SupervisorHandle` commands and idempotent behavior.
+- [Shutdown](shutdown.md): understand four-stage shutdown and blocking worker boundaries.
+- [Observability](observability.md): understand events, logs, tracing, metrics, audit data, and run summaries.
+- [Examples](examples.md): run each learning example under `examples/`.
+- [Quality Gates](quality-gates.md): run formatting, build, test, documentation, SBOM, and release checks.
 
-supervisor core(监督器核心) 只管理 lifecycle governance(生命周期治理). 高频业务消息属于 data plane(数据面), 不应该每条都经过 supervisor(监督器). control plane(控制面) 只处理生命周期命令, 当前状态, 事件和治理决策.
+## Runtime Boundary
+
+The supervisor core governs lifecycle behavior only. High-frequency business messages belong in the data plane. The control plane handles lifecycle commands, current state queries, events, and governance decisions.

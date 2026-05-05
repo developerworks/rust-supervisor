@@ -1,25 +1,25 @@
-# 运行时控制
+# Runtime Control
 
-## 控制入口
+## Control Entry Point
 
-`SupervisorHandle`(监督器句柄)是运行时控制入口. 它通过命令通道把请求发送给 runtime control loop(运行时控制循环), 并返回 `CommandResult`(命令结果).
+`SupervisorHandle` is the runtime control entry point. It sends requests to the runtime control loop through a command channel and returns `CommandResult`.
 
-## 控制命令
+## Control Commands
 
-- `add_child`: 添加新的 child(子任务), 并接入注册表和状态.
-- `remove_child`: 先关闭目标 child(子任务), 再移除注册表记录.
-- `restart_child`: 请求目标 child(子任务)重启.
-- `pause_child`: 暂停目标 child(子任务)治理.
-- `resume_child`: 恢复目标 child(子任务)治理.
-- `quarantine_child`: 把目标 child(子任务)放入隔离状态.
-- `shutdown_tree`: 关闭整棵监督树.
-- `current_state`: 返回当前 `SupervisorState`(监督器状态).
-- `subscribe_events`: 订阅生命周期事件.
+- `add_child`: add a new child and attach it to the registry and state model.
+- `remove_child`: stop the target child before removing its registry record.
+- `restart_child`: request a restart for the target child.
+- `pause_child`: pause governance for the target child.
+- `resume_child`: resume governance for the target child.
+- `quarantine_child`: place the target child into quarantine.
+- `shutdown_tree`: shut down the whole supervisor tree.
+- `current_state`: return the current `SupervisorState`.
+- `subscribe_events`: subscribe to lifecycle events.
 
-## 幂等语义
+## Idempotent Behavior
 
-重复控制命令不应该制造不可恢复错误. 已暂停的 child(子任务)再次暂停时返回当前状态. 已隔离的 child(子任务)再次隔离时返回当前状态. 已完成 shutdown(关闭)后再次关闭时返回已有关闭结果.
+Repeated control commands should not create unrecoverable errors. Pausing an already paused child returns the current state. Quarantining an already quarantined child returns the current state. Shutting down an already completed tree returns the existing shutdown result.
 
-## 审计数据
+## Audit Data
 
-每个控制命令都带有 `requested_by`(请求者), `reason`(原因), `target_path`(目标路径), `accepted_at`(接受时间)和 `command_id`(命令标识). 这些字段用于 audit event(审计事件)和问题追踪.
+Each control command carries `requested_by`, `reason`, `target_path`, `accepted_at`, and `command_id`. These fields support audit events and incident review.

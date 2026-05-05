@@ -1,6 +1,6 @@
-# Quality Gates(质量门禁)
+# Quality Gates
 
-## 基线命令
+## Baseline Commands
 
 ```bash
 cargo fmt --check
@@ -15,14 +15,14 @@ scripts/validate-sbom.sh
 cargo publish --dry-run
 ```
 
-## 编码标准门禁
+## Coding Standard Gate
 
-`scripts/check-coding-standard.sh` 检查必需文档, example(示例), YAML(数据序列化格式) 配置, ASCII(美国信息交换标准代码) 标点约束和 no compatibility(禁止兼容) 约束.
+`scripts/check-coding-standard.sh` checks required documents, example files, YAML configuration, ASCII punctuation constraints, and No Compatibility constraints.
 
-## 可维护性门禁
+## Maintainability Gate
 
-`scripts/check-maintainability.sh` 检查 manual(手册), docs(文档), quality gate(质量门禁), parallel governance(并行治理), example(示例) 数量和 validation artifact(验证产物).
+`scripts/check-maintainability.sh` checks manual pairs, docs pairs, quality gate pages, parallel governance pages, example count, and validation artifacts.
 
-## SBOM(软件物料清单) 门禁
+## SBOM Gate
 
-`scripts/generate-sbom.sh` 生成 CycloneDX JSON(CycloneDX JSON 格式) 和 SPDX JSON(SPDX JSON 格式) 的最小发布产物. `scripts/validate-sbom.sh` 校验格式, 当前 crate(包), `Cargo.lock` 摘要和敏感信息泄漏.
+`scripts/generate-sbom.sh` creates minimal CycloneDX JSON and SPDX JSON release artifacts. `scripts/validate-sbom.sh` checks artifact shape, current crate metadata, `Cargo.lock` digest, and sensitive information leakage.

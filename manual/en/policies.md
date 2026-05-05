@@ -1,23 +1,23 @@
-# 策略模型
+# Policies
 
-## 监督策略
+## Supervision Strategy
 
-`SupervisionStrategy`(监督策略)决定失败后的重启范围. `OneForOne`(一对一)只选择失败 child(子任务). `OneForAll`(一对全部)选择同组全部 child(子任务). `RestForOne`(从失败处开始)选择失败 child(子任务)和之后声明的 child(子任务).
+`SupervisionStrategy` decides the restart scope after a failure. `OneForOne` selects only the failed child. `OneForAll` selects every child in the same group. `RestForOne` selects the failed child and every child declared after it.
 
-`restart_scope` 根据 `SupervisorTree`(监督树), 策略和失败 child id(子任务标识)计算重启范围.
+`restart_scope` calculates the restart scope from `SupervisorTree`, the strategy, and the failed child identifier.
 
-## 重启策略
+## Restart Policy
 
-`RestartPolicy`(重启策略)包含 `Permanent`(永久), `Transient`(瞬时)和 `Temporary`(临时). `PolicyEngine`(策略引擎)读取 `TaskExit`(任务退出), 失败类别和重启策略, 输出 `RestartDecision`(重启决策).
+`RestartPolicy` contains `Permanent`, `Transient`, and `Temporary`. `PolicyEngine` reads `TaskExit`, the failure category, and the restart policy, then returns `RestartDecision`.
 
-## 退避和抖动
+## Backoff And Jitter
 
-`BackoffPolicy`(退避策略)描述初始延迟, 最大延迟, jitter(抖动)模式和 reset-after(稳定后重置). 测试可以使用 deterministic jitter(确定性抖动), 避免依赖随机结果.
+`BackoffPolicy` describes initial delay, maximum delay, jitter mode, and reset-after behavior. Tests can use deterministic jitter so coverage does not depend on random output.
 
-## 熔断和隔离
+## Fuse And Quarantine
 
-`MeltdownPolicy`(熔断策略)限制一个窗口内的重启或失败次数. 超过 child-level fuse(子任务级熔断)会进入 quarantine(隔离). 超过 supervisor-level fuse(监督器级熔断)会升级到父级.
+`MeltdownPolicy` limits restarts or failures inside configured windows. Crossing a child-level fuse places the child in quarantine. Crossing a supervisor-level fuse escalates the failure to the parent.
 
-## 任务退出分类
+## Task Exit Classification
 
-`TaskExit`(任务退出)区分成功, 取消, 类型化失败, panic(恐慌)和 timeout(超时). 策略层必须读取类型化分类, 不应该从字符串推断行为.
+`TaskExit` distinguishes success, cancellation, typed failure, panic, and timeout. The policy layer must read typed classifications instead of inferring behavior from strings.
