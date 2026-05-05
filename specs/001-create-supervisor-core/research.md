@@ -2,7 +2,7 @@
 
 ## Decision(决定): 构建项目自有 supervisor model(监督器模型),不包装现成 crate(库)
 
-**Rationale(理由)**: 本功能需要精确的领域模型:`ChildSpec`(子任务规格),`SupervisorTree`(监督树),`TaskFactory`(任务工厂),typed exit reason(类型化退出原因),child/supervisor fuse(子任务和监督器熔断),control-plane audit(控制平面审计),state snapshot(状态快照) 和 `When`(何时),`Where`(何处),`What`(发生内容) 事件.参考 crate(库) 分别覆盖部分能力,但没有一个能在不引入不兼容 API(接口) 或框架假设的情况下满足完整契约.
+**Rationale(理由)**: 本功能需要精确的领域模型:`ChildSpec`(子任务规格),`SupervisorTree`(监督树),`TaskFactory`(任务工厂),typed exit reason(类型化退出原因),child/supervisor fuse(子任务和监督器熔断),control-plane audit(控制平面审计),current state(当前状态) 和 `When`(何时),`Where`(何处),`What`(发生内容) 事件.参考 crate(库) 分别覆盖部分能力,但没有一个能在不复制第三方 API(接口) 形状或引入框架假设的情况下满足完整契约.
 
 **Alternatives considered(已考虑方案)**:
 
@@ -39,14 +39,24 @@
 - 每个 child(子任务) 只保存一个 `JoinHandle`(等待句柄):单任务可行,但对作用域关闭和无孤儿任务保证较弱.
 - 做 executor-agnostic abstraction(执行器无关抽象):对 Tokio(异步运行时) 专用监督器来说过早.
 
-## Decision(决定): 分离 state snapshot(状态快照) 和 lifecycle event(生命周期事件)
+## Decision(决定): 分离 current state(当前状态) 和 lifecycle event(生命周期事件)
 
-**Rationale(理由)**: 当前状态和历史事件回答不同问题.watch-style state plane(观察式状态平面) 只保存最新 `SupervisorSnapshot`(监督器快照),event plane(事件平面) 保存有序生命周期事件,供 subscriber(订阅者),audit(审计),replay(回放) 和测试使用.
+**Rationale(理由)**: 当前状态和历史事件回答不同问题.watch-style state plane(观察式状态平面) 只保存最新 `SupervisorState`(监督器当前状态),event plane(事件平面) 保存有序生命周期事件,供 subscriber(订阅者),audit(审计),replay(回放) 和测试使用.
 
 **Alternatives considered(已考虑方案)**:
 
 - 只提供 event stream(事件流):消费者必须回放历史才能知道当前状态.
-- 只提供 snapshot(快照):系统会丢失顺序,命令审计,重启决策和事件滞后信息.
+- 只提供 current state(当前状态):系统会丢失顺序,命令审计,重启决策和事件滞后信息.
+
+## Decision(决定): 禁止 `*Snapshot` 和 `*View` 代码命名
+
+**Rationale(理由)**: 用户要求删除所有 `*Snapshot` 和 `*View` 命名方式.状态查询在本项目中表达的是当前状态,不是复制某个历史对象,也不是只读视图对象.因此配置加载结果命名为 `ConfigState`(配置状态),监督器状态命名为 `SupervisorState`(监督器状态),子任务状态命名为 `ChildState`(子任务状态),运行时查询命令命名为 `current_state`(当前状态),源码模块命名为 `state`(状态).
+
+**Alternatives considered(已考虑方案)**:
+
+- 继续使用 `ConfigSnapshot` 和 `SupervisorSnapshot`:被拒绝,因为它违反新的代码命名要求.
+- 继续使用 `SupervisorStateView`,`ChildStateView` 或 `state_view`:被拒绝,因为它违反新的代码命名要求.
+- 只在文档中改名而保留代码别名:被拒绝,因为项目禁止兼容方法和旧接口别名.
 
 ## Decision(决定): 使用 `tracing`(结构化追踪) 和 `metrics`(指标) 作为可观察性基础
 
@@ -95,7 +105,7 @@
 
 ## Decision(决定): 使用 four-stage shutdown(四阶段关闭)
 
-**Rationale(理由)**: cancel-then-abort(先取消后强制终止) 是对外边界, 但内部必须明确 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账). reconcile(状态对账) 负责统一 registry(注册表), snapshot(快照), metrics(指标) 和 event journal(事件日志缓冲区), 防止关闭完成后状态互相矛盾.
+**Rationale(理由)**: cancel-then-abort(先取消后强制终止) 是对外边界, 但内部必须明确 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账). reconcile(状态对账) 负责统一 registry(注册表), current state(当前状态), metrics(指标) 和 event journal(事件日志缓冲区), 防止关闭完成后状态互相矛盾.
 
 **Alternatives considered(已考虑方案)**:
 
@@ -129,13 +139,61 @@
 - `tracing` 0.1.44 和 `tracing-subscriber` 0.3.23: span(追踪范围),event(追踪事件) 和测试或示例 subscriber(订阅者).
 - `metrics` 0.24.5: required metric name(必需指标名) 的 metrics facade(指标门面).
 - `thiserror` 2.0.18: typed supervisor error(类型化监督器错误).
-- `serde` 1.0.228 和 `serde_json` 1.0.149: snapshot(快照),event(事件) 和 audit(审计) 序列化.
+- `serde` 1.0.228 和 `serde_json` 1.0.149: current state(当前状态),event(事件) 和 audit(审计) 序列化.
+- `serde_yaml` 0.9: YAML(数据序列化格式) 配置解析支持,用于 rust-config-tree(集中配置树) v0.1.9 的主配置格式.
 - `uuid` 1.23.1: command id(命令标识) 和 correlation id(关联标识) 生成.
 - `rand` 0.10.1: 生产 jitter(抖动) 来源,并在测试中提供确定性覆盖.
-- 现有 `rust-config-tree` 0.1.7: 后续声明式配置 include tree(包含树) 可使用它;监督器运行时核心本身不依赖它.
+- 现有 `rust-config-tree` 0.1.9: 必须作为 centralized configuration(集中化配置) 唯一入口,加载 YAML(数据序列化格式) 主配置,并生成 `ConfigState`(配置状态).配置不得分散在模块内部.
 
 **Alternatives considered(已考虑方案)**:
 
 - 增加 actor(参与者) 或 supervision(监督) crate(库):被功能范围拒绝.
 - 把具体 Prometheus exporter(普罗米修斯导出器) 加进核心:推迟到示例,保持库表面小.
 - 增加 `anyhow`(通用错误):策略决定需要类型化类别,所以拒绝.
+
+## Decision(决定): rust-config-tree(集中配置树) 固定使用 v0.1.9 和 YAML(数据序列化格式)
+
+**Rationale(理由)**: 用户要求项目使用 rust-config-tree(集中配置树) 做 centralized configuration(集中化配置),并要求配置不能分散在各处.当前规格把 `rust-config-tree`(集中配置树软件包) 版本固定为 v0.1.9,主配置格式固定为 YAML(数据序列化格式),示例路径固定为 `examples/config/supervisor.yaml`.这样可以让配置加载,示例,quickstart(快速开始),测试和文档使用同一个来源.
+
+**Alternatives considered(已考虑方案)**:
+
+- 继续支持 TOML(配置格式) 或 JSON(数据交换格式) 主配置:被拒绝,因为它会扩大配置入口并制造多格式维护成本.
+- 允许模块自己保存可调默认值:被拒绝,因为它会绕过 rust-config-tree(集中配置树) 的集中化配置边界.
+
+## Decision(决定): 用 glossary.md(词汇表) 治理专业词汇和反引号词汇
+
+**Rationale(理由)**: 规格文档包含大量 supervisor(监督器),policy(策略),runtime(运行时),observability(可观测性),configuration(配置),release(发布) 和 Rust(编程语言) 类型词汇.用户要求专业词汇单独成文,并且反引号内的词汇也算词汇.因此 `glossary.md`(词汇表) 成为正式术语来源,并且必须覆盖类型名,枚举值,方法名,字段名,指标名,路径名,命令名,配置键和测试目标.
+
+**Alternatives considered(已考虑方案)**:
+
+- 把词汇说明散落在各文档章节:被拒绝,因为它会导致同一英文术语出现不同中文说明.
+- 只登记自然语言专业词汇,不登记反引号词汇:被拒绝,因为反引号内的公开名称同样影响 API(接口),配置和测试理解.
+
+## Decision(决定): 禁止 compatibility method(兼容方法)
+
+**Rationale(理由)**: 本项目是全新开发项目,没有历史包袱.公开 API(接口) 应该直接表达第一版自有模型,不能为了旧接口,第三方 API(接口) 或迁移路径增加额外表面.
+
+**Alternatives considered(已考虑方案)**:
+
+- 提供旧接口别名或 deprecated facade(废弃门面):被拒绝,因为它会制造不存在的历史包袱.
+- 提供第三方 API(接口) 包装层:被拒绝,因为它会让使用者误以为本项目承诺第三方语义.
+
+## Decision(决定): 使用 module dependency map(模块依赖图) 和 parallel workstream(并行工作流) 提高开发并行度
+
+**Rationale(理由)**: 实现阶段必须并行开发,但并行开发只有在模块依赖,文件所有权和测试边界清晰时才不会互相阻塞.计划把实现拆成 contract foundation(契约基础),configuration(集中配置),declaration and task(声明和任务),policy and time(策略和时间),runtime tree(运行时树),control and shutdown(控制和关闭),observability diagnostics(可观测性和诊断),docs examples release(文档示例和发布) 和 quality governance(质量治理) 九个 workstream(工作流).每个 workstream(工作流) 拥有明确 primary files(主文件),independent tests(独立测试) 和 blocker removal action(卡点消除动作).
+
+**Alternatives considered(已考虑方案)**:
+
+- 按 user story(用户故事) 串行实现:被拒绝,因为 runtime(运行时),configuration(配置),observability(可观测性),docs(文档) 和 quality gate(质量门禁) 可以在契约稳定后并行推进.
+- 只用任务列表标记 `[P]`:被拒绝,因为它不能解释模块依赖关系,也不能约束共享文件冲突.
+- 允许子代理自由选择文件范围:被拒绝,因为它会增加 merge conflict(合并冲突) 和 contract drift(契约漂移) 风险.
+
+## Decision(决定): 使用 unattended implementation(无人值守实现),task completion ledger(任务完成台账) 和 lead agent supervision(主代理监督) 治理实现执行
+
+**Rationale(理由)**: 用户要求实现阶段必须并行开发,无人值守,直到所有任务完成,并且主代理必须监督子代理开发工作并及时纠偏.因此实现阶段必须维护 task completion ledger(任务完成台账),subagent workstream record(子代理工作流记录),lead agent review(主代理审查),correction record(纠偏记录) 和 final evidence(最终证据).每个 workstream(工作流) 只有在测试,文档同步,模块边界,命名约束和完成证据都通过后才能完成.
+
+**Alternatives considered(已考虑方案)**:
+
+- 每个子代理完成后直接合并:被拒绝,因为它缺少主代理监督和偏差闭环.
+- 只在最后运行一次总验收:被拒绝,因为并行开发中的偏差会积累到后期,增加返工成本.
+- 依赖人工逐项催办:被拒绝,因为它违反 unattended implementation(无人值守实现) 要求.
