@@ -33,8 +33,8 @@
 <!-- SPECKIT START -->
 
 项目原则和治理规则读取 `.specify/memory/constitution.md`。
-当前功能计划读取 `specs/001-create-supervisor-core/plan.md`。
+当前功能计划读取 `specs/002-config-schema-support/plan.md`。
 功能规格、研究结论、数据模型、接口契约和 quickstart(快速开始) 都在
-`specs/001-create-supervisor-core/` 目录下。
+`specs/002-config-schema-support/` 目录下。
 
 <!-- SPECKIT END -->
