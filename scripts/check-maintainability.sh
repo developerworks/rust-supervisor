@@ -16,9 +16,17 @@ require_pair() {
 }
 
 require_manual_pair() {
-    require_file "manual/zh/$1"
-    require_file "manual/en/$1"
+require_file "manual/zh/$1"
+require_file "manual/en/$1"
 }
+
+require_file .github/dependabot.yml
+require_file .github/workflows/pages.yml
+require_file book.toml
+require_file manual/theme/left-aligned.css
+require_file scripts/publish-pages.sh
+require_manual_pair book.toml
+require_manual_pair SUMMARY.md
 
 example_count=$(find examples -maxdepth 1 -name '*.rs' -type f | wc -l | tr -d ' ')
 [ "$example_count" -ge 9 ] || fail "expected at least nine Rust examples"

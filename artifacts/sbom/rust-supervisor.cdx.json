@@ -4,7 +4,7 @@
   "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000001",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-05-05T07:42:15Z",
+    "timestamp": "2026-05-05T09:09:25Z",
     "tools": [
       {
         "vendor": "rust-supervisor",
@@ -32,7 +32,2952 @@
       ]
     }
   },
-  "components": [],
+  "components": [
+    {
+      "type": "library",
+      "name": "anstream",
+      "version": "1.0.0",
+      "purl": "pkg:cargo/anstream@1.0.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "anstyle",
+      "version": "1.0.14",
+      "purl": "pkg:cargo/anstyle@1.0.14",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "anstyle-parse",
+      "version": "1.0.0",
+      "purl": "pkg:cargo/anstyle-parse@1.0.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "anstyle-query",
+      "version": "1.1.5",
+      "purl": "pkg:cargo/anstyle-query@1.1.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "anstyle-wincon",
+      "version": "3.0.11",
+      "purl": "pkg:cargo/anstyle-wincon@3.0.11",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "anyhow",
+      "version": "1.0.102",
+      "purl": "pkg:cargo/anyhow@1.0.102",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "atomic",
+      "version": "0.6.1",
+      "purl": "pkg:cargo/atomic@0.6.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a89cbf775b137e9b968e67227ef7f775587cde3fd31b0d8599dbd0f598a48340"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "bitflags",
+      "version": "2.11.1",
+      "purl": "pkg:cargo/bitflags@2.11.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "purl": "pkg:cargo/block-buffer@0.10.4",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "bumpalo",
+      "version": "3.20.2",
+      "purl": "pkg:cargo/bumpalo@3.20.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "bytemuck",
+      "version": "1.25.0",
+      "purl": "pkg:cargo/bytemuck@1.25.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c8efb64bd706a16a1bdde310ae86b351e4d21550d98d056f22f8a7f7a2183fec"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "bytes",
+      "version": "1.11.1",
+      "purl": "pkg:cargo/bytes@1.11.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "purl": "pkg:cargo/cfg-if@1.0.4",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "chacha20",
+      "version": "0.10.0",
+      "purl": "pkg:cargo/chacha20@0.10.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6f8d983286843e49675a4b7a2d174efe136dc93a18d69130dd18198a6c167601"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "clap",
+      "version": "4.6.1",
+      "purl": "pkg:cargo/clap@4.6.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1ddb117e43bbf7dacf0a4190fef4d345b9bad68dfc649cb349e7d17d28428e51"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "clap_builder",
+      "version": "4.6.0",
+      "purl": "pkg:cargo/clap_builder@4.6.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "714a53001bf66416adb0e2ef5ac857140e7dc3a0c48fb28b2f10762fc4b5069f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "clap_complete",
+      "version": "4.6.3",
+      "purl": "pkg:cargo/clap_complete@4.6.3",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "660c0520455b1013b9bcb0393d5f643d7e4454fb69c915b8d6d2aa0e9a45acc3"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "clap_derive",
+      "version": "4.6.1",
+      "purl": "pkg:cargo/clap_derive@4.6.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f2ce8604710f6733aa641a2b3731eaa1e8b3d9973d5e3565da11800813f997a9"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "clap_lex",
+      "version": "1.1.0",
+      "purl": "pkg:cargo/clap_lex@1.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "colorchoice",
+      "version": "1.0.5",
+      "purl": "pkg:cargo/colorchoice@1.0.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "confique",
+      "version": "0.4.0",
+      "purl": "pkg:cargo/confique@0.4.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "06b4f5ec222421e22bb0a8cbaa36b1d2b50fd45cdd30c915ded34108da78b29f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "confique-macro",
+      "version": "0.0.13",
+      "purl": "pkg:cargo/confique-macro@0.0.13",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e4d1754680cd218e7bcb4c960cc9bae3444b5197d64563dccccfdf83cab9e1a7"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "purl": "pkg:cargo/cpufeatures@0.2.17",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "cpufeatures",
+      "version": "0.3.0",
+      "purl": "pkg:cargo/cpufeatures@0.3.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "purl": "pkg:cargo/crypto-common@0.1.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "digest",
+      "version": "0.10.7",
+      "purl": "pkg:cargo/digest@0.10.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "dotenvy",
+      "version": "0.15.7",
+      "purl": "pkg:cargo/dotenvy@0.15.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "dyn-clone",
+      "version": "1.0.20",
+      "purl": "pkg:cargo/dyn-clone@1.0.20",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "equivalent",
+      "version": "1.0.2",
+      "purl": "pkg:cargo/equivalent@1.0.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "errno",
+      "version": "0.3.14",
+      "purl": "pkg:cargo/errno@0.3.14",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "figment",
+      "version": "0.10.19",
+      "purl": "pkg:cargo/figment@0.10.19",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8cb01cd46b0cf372153850f4c6c272d9cbea2da513e07538405148f95bd789f3"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "foldhash",
+      "version": "0.1.5",
+      "purl": "pkg:cargo/foldhash@0.1.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "futures-core",
+      "version": "0.3.32",
+      "purl": "pkg:cargo/futures-core@0.3.32",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "futures-sink",
+      "version": "0.3.32",
+      "purl": "pkg:cargo/futures-sink@0.3.32",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c39754e157331b013978ec91992bde1ac089843443c49cbc7f46150b0fad0893"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "futures-task",
+      "version": "0.3.32",
+      "purl": "pkg:cargo/futures-task@0.3.32",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "037711b3d59c33004d3856fbdc83b99d4ff37a24768fa1be9ce3538a1cde4393"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "futures-util",
+      "version": "0.3.32",
+      "purl": "pkg:cargo/futures-util@0.3.32",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "generic-array",
+      "version": "0.14.7",
+      "purl": "pkg:cargo/generic-array@0.14.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "getrandom",
+      "version": "0.4.2",
+      "purl": "pkg:cargo/getrandom@0.4.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0de51e6874e94e7bf76d726fc5d13ba782deca734ff60d5bb2fb2607c7406555"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "hashbrown",
+      "version": "0.15.5",
+      "purl": "pkg:cargo/hashbrown@0.15.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "hashbrown",
+      "version": "0.17.0",
+      "purl": "pkg:cargo/hashbrown@0.17.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "heck",
+      "version": "0.5.0",
+      "purl": "pkg:cargo/heck@0.5.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "id-arena",
+      "version": "2.3.0",
+      "purl": "pkg:cargo/id-arena@2.3.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3d3067d79b975e8844ca9eb072e16b31c3c1c36928edf9c6789548c524d0d954"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "indexmap",
+      "version": "2.14.0",
+      "purl": "pkg:cargo/indexmap@2.14.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "inlinable_string",
+      "version": "0.1.15",
+      "purl": "pkg:cargo/inlinable_string@0.1.15",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c8fae54786f62fb2918dcfae3d568594e50eb9b5c25bf04371af6fe7516452fb"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "is_terminal_polyfill",
+      "version": "1.70.2",
+      "purl": "pkg:cargo/is_terminal_polyfill@1.70.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "itoa",
+      "version": "1.0.18",
+      "purl": "pkg:cargo/itoa@1.0.18",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "js-sys",
+      "version": "0.3.97",
+      "purl": "pkg:cargo/js-sys@0.3.97",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a1840c94c045fbcf8ba2812c95db44499f7c64910a912551aaaa541decebcacf"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "json5",
+      "version": "0.4.1",
+      "purl": "pkg:cargo/json5@0.4.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "96b0db21af676c1ce64250b5f40f3ce2cf27e4e47cb91ed91eb6fe9350b430c1"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "lazy_static",
+      "version": "1.5.0",
+      "purl": "pkg:cargo/lazy_static@1.5.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "leb128fmt",
+      "version": "0.1.0",
+      "purl": "pkg:cargo/leb128fmt@0.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "libc",
+      "version": "0.2.186",
+      "purl": "pkg:cargo/libc@0.2.186",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "lock_api",
+      "version": "0.4.14",
+      "purl": "pkg:cargo/lock_api@0.4.14",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "log",
+      "version": "0.4.29",
+      "purl": "pkg:cargo/log@0.4.29",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "memchr",
+      "version": "2.8.0",
+      "purl": "pkg:cargo/memchr@2.8.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "metrics",
+      "version": "0.24.5",
+      "purl": "pkg:cargo/metrics@0.24.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ff56c2e7dce6bd462e3b8919986a617027481b1dcc703175b58cf9dd98a2f071"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "mio",
+      "version": "1.2.0",
+      "purl": "pkg:cargo/mio@1.2.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "50b7e5b27aa02a74bac8c3f23f448f8d87ff11f92d3aac1a6ed369ee08cc56c1"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "nu-ansi-term",
+      "version": "0.50.3",
+      "purl": "pkg:cargo/nu-ansi-term@0.50.3",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "once_cell",
+      "version": "1.21.4",
+      "purl": "pkg:cargo/once_cell@1.21.4",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "once_cell_polyfill",
+      "version": "1.70.2",
+      "purl": "pkg:cargo/once_cell_polyfill@1.70.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "parking_lot",
+      "version": "0.12.5",
+      "purl": "pkg:cargo/parking_lot@0.12.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "parking_lot_core",
+      "version": "0.9.12",
+      "purl": "pkg:cargo/parking_lot_core@0.9.12",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pear",
+      "version": "0.2.9",
+      "purl": "pkg:cargo/pear@0.2.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bdeeaa00ce488657faba8ebf44ab9361f9365a97bd39ffb8a60663f57ff4b467"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pear_codegen",
+      "version": "0.2.9",
+      "purl": "pkg:cargo/pear_codegen@0.2.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4bab5b985dc082b345f812b7df84e1bef27e7207b39e448439ba8bd69c93f147"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pest",
+      "version": "2.8.6",
+      "purl": "pkg:cargo/pest@2.8.6",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e0848c601009d37dfa3430c4666e147e49cdcf1b92ecd3e63657d8a5f19da662"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pest_derive",
+      "version": "2.8.6",
+      "purl": "pkg:cargo/pest_derive@2.8.6",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "11f486f1ea21e6c10ed15d5a7c77165d0ee443402f0780849d1768e7d9d6fe77"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pest_generator",
+      "version": "2.8.6",
+      "purl": "pkg:cargo/pest_generator@2.8.6",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8040c4647b13b210a963c1ed407c1ff4fdfa01c31d6d2a098218702e6664f94f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pest_meta",
+      "version": "2.8.6",
+      "purl": "pkg:cargo/pest_meta@2.8.6",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "purl": "pkg:cargo/pin-project-lite@0.2.17",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "portable-atomic",
+      "version": "1.13.1",
+      "purl": "pkg:cargo/portable-atomic@1.13.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "prettyplease",
+      "version": "0.2.37",
+      "purl": "pkg:cargo/prettyplease@0.2.37",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "proc-macro2",
+      "version": "1.0.106",
+      "purl": "pkg:cargo/proc-macro2@1.0.106",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "proc-macro2-diagnostics",
+      "version": "0.10.1",
+      "purl": "pkg:cargo/proc-macro2-diagnostics@0.10.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "quote",
+      "version": "1.0.45",
+      "purl": "pkg:cargo/quote@1.0.45",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "r-efi",
+      "version": "6.0.0",
+      "purl": "pkg:cargo/r-efi@6.0.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "rand",
+      "version": "0.10.1",
+      "purl": "pkg:cargo/rand@0.10.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "rand_core",
+      "version": "0.10.1",
+      "purl": "pkg:cargo/rand_core@0.10.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "rapidhash",
+      "version": "4.4.1",
+      "purl": "pkg:cargo/rapidhash@4.4.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b5e48930979c155e2f33aa36ab3119b5ee81332beb6482199a8ecd6029b80b59"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "redox_syscall",
+      "version": "0.5.18",
+      "purl": "pkg:cargo/redox_syscall@0.5.18",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "ref-cast",
+      "version": "1.0.25",
+      "purl": "pkg:cargo/ref-cast@1.0.25",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f354300ae66f76f1c85c5f84693f0ce81d747e2c3f21a45fef496d89c960bf7d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "ref-cast-impl",
+      "version": "1.0.25",
+      "purl": "pkg:cargo/ref-cast-impl@1.0.25",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b7186006dcb21920990093f30e3dea63b7d6e977bf1256be20c3563a5db070da"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "rust-config-tree",
+      "version": "0.1.9",
+      "purl": "pkg:cargo/rust-config-tree@0.1.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "80e3898de3acb1d03261e5bfd6c08948239ec6f536f7ff2402c8f615d71676c0"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "rustversion",
+      "version": "1.0.22",
+      "purl": "pkg:cargo/rustversion@1.0.22",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "ryu",
+      "version": "1.0.23",
+      "purl": "pkg:cargo/ryu@1.0.23",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "schemars",
+      "version": "1.2.1",
+      "purl": "pkg:cargo/schemars@1.2.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "schemars_derive",
+      "version": "1.2.1",
+      "purl": "pkg:cargo/schemars_derive@1.2.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7d115b50f4aaeea07e79c1912f645c7513d81715d0420f8bc77a18c6260b307f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "scopeguard",
+      "version": "1.2.0",
+      "purl": "pkg:cargo/scopeguard@1.2.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "semver",
+      "version": "1.0.28",
+      "purl": "pkg:cargo/semver@1.0.28",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde",
+      "version": "1.0.228",
+      "purl": "pkg:cargo/serde@1.0.228",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_core",
+      "version": "1.0.228",
+      "purl": "pkg:cargo/serde_core@1.0.228",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "purl": "pkg:cargo/serde_derive@1.0.228",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_derive_internals",
+      "version": "0.29.1",
+      "purl": "pkg:cargo/serde_derive_internals@0.29.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_json",
+      "version": "1.0.149",
+      "purl": "pkg:cargo/serde_json@1.0.149",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_spanned",
+      "version": "0.6.9",
+      "purl": "pkg:cargo/serde_spanned@0.6.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_spanned",
+      "version": "1.1.1",
+      "purl": "pkg:cargo/serde_spanned@1.1.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "serde_yaml",
+      "version": "0.9.34+deprecated",
+      "purl": "pkg:cargo/serde_yaml@0.9.34+deprecated",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "sha2",
+      "version": "0.10.9",
+      "purl": "pkg:cargo/sha2@0.10.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "sharded-slab",
+      "version": "0.1.7",
+      "purl": "pkg:cargo/sharded-slab@0.1.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "signal-hook-registry",
+      "version": "1.4.8",
+      "purl": "pkg:cargo/signal-hook-registry@1.4.8",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "slab",
+      "version": "0.4.12",
+      "purl": "pkg:cargo/slab@0.4.12",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "smallvec",
+      "version": "1.15.1",
+      "purl": "pkg:cargo/smallvec@1.15.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "socket2",
+      "version": "0.6.3",
+      "purl": "pkg:cargo/socket2@0.6.3",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "strsim",
+      "version": "0.11.1",
+      "purl": "pkg:cargo/strsim@0.11.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "syn",
+      "version": "2.0.117",
+      "purl": "pkg:cargo/syn@2.0.117",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "thiserror",
+      "version": "2.0.18",
+      "purl": "pkg:cargo/thiserror@2.0.18",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "thiserror-impl",
+      "version": "2.0.18",
+      "purl": "pkg:cargo/thiserror-impl@2.0.18",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "thread_local",
+      "version": "1.1.9",
+      "purl": "pkg:cargo/thread_local@1.1.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tokio",
+      "version": "1.52.1",
+      "purl": "pkg:cargo/tokio@1.52.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b67dee974fe86fd92cc45b7a95fdd2f99a36a6d7b0d431a231178d3d670bbcc6"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tokio-macros",
+      "version": "2.7.0",
+      "purl": "pkg:cargo/tokio-macros@2.7.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tokio-util",
+      "version": "0.7.18",
+      "purl": "pkg:cargo/tokio-util@0.7.18",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml",
+      "version": "0.8.23",
+      "purl": "pkg:cargo/toml@0.8.23",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml",
+      "version": "0.9.12+spec-1.1.0",
+      "purl": "pkg:cargo/toml@0.9.12+spec-1.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_datetime",
+      "version": "0.6.11",
+      "purl": "pkg:cargo/toml_datetime@0.6.11",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_datetime",
+      "version": "0.7.5+spec-1.1.0",
+      "purl": "pkg:cargo/toml_datetime@0.7.5+spec-1.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_edit",
+      "version": "0.22.27",
+      "purl": "pkg:cargo/toml_edit@0.22.27",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_parser",
+      "version": "1.1.2+spec-1.1.0",
+      "purl": "pkg:cargo/toml_parser@1.1.2+spec-1.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_write",
+      "version": "0.1.2",
+      "purl": "pkg:cargo/toml_write@0.1.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "toml_writer",
+      "version": "1.1.1+spec-1.1.0",
+      "purl": "pkg:cargo/toml_writer@1.1.1+spec-1.1.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "756daf9b1013ebe47a8776667b466417e2d4c5679d441c26230efd9ef78692db"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tracing",
+      "version": "0.1.44",
+      "purl": "pkg:cargo/tracing@0.1.44",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tracing-attributes",
+      "version": "0.1.31",
+      "purl": "pkg:cargo/tracing-attributes@0.1.31",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tracing-core",
+      "version": "0.1.36",
+      "purl": "pkg:cargo/tracing-core@0.1.36",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tracing-log",
+      "version": "0.2.0",
+      "purl": "pkg:cargo/tracing-log@0.2.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "tracing-subscriber",
+      "version": "0.3.23",
+      "purl": "pkg:cargo/tracing-subscriber@0.3.23",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "typenum",
+      "version": "1.20.0",
+      "purl": "pkg:cargo/typenum@1.20.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "40ce102ab67701b8526c123c1bab5cbe42d7040ccfd0f64af1a385808d2f43de"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "ucd-trie",
+      "version": "0.1.7",
+      "purl": "pkg:cargo/ucd-trie@0.1.7",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "uncased",
+      "version": "0.9.10",
+      "purl": "pkg:cargo/uncased@0.9.10",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e1b88fcfe09e89d3866a5c11019378088af2d24c3fbd4f0543f96b479ec90697"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "purl": "pkg:cargo/unicode-ident@1.0.24",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "unicode-xid",
+      "version": "0.2.6",
+      "purl": "pkg:cargo/unicode-xid@0.2.6",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "unsafe-libyaml",
+      "version": "0.2.11",
+      "purl": "pkg:cargo/unsafe-libyaml@0.2.11",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "utf8parse",
+      "version": "0.2.2",
+      "purl": "pkg:cargo/utf8parse@0.2.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "uuid",
+      "version": "1.23.1",
+      "purl": "pkg:cargo/uuid@1.23.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ddd74a9687298c6858e9b88ec8935ec45d22e8fd5e6394fa1bd4e99a87789c76"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "valuable",
+      "version": "0.1.1",
+      "purl": "pkg:cargo/valuable@0.1.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "version_check",
+      "version": "0.9.5",
+      "purl": "pkg:cargo/version_check@0.9.5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasi",
+      "version": "0.11.1+wasi-snapshot-preview1",
+      "purl": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasip2",
+      "version": "1.0.3+wasi-0.2.9",
+      "purl": "pkg:cargo/wasip2@1.0.3+wasi-0.2.9",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "20064672db26d7cdc89c7798c48a0fdfac8213434a1186e5ef29fd560ae223d6"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasip3",
+      "version": "0.4.0+wasi-0.3.0-rc-2026-01-06",
+      "purl": "pkg:cargo/wasip3@0.4.0+wasi-0.3.0-rc-2026-01-06",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5428f8bf88ea5ddc08faddef2ac4a67e390b88186c703ce6dbd955e1c145aca5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-bindgen",
+      "version": "0.2.120",
+      "purl": "pkg:cargo/wasm-bindgen@0.2.120",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "df52b6d9b87e0c74c9edfa1eb2d9bf85e5d63515474513aa50fa181b3c4f5db1"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-bindgen-macro",
+      "version": "0.2.120",
+      "purl": "pkg:cargo/wasm-bindgen-macro@0.2.120",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "78b1041f495fb322e64aca85f5756b2172e35cd459376e67f2a6c9dffcedb103"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-bindgen-macro-support",
+      "version": "0.2.120",
+      "purl": "pkg:cargo/wasm-bindgen-macro-support@0.2.120",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9dcd0ff20416988a18ac686d4d4d0f6aae9ebf08a389ff5d29012b05af2a1b41"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-bindgen-shared",
+      "version": "0.2.120",
+      "purl": "pkg:cargo/wasm-bindgen-shared@0.2.120",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "49757b3c82ebf16c57d69365a142940b384176c24df52a087fb748e2085359ea"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-encoder",
+      "version": "0.244.0",
+      "purl": "pkg:cargo/wasm-encoder@0.244.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "990065f2fe63003fe337b932cfb5e3b80e0b4d0f5ff650e6985b1048f62c8319"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasm-metadata",
+      "version": "0.244.0",
+      "purl": "pkg:cargo/wasm-metadata@0.244.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bb0e353e6a2fbdc176932bbaab493762eb1255a7900fe0fea1a2f96c296cc909"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wasmparser",
+      "version": "0.244.0",
+      "purl": "pkg:cargo/wasmparser@0.244.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "windows-link",
+      "version": "0.2.1",
+      "purl": "pkg:cargo/windows-link@0.2.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "purl": "pkg:cargo/windows-sys@0.61.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "winnow",
+      "version": "0.7.15",
+      "purl": "pkg:cargo/winnow@0.7.15",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "winnow",
+      "version": "1.0.2",
+      "purl": "pkg:cargo/winnow@1.0.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-bindgen",
+      "version": "0.51.0",
+      "purl": "pkg:cargo/wit-bindgen@0.51.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-bindgen",
+      "version": "0.57.1",
+      "purl": "pkg:cargo/wit-bindgen@0.57.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-bindgen-core",
+      "version": "0.51.0",
+      "purl": "pkg:cargo/wit-bindgen-core@0.51.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ea61de684c3ea68cb082b7a88508a8b27fcc8b797d738bfc99a82facf1d752dc"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-bindgen-rust",
+      "version": "0.51.0",
+      "purl": "pkg:cargo/wit-bindgen-rust@0.51.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b7c566e0f4b284dd6561c786d9cb0142da491f46a9fbed79ea69cdad5db17f21"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-bindgen-rust-macro",
+      "version": "0.51.0",
+      "purl": "pkg:cargo/wit-bindgen-rust-macro@0.51.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0c0f9bfd77e6a48eccf51359e3ae77140a7f50b1e2ebfe62422d8afdaffab17a"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-component",
+      "version": "0.244.0",
+      "purl": "pkg:cargo/wit-component@0.244.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9d66ea20e9553b30172b5e831994e35fbde2d165325bec84fc43dbf6f4eb9cb2"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "wit-parser",
+      "version": "0.244.0",
+      "purl": "pkg:cargo/wit-parser@0.244.0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ecc8ac4bc1dc3381b7f59c34f00b67e18f910c2c0f50015669dde7def656a736"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "yansi",
+      "version": "1.0.1",
+      "purl": "pkg:cargo/yansi@1.0.1",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+        }
+      ]
+    }
+,
+    {
+      "type": "library",
+      "name": "zmij",
+      "version": "1.0.21",
+      "purl": "pkg:cargo/zmij@1.0.21",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+        }
+      ]
+    }
+  ],
   "properties": [
     {
       "name": "cargo.lock.cksum",

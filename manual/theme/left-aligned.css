@@ -1,0 +1,65 @@
+#mdbook-content.content main {
+  margin-inline-start: 24px;
+  margin-inline-end: auto;
+  max-width: max-content;
+}
+
+#mdbook-searchbar-outer.searchbar-outer,
+#mdbook-searchresults-outer.searchresults-outer {
+  margin-inline-start: 24px;
+  margin-inline-end: auto;
+  max-width: max-content;
+}
+
+#mdbook-content.content .table-wrapper {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+#mdbook-content.content table {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+.nav-wide-wrapper {
+  position: fixed;
+  inset-block-start: var(--menu-bar-height);
+  inset-inline-start: auto;
+  inset-inline-end: var(--page-padding);
+  z-index: 100;
+  display: flex;
+  height: 56px;
+}
+
+.nav-wide-wrapper .nav-chapters {
+  position: static;
+  min-width: 56px;
+  max-width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  float: none;
+  right: auto;
+  left: auto;
+}
+
+.nav-wide-wrapper .nav-chapters:first-child {
+  border-end-start-radius: 6px;
+}
+
+.nav-wide-wrapper .nav-chapters:last-child {
+  border-end-end-radius: 6px;
+}
+
+@media only screen and (max-width: 1080px) {
+  .nav-wide-wrapper {
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 1380px) {
+  #mdbook-sidebar-toggle-anchor:checked ~ .page-wrapper .nav-wide-wrapper {
+    display: none;
+  }
+}

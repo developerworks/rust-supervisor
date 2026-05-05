@@ -1,0 +1,16 @@
+[book]
+title = "rust-supervisor Manual"
+authors = ["developerworks"]
+description = "Default English manual for rust-supervisor."
+language = "en"
+src = "manual/en"
+
+[build]
+build-dir = "target/mdbook/en"
+create-missing = false
+
+[output.html]
+git-repository-url = "https://github.com/developerworks/rust-supervisor"
+edit-url-template = "https://github.com/developerworks/rust-supervisor/edit/main/manual/en/{path}"
+site-url = "/rust-supervisor/en/"
+additional-css = ["manual/theme/left-aligned.css"]

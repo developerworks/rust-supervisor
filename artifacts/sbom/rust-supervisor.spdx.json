@@ -5,7 +5,7 @@
   "name": "rust-supervisor-0.1.0",
   "documentNamespace": "https://github.com/developerworks/rust-supervisor/sbom/0.1.0",
   "creationInfo": {
-    "created": "2026-05-05T07:42:15Z",
+    "created": "2026-05-05T09:09:25Z",
     "creators": [
       "Tool: scripts/generate-sbom.sh-0.1.0"
     ]
@@ -28,6 +28,4191 @@
         {
           "algorithm": "OTHER",
           "checksumValue": "1112947306-36925"
+        }
+      ]
+    }
+,
+    {
+      "name": "anstream",
+      "SPDXID": "SPDXRef-Package-anstream-1.0.0",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anstream@1.0.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
+        }
+      ]
+    }
+,
+    {
+      "name": "anstyle",
+      "SPDXID": "SPDXRef-Package-anstyle-1.0.14",
+      "versionInfo": "1.0.14",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anstyle@1.0.14"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
+        }
+      ]
+    }
+,
+    {
+      "name": "anstyle-parse",
+      "SPDXID": "SPDXRef-Package-anstyle-parse-1.0.0",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anstyle-parse@1.0.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+        }
+      ]
+    }
+,
+    {
+      "name": "anstyle-query",
+      "SPDXID": "SPDXRef-Package-anstyle-query-1.1.5",
+      "versionInfo": "1.1.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anstyle-query@1.1.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
+        }
+      ]
+    }
+,
+    {
+      "name": "anstyle-wincon",
+      "SPDXID": "SPDXRef-Package-anstyle-wincon-3.0.11",
+      "versionInfo": "3.0.11",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anstyle-wincon@3.0.11"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
+        }
+      ]
+    }
+,
+    {
+      "name": "anyhow",
+      "SPDXID": "SPDXRef-Package-anyhow-1.0.102",
+      "versionInfo": "1.0.102",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/anyhow@1.0.102"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+        }
+      ]
+    }
+,
+    {
+      "name": "atomic",
+      "SPDXID": "SPDXRef-Package-atomic-0.6.1",
+      "versionInfo": "0.6.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/atomic@0.6.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a89cbf775b137e9b968e67227ef7f775587cde3fd31b0d8599dbd0f598a48340"
+        }
+      ]
+    }
+,
+    {
+      "name": "bitflags",
+      "SPDXID": "SPDXRef-Package-bitflags-2.11.1",
+      "versionInfo": "2.11.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/bitflags@2.11.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
+        }
+      ]
+    }
+,
+    {
+      "name": "block-buffer",
+      "SPDXID": "SPDXRef-Package-block-buffer-0.10.4",
+      "versionInfo": "0.10.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/block-buffer@0.10.4"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
+        }
+      ]
+    }
+,
+    {
+      "name": "bumpalo",
+      "SPDXID": "SPDXRef-Package-bumpalo-3.20.2",
+      "versionInfo": "3.20.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/bumpalo@3.20.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
+        }
+      ]
+    }
+,
+    {
+      "name": "bytemuck",
+      "SPDXID": "SPDXRef-Package-bytemuck-1.25.0",
+      "versionInfo": "1.25.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/bytemuck@1.25.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c8efb64bd706a16a1bdde310ae86b351e4d21550d98d056f22f8a7f7a2183fec"
+        }
+      ]
+    }
+,
+    {
+      "name": "bytes",
+      "SPDXID": "SPDXRef-Package-bytes-1.11.1",
+      "versionInfo": "1.11.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/bytes@1.11.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
+        }
+      ]
+    }
+,
+    {
+      "name": "cfg-if",
+      "SPDXID": "SPDXRef-Package-cfg-if-1.0.4",
+      "versionInfo": "1.0.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/cfg-if@1.0.4"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ]
+    }
+,
+    {
+      "name": "chacha20",
+      "SPDXID": "SPDXRef-Package-chacha20-0.10.0",
+      "versionInfo": "0.10.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/chacha20@0.10.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6f8d983286843e49675a4b7a2d174efe136dc93a18d69130dd18198a6c167601"
+        }
+      ]
+    }
+,
+    {
+      "name": "clap",
+      "SPDXID": "SPDXRef-Package-clap-4.6.1",
+      "versionInfo": "4.6.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/clap@4.6.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1ddb117e43bbf7dacf0a4190fef4d345b9bad68dfc649cb349e7d17d28428e51"
+        }
+      ]
+    }
+,
+    {
+      "name": "clap_builder",
+      "SPDXID": "SPDXRef-Package-clap-builder-4.6.0",
+      "versionInfo": "4.6.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/clap_builder@4.6.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "714a53001bf66416adb0e2ef5ac857140e7dc3a0c48fb28b2f10762fc4b5069f"
+        }
+      ]
+    }
+,
+    {
+      "name": "clap_complete",
+      "SPDXID": "SPDXRef-Package-clap-complete-4.6.3",
+      "versionInfo": "4.6.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/clap_complete@4.6.3"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "660c0520455b1013b9bcb0393d5f643d7e4454fb69c915b8d6d2aa0e9a45acc3"
+        }
+      ]
+    }
+,
+    {
+      "name": "clap_derive",
+      "SPDXID": "SPDXRef-Package-clap-derive-4.6.1",
+      "versionInfo": "4.6.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/clap_derive@4.6.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f2ce8604710f6733aa641a2b3731eaa1e8b3d9973d5e3565da11800813f997a9"
+        }
+      ]
+    }
+,
+    {
+      "name": "clap_lex",
+      "SPDXID": "SPDXRef-Package-clap-lex-1.1.0",
+      "versionInfo": "1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/clap_lex@1.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
+        }
+      ]
+    }
+,
+    {
+      "name": "colorchoice",
+      "SPDXID": "SPDXRef-Package-colorchoice-1.0.5",
+      "versionInfo": "1.0.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/colorchoice@1.0.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
+        }
+      ]
+    }
+,
+    {
+      "name": "confique",
+      "SPDXID": "SPDXRef-Package-confique-0.4.0",
+      "versionInfo": "0.4.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/confique@0.4.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "06b4f5ec222421e22bb0a8cbaa36b1d2b50fd45cdd30c915ded34108da78b29f"
+        }
+      ]
+    }
+,
+    {
+      "name": "confique-macro",
+      "SPDXID": "SPDXRef-Package-confique-macro-0.0.13",
+      "versionInfo": "0.0.13",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/confique-macro@0.0.13"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e4d1754680cd218e7bcb4c960cc9bae3444b5197d64563dccccfdf83cab9e1a7"
+        }
+      ]
+    }
+,
+    {
+      "name": "cpufeatures",
+      "SPDXID": "SPDXRef-Package-cpufeatures-0.2.17",
+      "versionInfo": "0.2.17",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/cpufeatures@0.2.17"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
+        }
+      ]
+    }
+,
+    {
+      "name": "cpufeatures",
+      "SPDXID": "SPDXRef-Package-cpufeatures-0.3.0",
+      "versionInfo": "0.3.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/cpufeatures@0.3.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
+        }
+      ]
+    }
+,
+    {
+      "name": "crypto-common",
+      "SPDXID": "SPDXRef-Package-crypto-common-0.1.7",
+      "versionInfo": "0.1.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/crypto-common@0.1.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
+        }
+      ]
+    }
+,
+    {
+      "name": "digest",
+      "SPDXID": "SPDXRef-Package-digest-0.10.7",
+      "versionInfo": "0.10.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/digest@0.10.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
+        }
+      ]
+    }
+,
+    {
+      "name": "dotenvy",
+      "SPDXID": "SPDXRef-Package-dotenvy-0.15.7",
+      "versionInfo": "0.15.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/dotenvy@0.15.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+        }
+      ]
+    }
+,
+    {
+      "name": "dyn-clone",
+      "SPDXID": "SPDXRef-Package-dyn-clone-1.0.20",
+      "versionInfo": "1.0.20",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/dyn-clone@1.0.20"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+        }
+      ]
+    }
+,
+    {
+      "name": "equivalent",
+      "SPDXID": "SPDXRef-Package-equivalent-1.0.2",
+      "versionInfo": "1.0.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/equivalent@1.0.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+        }
+      ]
+    }
+,
+    {
+      "name": "errno",
+      "SPDXID": "SPDXRef-Package-errno-0.3.14",
+      "versionInfo": "0.3.14",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/errno@0.3.14"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+        }
+      ]
+    }
+,
+    {
+      "name": "figment",
+      "SPDXID": "SPDXRef-Package-figment-0.10.19",
+      "versionInfo": "0.10.19",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/figment@0.10.19"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8cb01cd46b0cf372153850f4c6c272d9cbea2da513e07538405148f95bd789f3"
+        }
+      ]
+    }
+,
+    {
+      "name": "foldhash",
+      "SPDXID": "SPDXRef-Package-foldhash-0.1.5",
+      "versionInfo": "0.1.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/foldhash@0.1.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
+        }
+      ]
+    }
+,
+    {
+      "name": "futures-core",
+      "SPDXID": "SPDXRef-Package-futures-core-0.3.32",
+      "versionInfo": "0.3.32",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/futures-core@0.3.32"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d"
+        }
+      ]
+    }
+,
+    {
+      "name": "futures-sink",
+      "SPDXID": "SPDXRef-Package-futures-sink-0.3.32",
+      "versionInfo": "0.3.32",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/futures-sink@0.3.32"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c39754e157331b013978ec91992bde1ac089843443c49cbc7f46150b0fad0893"
+        }
+      ]
+    }
+,
+    {
+      "name": "futures-task",
+      "SPDXID": "SPDXRef-Package-futures-task-0.3.32",
+      "versionInfo": "0.3.32",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/futures-task@0.3.32"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "037711b3d59c33004d3856fbdc83b99d4ff37a24768fa1be9ce3538a1cde4393"
+        }
+      ]
+    }
+,
+    {
+      "name": "futures-util",
+      "SPDXID": "SPDXRef-Package-futures-util-0.3.32",
+      "versionInfo": "0.3.32",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/futures-util@0.3.32"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6"
+        }
+      ]
+    }
+,
+    {
+      "name": "generic-array",
+      "SPDXID": "SPDXRef-Package-generic-array-0.14.7",
+      "versionInfo": "0.14.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/generic-array@0.14.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
+        }
+      ]
+    }
+,
+    {
+      "name": "getrandom",
+      "SPDXID": "SPDXRef-Package-getrandom-0.4.2",
+      "versionInfo": "0.4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/getrandom@0.4.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0de51e6874e94e7bf76d726fc5d13ba782deca734ff60d5bb2fb2607c7406555"
+        }
+      ]
+    }
+,
+    {
+      "name": "hashbrown",
+      "SPDXID": "SPDXRef-Package-hashbrown-0.15.5",
+      "versionInfo": "0.15.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hashbrown@0.15.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
+        }
+      ]
+    }
+,
+    {
+      "name": "hashbrown",
+      "SPDXID": "SPDXRef-Package-hashbrown-0.17.0",
+      "versionInfo": "0.17.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/hashbrown@0.17.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
+        }
+      ]
+    }
+,
+    {
+      "name": "heck",
+      "SPDXID": "SPDXRef-Package-heck-0.5.0",
+      "versionInfo": "0.5.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/heck@0.5.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+        }
+      ]
+    }
+,
+    {
+      "name": "id-arena",
+      "SPDXID": "SPDXRef-Package-id-arena-2.3.0",
+      "versionInfo": "2.3.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/id-arena@2.3.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3d3067d79b975e8844ca9eb072e16b31c3c1c36928edf9c6789548c524d0d954"
+        }
+      ]
+    }
+,
+    {
+      "name": "indexmap",
+      "SPDXID": "SPDXRef-Package-indexmap-2.14.0",
+      "versionInfo": "2.14.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/indexmap@2.14.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+        }
+      ]
+    }
+,
+    {
+      "name": "inlinable_string",
+      "SPDXID": "SPDXRef-Package-inlinable-string-0.1.15",
+      "versionInfo": "0.1.15",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/inlinable_string@0.1.15"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c8fae54786f62fb2918dcfae3d568594e50eb9b5c25bf04371af6fe7516452fb"
+        }
+      ]
+    }
+,
+    {
+      "name": "is_terminal_polyfill",
+      "SPDXID": "SPDXRef-Package-is-terminal-polyfill-1.70.2",
+      "versionInfo": "1.70.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/is_terminal_polyfill@1.70.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+        }
+      ]
+    }
+,
+    {
+      "name": "itoa",
+      "SPDXID": "SPDXRef-Package-itoa-1.0.18",
+      "versionInfo": "1.0.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/itoa@1.0.18"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+        }
+      ]
+    }
+,
+    {
+      "name": "js-sys",
+      "SPDXID": "SPDXRef-Package-js-sys-0.3.97",
+      "versionInfo": "0.3.97",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/js-sys@0.3.97"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a1840c94c045fbcf8ba2812c95db44499f7c64910a912551aaaa541decebcacf"
+        }
+      ]
+    }
+,
+    {
+      "name": "json5",
+      "SPDXID": "SPDXRef-Package-json5-0.4.1",
+      "versionInfo": "0.4.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/json5@0.4.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "96b0db21af676c1ce64250b5f40f3ce2cf27e4e47cb91ed91eb6fe9350b430c1"
+        }
+      ]
+    }
+,
+    {
+      "name": "lazy_static",
+      "SPDXID": "SPDXRef-Package-lazy-static-1.5.0",
+      "versionInfo": "1.5.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/lazy_static@1.5.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+        }
+      ]
+    }
+,
+    {
+      "name": "leb128fmt",
+      "SPDXID": "SPDXRef-Package-leb128fmt-0.1.0",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/leb128fmt@0.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
+        }
+      ]
+    }
+,
+    {
+      "name": "libc",
+      "SPDXID": "SPDXRef-Package-libc-0.2.186",
+      "versionInfo": "0.2.186",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/libc@0.2.186"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+        }
+      ]
+    }
+,
+    {
+      "name": "lock_api",
+      "SPDXID": "SPDXRef-Package-lock-api-0.4.14",
+      "versionInfo": "0.4.14",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/lock_api@0.4.14"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "224399e74b87b5f3557511d98dff8b14089b3dadafcab6bb93eab67d3aace965"
+        }
+      ]
+    }
+,
+    {
+      "name": "log",
+      "SPDXID": "SPDXRef-Package-log-0.4.29",
+      "versionInfo": "0.4.29",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/log@0.4.29"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+        }
+      ]
+    }
+,
+    {
+      "name": "memchr",
+      "SPDXID": "SPDXRef-Package-memchr-2.8.0",
+      "versionInfo": "2.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/memchr@2.8.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
+        }
+      ]
+    }
+,
+    {
+      "name": "metrics",
+      "SPDXID": "SPDXRef-Package-metrics-0.24.5",
+      "versionInfo": "0.24.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/metrics@0.24.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ff56c2e7dce6bd462e3b8919986a617027481b1dcc703175b58cf9dd98a2f071"
+        }
+      ]
+    }
+,
+    {
+      "name": "mio",
+      "SPDXID": "SPDXRef-Package-mio-1.2.0",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/mio@1.2.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "50b7e5b27aa02a74bac8c3f23f448f8d87ff11f92d3aac1a6ed369ee08cc56c1"
+        }
+      ]
+    }
+,
+    {
+      "name": "nu-ansi-term",
+      "SPDXID": "SPDXRef-Package-nu-ansi-term-0.50.3",
+      "versionInfo": "0.50.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/nu-ansi-term@0.50.3"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
+        }
+      ]
+    }
+,
+    {
+      "name": "once_cell",
+      "SPDXID": "SPDXRef-Package-once-cell-1.21.4",
+      "versionInfo": "1.21.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/once_cell@1.21.4"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+        }
+      ]
+    }
+,
+    {
+      "name": "once_cell_polyfill",
+      "SPDXID": "SPDXRef-Package-once-cell-polyfill-1.70.2",
+      "versionInfo": "1.70.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/once_cell_polyfill@1.70.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+        }
+      ]
+    }
+,
+    {
+      "name": "parking_lot",
+      "SPDXID": "SPDXRef-Package-parking-lot-0.12.5",
+      "versionInfo": "0.12.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/parking_lot@0.12.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
+        }
+      ]
+    }
+,
+    {
+      "name": "parking_lot_core",
+      "SPDXID": "SPDXRef-Package-parking-lot-core-0.9.12",
+      "versionInfo": "0.9.12",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/parking_lot_core@0.9.12"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2621685985a2ebf1c516881c026032ac7deafcda1a2c9b7850dc81e3dfcb64c1"
+        }
+      ]
+    }
+,
+    {
+      "name": "pear",
+      "SPDXID": "SPDXRef-Package-pear-0.2.9",
+      "versionInfo": "0.2.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pear@0.2.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bdeeaa00ce488657faba8ebf44ab9361f9365a97bd39ffb8a60663f57ff4b467"
+        }
+      ]
+    }
+,
+    {
+      "name": "pear_codegen",
+      "SPDXID": "SPDXRef-Package-pear-codegen-0.2.9",
+      "versionInfo": "0.2.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pear_codegen@0.2.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4bab5b985dc082b345f812b7df84e1bef27e7207b39e448439ba8bd69c93f147"
+        }
+      ]
+    }
+,
+    {
+      "name": "pest",
+      "SPDXID": "SPDXRef-Package-pest-2.8.6",
+      "versionInfo": "2.8.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pest@2.8.6"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e0848c601009d37dfa3430c4666e147e49cdcf1b92ecd3e63657d8a5f19da662"
+        }
+      ]
+    }
+,
+    {
+      "name": "pest_derive",
+      "SPDXID": "SPDXRef-Package-pest-derive-2.8.6",
+      "versionInfo": "2.8.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pest_derive@2.8.6"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "11f486f1ea21e6c10ed15d5a7c77165d0ee443402f0780849d1768e7d9d6fe77"
+        }
+      ]
+    }
+,
+    {
+      "name": "pest_generator",
+      "SPDXID": "SPDXRef-Package-pest-generator-2.8.6",
+      "versionInfo": "2.8.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pest_generator@2.8.6"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8040c4647b13b210a963c1ed407c1ff4fdfa01c31d6d2a098218702e6664f94f"
+        }
+      ]
+    }
+,
+    {
+      "name": "pest_meta",
+      "SPDXID": "SPDXRef-Package-pest-meta-2.8.6",
+      "versionInfo": "2.8.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pest_meta@2.8.6"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "89815c69d36021a140146f26659a81d6c2afa33d216d736dd4be5381a7362220"
+        }
+      ]
+    }
+,
+    {
+      "name": "pin-project-lite",
+      "SPDXID": "SPDXRef-Package-pin-project-lite-0.2.17",
+      "versionInfo": "0.2.17",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/pin-project-lite@0.2.17"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+        }
+      ]
+    }
+,
+    {
+      "name": "portable-atomic",
+      "SPDXID": "SPDXRef-Package-portable-atomic-1.13.1",
+      "versionInfo": "1.13.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/portable-atomic@1.13.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
+        }
+      ]
+    }
+,
+    {
+      "name": "prettyplease",
+      "SPDXID": "SPDXRef-Package-prettyplease-0.2.37",
+      "versionInfo": "0.2.37",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/prettyplease@0.2.37"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
+        }
+      ]
+    }
+,
+    {
+      "name": "proc-macro2",
+      "SPDXID": "SPDXRef-Package-proc-macro2-1.0.106",
+      "versionInfo": "1.0.106",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/proc-macro2@1.0.106"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
+        }
+      ]
+    }
+,
+    {
+      "name": "proc-macro2-diagnostics",
+      "SPDXID": "SPDXRef-Package-proc-macro2-diagnostics-0.10.1",
+      "versionInfo": "0.10.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/proc-macro2-diagnostics@0.10.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
+        }
+      ]
+    }
+,
+    {
+      "name": "quote",
+      "SPDXID": "SPDXRef-Package-quote-1.0.45",
+      "versionInfo": "1.0.45",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/quote@1.0.45"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+        }
+      ]
+    }
+,
+    {
+      "name": "r-efi",
+      "SPDXID": "SPDXRef-Package-r-efi-6.0.0",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/r-efi@6.0.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+        }
+      ]
+    }
+,
+    {
+      "name": "rand",
+      "SPDXID": "SPDXRef-Package-rand-0.10.1",
+      "versionInfo": "0.10.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rand@0.10.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+        }
+      ]
+    }
+,
+    {
+      "name": "rand_core",
+      "SPDXID": "SPDXRef-Package-rand-core-0.10.1",
+      "versionInfo": "0.10.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rand_core@0.10.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+        }
+      ]
+    }
+,
+    {
+      "name": "rapidhash",
+      "SPDXID": "SPDXRef-Package-rapidhash-4.4.1",
+      "versionInfo": "4.4.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rapidhash@4.4.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b5e48930979c155e2f33aa36ab3119b5ee81332beb6482199a8ecd6029b80b59"
+        }
+      ]
+    }
+,
+    {
+      "name": "redox_syscall",
+      "SPDXID": "SPDXRef-Package-redox-syscall-0.5.18",
+      "versionInfo": "0.5.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/redox_syscall@0.5.18"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ed2bf2547551a7053d6fdfafda3f938979645c44812fbfcda098faae3f1a362d"
+        }
+      ]
+    }
+,
+    {
+      "name": "ref-cast",
+      "SPDXID": "SPDXRef-Package-ref-cast-1.0.25",
+      "versionInfo": "1.0.25",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/ref-cast@1.0.25"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f354300ae66f76f1c85c5f84693f0ce81d747e2c3f21a45fef496d89c960bf7d"
+        }
+      ]
+    }
+,
+    {
+      "name": "ref-cast-impl",
+      "SPDXID": "SPDXRef-Package-ref-cast-impl-1.0.25",
+      "versionInfo": "1.0.25",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/ref-cast-impl@1.0.25"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b7186006dcb21920990093f30e3dea63b7d6e977bf1256be20c3563a5db070da"
+        }
+      ]
+    }
+,
+    {
+      "name": "rust-config-tree",
+      "SPDXID": "SPDXRef-Package-rust-config-tree-0.1.9",
+      "versionInfo": "0.1.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rust-config-tree@0.1.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "80e3898de3acb1d03261e5bfd6c08948239ec6f536f7ff2402c8f615d71676c0"
+        }
+      ]
+    }
+,
+    {
+      "name": "rustversion",
+      "SPDXID": "SPDXRef-Package-rustversion-1.0.22",
+      "versionInfo": "1.0.22",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/rustversion@1.0.22"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+        }
+      ]
+    }
+,
+    {
+      "name": "ryu",
+      "SPDXID": "SPDXRef-Package-ryu-1.0.23",
+      "versionInfo": "1.0.23",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/ryu@1.0.23"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
+        }
+      ]
+    }
+,
+    {
+      "name": "schemars",
+      "SPDXID": "SPDXRef-Package-schemars-1.2.1",
+      "versionInfo": "1.2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/schemars@1.2.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a2b42f36aa1cd011945615b92222f6bf73c599a102a300334cd7f8dbeec726cc"
+        }
+      ]
+    }
+,
+    {
+      "name": "schemars_derive",
+      "SPDXID": "SPDXRef-Package-schemars-derive-1.2.1",
+      "versionInfo": "1.2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/schemars_derive@1.2.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7d115b50f4aaeea07e79c1912f645c7513d81715d0420f8bc77a18c6260b307f"
+        }
+      ]
+    }
+,
+    {
+      "name": "scopeguard",
+      "SPDXID": "SPDXRef-Package-scopeguard-1.2.0",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/scopeguard@1.2.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+        }
+      ]
+    }
+,
+    {
+      "name": "semver",
+      "SPDXID": "SPDXRef-Package-semver-1.0.28",
+      "versionInfo": "1.0.28",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/semver@1.0.28"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde",
+      "SPDXID": "SPDXRef-Package-serde-1.0.228",
+      "versionInfo": "1.0.228",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde@1.0.228"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_core",
+      "SPDXID": "SPDXRef-Package-serde-core-1.0.228",
+      "versionInfo": "1.0.228",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_core@1.0.228"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_derive",
+      "SPDXID": "SPDXRef-Package-serde-derive-1.0.228",
+      "versionInfo": "1.0.228",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_derive@1.0.228"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_derive_internals",
+      "SPDXID": "SPDXRef-Package-serde-derive-internals-0.29.1",
+      "versionInfo": "0.29.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_derive_internals@0.29.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_json",
+      "SPDXID": "SPDXRef-Package-serde-json-1.0.149",
+      "versionInfo": "1.0.149",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_json@1.0.149"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_spanned",
+      "SPDXID": "SPDXRef-Package-serde-spanned-0.6.9",
+      "versionInfo": "0.6.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_spanned@0.6.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_spanned",
+      "SPDXID": "SPDXRef-Package-serde-spanned-1.1.1",
+      "versionInfo": "1.1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_spanned@1.1.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
+        }
+      ]
+    }
+,
+    {
+      "name": "serde_yaml",
+      "SPDXID": "SPDXRef-Package-serde-yaml-0.9.34-deprecated",
+      "versionInfo": "0.9.34+deprecated",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/serde_yaml@0.9.34+deprecated"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+        }
+      ]
+    }
+,
+    {
+      "name": "sha2",
+      "SPDXID": "SPDXRef-Package-sha2-0.10.9",
+      "versionInfo": "0.10.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/sha2@0.10.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
+        }
+      ]
+    }
+,
+    {
+      "name": "sharded-slab",
+      "SPDXID": "SPDXRef-Package-sharded-slab-0.1.7",
+      "versionInfo": "0.1.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/sharded-slab@0.1.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
+        }
+      ]
+    }
+,
+    {
+      "name": "signal-hook-registry",
+      "SPDXID": "SPDXRef-Package-signal-hook-registry-1.4.8",
+      "versionInfo": "1.4.8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/signal-hook-registry@1.4.8"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+        }
+      ]
+    }
+,
+    {
+      "name": "slab",
+      "SPDXID": "SPDXRef-Package-slab-0.4.12",
+      "versionInfo": "0.4.12",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/slab@0.4.12"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
+        }
+      ]
+    }
+,
+    {
+      "name": "smallvec",
+      "SPDXID": "SPDXRef-Package-smallvec-1.15.1",
+      "versionInfo": "1.15.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/smallvec@1.15.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+        }
+      ]
+    }
+,
+    {
+      "name": "socket2",
+      "SPDXID": "SPDXRef-Package-socket2-0.6.3",
+      "versionInfo": "0.6.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/socket2@0.6.3"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
+        }
+      ]
+    }
+,
+    {
+      "name": "strsim",
+      "SPDXID": "SPDXRef-Package-strsim-0.11.1",
+      "versionInfo": "0.11.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/strsim@0.11.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+        }
+      ]
+    }
+,
+    {
+      "name": "syn",
+      "SPDXID": "SPDXRef-Package-syn-2.0.117",
+      "versionInfo": "2.0.117",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/syn@2.0.117"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
+        }
+      ]
+    }
+,
+    {
+      "name": "thiserror",
+      "SPDXID": "SPDXRef-Package-thiserror-2.0.18",
+      "versionInfo": "2.0.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/thiserror@2.0.18"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
+        }
+      ]
+    }
+,
+    {
+      "name": "thiserror-impl",
+      "SPDXID": "SPDXRef-Package-thiserror-impl-2.0.18",
+      "versionInfo": "2.0.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/thiserror-impl@2.0.18"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
+        }
+      ]
+    }
+,
+    {
+      "name": "thread_local",
+      "SPDXID": "SPDXRef-Package-thread-local-1.1.9",
+      "versionInfo": "1.1.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/thread_local@1.1.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
+        }
+      ]
+    }
+,
+    {
+      "name": "tokio",
+      "SPDXID": "SPDXRef-Package-tokio-1.52.1",
+      "versionInfo": "1.52.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tokio@1.52.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b67dee974fe86fd92cc45b7a95fdd2f99a36a6d7b0d431a231178d3d670bbcc6"
+        }
+      ]
+    }
+,
+    {
+      "name": "tokio-macros",
+      "SPDXID": "SPDXRef-Package-tokio-macros-2.7.0",
+      "versionInfo": "2.7.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tokio-macros@2.7.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496"
+        }
+      ]
+    }
+,
+    {
+      "name": "tokio-util",
+      "SPDXID": "SPDXRef-Package-tokio-util-0.7.18",
+      "versionInfo": "0.7.18",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tokio-util@0.7.18"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml",
+      "SPDXID": "SPDXRef-Package-toml-0.8.23",
+      "versionInfo": "0.8.23",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml@0.8.23"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml",
+      "SPDXID": "SPDXRef-Package-toml-0.9.12-spec-1.1.0",
+      "versionInfo": "0.9.12+spec-1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml@0.9.12+spec-1.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cf92845e79fc2e2def6a5d828f0801e29a2f8acc037becc5ab08595c7d5e9863"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_datetime",
+      "SPDXID": "SPDXRef-Package-toml-datetime-0.6.11",
+      "versionInfo": "0.6.11",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_datetime@0.6.11"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_datetime",
+      "SPDXID": "SPDXRef-Package-toml-datetime-0.7.5-spec-1.1.0",
+      "versionInfo": "0.7.5+spec-1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_datetime@0.7.5+spec-1.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_edit",
+      "SPDXID": "SPDXRef-Package-toml-edit-0.22.27",
+      "versionInfo": "0.22.27",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_edit@0.22.27"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_parser",
+      "SPDXID": "SPDXRef-Package-toml-parser-1.1.2-spec-1.1.0",
+      "versionInfo": "1.1.2+spec-1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_parser@1.1.2+spec-1.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_write",
+      "SPDXID": "SPDXRef-Package-toml-write-0.1.2",
+      "versionInfo": "0.1.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_write@0.1.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+        }
+      ]
+    }
+,
+    {
+      "name": "toml_writer",
+      "SPDXID": "SPDXRef-Package-toml-writer-1.1.1-spec-1.1.0",
+      "versionInfo": "1.1.1+spec-1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/toml_writer@1.1.1+spec-1.1.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "756daf9b1013ebe47a8776667b466417e2d4c5679d441c26230efd9ef78692db"
+        }
+      ]
+    }
+,
+    {
+      "name": "tracing",
+      "SPDXID": "SPDXRef-Package-tracing-0.1.44",
+      "versionInfo": "0.1.44",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tracing@0.1.44"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
+        }
+      ]
+    }
+,
+    {
+      "name": "tracing-attributes",
+      "SPDXID": "SPDXRef-Package-tracing-attributes-0.1.31",
+      "versionInfo": "0.1.31",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tracing-attributes@0.1.31"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
+        }
+      ]
+    }
+,
+    {
+      "name": "tracing-core",
+      "SPDXID": "SPDXRef-Package-tracing-core-0.1.36",
+      "versionInfo": "0.1.36",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tracing-core@0.1.36"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
+        }
+      ]
+    }
+,
+    {
+      "name": "tracing-log",
+      "SPDXID": "SPDXRef-Package-tracing-log-0.2.0",
+      "versionInfo": "0.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tracing-log@0.2.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+        }
+      ]
+    }
+,
+    {
+      "name": "tracing-subscriber",
+      "SPDXID": "SPDXRef-Package-tracing-subscriber-0.3.23",
+      "versionInfo": "0.3.23",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/tracing-subscriber@0.3.23"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
+        }
+      ]
+    }
+,
+    {
+      "name": "typenum",
+      "SPDXID": "SPDXRef-Package-typenum-1.20.0",
+      "versionInfo": "1.20.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/typenum@1.20.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "40ce102ab67701b8526c123c1bab5cbe42d7040ccfd0f64af1a385808d2f43de"
+        }
+      ]
+    }
+,
+    {
+      "name": "ucd-trie",
+      "SPDXID": "SPDXRef-Package-ucd-trie-0.1.7",
+      "versionInfo": "0.1.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/ucd-trie@0.1.7"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
+        }
+      ]
+    }
+,
+    {
+      "name": "uncased",
+      "SPDXID": "SPDXRef-Package-uncased-0.9.10",
+      "versionInfo": "0.9.10",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/uncased@0.9.10"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e1b88fcfe09e89d3866a5c11019378088af2d24c3fbd4f0543f96b479ec90697"
+        }
+      ]
+    }
+,
+    {
+      "name": "unicode-ident",
+      "SPDXID": "SPDXRef-Package-unicode-ident-1.0.24",
+      "versionInfo": "1.0.24",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/unicode-ident@1.0.24"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+        }
+      ]
+    }
+,
+    {
+      "name": "unicode-xid",
+      "SPDXID": "SPDXRef-Package-unicode-xid-0.2.6",
+      "versionInfo": "0.2.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/unicode-xid@0.2.6"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+        }
+      ]
+    }
+,
+    {
+      "name": "unsafe-libyaml",
+      "SPDXID": "SPDXRef-Package-unsafe-libyaml-0.2.11",
+      "versionInfo": "0.2.11",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/unsafe-libyaml@0.2.11"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
+        }
+      ]
+    }
+,
+    {
+      "name": "utf8parse",
+      "SPDXID": "SPDXRef-Package-utf8parse-0.2.2",
+      "versionInfo": "0.2.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/utf8parse@0.2.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
+        }
+      ]
+    }
+,
+    {
+      "name": "uuid",
+      "SPDXID": "SPDXRef-Package-uuid-1.23.1",
+      "versionInfo": "1.23.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/uuid@1.23.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ddd74a9687298c6858e9b88ec8935ec45d22e8fd5e6394fa1bd4e99a87789c76"
+        }
+      ]
+    }
+,
+    {
+      "name": "valuable",
+      "SPDXID": "SPDXRef-Package-valuable-0.1.1",
+      "versionInfo": "0.1.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/valuable@0.1.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+        }
+      ]
+    }
+,
+    {
+      "name": "version_check",
+      "SPDXID": "SPDXRef-Package-version-check-0.9.5",
+      "versionInfo": "0.9.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/version_check@0.9.5"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasi",
+      "SPDXID": "SPDXRef-Package-wasi-0.11.1-wasi-snapshot-preview1",
+      "versionInfo": "0.11.1+wasi-snapshot-preview1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasi@0.11.1+wasi-snapshot-preview1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasip2",
+      "SPDXID": "SPDXRef-Package-wasip2-1.0.3-wasi-0.2.9",
+      "versionInfo": "1.0.3+wasi-0.2.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasip2@1.0.3+wasi-0.2.9"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "20064672db26d7cdc89c7798c48a0fdfac8213434a1186e5ef29fd560ae223d6"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasip3",
+      "SPDXID": "SPDXRef-Package-wasip3-0.4.0-wasi-0.3.0-rc-2026-01-06",
+      "versionInfo": "0.4.0+wasi-0.3.0-rc-2026-01-06",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasip3@0.4.0+wasi-0.3.0-rc-2026-01-06"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5428f8bf88ea5ddc08faddef2ac4a67e390b88186c703ce6dbd955e1c145aca5"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-bindgen",
+      "SPDXID": "SPDXRef-Package-wasm-bindgen-0.2.120",
+      "versionInfo": "0.2.120",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-bindgen@0.2.120"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "df52b6d9b87e0c74c9edfa1eb2d9bf85e5d63515474513aa50fa181b3c4f5db1"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-bindgen-macro",
+      "SPDXID": "SPDXRef-Package-wasm-bindgen-macro-0.2.120",
+      "versionInfo": "0.2.120",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-bindgen-macro@0.2.120"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "78b1041f495fb322e64aca85f5756b2172e35cd459376e67f2a6c9dffcedb103"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-bindgen-macro-support",
+      "SPDXID": "SPDXRef-Package-wasm-bindgen-macro-support-0.2.120",
+      "versionInfo": "0.2.120",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-bindgen-macro-support@0.2.120"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9dcd0ff20416988a18ac686d4d4d0f6aae9ebf08a389ff5d29012b05af2a1b41"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-bindgen-shared",
+      "SPDXID": "SPDXRef-Package-wasm-bindgen-shared-0.2.120",
+      "versionInfo": "0.2.120",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-bindgen-shared@0.2.120"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "49757b3c82ebf16c57d69365a142940b384176c24df52a087fb748e2085359ea"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-encoder",
+      "SPDXID": "SPDXRef-Package-wasm-encoder-0.244.0",
+      "versionInfo": "0.244.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-encoder@0.244.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "990065f2fe63003fe337b932cfb5e3b80e0b4d0f5ff650e6985b1048f62c8319"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasm-metadata",
+      "SPDXID": "SPDXRef-Package-wasm-metadata-0.244.0",
+      "versionInfo": "0.244.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasm-metadata@0.244.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bb0e353e6a2fbdc176932bbaab493762eb1255a7900fe0fea1a2f96c296cc909"
+        }
+      ]
+    }
+,
+    {
+      "name": "wasmparser",
+      "SPDXID": "SPDXRef-Package-wasmparser-0.244.0",
+      "versionInfo": "0.244.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wasmparser@0.244.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
+        }
+      ]
+    }
+,
+    {
+      "name": "windows-link",
+      "SPDXID": "SPDXRef-Package-windows-link-0.2.1",
+      "versionInfo": "0.2.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/windows-link@0.2.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+        }
+      ]
+    }
+,
+    {
+      "name": "windows-sys",
+      "SPDXID": "SPDXRef-Package-windows-sys-0.61.2",
+      "versionInfo": "0.61.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/windows-sys@0.61.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+        }
+      ]
+    }
+,
+    {
+      "name": "winnow",
+      "SPDXID": "SPDXRef-Package-winnow-0.7.15",
+      "versionInfo": "0.7.15",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/winnow@0.7.15"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
+        }
+      ]
+    }
+,
+    {
+      "name": "winnow",
+      "SPDXID": "SPDXRef-Package-winnow-1.0.2",
+      "versionInfo": "1.0.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/winnow@1.0.2"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-bindgen",
+      "SPDXID": "SPDXRef-Package-wit-bindgen-0.51.0",
+      "versionInfo": "0.51.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-bindgen@0.51.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-bindgen",
+      "SPDXID": "SPDXRef-Package-wit-bindgen-0.57.1",
+      "versionInfo": "0.57.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-bindgen@0.57.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-bindgen-core",
+      "SPDXID": "SPDXRef-Package-wit-bindgen-core-0.51.0",
+      "versionInfo": "0.51.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-bindgen-core@0.51.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ea61de684c3ea68cb082b7a88508a8b27fcc8b797d738bfc99a82facf1d752dc"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-bindgen-rust",
+      "SPDXID": "SPDXRef-Package-wit-bindgen-rust-0.51.0",
+      "versionInfo": "0.51.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-bindgen-rust@0.51.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b7c566e0f4b284dd6561c786d9cb0142da491f46a9fbed79ea69cdad5db17f21"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-bindgen-rust-macro",
+      "SPDXID": "SPDXRef-Package-wit-bindgen-rust-macro-0.51.0",
+      "versionInfo": "0.51.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-bindgen-rust-macro@0.51.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0c0f9bfd77e6a48eccf51359e3ae77140a7f50b1e2ebfe62422d8afdaffab17a"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-component",
+      "SPDXID": "SPDXRef-Package-wit-component-0.244.0",
+      "versionInfo": "0.244.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-component@0.244.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9d66ea20e9553b30172b5e831994e35fbde2d165325bec84fc43dbf6f4eb9cb2"
+        }
+      ]
+    }
+,
+    {
+      "name": "wit-parser",
+      "SPDXID": "SPDXRef-Package-wit-parser-0.244.0",
+      "versionInfo": "0.244.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/wit-parser@0.244.0"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ecc8ac4bc1dc3381b7f59c34f00b67e18f910c2c0f50015669dde7def656a736"
+        }
+      ]
+    }
+,
+    {
+      "name": "yansi",
+      "SPDXID": "SPDXRef-Package-yansi-1.0.1",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/yansi@1.0.1"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+        }
+      ]
+    }
+,
+    {
+      "name": "zmij",
+      "SPDXID": "SPDXRef-Package-zmij-1.0.21",
+      "versionInfo": "1.0.21",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:cargo/zmij@1.0.21"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "other",
+          "referenceLocator": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
         }
       ]
     }
