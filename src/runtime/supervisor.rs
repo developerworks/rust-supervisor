@@ -5,7 +5,7 @@
 
 use crate::control::handle::SupervisorHandle;
 use crate::error::types::SupervisorError;
-use crate::runtime::control_loop::run_control_loop;
+use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
 use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
 use tokio::sync::{broadcast, mpsc};
@@ -46,10 +46,11 @@ impl Supervisor {
         spec.validate()?;
         let (command_sender, command_receiver) = mpsc::channel(spec.control_channel_capacity);
         let (event_sender, _) = broadcast::channel(spec.event_channel_capacity);
+        let state = RuntimeControlState::new(spec, shutdown_policy, command_sender.clone())?;
         tokio::spawn(run_control_loop(
+            state,
             command_receiver,
             event_sender.clone(),
-            shutdown_policy,
         ));
         Ok(SupervisorHandle::new(command_sender, event_sender))
     }

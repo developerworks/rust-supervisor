@@ -241,7 +241,7 @@ impl SupervisorHandle {
     async fn send(&self, command: ControlCommand) -> Result<CommandResult, SupervisorError> {
         let (reply_sender, reply_receiver) = oneshot::channel();
         self.command_sender
-            .send(RuntimeCommand {
+            .send(RuntimeCommand::Control {
                 command,
                 reply_sender,
             })

@@ -6,6 +6,8 @@
 
 `restart_scope` calculates the restart scope from `SupervisorTree`, the strategy, and the failed child identifier.
 
+The runtime control loop now receives child exits and applies the selected strategy automatically when policy returns a restart decision.
+
 ## Restart Policy
 
 `RestartPolicy` contains `Permanent`, `Transient`, and `Temporary`. `PolicyEngine` reads `TaskExit`, the failure category, and the restart policy, then returns `RestartDecision`.

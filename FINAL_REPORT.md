@@ -12,6 +12,7 @@
 - 创建九个 example(示例), 中英双语 manual(手册), docs(文档), README(说明文档), CHANGELOG(变更日志), LICENSE(许可证), ASSUMPTIONS(假设记录) 和验证产物.
 - 修正 `README.md`, `manual/en` 和 `docs/en` 为英文正文, 中文内容保留在 `README.zh.md`, `manual/zh` 和 `docs/zh`.
 - 调整 `examples/*.rs` 注释样式, 每一行非空代码的上方都有注释, 不使用右侧内联注释.
+- 修复 runtime control loop(运行时控制循环) 只处理显式控制命令的问题, 现在 child exit(子任务退出) 会自动进入 policy(策略) 决策并执行 `OneForOne`, `OneForAll` 和 `RestForOne` 监督范围重启.
 - 生成 SBOM(软件物料清单): `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`.
 
 ## 验证结果
@@ -19,6 +20,8 @@
 - `cargo fmt --all --check`: 通过.
 - `cargo check`: 通过.
 - `cargo test`: 通过, 包含全部集成测试, 模块测试和 52 个 doctest(文档测试).
+- `cargo clippy --all-targets --all-features -- -D warnings`: 通过.
+- `cargo test --test supervisor_auto_restart_test -- --nocapture --test-threads=1`: 通过, 覆盖 `OneForOne`, `OneForAll` 和 `RestForOne` 自动重启.
 - `cargo check --examples`: 通过.
 - 示例注释位置检查: 通过, `examples/*.rs` 每一行非空代码上方都有注释.
 - `cargo doc --no-deps`: 通过.
@@ -35,6 +38,8 @@
 - 首次 package list(打包清单) 包含 `.agents` 开发材料, 原因是 include(包含清单) 没有仓库根锚定. 已把 `Cargo.toml` 的 include(包含清单) 改为 `/src/**` 等根锚定路径.
 - 质量测试曾误扫自身检测字面量. 已改为构造检测模式, 避免 self-hit(自命中).
 - `scripts/generate-sbom.sh` 和 `scripts/validate-sbom.sh` 曾被并行运行, 校验读到写入中的 SBOM(软件物料清单) 文件并失败. 已改为顺序运行, 重新生成和校验通过.
+- `supervisor_auto_restart_test` 首次验证时被旧 test binary(测试二进制) 干扰, `cargo clean -p rust-supervisor` 后重新编译, 定向测试通过.
+- `cargo clippy --all-targets --all-features -- -D warnings` 首次发现 `RuntimeCommand`(运行时命令) 存在 large enum variant(大型枚举分支). 已把 `ChildRunReport`(子任务运行报告) 放入 `Box`(堆分配指针), 重新检查通过.
 
 ## 剩余风险
 

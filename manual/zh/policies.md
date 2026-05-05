@@ -6,6 +6,8 @@
 
 `restart_scope` 根据 `SupervisorTree`(监督树), 策略和失败 child id(子任务标识)计算重启范围.
 
+runtime control loop(运行时控制循环) 现在会接收 child exit(子任务退出),并在 policy(策略) 返回重启决策时自动执行选定的 supervision strategy(监督策略).
+
 ## 重启策略
 
 `RestartPolicy`(重启策略)包含 `Permanent`(永久), `Transient`(瞬时)和 `Temporary`(临时). `PolicyEngine`(策略引擎)读取 `TaskExit`(任务退出), 失败类别和重启策略, 输出 `RestartDecision`(重启决策).
