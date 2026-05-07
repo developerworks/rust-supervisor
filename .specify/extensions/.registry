@@ -25,6 +25,33 @@
       },
       "registered_skills": [],
       "installed_at": "2026-05-03T17:28:48.163834+00:00"
+    },
+    "sync": {
+      "version": "0.1.0",
+      "source": "local",
+      "manifest_hash": "sha256:e5f4b9456751e1251693feae987401b3583d67770a43d370741c35182a46d06f",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "agy": [
+          "speckit.sync.analyze",
+          "speckit.drift",
+          "speckit.sync.propose",
+          "speckit.sync.apply",
+          "speckit.sync.conflicts",
+          "speckit.sync.backfill"
+        ],
+        "codex": [
+          "speckit.sync.analyze",
+          "speckit.drift",
+          "speckit.sync.propose",
+          "speckit.sync.apply",
+          "speckit.sync.conflicts",
+          "speckit.sync.backfill"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-05-07T16:24:33.368470+00:00"
     }
   }
 }

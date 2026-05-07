@@ -1,0 +1,177 @@
+{
+  "generated": "2026-05-08T00:36:41+08:00",
+  "based_on": {
+    "drift_report_generated": "2026-05-08T00:34:25+08:00",
+    "path": ".specify/sync/drift-report.json"
+  },
+  "summary": {
+    "backfill": 2,
+    "align": 6,
+    "human_decision": 0,
+    "new_specs": 1,
+    "remove_from_spec": 0
+  },
+  "proposals": [
+    {
+      "id": "P001",
+      "target": "001-create-supervisor-core/FR-063",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "current_state": {
+        "spec_says": "系统代码命名不得使用任何 *Snapshot 或 *View 后缀, 也不得提供 snapshot() 查询方法.",
+        "code_does": "src/dashboard/model.rs defines DashboardSnapshot and src/dashboard/ipc_server.rs exposes DashboardIpcService::snapshot for the dashboard protocol."
+      },
+      "proposed_resolution": {
+        "type": "spec_update",
+        "new_text": "- **FR-063**: 系统核心状态和配置命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得在 `SupervisorHandle`(监督器句柄), runtime(运行时), state(状态) 或 config(配置) 查询接口提供 `snapshot()` 方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). 后续 dashboard(看板) 规格明确拥有的 IPC(进程间通信) 或 UI(用户界面) 协议对象可以使用 `snapshot(快照)` 术语, 但该术语不得替代核心状态查询契约."
+      },
+      "rationale": "003 是后续规格, 明确要求 dashboard snapshot 协议对象和首包语义. 当前代码有测试覆盖并且 dashboard Cargo 测试通过.",
+      "action": "pending"
+    },
+    {
+      "id": "P002",
+      "target": "001-create-supervisor-core/SC-031",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "current_state": {
+        "spec_says": "naming check 必须证明源码, 示例, 公开契约和文档中不存在任何 *Snapshot, *View, snapshot() 查询方法或 state_view 模块名.",
+        "code_does": "src/tests/naming_contract_test.rs skips dashboard sources while dashboard protocol code uses DashboardSnapshot and snapshot()."
+      },
+      "proposed_resolution": {
+        "type": "spec_update",
+        "new_text": "- **SC-031**: naming check(命名检查) 必须证明核心源码, 示例, 公开契约和文档中不存在任何 `*Snapshot`, `*View`, `snapshot()` 查询方法或 `state_view` 模块名, 并且统一使用 `ConfigState`(配置状态), `SupervisorState`(监督器状态), `ChildState`(子任务状态), `current_state`(当前状态) 和 `state`(状态). dashboard(看板) 规格明确拥有的 IPC(进程间通信) 和 UI(用户界面) 协议对象可以使用 `snapshot(快照)`, 但检查必须证明该例外只出现在 dashboard(看板) 协议边界, 不得扩散到核心状态查询接口.",
+        "acceptance_scenarios": [
+          "Given(假设) 维护者在 src/dashboard/ 之外新增 *Snapshot, *View, snapshot() 或 state_view, When(当) naming check(命名检查) 运行, Then(则) 检查必须失败.",
+          "Given(假设) dashboard(看板) 协议需要 snapshot(快照) 首包, When(当) naming check(命名检查) 运行, Then(则) 检查必须允许该术语留在 dashboard(看板) 协议边界, 并证明核心状态查询仍然使用 current_state(当前状态)."
+        ]
+      },
+      "rationale": "当前测试已经表达 dashboard 协议例外, 规格需要同步该边界以避免测试口径漂移.",
+      "action": "pending"
+    },
+    {
+      "id": "P003",
+      "target": "004-agent-retrieval-rules/FR-001-FR-002",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须维护 risk pattern 清单, 并为每个 risk pattern 保存适用条件, 触发信号, 证据需求, 排除条件, 相关度和最近验证时间.",
+        "code_does": "当前 src/ 没有 risk pattern 模块, 数据模型或测试."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留需求, 并在 004 plan 和 tasks 中新增 src/retrieval_rules/risk.rs, src/retrieval_rules/mod.rs 和 src/retrieval_rules/tests/risk_pattern_test.rs."
+      },
+      "rationale": "004 是 Draft 新功能, FR-001 到 FR-002 是 P1 输入, 未实现不代表需求过时.",
+      "action": "pending"
+    },
+    {
+      "id": "P004",
+      "target": "004-agent-retrieval-rules/FR-003-FR-006",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须生成 evidence plan, 建立 causal chain, 检测证据缺失和冲突, 并把未充分验证的结论标记为 hypothesis.",
+        "code_does": "当前 src/ 没有 evidence plan, evidence record, causal chain, evidence diagnostic 或 hypothesis 标记实现."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留需求, 并新增 src/retrieval_rules/evidence.rs, src/retrieval_rules/causal.rs, src/retrieval_rules/diagnostics.rs 和对应外部测试."
+      },
+      "rationale": "这组需求直接对应信息检索完整性和因果链稳健性, 删除会破坏原始用户输入.",
+      "action": "pending"
+    },
+    {
+      "id": "P005",
+      "target": "004-agent-retrieval-rules/FR-007-FR-008",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须支持 rule evolution, 并记录旧规则, 新规则, 变更原因, 适用范围, 生效时间, 回滚条件和审查状态.",
+        "code_does": "当前 src/ 没有 behavior rule 模型, rule evolution record 或审查状态."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留需求, 并新增 src/retrieval_rules/rule.rs, src/retrieval_rules/evolution.rs 和 src/retrieval_rules/tests/rule_evolution_test.rs."
+      },
+      "rationale": "规则演化是 004 与一次性分析工具的边界, 当前没有证据表明该能力应移除.",
+      "action": "pending"
+    },
+    {
+      "id": "P006",
+      "target": "004-agent-retrieval-rules/FR-009-FR-013",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须拆分 parallel subtask, 支持多个 agent 同时检索和汇总, 合并结果, 迭代细化并定义停止条件.",
+        "code_does": "当前 src/ 没有 parallel subtask, agent result, result merge, iterative refinement 或 stop condition 实现."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留需求, 并新增 src/retrieval_rules/subtask.rs, src/retrieval_rules/agent.rs, src/retrieval_rules/iteration.rs 和 src/retrieval_rules/tests/parallel_iteration_test.rs."
+      },
+      "rationale": "004 assumption 允许 agent 是分析角色或执行单元, 因此第一版可以先实现数据和合并规则.",
+      "action": "pending"
+    },
+    {
+      "id": "P007",
+      "target": "004-agent-retrieval-rules/FR-014-FR-016",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须生成 final synthesis, 提供结构化诊断, 并不得提供 compatibility export, 旧规则别名或历史任务别名.",
+        "code_does": "当前 src/ 没有 synthesis report, retrieval diagnostics 或 004 专属 no compatibility check."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留需求, 并新增 src/retrieval_rules/synthesis.rs, src/retrieval_rules/diagnostics.rs 和 src/retrieval_rules/tests/synthesis_diagnostics_test.rs."
+      },
+      "rationale": "final synthesis 是用户可见结果, 也是前面风险, 证据和并行子任务的汇总出口.",
+      "action": "pending"
+    },
+    {
+      "id": "P008",
+      "target": "004-agent-retrieval-rules/SC-001-SC-007",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "系统必须用 20 个经验风险样本, 证据缺失和冲突样本, 两轮迭代, 至少 3 个并行子任务, 规则演化记录, final synthesis 和停止条件说明完成验收.",
+        "code_does": "当前仓库没有这些样本, 测试或验收证据."
+      },
+      "proposed_resolution": {
+        "type": "implementation_task",
+        "description": "保留 SC-001 到 SC-007, 并在 004 tasks 中先创建 risk_sample_test, evidence_gap_test, parallel_subtask_test, rule_evolution_test 和 final_synthesis_test."
+      },
+      "rationale": "SC-001 到 SC-007 是可量化验收门槛, 未实现是因为功能尚未进入实现阶段.",
+      "action": "pending"
+    },
+    {
+      "id": "P009",
+      "target": "005-spec-sync-tooling",
+      "direction": "NEW_SPEC",
+      "confidence": "MEDIUM",
+      "feature": {
+        "name": "Spec Kit sync extension 本地命令和技能资产",
+        "location": ".specify/extensions/sync/; .agents/skills/speckit-sync-analyze/SKILL.md"
+      },
+      "draft_spec": {
+        "title": "Spec Kit 同步扩展工具",
+        "user_stories": [
+          "维护者需要在本地 Spec Kit 工作区运行 sync analyze, 读取规格, 源码, 测试和设计文档, 并生成 Markdown 和 JSON 漂移报告.",
+          "维护者需要在 drift report 基础上生成 backfill, align, human decision 和 new spec 提案.",
+          "维护者需要通过 sync-config.yml 控制 ignore pattern, design doc pattern, artifact directory, history retention 和默认提案策略."
+        ],
+        "requirements": [
+          "FR-001: 系统必须提供 speckit-sync-analyze, speckit-sync-propose, speckit-sync-apply, speckit-sync-backfill 和 speckit-sync-conflicts 本地技能或命令入口.",
+          "FR-002: 系统必须读取 .specify/extensions/sync/sync-config.yml, 并支持 ignore_patterns, design_doc_patterns, default_strategy, artifacts_dir, keep_history 和 history_limit.",
+          "FR-003: sync analyze 必须输出 .specify/sync/drift-report.md 和 .specify/sync/drift-report.json.",
+          "FR-004: sync propose 必须输出 .specify/sync/proposals.md 和 .specify/sync/proposals.json.",
+          "FR-005: analyze 和 propose 必须保持 read-only 实现行为, 除写入同步产物外不得修改规格或源码.",
+          "FR-006: apply 只能执行已批准的提案, 并且必须保留变更摘要和验证证据.",
+          "FR-007: 本扩展不得提供 compatibility export, 历史命令别名或旧规格别名."
+        ]
+      },
+      "rationale": "当前 sync extension 文件存在但没有产品规格覆盖. 如果它属于项目工具链, 新规格可以避免持续被判定为 unspecced code.",
+      "action": "pending"
+    }
+  ]
+}
