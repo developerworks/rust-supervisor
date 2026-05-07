@@ -1,0 +1,72 @@
+{
+  "applied": "2026-05-08T00:46:58+08:00",
+  "changes_made": {
+    "specs_updated": [
+      {
+        "spec": "001-create-supervisor-core",
+        "requirement": "FR-063",
+        "change_type": "modified",
+        "file": "specs/001-create-supervisor-core/spec.md",
+        "before": "- **FR-063**: 系统代码命名不得使用任何 `*Snapshot` 或 `*View` 后缀,也不得提供 `snapshot()` 查询方法.配置加载结果必须命名为 `ConfigState`(配置状态),监督器当前状态必须命名为 `SupervisorState`(监督器状态),子任务当前状态必须命名为 `ChildState`(子任务状态),运行时查询命令必须命名为 `current_state`(当前状态),源码模块必须命名为 `state`(状态),不得命名为 `state_view`(状态视图).",
+        "after": "- **FR-063**: 系统核心状态和配置命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得在 `SupervisorHandle`(监督器句柄), runtime(运行时), state(状态) 或 config(配置) 查询接口提供 `snapshot()` 方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). 后续 dashboard(看板) 规格明确拥有的 IPC(进程间通信) 或 UI(用户界面) 协议对象可以使用 `snapshot(快照)` 术语, 但该术语不得替代核心状态查询契约.",
+        "applied_at": "2026-05-08T00:46:58+08:00"
+      }
+    ],
+    "new_specs_created": [],
+    "implementation_tasks_generated": []
+  },
+  "backups": [
+    ".specify/sync/backups/001-create-supervisor-core-spec-2026-05-08T00-46-58+08-00.md"
+  ],
+  "proposal_status_updated": [
+    {
+      "id": "P001",
+      "approved": true,
+      "action": "applied",
+      "applied_at": "2026-05-08T00:46:58+08:00"
+    }
+  ],
+  "not_applied": [
+    {
+      "proposal": "P002",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P003",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P004",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P005",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P006",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P007",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P008",
+      "reason": "Not requested in this apply run."
+    },
+    {
+      "proposal": "P009",
+      "reason": "Not requested in this apply run."
+    }
+  ],
+  "validation": {
+    "status": "passed",
+    "evidence": [
+      "jq parsed .specify/sync/apply-report.json and .specify/sync/proposals.json",
+      "rg confirmed FR-063 and Last Modified in specs/001-create-supervisor-core/spec.md",
+      "test -f confirmed backup file exists",
+      "git diff --check passed"
+    ]
+  }
+}

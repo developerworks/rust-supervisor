@@ -3,7 +3,6 @@
 **Feature Branch(功能分支)**: `001-create-supervisor-core`
 **Created(创建日期)**: 2026-05-04
 **Status(状态)**: Draft(草稿)
-**Last Modified(最后修改日期)**: 2026-05-08
 **Input(输入)**: 用户描述:"吸收 `task-supervisor`,`taskvisor`,`tokio-graceful-shutdown`,`ractor-supervisor`,`task_scope`,Tokio(异步运行时) `JoinSet`,`supertrees`,Tokio(异步运行时) `watch`,`tokio-util` `CancellationToken` 和 `tracing`(结构化追踪) 的成熟概念,创建一个基于 Tokio(异步运行时) 的轻量 supervisor(监督器) 运行时治理层.它负责启动,停止,重启,隔离,降级,熔断,状态查询,事件记录,健康检查和关闭顺序;不引入 actor(参与者) 框架,不照搬第三方 crate(库) API(接口)."
 
 ## Clarifications(澄清)
@@ -292,7 +291,7 @@
 - **FR-060**: 系统必须控制 cognitive complexity(认知复杂度).普通函数的认知复杂度不得超过 15,生命周期调度函数不得超过 20,控制流嵌套不得超过 3 层.超过阈值的逻辑必须拆分为 state machine(状态机),policy function(策略函数),small helper function(小辅助函数) 或独立模块.
 - **FR-061**: 系统必须保证 high maintainability(高可维护性).每个模块必须有单一清晰职责,公开 API(公开接口) 必须通过契约类型表达,共享状态必须集中在运行时边界,行为变化必须有测试,文档和示例同步,并且不得通过全局可变状态,隐式副作用或跨模块内部访问降低可维护性.
 - **FR-062**: 系统必须在发布准备阶段生成 SBOM(软件物料清单).SBOM(软件物料清单) 至少必须包含 crate(包) 本身,所有直接依赖,所有传递依赖,版本,license(许可证),package URL(软件包地址),checksum(校验和),source repository(源码仓库) 和生成工具信息,并输出 CycloneDX JSON(CycloneDX JSON 格式) 与 SPDX JSON(SPDX JSON 格式) 两种文件.
-- **FR-063**: 系统核心状态和配置命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得在 `SupervisorHandle`(监督器句柄), runtime(运行时), state(状态) 或 config(配置) 查询接口提供 `snapshot()` 方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). 后续 dashboard(看板) 规格明确拥有的 IPC(进程间通信) 或 UI(用户界面) 协议对象可以使用 `snapshot(快照)` 术语, 但该术语不得替代核心状态查询契约.
+- **FR-063**: 系统代码命名不得使用任何 `*Snapshot` 或 `*View` 后缀,也不得提供 `snapshot()` 查询方法.配置加载结果必须命名为 `ConfigState`(配置状态),监督器当前状态必须命名为 `SupervisorState`(监督器状态),子任务当前状态必须命名为 `ChildState`(子任务状态),运行时查询命令必须命名为 `current_state`(当前状态),源码模块必须命名为 `state`(状态),不得命名为 `state_view`(状态视图).
 - **FR-064**: 系统必须规定所有测试文件以 `_test.rs` 结尾.integration test(集成测试) 文件必须位于 `src/tests/*_test.rs`,unit test(单元测试) 文件必须位于对应模块自己的 `tests/*_test.rs` 目录,不得使用其它测试文件后缀.
 - **FR-065**: 系统必须规定 rust-config-tree(集中配置树) 的主配置格式为 YAML(数据序列化格式).配置示例,quickstart(快速开始),文档,契约和任务必须使用 `*.yaml` 文件,不得把 TOML(配置格式),JSON(数据交换格式) 或其它格式作为主配置格式.
 - **FR-066**: 系统必须维护独立 `glossary.md`(词汇表),覆盖规格文档中出现的专业词汇和所有反引号词汇.反引号内的 Rust(编程语言) 类型名,枚举值,方法名,字段名,指标名,路径名,命令名,配置键和测试目标都必须被视为词汇表条目.

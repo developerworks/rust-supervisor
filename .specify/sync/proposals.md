@@ -35,8 +35,10 @@ Based on(基于): drift-report from 2026-05-08T00:34:25+08:00
 
 **Confidence(置信度)**: HIGH(高)
 
+**Apply Status(应用状态)**: APPLIED(已应用), 2026-05-08T00:46:58+08:00.
+
 **Action(操作)**:
-- [ ] Approve(批准)
+- [x] Approve(批准)
 - [ ] Reject(拒绝)
 - [ ] Modify(修改)
 
