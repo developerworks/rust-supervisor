@@ -24,7 +24,7 @@
 ### Methods(方法)
 
 - `hello`: relay(中继) 建立 IPC(进程间通信) 后声明协议版本和目标身份.
-- `snapshot`: 读取 DashboardSnapshot(看板快照).
+- `snapshot`: 读取 DashboardState(看板状态).
 - `events.subscribe`: 在已认证客户端会话触发目标绑定后, 订阅目标进程主动推送的 EventRecord(事件记录).
 - `logs.tail`: 在已认证客户端会话触发目标绑定后, 订阅 LogRecord(日志记录) 和最近日志.
 - `command.restart_child`: 重启 child task(子任务).

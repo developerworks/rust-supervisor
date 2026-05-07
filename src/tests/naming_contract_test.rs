@@ -14,9 +14,6 @@ fn source_code_avoids_forbidden_snapshot_and_view_names() {
     let forbidden_state_module = ["state", "_", "view"].concat();
 
     for path in rust_files(Path::new(env!("CARGO_MANIFEST_DIR")).join("src")) {
-        if is_dashboard_source(&path) {
-            continue;
-        }
         let text = fs::read_to_string(&path).expect("read rust file");
         assert!(
             !text.contains(&snapshot_suffix),
@@ -39,12 +36,6 @@ fn source_code_avoids_forbidden_snapshot_and_view_names() {
             path
         );
     }
-}
-
-/// Reports whether a file belongs to the dashboard protocol module.
-fn is_dashboard_source(path: &Path) -> bool {
-    path.components()
-        .any(|component| component.as_os_str() == "dashboard")
 }
 
 /// Verifies that the approved state names exist in source code.

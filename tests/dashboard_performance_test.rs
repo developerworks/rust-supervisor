@@ -1,5 +1,5 @@
-use rust_supervisor::dashboard::snapshot::{
-    DashboardSnapshotInput, build_dashboard_snapshot, declared_state_from_spec,
+use rust_supervisor::dashboard::state::{
+    DashboardStateInput, build_dashboard_state, declared_state_from_spec,
 };
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::journal::ring::EventJournal;
@@ -30,8 +30,8 @@ fn dashboard_snapshot_builds_two_hundred_children_quickly() {
     let journal = EventJournal::new(256);
     let started = Instant::now();
 
-    let snapshot = build_dashboard_snapshot(
-        DashboardSnapshotInput {
+    let snapshot = build_dashboard_state(
+        DashboardStateInput {
             target_id: "payments".to_owned(),
             display_name: "payments".to_owned(),
             authorization_scope: "payments:operate".to_owned(),

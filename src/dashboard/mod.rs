@@ -6,4 +6,4 @@ pub mod ipc_server;
 pub mod model;
 pub mod protocol;
 pub mod registration;
-pub mod snapshot;
+pub mod state;

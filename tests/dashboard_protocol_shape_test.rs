@@ -7,7 +7,7 @@ use rust_supervisor::dashboard::model::{
 use rust_supervisor::dashboard::protocol::{
     IpcMethod, IpcRequest, IpcResponse, IpcResult, parse_request_line, response_to_line,
 };
-use rust_supervisor::dashboard::snapshot::declared_state_from_spec;
+use rust_supervisor::dashboard::state::declared_state_from_spec;
 use rust_supervisor::journal::ring::EventJournal;
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 

@@ -9,7 +9,7 @@ use crate::control::handle::SupervisorHandle;
 use crate::dashboard::config::ValidatedDashboardIpcConfig;
 use crate::dashboard::error::DashboardError;
 use crate::dashboard::model::{
-    ControlCommandKind, ControlCommandRequest, ControlCommandResult, DashboardSnapshot,
+    ControlCommandKind, ControlCommandRequest, ControlCommandResult, DashboardState,
     TargetProcessRegistration,
 };
 use crate::dashboard::protocol::{
@@ -17,7 +17,7 @@ use crate::dashboard::protocol::{
     decode_command_params,
 };
 use crate::dashboard::registration::build_registration_payload;
-use crate::dashboard::snapshot::{DashboardSnapshotInput, build_dashboard_snapshot};
+use crate::dashboard::state::{DashboardStateInput, build_dashboard_state};
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
@@ -31,15 +31,15 @@ use tokio::net::UnixListener;
 pub struct DashboardIpcService {
     /// Validated IPC configuration.
     config: ValidatedDashboardIpcConfig,
-    /// Supervisor declaration used for topology snapshots.
+    /// Supervisor declaration used for topology payloads.
     spec: SupervisorSpec,
-    /// Current supervisor state snapshot.
+    /// Current supervisor state payload.
     state: SupervisorState,
     /// Recent event journal.
     journal: EventJournal,
     /// Optional runtime control handle.
     handle: Option<SupervisorHandle>,
-    /// Monotonic snapshot generation.
+    /// Monotonic payload generation.
     snapshot_generation: u64,
 }
 
@@ -131,11 +131,11 @@ impl DashboardIpcService {
                 protocol_version: DASHBOARD_IPC_PROTOCOL_VERSION.to_owned(),
                 registration: self.registration_payload()?,
             }),
-            IpcMethod::Snapshot => {
-                let snapshot = self.snapshot();
-                Ok(IpcResult::Snapshot {
-                    target_id: snapshot.target.target_id.clone(),
-                    snapshot,
+            IpcMethod::CurrentState => {
+                let state = self.current_dashboard_state();
+                Ok(IpcResult::State {
+                    target_id: state.target.target_id.clone(),
+                    state,
                 })
             }
             IpcMethod::EventsSubscribe => {
@@ -162,7 +162,7 @@ impl DashboardIpcService {
         }
     }
 
-    /// Builds the current dashboard snapshot.
+    /// Builds the current dashboard state.
     ///
     /// # Arguments
     ///
@@ -170,11 +170,11 @@ impl DashboardIpcService {
     ///
     /// # Returns
     ///
-    /// Returns the current [`DashboardSnapshot`].
-    pub fn snapshot(&self) -> DashboardSnapshot {
+    /// Returns the current [`DashboardState`].
+    pub fn current_dashboard_state(&self) -> DashboardState {
         let registration = self.registration_payload().ok();
-        build_dashboard_snapshot(
-            DashboardSnapshotInput {
+        build_dashboard_state(
+            DashboardStateInput {
                 target_id: self.config.target_id.clone(),
                 display_name: registration
                     .as_ref()

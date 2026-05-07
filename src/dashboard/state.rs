@@ -1,12 +1,12 @@
-//! Dashboard snapshot construction.
+//! Dashboard state construction.
 //!
-//! Snapshots combine static supervisor declarations, current runtime state, and
-//! recent journal records into one payload that relay and UI can consume after
-//! session binding or reconnect.
+//! The builder combines static supervisor declarations, current runtime state,
+//! and recent journal records into one payload that relay and UI can consume
+//! after session binding or reconnect.
 
 use crate::dashboard::events::{journal_to_event_records, log_record_for_event};
 use crate::dashboard::model::{
-    DashboardCriticality, DashboardSnapshot, RegistrationState, RuntimeState, SupervisorEdge,
+    DashboardCriticality, DashboardState, RegistrationState, RuntimeState, SupervisorEdge,
     SupervisorEdgeKind, SupervisorNode, SupervisorNodeKind, SupervisorTopology,
     TargetConnectionState, TargetProcessIdentity,
 };
@@ -17,39 +17,39 @@ use crate::spec::supervisor::SupervisorSpec;
 use crate::state::supervisor::SupervisorState;
 use std::collections::BTreeMap;
 
-/// Input required to build one dashboard snapshot.
+/// Input required to build one dashboard state payload.
 #[derive(Debug, Clone)]
-pub struct DashboardSnapshotInput {
+pub struct DashboardStateInput {
     /// Stable target process identifier.
     pub target_id: String,
     /// Human-readable target display name.
     pub display_name: String,
     /// Authorization scope required for the target.
     pub authorization_scope: String,
-    /// Snapshot generation assigned by the target process.
+    /// Payload generation assigned by the target process.
     pub snapshot_generation: u64,
     /// Number of recent records to include.
     pub recent_limit: usize,
 }
 
-/// Builds a dashboard snapshot from current supervisor facts.
+/// Builds dashboard state from current supervisor facts.
 ///
 /// # Arguments
 ///
-/// - `input`: Snapshot target identity and generation data.
+/// - `input`: Target identity and generation data.
 /// - `spec`: Supervisor declaration.
 /// - `state`: Current runtime state.
 /// - `journal`: Recent event journal.
 ///
 /// # Returns
 ///
-/// Returns a [`DashboardSnapshot`] ready for IPC serialization.
-pub fn build_dashboard_snapshot(
-    input: DashboardSnapshotInput,
+/// Returns a [`DashboardState`] ready for IPC serialization.
+pub fn build_dashboard_state(
+    input: DashboardStateInput,
     spec: &SupervisorSpec,
     state: &SupervisorState,
     journal: &EventJournal,
-) -> DashboardSnapshot {
+) -> DashboardState {
     let config_version = spec.config_version.clone();
     let recent_events = journal_to_event_records(
         &input.target_id,
@@ -61,7 +61,7 @@ pub fn build_dashboard_snapshot(
         .iter()
         .map(|event| log_record_for_event(event, format!("event {}", event.event_type)))
         .collect::<Vec<_>>();
-    DashboardSnapshot {
+    DashboardState {
         target: TargetProcessIdentity {
             target_id: input.target_id,
             display_name: input.display_name,

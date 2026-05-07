@@ -110,7 +110,7 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - **TargetProcessRegistration(目标进程注册)**: 目标进程向 relay(中继) 提交的运行时注册记录, 表达目标进程身份, IPC path(进程间通信路径), 显示名称, 授权范围, 租约和心跳状态.
 - **TargetProcessConnection(目标进程连接)**: relay(中继) 与一个目标进程 IPC(进程间通信) 之间的本机连接, 用于接收目标进程主动推送的事件和日志, 并转发控制命令.
 - **TargetProcessRegistry(目标进程注册表)**: relay(中继) 中保存多个 active registration(活动注册), target process identity(目标进程身份), IPC path(进程间通信路径), 连接状态, 租约状态和授权范围的集合.
-- **DashboardSnapshot(看板快照)**: 打开 dashboard(看板) 或重连后返回的完整视图, 包含目标进程身份, 监督拓扑, 当前状态, 最近事件, 最近日志和丢弃数量.
+- **DashboardState(看板状态)**: 打开 dashboard(看板) 或重连后返回的完整视图, 包含目标进程身份, 监督拓扑, 当前状态, 最近事件, 最近日志和丢弃数量.
 - **SupervisorTopology(监督拓扑)**: 监督树的可视化结构, 包含节点, 边, 路径, 依赖关系, 标签和声明顺序.
 - **SupervisorNode(监督节点)**: 一个 root supervisor(根监督器) 或 child task(子任务) 的可视化单元, 包含身份, 名称, 路径, 当前状态和关键诊断字段.
 - **SupervisorEdge(监督边)**: 监督树父子关系或 child task(子任务) 依赖关系, 用于解释启动顺序, 关闭顺序和重启范围.

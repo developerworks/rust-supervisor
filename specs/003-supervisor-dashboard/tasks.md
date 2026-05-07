@@ -28,7 +28,7 @@
 - [X] T008 [P] 在 `tests/dashboard_config_test.rs` 中添加 FR-001, FR-023, FR-024 和 FR-025 的配置与目录边界测试, 覆盖 IPC path(进程间通信路径) 外部化, dynamic registration(动态注册) 配置, 当前仓库无 relay binary(中继二进制入口) 和当前仓库无同仓前端目录.
 - [X] T009 [P] 在 `tests/dashboard_protocol_shape_test.rs` 中添加 FR-008 到 FR-012, FR-015 到 FR-018 和 FR-022 的 JSON(数据交换格式) shape(形状) 契约测试, 覆盖 snapshot(快照), event(事件), log(日志), command request(命令请求), command result(命令结果), error(错误), audit event(审计事件) 和旧协议别名拒绝.
 - [X] T010 [P] 在 `src/dashboard/error.rs` 中定义目标侧结构化 DashboardError(看板错误) 和错误 code(代码), stage(阶段), target id(目标标识), retryable(可重试) 字段.
-- [X] T011 [P] 在 `src/dashboard/model.rs` 中定义 TargetProcessConfig(目标进程配置), TargetProcessRegistration(目标进程注册), DashboardSnapshot(看板快照), SupervisorTopology(监督拓扑), SupervisorNode(监督节点), SupervisorEdge(监督边), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求), ControlCommandResult(控制命令结果) 和 AuditEvent(审计事件) 共享模型.
+- [X] T011 [P] 在 `src/dashboard/model.rs` 中定义 TargetProcessConfig(目标进程配置), TargetProcessRegistration(目标进程注册), DashboardState(看板状态), SupervisorTopology(监督拓扑), SupervisorNode(监督节点), SupervisorEdge(监督边), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求), ControlCommandResult(控制命令结果) 和 AuditEvent(审计事件) 共享模型.
 - [X] T012 [P] 在 `src/dashboard/protocol.rs` 中定义目标侧 IPC(进程间通信) request(请求), response(响应), server push(服务端主动推送) 和拒绝旧协议别名的解析规则.
 - [X] T013 [P] 在 `src/dashboard/config.rs` 中定义目标进程 IPC(进程间通信) 配置模型和 path(路径), permissions(权限), bind mode(绑定模式) 校验.
 - [X] T014 [P] 在 `src/dashboard/diagnostics.rs` 中定义目标侧 IPC(进程间通信), sequence(序号), command(命令) 和 dropped count(丢弃数量) 的 tracing(结构化追踪) 字段.
@@ -63,7 +63,7 @@
 
 ### Implementation for User Story 1(用户故事一的实现)
 
-- [X] T030 [P] [US1] 在 `src/dashboard/snapshot.rs` 中实现从 SupervisorHandle(监督器句柄), SupervisorTree(监督树), SupervisorState(监督器状态) 和 EventJournal(事件日志缓冲区) 构建 DashboardSnapshot(看板快照).
+- [X] T030 [P] [US1] 在 `src/dashboard/state.rs` 中实现从 SupervisorHandle(监督器句柄), SupervisorTree(监督树), SupervisorState(监督器状态) 和 EventJournal(事件日志缓冲区) 构建 DashboardState(看板状态).
 - [X] T031 [US1] 在 `src/dashboard/ipc_server.rs` 和 `src/dashboard/registration.rs` 中实现目标进程 Unix domain socket(Unix 域套接字) listener(监听器), dynamic registration(动态注册) payload(载荷), `hello` 方法和 `snapshot` 方法.
 - [X] T032 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 到目标进程 IPC(进程间通信) 的 snapshot(快照) 读取.
 - [X] T033 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/registry.rs` 中实现 registered(已注册), connected(已连接), reconnecting(重连中), unavailable(不可用), expired(已过期) 状态汇总和可见目标过滤.

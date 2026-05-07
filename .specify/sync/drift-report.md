@@ -1,17 +1,17 @@
 # Spec Drift Report(规格漂移报告)
 
-Generated(生成时间): 2026-05-08T00:34:25+08:00
+Generated(生成时间): 2026-05-08T01:18:11+08:00
 Project(项目): rust-tokio-supervisor
 
 ## Summary(摘要)
 
 | Category(类别) | Count(数量) |
 |---|---:|
-| Specs Analyzed(已分析规格) | 4 |
-| Requirements Checked(已检查需求) | 208 |
-| Aligned(已对齐) | 183 (88.0%) |
-| Drifted(已漂移) | 2 (1.0%) |
-| Not Implemented(未实现) | 23 (11.1%) |
+| Specs Analyzed(已分析规格) | 3 |
+| Requirements Checked(已检查需求) | 185 |
+| Aligned(已对齐) | 185 (100.0%) |
+| Drifted(已漂移) | 0 (0.0%) |
+| Not Implemented(未实现) | 0 (0.0%) |
 | Unspecced Code(无规格代码) | 1 |
 
 ## Scope(范围)
@@ -24,20 +24,12 @@ Project(项目): rust-tokio-supervisor
 
 #### Aligned(已对齐)
 
-- FR-001 到 FR-062: 核心监督器声明, 任务工厂, 任务上下文, 监督树, 重启策略, 退出分类, 熔断, 健康检查, 关闭, 控制命令, 状态平面, 事件平面, 可观测性, 配置, 文档和发布边界, 已由 `src/spec/`, `src/task/`, `src/tree/`, `src/policy/`, `src/health/`, `src/shutdown/`, `src/control/`, `src/state/`, `src/event/`, `src/observe/`, `src/runtime/`, `src/summary/`, `examples/`, `manual/` 和对应 `src/tests/*_test.rs` 覆盖.
-- FR-064 到 FR-077: 测试命名, YAML(数据序列化格式) 主配置, glossary(词汇表), 硬编码常量检查, module dependency map(模块依赖图), module dependency rule(模块依赖规则), parallel workstream(并行工作流), unattended implementation(无人值守实现), task completion ledger(任务完成台账), blocker elimination(卡点消除), lead agent supervision(主代理监督), correction loop(纠偏循环) 和 top-level directory module(顶层目录模块) 规则, 已由 `src/tests/*_test.rs`, `specs/001-create-supervisor-core/*`, `Cargo.toml` 和 `manual/` 覆盖.
-- SC-001 到 SC-030 以及 SC-032 到 SC-045: 对应的监督行为, 可观测性, 配置, 文档同步, 发布, 依赖, 并行治理和源码布局检查已经存在于当前仓库的测试, 示例和文档中.
+- FR-001 到 FR-077: 核心监督器声明, 任务工厂, 任务上下文, 监督树, 重启策略, 退出分类, 熔断, 健康检查, 关闭, 控制命令, 状态平面, 事件平面, 可观测性, 配置, 文档, 发布边界, 命名规则, YAML(数据序列化格式), glossary(词汇表), 硬编码常量检查, module dependency map(模块依赖图), module dependency rule(模块依赖规则), parallel workstream(并行工作流), unattended implementation(无人值守实现), task completion ledger(任务完成台账), blocker elimination(卡点消除), lead agent supervision(主代理监督), correction loop(纠偏循环) 和 top-level directory module(顶层目录模块) 规则, 已由 `src/spec/`, `src/task/`, `src/tree/`, `src/policy/`, `src/health/`, `src/shutdown/`, `src/control/`, `src/state/`, `src/dashboard/state.rs`, `src/tests/*_test.rs`, `examples/`, `manual/`, `specs/001-create-supervisor-core/*` 和 `Cargo.toml` 覆盖.
+- SC-001 到 SC-045: 对应的监督行为, 可观测性, 配置, 文档同步, 发布, 依赖, 并行治理, 命名检查和源码布局检查已经存在于当前仓库的测试, 示例和文档中.
 
 #### Drifted(已漂移)
 
-- FR-063: 规格要求源码不得出现任何 `*Snapshot`, `*View` 后缀或 `snapshot()` 查询方法, 但 003 已经在当前仓库实现 `DashboardSnapshot` 和 `DashboardIpcService::snapshot`.
-  - Location(位置): `src/dashboard/model.rs:74`, `src/dashboard/ipc_server.rs:174`
-  - Actual(实际行为): dashboard(看板) 模块使用 snapshot(快照) 作为协议模型和 IPC(进程间通信) 查询方法.
-  - Severity(严重程度): major(重大)
-- SC-031: 规格要求 naming check(命名检查) 证明源码, 示例, 公开契约和文档中不存在 `*Snapshot`, `*View`, `snapshot()` 或 `state_view`, 但当前测试跳过 `src/dashboard/`, 所以它不再证明全局禁止规则.
-  - Location(位置): `src/tests/naming_contract_test.rs:17`, `src/dashboard/model.rs:74`, `src/dashboard/ipc_server.rs:174`
-  - Actual(实际行为): `cargo test source_code_avoids_forbidden_snapshot_and_view_names` 通过, 但通过原因包含 dashboard(看板) 源码例外.
-  - Severity(严重程度): major(重大)
+- None(无).
 
 #### Not Implemented(未实现)
 
@@ -75,21 +67,6 @@ Project(项目): rust-tokio-supervisor
 
 - None(无).
 
-### Spec(规格): 004-agent-retrieval-rules - 智能体检索规则演化
-
-#### Aligned(已对齐)
-
-- None(无). 当前目录只有 `spec.md` 和 `checklists/requirements.md`, 尚未进入 plan(计划), tasks(任务) 或 implementation(实现) 阶段.
-
-#### Drifted(已漂移)
-
-- None(无).
-
-#### Not Implemented(未实现)
-
-- FR-001 到 FR-016: 当前 `src/` 中没有 `risk pattern(风险模式)`, `evidence plan(证据计划)`, `evidence record(证据记录)`, `causal chain(因果链)`, `behavior rule(行为规则)`, `rule evolution record(规则演化记录)`, `parallel subtask(并行子任务)`, `agent result(智能体结果)` 或 `synthesis report(汇总报告)` 的实现模块.
-- SC-001 到 SC-007: 当前仓库没有用于 20 个已知经验风险样本, 证据缺失和冲突样本, 两轮迭代, 3 个并行子任务, rule evolution(规则演化) 记录, final synthesis(最终汇总) 或 stop condition(停止条件) 的测试与验收证据.
-
 ## Unspecced Code(无规格代码)
 
 | Feature(功能) | Location(位置) | Lines(行数) | Suggested Spec(建议规格) |
@@ -98,10 +75,8 @@ Project(项目): rust-tokio-supervisor
 
 ## Inter-Spec Conflicts(规格间冲突)
 
-- `001-create-supervisor-core` 的 FR-063 和 SC-031 全局禁止 `*Snapshot` 和 `snapshot()`, 但 `003-supervisor-dashboard` 的 FR-008, FR-014, SC-001 以及 data model(数据模型) 明确要求 snapshot(快照) 作为 dashboard(看板) 协议对象. 当前代码选择实现 003, 因此 001 的命名规则已经和后续规格冲突.
+- None(无).
 
 ## Recommendations(建议)
 
-1. 先解决 `001-create-supervisor-core` 和 `003-supervisor-dashboard` 的 snapshot(快照) 命名冲突. 如果 dashboard snapshot(看板快照) 是正式新边界, 需要用 sync apply(同步应用) 或单独规格修订把 001 的全局禁止规则改成核心状态查询边界禁止, 并保留 dashboard(看板) 协议例外.
-2. 对 `004-agent-retrieval-rules` 进入 plan(计划) 和 tasks(任务) 阶段前, 不要把当前状态解读为代码缺陷. 它是新规格尚未实现.
-3. 为 `.specify/extensions/sync/` 和 `speckit-sync-*` 技能资产补一个独立工具规格, 或明确把它们归类为本地开发工具, 不进入产品规格同步范围.
+1. 为 `.specify/extensions/sync/` 和 `speckit-sync-*` 技能资产补一个独立工具规格, 或明确把它们归类为本地开发工具, 不进入产品规格同步范围.

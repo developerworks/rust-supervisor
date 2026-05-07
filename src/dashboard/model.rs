@@ -54,7 +54,7 @@ pub enum TargetConnectionState {
     Expired,
 }
 
-/// Target identity shown in snapshots and target lists.
+/// Target identity shown in dashboard state payloads and target lists.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TargetProcessIdentity {
     /// Stable target process identifier.
@@ -69,9 +69,9 @@ pub struct TargetProcessIdentity {
     pub connection_state: TargetConnectionState,
 }
 
-/// Complete snapshot returned when a target is opened or reconnected.
+/// Complete dashboard state returned when a target is opened or reconnected.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct DashboardSnapshot {
+pub struct DashboardState {
     /// Target process identity.
     pub target: TargetProcessIdentity,
     /// Supervisor topology.
@@ -90,7 +90,7 @@ pub struct DashboardSnapshot {
     pub config_version: String,
     /// Generated time as Unix nanoseconds.
     pub generated_at_unix_nanos: u128,
-    /// Monotonic snapshot generation for this target.
+    /// Monotonic payload generation for this target.
     pub snapshot_generation: u64,
 }
 

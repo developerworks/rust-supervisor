@@ -102,7 +102,7 @@
 - `registered -> expired`: 注册租约过期或心跳中断.
 - `connected -> expired`: 注册租约过期, 连接必须降级并停止继续推送.
 
-## DashboardSnapshot(看板快照)
+## DashboardState(看板状态)
 
 **Purpose(目的)**: 打开 dashboard(看板), 重连或命令后返回完整当前视图.
 

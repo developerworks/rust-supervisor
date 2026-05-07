@@ -292,7 +292,7 @@
 - **FR-060**: 系统必须控制 cognitive complexity(认知复杂度).普通函数的认知复杂度不得超过 15,生命周期调度函数不得超过 20,控制流嵌套不得超过 3 层.超过阈值的逻辑必须拆分为 state machine(状态机),policy function(策略函数),small helper function(小辅助函数) 或独立模块.
 - **FR-061**: 系统必须保证 high maintainability(高可维护性).每个模块必须有单一清晰职责,公开 API(公开接口) 必须通过契约类型表达,共享状态必须集中在运行时边界,行为变化必须有测试,文档和示例同步,并且不得通过全局可变状态,隐式副作用或跨模块内部访问降低可维护性.
 - **FR-062**: 系统必须在发布准备阶段生成 SBOM(软件物料清单).SBOM(软件物料清单) 至少必须包含 crate(包) 本身,所有直接依赖,所有传递依赖,版本,license(许可证),package URL(软件包地址),checksum(校验和),source repository(源码仓库) 和生成工具信息,并输出 CycloneDX JSON(CycloneDX JSON 格式) 与 SPDX JSON(SPDX JSON 格式) 两种文件.
-- **FR-063**: 系统全仓代码命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得提供 `snapshot()` 查询方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). dashboard(看板), IPC(进程间通信) 和 UI(用户界面) 协议也不得使用 `*Snapshot` 或 `*View` 代码命名.
+- **FR-063**: 系统核心状态和配置命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得在 `SupervisorHandle`(监督器句柄), runtime(运行时), state(状态) 或 config(配置) 查询接口提供 `snapshot()` 方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). 后续 dashboard(看板) 规格明确拥有的 IPC(进程间通信) 或 UI(用户界面) 协议对象可以使用 `snapshot(快照)` 术语, 但该术语不得替代核心状态查询契约.
 - **FR-064**: 系统必须规定所有测试文件以 `_test.rs` 结尾.integration test(集成测试) 文件必须位于 `src/tests/*_test.rs`,unit test(单元测试) 文件必须位于对应模块自己的 `tests/*_test.rs` 目录,不得使用其它测试文件后缀.
 - **FR-065**: 系统必须规定 rust-config-tree(集中配置树) 的主配置格式为 YAML(数据序列化格式).配置示例,quickstart(快速开始),文档,契约和任务必须使用 `*.yaml` 文件,不得把 TOML(配置格式),JSON(数据交换格式) 或其它格式作为主配置格式.
 - **FR-066**: 系统必须维护独立 `glossary.md`(词汇表),覆盖规格文档中出现的专业词汇和所有反引号词汇.反引号内的 Rust(编程语言) 类型名,枚举值,方法名,字段名,指标名,路径名,命令名,配置键和测试目标都必须被视为词汇表条目.
@@ -439,7 +439,7 @@
 - **SC-028**: cognitive complexity check(认知复杂度检查) 必须证明普通函数认知复杂度不超过 15,生命周期调度函数不超过 20,控制流嵌套不超过 3 层,并且每个超限候选都有已完成拆分记录.
 - **SC-029**: maintainability check(可维护性检查) 必须证明每个模块只有清晰职责,跨模块依赖只通过公开契约类型发生,行为变化有对应测试和文档,共享可变状态集中在运行时边界,并且新增代码没有把业务 data plane(数据面) 混入 supervisor core(监督器核心).
 - **SC-030**: SBOM check(SBOM 检查) 必须证明 `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json` 存在,格式有效,包含 crate(包) 本身,直接依赖,传递依赖,license(许可证),checksum(校验和) 和生成工具信息,并且依赖版本与 `Cargo.lock` 一致.
-- **SC-031**: naming check(命名检查) 必须证明全仓源码, 示例, 公开契约和文档中不存在任何 `*Snapshot`, `*View`, `snapshot()` 查询方法或 `state_view` 模块名, 并且统一使用 `ConfigState`(配置状态), `SupervisorState`(监督器状态), `ChildState`(子任务状态), `current_state`(当前状态) 和 `state`(状态). 检查不得跳过 dashboard(看板), IPC(进程间通信) 或 UI(用户界面) 协议边界.
+- **SC-031**: naming check(命名检查) 必须证明源码,示例,公开契约和文档中不存在任何 `*Snapshot`,`*View`,`snapshot()` 查询方法或 `state_view` 模块名,并且统一使用 `ConfigState`(配置状态),`SupervisorState`(监督器状态),`ChildState`(子任务状态),`current_state`(当前状态) 和 `state`(状态).
 - **SC-032**: test naming check(测试命名检查) 必须证明所有测试文件都以 `_test.rs` 结尾,并且 integration test(集成测试) 只出现在 `src/tests/*_test.rs`,unit test(单元测试) 只出现在模块自己的 `tests/*_test.rs`.
 - **SC-033**: YAML configuration check(YAML 配置检查) 必须证明 rust-config-tree(集中配置树) v0.1.9 只通过 `*.yaml` 主配置文件加载 supervisor(监督器) 配置,并且 quickstart(快速开始),示例,契约和文档都不把 TOML(配置格式) 或 JSON(数据交换格式) 作为主配置格式.
 - **SC-034**: glossary coverage check(词汇表覆盖检查) 必须证明 `specs/001-create-supervisor-core/glossary.md` 存在,并覆盖规格,计划,数据模型,公开契约,quickstart(快速开始) 和任务清单中的专业词汇以及所有反引号词汇.

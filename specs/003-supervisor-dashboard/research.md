@@ -32,7 +32,7 @@
 
 ## Decision(决定): snapshot(快照) 使用单一 typed model(类型化模型)
 
-**Rationale(理由)**: DashboardSnapshot(看板快照) 聚合 target process identity(目标进程身份), SupervisorTopology(监督拓扑), RuntimeState(运行时状态), recent events(最近事件), recent logs(最近日志), dropped count(丢弃数量), config version(配置版本) 和 generated time(生成时间). 该模型同时用于 IPC(进程间通信) response(响应), `wss://` message(消息) 和 dashboard(看板) 前端 TypeScript(类型脚本语言) 类型生成或手工同步, 并由 Vue(网页界面框架) 状态层消费.
+**Rationale(理由)**: DashboardState(看板状态) 聚合 target process identity(目标进程身份), SupervisorTopology(监督拓扑), RuntimeState(运行时状态), recent events(最近事件), recent logs(最近日志), dropped count(丢弃数量), config version(配置版本) 和 generated time(生成时间). 该模型同时用于 IPC(进程间通信) response(响应), `wss://` message(消息) 和 dashboard(看板) 前端 TypeScript(类型脚本语言) 类型生成或手工同步, 并由 Vue(网页界面框架) 状态层消费.
 
 **Alternatives considered(备选方案)**: 分散多个接口被拒绝, 因为重连必须获得新的完整 snapshot(快照). 让前端自行拼接监督树被拒绝, 因为操作者不能手工拼接状态.
 

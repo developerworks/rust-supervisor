@@ -66,7 +66,7 @@ src/
 │   ├── model.rs
 │   ├── protocol.rs
 │   ├── registration.rs
-│   └── snapshot.rs
+│   └── state.rs
 ├── config/
 │   ├── configurable.rs
 │   └── state.rs

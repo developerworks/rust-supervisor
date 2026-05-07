@@ -5,7 +5,7 @@
 
 use crate::dashboard::error::DashboardError;
 use crate::dashboard::model::{
-    ControlCommandRequest, ControlCommandResult, DashboardSnapshot, EventRecord, LogRecord,
+    ControlCommandRequest, ControlCommandResult, DashboardState, EventRecord, LogRecord,
     TargetProcessRegistration,
 };
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,8 @@ pub struct IpcRequest {
 pub enum IpcMethod {
     /// Protocol handshake.
     Hello,
-    /// Full snapshot request.
-    Snapshot,
+    /// Full dashboard state request.
+    CurrentState,
     /// Event subscription request.
     EventsSubscribe,
     /// Log tail subscription request.
@@ -66,7 +66,7 @@ impl IpcMethod {
     pub fn parse(method: &str) -> Result<Self, DashboardError> {
         match method {
             "hello" => Ok(Self::Hello),
-            "snapshot" => Ok(Self::Snapshot),
+            "snapshot" => Ok(Self::CurrentState),
             "events.subscribe" => Ok(Self::EventsSubscribe),
             "logs.tail" => Ok(Self::LogsTail),
             "command.restart_child" => Ok(Self::CommandRestartChild),
@@ -92,7 +92,7 @@ impl IpcMethod {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Hello => "hello",
-            Self::Snapshot => "snapshot",
+            Self::CurrentState => "snapshot",
             Self::EventsSubscribe => "events.subscribe",
             Self::LogsTail => "logs.tail",
             Self::CommandRestartChild => "command.restart_child",
@@ -117,12 +117,14 @@ pub enum IpcResult {
         /// Registration payload advertised by the target.
         registration: TargetProcessRegistration,
     },
-    /// Full target snapshot.
-    Snapshot {
+    /// Full target dashboard state.
+    #[serde(rename = "snapshot")]
+    State {
         /// Target process identifier.
         target_id: String,
-        /// Snapshot payload.
-        snapshot: DashboardSnapshot,
+        /// Dashboard state payload.
+        #[serde(rename = "snapshot")]
+        state: DashboardState,
     },
     /// Subscription acceptance.
     Subscription {
