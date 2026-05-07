@@ -124,7 +124,7 @@ pub enum IpcResult {
         target_id: String,
         /// Dashboard state payload.
         #[serde(rename = "snapshot")]
-        state: DashboardState,
+        state: Box<DashboardState>,
     },
     /// Subscription acceptance.
     Subscription {

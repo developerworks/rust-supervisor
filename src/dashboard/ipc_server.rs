@@ -135,7 +135,7 @@ impl DashboardIpcService {
                 let state = self.current_dashboard_state();
                 Ok(IpcResult::State {
                     target_id: state.target.target_id.clone(),
-                    state,
+                    state: Box::new(state),
                 })
             }
             IpcMethod::EventsSubscribe => {
