@@ -62,6 +62,8 @@ pub(crate) struct DemoScenario {
     state_generation: AtomicU64,
     /// Mutable child rows.
     children: Mutex<Vec<DemoChild>>,
+    /// Command event sequence counter.
+    activity_sequence: AtomicU64,
     // Continue the demo expression.
 }
 
@@ -83,6 +85,17 @@ struct DemoChild {
     restart_count: u64,
     /// Whether the child remains visible.
     present: bool,
+    // Continue the demo expression.
+}
+
+// Derive clone and debug helpers for command transition payloads.
+#[derive(Clone, Debug)]
+/// Lifecycle transition caused by one demo command.
+struct CommandTransition {
+    /// Lifecycle state before command application.
+    previous_lifecycle_state: String,
+    /// Lifecycle state after command application.
+    lifecycle_state: String,
     // Continue the demo expression.
 }
 
@@ -109,6 +122,8 @@ impl DemoScenario {
             state_generation: AtomicU64::new(1),
             // Seed child rows for the UI topology.
             children: Mutex::new(seed_children()),
+            // Start command activity sequences away from seed records.
+            activity_sequence: AtomicU64::new(1),
             // End scenario initialization.
         }
         // End constructor.
@@ -191,7 +206,23 @@ impl DemoScenario {
         // Lock child rows while applying the command.
         let mut children = self.children.lock().expect("demo scenario mutex");
         // Apply the requested command.
-        let delta = apply_command(&mut children, &command)?;
+        let transition = apply_command(&mut children, &command)?;
+        // Build a UI-consumable state delta after mutation.
+        let delta = command_state_delta(
+            // Continue the demo expression.
+            &self.target_id,
+            // Continue the demo expression.
+            &children,
+            // Continue the demo expression.
+            &command,
+            // Continue the demo expression.
+            &transition,
+            // Continue the demo expression.
+            self.activity_sequence.fetch_add(1, Ordering::Relaxed),
+            // Continue the demo expression.
+            self.state_generation.fetch_add(1, Ordering::Relaxed),
+            // Continue the demo expression.
+        );
         // Return a successful command result.
         Ok(ControlCommandResult {
             // Preserve the original command identifier.
@@ -786,6 +817,8 @@ fn event_record(target_id: &str, index: usize, child: &DemoChild) -> EventRecord
         payload: json!({
             // Include the child path field.
             "child_path": child_path(&child.id),
+            // Include the previous lifecycle state field.
+            "previous_lifecycle_state": "unknown",
             // Include the lifecycle state field.
             "lifecycle_state": child.lifecycle,
             // End event payload object.
@@ -837,6 +870,8 @@ fn log_record(target_id: &str, index: usize, child: &DemoChild) -> LogRecord {
     let mut fields = BTreeMap::new();
     // Insert child path.
     fields.insert("child_path".to_owned(), child_path(&child.id));
+    // Insert previous lifecycle state.
+    fields.insert("previous_lifecycle_state".to_owned(), "unknown".to_owned());
     // Insert lifecycle state.
     fields.insert("lifecycle_state".to_owned(), child.lifecycle.clone());
     // Build the log record.
@@ -850,7 +885,13 @@ fn log_record(target_id: &str, index: usize, child: &DemoChild) -> LogRecord {
         // Include log severity.
         severity: severity(child).to_owned(),
         // Include log message.
-        message: format!("{} is {}", child.name, child.lifecycle),
+        message: format!(
+            // Continue the demo expression.
+            "{} transitioned from unknown to {}",
+            // Continue the demo expression.
+            child.name, child.lifecycle,
+            // End transition message expression.
+        ),
         // Include structured fields.
         fields,
         // Include occurrence time.
@@ -876,27 +917,59 @@ fn apply_command(
     // Continue the demo expression.
     command: &ControlCommandRequest,
     // Continue the demo expression.
-) -> Result<serde_json::Value, DashboardError> {
+) -> Result<CommandTransition, DashboardError> {
     // Apply tree shutdown without a child path.
     if command.command == ControlCommandKind::ShutdownTree {
+        // Read first visible lifecycle before shutdown.
+        let previous = children
+            // Continue the demo expression.
+            .iter()
+            // Continue the demo expression.
+            .find(|child| child.present)
+            // Continue the demo expression.
+            .map(|child| child.lifecycle.clone())
+            // Continue the demo expression.
+            .unwrap_or_else(|| "unknown".to_owned());
         // Mark visible children as stopped.
         children
             // Continue the demo expression.
             .iter_mut()
             // Continue the demo expression.
             .for_each(|child| child.lifecycle = "stopped".to_owned());
-        // Return tree shutdown delta.
-        return Ok(json!({"command": "shutdown_tree", "tree_state": "stopped"}));
+        // Return success.
+        return Ok(CommandTransition {
+            // Preserve the previous lifecycle state.
+            previous_lifecycle_state: previous,
+            // Store the lifecycle after shutdown.
+            lifecycle_state: "stopped".to_owned(),
+            // End transition construction.
+        });
         // End shutdown branch.
     }
     // Resolve the target child identifier.
     let child_id = command_child_id(command)?;
     // Apply add-child separately.
     if command.command == ControlCommandKind::AddChild {
+        // Read the lifecycle before adding or restoring.
+        let previous = children
+            // Continue the demo expression.
+            .iter()
+            // Continue the demo expression.
+            .find(|row| row.id == child_id && row.present)
+            // Continue the demo expression.
+            .map(|row| row.lifecycle.clone())
+            // Continue the demo expression.
+            .unwrap_or_else(|| "absent".to_owned());
         // Add or restore the requested child.
         add_child(children, &child_id);
-        // Return add-child delta.
-        return Ok(delta(command.command, &child_id, "running"));
+        // Return success.
+        return Ok(CommandTransition {
+            // Preserve the previous lifecycle state.
+            previous_lifecycle_state: previous,
+            // Store the lifecycle after adding or restoring.
+            lifecycle_state: "running".to_owned(),
+            // End transition construction.
+        });
         // End add-child branch.
     }
     // Find the target child row.
@@ -917,6 +990,8 @@ fn apply_command(
             )
             // Continue the demo expression.
         })?;
+    // Preserve the lifecycle before child command application.
+    let previous = child.lifecycle.clone();
     // Apply the child command.
     match command.command {
         // Restart moves the child into restarting state.
@@ -941,16 +1016,14 @@ fn apply_command(
         ControlCommandKind::AddChild | ControlCommandKind::ShutdownTree => {} // End command match.
                                                                               // Continue the demo expression.
     }
-    // Return the child command delta.
-    Ok(delta(
-        // Continue the demo expression.
-        command.command,
-        // Continue the demo expression.
-        &child_id,
-        // Continue the demo expression.
-        lifecycle_after(command.command),
-        // Continue the demo expression.
-    ))
+    // Return success.
+    Ok(CommandTransition {
+        // Preserve the previous lifecycle state.
+        previous_lifecycle_state: previous,
+        // Store the lifecycle after command application.
+        lifecycle_state: lifecycle_after(command.command).to_owned(),
+        // End transition construction.
+    })
     // End command application.
 }
 
@@ -1008,29 +1081,244 @@ fn set_child_state(child: &mut DemoChild, lifecycle: &str, health: &str, readine
     // End state update.
 }
 
-/// Builds a command delta.
+/// Builds a command delta for the UI.
 ///
 /// # Arguments
 ///
-/// - `command`: Command kind.
-/// - `child_id`: Child identifier.
-/// - `lifecycle`: New lifecycle label.
+/// - `target_id`: Target identifier.
+/// - `children`: Current child rows after mutation.
+/// - `command`: Command request.
+/// - `sequence`: Command activity sequence.
+/// - `state_generation`: State generation value.
 ///
 /// # Returns
 ///
 /// Returns a JSON delta.
-fn delta(command: ControlCommandKind, child_id: &str, lifecycle: &str) -> serde_json::Value {
-    // Build the JSON delta.
+fn command_state_delta(
+    // Accept target identifier.
+    target_id: &str,
+    // Accept current child rows.
+    children: &[DemoChild],
+    // Accept original command.
+    command: &ControlCommandRequest,
+    // Accept lifecycle transition.
+    transition: &CommandTransition,
+    // Accept activity sequence.
+    sequence: u64,
+    // Accept state generation.
+    state_generation: u64,
+    // End command delta signature.
+) -> serde_json::Value {
+    // Collect visible rows after command application.
+    let visible = visible_children(children);
+    // Build the JSON delta consumed by the UI.
     json!({
         // Include command kind.
-        "command": command_name(command),
+        "command": command_name(command.command),
         // Include child path.
-        "child_path": child_path(child_id),
+        "child_path": command.target.child_path,
+        // Include previous lifecycle state.
+        "previous_lifecycle_state": transition.previous_lifecycle_state.as_str(),
         // Include lifecycle state.
-        "lifecycle_state": lifecycle,
+        "lifecycle_state": transition.lifecycle_state.as_str(),
+        // Include state generation.
+        "state_generation": state_generation,
+        // Include current topology after mutation.
+        "topology": topology(&visible),
+        // Include current runtime rows after mutation.
+        "runtime_state": runtime_rows(&visible),
+        // Include command event rows.
+        "recent_events": [command_event_record(target_id, sequence, command, transition)],
+        // Include command log rows.
+        "recent_logs": [command_log_record(target_id, sequence, command, transition)],
+        // Include dropped event count.
+        "dropped_event_count": 2,
+        // Include dropped log count.
+        "dropped_log_count": 1,
         // End delta object.
     })
     // End delta construction.
+}
+
+/// Builds an event row for a command.
+fn command_event_record(
+    // Accept target identifier.
+    target_id: &str,
+    // Accept activity sequence.
+    sequence: u64,
+    // Accept original command.
+    command: &ControlCommandRequest,
+    // Accept lifecycle transition.
+    transition: &CommandTransition,
+    // End command event signature.
+) -> EventRecord {
+    // Resolve target path.
+    let target_path = command
+        // Access command target.
+        .target
+        // Access child path.
+        .child_path
+        // Clone path value.
+        .clone()
+        // Use root when the command targets the tree.
+        .unwrap_or_else(|| ROOT_PATH.to_owned());
+    // Resolve child id.
+    let child_id = child_id_from_path(&target_path);
+    // Build event record.
+    EventRecord {
+        // Include target identifier.
+        target_id: target_id.to_owned(),
+        // Include command event sequence.
+        sequence: 7000_u64.saturating_add(sequence),
+        // Include command identifier.
+        correlation_id: command.command_id.clone(),
+        // Include command event type.
+        event_type: command_event_type(command.command).to_owned(),
+        // Include command severity.
+        severity: command_severity(command.command).to_owned(),
+        // Include affected target path.
+        target_path,
+        // Include affected child identifier.
+        child_id,
+        // Include occurrence time.
+        occurred_at_unix_nanos: unix_nanos_now(),
+        // Include config version.
+        config_version: CONFIG_VERSION.to_owned(),
+        // Include command payload.
+        payload: json!({
+            // Include child path.
+            "child_path": command.target.child_path,
+            // Include command name.
+            "command": command_name(command.command),
+            // Include previous lifecycle state.
+            "previous_lifecycle_state": transition.previous_lifecycle_state.as_str(),
+            // Include lifecycle state.
+            "lifecycle_state": transition.lifecycle_state.as_str(),
+            // Include command reason.
+            "reason": command.reason,
+            // End command payload.
+        }),
+        // End event record construction.
+    }
+    // End event record.
+}
+
+/// Builds a log row for a command.
+fn command_log_record(
+    // Accept target identifier.
+    target_id: &str,
+    // Accept activity sequence.
+    sequence: u64,
+    // Accept original command.
+    command: &ControlCommandRequest,
+    // Accept lifecycle transition.
+    transition: &CommandTransition,
+    // End command log signature.
+) -> LogRecord {
+    // Resolve target path.
+    let target_path = command
+        // Access command target.
+        .target
+        // Access child path.
+        .child_path
+        // Clone path value.
+        .clone()
+        // Use root when the command targets the tree.
+        .unwrap_or_else(|| ROOT_PATH.to_owned());
+    // Start structured fields.
+    let mut fields = BTreeMap::new();
+    // Include child path field.
+    fields.insert("child_path".to_owned(), target_path.clone());
+    // Include command field.
+    fields.insert("command".to_owned(), command_name(command.command).to_owned());
+    // Include previous lifecycle field.
+    fields.insert("previous_lifecycle_state".to_owned(), transition.previous_lifecycle_state.clone());
+    // Include lifecycle field.
+    fields.insert("lifecycle_state".to_owned(), transition.lifecycle_state.clone());
+    // Build log record.
+    LogRecord {
+        // Include target identifier.
+        target_id: target_id.to_owned(),
+        // Include log sequence.
+        sequence: Some(8000_u64.saturating_add(sequence)),
+        // Include command identifier.
+        correlation_id: Some(command.command_id.clone()),
+        // Include log severity.
+        severity: command_severity(command.command).to_owned(),
+        // Include log message.
+        message: format!(
+            // Continue the demo expression.
+            "{} {} completed, transitioned from {} to {}",
+            // Continue the demo expression.
+            target_path,
+            // Continue the demo expression.
+            command_name(command.command),
+            // Continue the demo expression.
+            transition.previous_lifecycle_state,
+            // Continue the demo expression.
+            transition.lifecycle_state,
+            // End transition message expression.
+        ),
+        // Include structured fields.
+        fields,
+        // Include occurrence time.
+        occurred_at_unix_nanos: unix_nanos_now(),
+        // End log record construction.
+    }
+    // End log record.
+}
+
+/// Returns command event type.
+fn command_event_type(command: ControlCommandKind) -> &'static str {
+    // Match command to event type.
+    match command {
+        // Return restart event type.
+        ControlCommandKind::RestartChild => "child_restarted",
+        // Return pause event type.
+        ControlCommandKind::PauseChild => "child_paused",
+        // Return resume event type.
+        ControlCommandKind::ResumeChild => "child_resumed",
+        // Return quarantine event type.
+        ControlCommandKind::QuarantineChild => "child_quarantined",
+        // Return remove event type.
+        ControlCommandKind::RemoveChild => "child_removed",
+        // Return add event type.
+        ControlCommandKind::AddChild => "child_added",
+        // Return shutdown event type.
+        ControlCommandKind::ShutdownTree => "tree_stopped",
+        // End event type match.
+    }
+    // End event type lookup.
+}
+
+/// Returns command severity.
+fn command_severity(command: ControlCommandKind) -> &'static str {
+    // Match command to severity.
+    match command {
+        // Mark disruptive commands as warning.
+        ControlCommandKind::QuarantineChild | ControlCommandKind::ShutdownTree => "warning",
+        // Mark other commands as info.
+        _ => "info",
+        // End severity match.
+    }
+    // End severity lookup.
+}
+
+/// Extracts child id from path.
+fn child_id_from_path(path: &str) -> Option<String> {
+    // Skip the root path.
+    if path == ROOT_PATH {
+        // Return no child identifier.
+        return None;
+        // End root branch.
+    }
+    // Extract final path segment.
+    path.rsplit('/')
+        // Keep non-empty segments.
+        .find(|segment| !segment.is_empty())
+        // Convert to owned string.
+        .map(ToOwned::to_owned)
+    // End child id extraction.
 }
 
 /// Extracts the child identifier from a command.
@@ -1412,6 +1700,129 @@ mod tests {
         // End command result test.
     }
 
+    /// Verifies that pause command deltas include UI-consumable runtime rows.
+    #[test]
+    /// Runs the pause command delta test.
+    fn pause_child_delta_contains_runtime_state() {
+        // Build the demo scenario.
+        let scenario = scenario();
+        // Build a pause command.
+        let command = command(
+            // Use pause command.
+            ControlCommandKind::PauseChild,
+            // Use command identifier.
+            "cmd-pause",
+            // Use target child path.
+            "/root/healthy_worker",
+            // Mark confirmation present.
+            true,
+            // End pause command construction.
+        );
+        // Apply the command.
+        let result = scenario.command_result(command).expect("command result");
+        // Read the delta.
+        let delta = result.state_delta.expect("state delta");
+        // Check the paused child appears in delta.
+        let paused = delta_runtime_has_child_state(&delta, "/root/healthy_worker", "paused");
+        // Assert the paused child appears in delta.
+        assert!(paused);
+        // End pause delta test.
+    }
+
+    /// Verifies that remove command deltas update topology and include logs.
+    #[test]
+    /// Runs the remove command delta test.
+    fn remove_child_delta_removes_topology_node_and_logs_command() {
+        // Build the demo scenario.
+        let scenario = scenario();
+        // Build a remove command.
+        let command = command(
+            // Use remove command.
+            ControlCommandKind::RemoveChild,
+            // Use command identifier.
+            "cmd-remove",
+            // Use target child path.
+            "/root/healthy_worker",
+            // Mark confirmation present.
+            true,
+            // End remove command construction.
+        );
+        // Apply the command.
+        let result = scenario.command_result(command).expect("command result");
+        // Read the delta.
+        let delta = result.state_delta.expect("state delta");
+        // Check removed child is absent.
+        let removed = !delta_topology_has_node(&delta, "/root/healthy_worker");
+        // Assert removed child is absent.
+        assert!(removed);
+        // Check remove command log exists.
+        let logged = delta_logs_contain(&delta, "remove_child");
+        // Assert remove command log exists.
+        assert!(logged);
+        // End remove delta test.
+    }
+
+    /// Verifies that command activity describes lifecycle transitions.
+    #[test]
+    /// Runs the lifecycle transition test.
+    fn command_delta_describes_lifecycle_transition() {
+        // Build the demo scenario.
+        let scenario = scenario();
+        // Build a pause command.
+        let command = command(
+            // Use pause command.
+            ControlCommandKind::PauseChild,
+            // Use command identifier.
+            "cmd-transition",
+            // Use target child path.
+            "/root/healthy_worker",
+            // Mark confirmation present.
+            true,
+            // End pause command construction.
+        );
+        // Apply the command.
+        let result = scenario.command_result(command).expect("command result");
+        // Read the delta.
+        let delta = result.state_delta.expect("state delta");
+        // Assert the previous lifecycle is present.
+        assert_eq!(
+            // Read previous lifecycle from event payload.
+            delta["recent_events"][0]["payload"]["previous_lifecycle_state"].as_str(),
+            // Compare expected previous lifecycle.
+            Some("running"),
+            // End previous lifecycle assertion.
+        );
+        // Assert the current lifecycle is present.
+        assert_eq!(
+            // Read current lifecycle from event payload.
+            delta["recent_events"][0]["payload"]["lifecycle_state"].as_str(),
+            // Compare expected current lifecycle.
+            Some("paused"),
+            // End current lifecycle assertion.
+        );
+        // Read the log message.
+        let message = delta["recent_logs"][0]["message"].as_str().unwrap_or_default();
+        // Assert the log message describes the transition.
+        assert!(message.contains("running to paused"));
+        // Assert structured log fields describe the previous lifecycle.
+        assert_eq!(
+            // Read previous lifecycle from log fields.
+            delta["recent_logs"][0]["fields"]["previous_lifecycle_state"].as_str(),
+            // Compare expected previous lifecycle.
+            Some("running"),
+            // End previous log lifecycle assertion.
+        );
+        // Assert structured log fields describe the current lifecycle.
+        assert_eq!(
+            // Read current lifecycle from log fields.
+            delta["recent_logs"][0]["fields"]["lifecycle_state"].as_str(),
+            // Compare expected current lifecycle.
+            Some("paused"),
+            // End current log lifecycle assertion.
+        );
+        // End transition delta test.
+    }
+
     /// Verifies that add-child requires a manifest.
     #[test]
     /// Runs the add-child validation test.
@@ -1506,6 +1917,101 @@ mod tests {
         // Build the test scenario.
         DemoScenario::new(TEST_TARGET_ID.to_owned(), TEST_DISPLAY_NAME.to_owned())
         // End test scenario construction.
+    }
+
+    /// Checks whether a delta contains one runtime row with a lifecycle.
+    fn delta_runtime_has_child_state(
+        // Accept delta value.
+        delta: &serde_json::Value,
+        // Accept child path.
+        child_path: &str,
+        // Accept lifecycle.
+        lifecycle: &str,
+        // End helper signature.
+    ) -> bool {
+        // Access runtime state.
+        let Some(rows) = delta.get("runtime_state").and_then(|value| value.as_array()) else {
+            // Return absence.
+            return false;
+            // End missing runtime state branch.
+        };
+        // Scan runtime rows.
+        rows.iter().any(|row| {
+            // Compare child path.
+            row.get("child_path").and_then(|value| value.as_str()) == Some(child_path)
+                // Compare lifecycle state.
+                && row.get("lifecycle_state").and_then(|value| value.as_str()) == Some(lifecycle)
+            // End runtime row predicate.
+        })
+        // End runtime delta lookup.
+    }
+
+    /// Checks whether a delta topology contains one node path.
+    fn delta_topology_has_node(
+        // Accept delta value.
+        delta: &serde_json::Value,
+        // Accept node path.
+        path: &str,
+        // End helper signature.
+    ) -> bool {
+        // Access topology nodes.
+        let Some(nodes) = delta
+            // Access topology.
+            .get("topology")
+            // Access node list.
+            .and_then(|value| value.get("nodes"))
+            // Convert to array.
+            .and_then(|value| value.as_array())
+        // Handle missing topology.
+        else {
+            // Return absence.
+            return false;
+            // End missing topology branch.
+        };
+        // Scan topology nodes.
+        nodes
+            // Iterate nodes.
+            .iter()
+            // Match path.
+            .any(|node| node.get("path").and_then(|value| value.as_str()) == Some(path))
+        // End topology lookup.
+    }
+
+    /// Checks whether a delta log message contains text.
+    fn delta_logs_contain(
+        // Accept delta value.
+        delta: &serde_json::Value,
+        // Accept expected text.
+        expected: &str,
+        // End helper signature.
+    ) -> bool {
+        // Access recent logs.
+        let Some(logs) = delta
+            // Access recent logs.
+            .get("recent_logs")
+            // Convert to array.
+            .and_then(|value| value.as_array())
+        // Handle missing logs.
+        else {
+            // Return absence.
+            return false;
+            // End missing log branch.
+        };
+        // Scan log rows.
+        logs
+            // Iterate logs.
+            .iter()
+            // Match message text.
+            .any(|log| {
+                // Read message.
+                log.get("message")
+                    // Convert to string.
+                    .and_then(|value| value.as_str())
+                    // Match expected text.
+                    .is_some_and(|message| message.contains(expected))
+                // End log predicate.
+            })
+        // End log lookup.
     }
 
     /// Checks whether a lifecycle appears in state.
