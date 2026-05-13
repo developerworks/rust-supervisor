@@ -87,6 +87,7 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 ## Examples
 
 ```bash
+cargo run --example demo -- --config examples/config/supervisor.yaml
 cargo run --example supervisor_quickstart
 cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
@@ -97,6 +98,8 @@ cargo run --example runtime_control_story
 cargo run --example policy_failure_matrix
 cargo run --example diagnostic_replay
 ```
+
+`cargo run --example demo -- --config examples/config/supervisor.yaml` 是三端联调用 supervisor(监督器) demo(演示程序). 它调用 `Supervisor::start_from_config_file`, 所以会启动 dashboard IPC(看板进程间通信) 和 registration heartbeat(注册心跳). 这个入口不是 crate(库包) 的生产 binary(二进制目标).
 
 ## Manuals
 

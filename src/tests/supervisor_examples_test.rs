@@ -26,3 +26,20 @@ fn example_suite_contains_learning_programs() {
 
     assert!(root.join("examples/config/supervisor.yaml").is_file());
 }
+
+/// Verifies that the demo entry point uses configuration startup.
+#[test]
+fn demo_example_starts_from_config_file() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let demo = root.join("examples/demo/main.rs");
+    let text = fs::read_to_string(&demo).expect("read demo example");
+
+    assert!(text.contains("Supervisor::start_from_config_file"));
+    assert!(!text.contains("to_supervisor_spec"));
+    assert!(!root.join("src/bin").exists());
+
+    let readme = fs::read_to_string(root.join("README.md")).expect("read README");
+    assert!(
+        readme.contains("cargo run --example demo -- --config examples/config/supervisor.yaml")
+    );
+}

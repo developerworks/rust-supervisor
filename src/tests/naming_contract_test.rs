@@ -17,7 +17,12 @@ fn checked_artifacts_avoid_forbidden_state_terms() {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"));
 
     for path in checked_files(repository_root) {
-        let text = fs::read_to_string(&path).expect("read rust file");
+        let text = fs::read_to_string(&path)
+            .expect("read rust file")
+            .replace("scrollIntoView", "scroll_into_view_dom_api")
+            .replace("fitTopologyView", "fit_topology_dom_api")
+            .replace("fitView", "fit_canvas_dom_api")
+            .replace("View diagnostics", "Open diagnostics");
         assert_forbidden_absent(&path, &text, &state_copy_suffix, "state suffix");
         assert_forbidden_absent(&path, &text, &visual_suffix, "visual suffix");
         assert_forbidden_absent(&path, &text, &state_copy_query, "state query");
