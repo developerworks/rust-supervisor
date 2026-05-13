@@ -99,7 +99,7 @@ cargo run --example policy_failure_matrix
 cargo run --example diagnostic_replay
 ```
 
-`cargo run --example demo -- --config examples/config/supervisor.yaml` 是三端联调用 supervisor(监督器) demo(演示程序). 它调用 `Supervisor::start_from_config_file`, 所以会启动 dashboard IPC(看板进程间通信) 和 registration heartbeat(注册心跳). 这个入口不是 crate(库包) 的生产 binary(二进制目标).
+`cargo run --example demo -- --config examples/config/supervisor.yaml` 是三端联调用 supervisor(监督器) demo(演示程序). 它从同一份配置启动纯 library supervisor(库包监督器) 运行时, 并在 `examples/demo` 内部启动演示专用 dashboard IPC(看板进程间通信) 和 registration heartbeat(注册心跳). 这个入口不是 crate(库包) 的生产 binary(二进制目标), 也不会把 demo(演示程序) 状态写进核心 `src` 模块.
 
 ## Manuals
 
