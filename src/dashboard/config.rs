@@ -28,10 +28,10 @@ pub struct ValidatedDashboardRegistrationConfig {
     pub relay_registration_path: std::path::PathBuf,
     /// Display name sent to relay and UI.
     pub display_name: String,
-    /// Authorization scope required to operate this target.
-    pub authorization_scope: String,
     /// Registration lease duration in seconds.
     pub lease_seconds: u64,
+    /// Registration heartbeat interval in seconds.
+    pub registration_heartbeat_interval_seconds: u64,
 }
 
 /// Validates optional dashboard IPC configuration.
@@ -115,10 +115,6 @@ fn validate_registration(
             "ipc.registration.relay_registration_path must be absolute",
         ));
     }
-    let authorization_scope = required_text(
-        registration.authorization_scope.as_deref(),
-        "ipc.registration.authorization_scope",
-    )?;
     let lease_seconds = registration.lease_seconds.ok_or_else(|| {
         DashboardError::validation(
             "config",
@@ -133,6 +129,16 @@ fn validate_registration(
             "ipc.registration.lease_seconds must be greater than zero",
         ));
     }
+    let heartbeat_seconds = registration
+        .registration_heartbeat_interval_seconds
+        .unwrap_or(15);
+    if heartbeat_seconds == 0 || heartbeat_seconds >= lease_seconds {
+        return Err(DashboardError::validation(
+            "config",
+            Some(target_id.to_owned()),
+            "ipc.registration.registration_heartbeat_interval_seconds must be positive and less than lease_seconds",
+        ));
+    }
     Ok(Some(ValidatedDashboardRegistrationConfig {
         relay_registration_path,
         display_name: registration
@@ -140,8 +146,8 @@ fn validate_registration(
             .clone()
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| target_id.to_owned()),
-        authorization_scope,
         lease_seconds,
+        registration_heartbeat_interval_seconds: heartbeat_seconds,
     }))
 }
 

@@ -27,5 +27,5 @@ ipc:
     enabled: true
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "payments worker a"
-    authorization_scope: "payments:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15

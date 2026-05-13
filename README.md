@@ -56,8 +56,8 @@ ipc:
     enabled: true
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "payments worker a"
-    authorization_scope: "payments:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15
 ```
 
 When `ipc.enabled=true`, `ipc.path` and `ipc.registration.relay_registration_path` must be absolute local paths. Registration uses dynamic registration. The relay configuration must not hard-code target lists.

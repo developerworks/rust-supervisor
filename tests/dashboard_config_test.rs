@@ -34,8 +34,8 @@ ipc:
     enabled: true
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "payments worker a"
-    authorization_scope: "payments:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15
 "#
     )
 }
@@ -67,8 +67,8 @@ fn dashboard_ipc_schema_exposes_optional_ipc_section() {
         "ipc",
         "target_id",
         "relay_registration_path",
-        "authorization_scope",
         "lease_seconds",
+        "registration_heartbeat_interval_seconds",
     ] {
         assert!(text.contains(field), "schema missing {field}");
     }

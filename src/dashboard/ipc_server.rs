@@ -23,6 +23,8 @@ use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::state::supervisor::SupervisorState;
 use serde_json::json;
+use std::os::unix::fs::FileTypeExt;
+use std::os::unix::net::UnixStream as StdUnixStream;
 use std::path::Path;
 use tokio::net::UnixListener;
 
@@ -180,10 +182,6 @@ impl DashboardIpcService {
                     .as_ref()
                     .map(|registration| registration.display_name.clone())
                     .unwrap_or_else(|| self.config.target_id.clone()),
-                authorization_scope: registration
-                    .as_ref()
-                    .map(|registration| registration.authorization_scope.clone())
-                    .unwrap_or_default(),
                 state_generation: self.state_generation,
                 recent_limit: 128,
             },
@@ -294,6 +292,36 @@ fn prepare_socket_path(config: &ValidatedDashboardIpcConfig) -> Result<(), Dashb
             ))
         }
         crate::config::configurable::DashboardIpcBindMode::ReplaceStale => {
+            let metadata = std::fs::symlink_metadata(&config.path).map_err(|error| {
+                DashboardError::new(
+                    "ipc_path_metadata_failed",
+                    "ipc_bind",
+                    Some(config.target_id.clone()),
+                    format!("failed to inspect IPC path: {error}"),
+                    false,
+                )
+            })?;
+            if metadata.file_type().is_symlink() {
+                return Err(DashboardError::validation(
+                    "ipc_bind",
+                    Some(config.target_id.clone()),
+                    "IPC path must not be a symlink",
+                ));
+            }
+            if !metadata.file_type().is_socket() {
+                return Err(DashboardError::validation(
+                    "ipc_bind",
+                    Some(config.target_id.clone()),
+                    "IPC path must be a Unix socket before stale replacement",
+                ));
+            }
+            if StdUnixStream::connect(&config.path).is_ok() {
+                return Err(DashboardError::validation(
+                    "ipc_bind",
+                    Some(config.target_id.clone()),
+                    "IPC path is served by a live process",
+                ));
+            }
             std::fs::remove_file(&config.path).map_err(|error| {
                 DashboardError::new(
                     "ipc_stale_remove_failed",

@@ -34,7 +34,6 @@ fn dashboard_state_builds_two_hundred_children_quickly() {
         DashboardStateInput {
             target_id: "payments".to_owned(),
             display_name: "payments".to_owned(),
-            authorization_scope: "payments:operate".to_owned(),
             state_generation: 1,
             recent_limit: 128,
         },

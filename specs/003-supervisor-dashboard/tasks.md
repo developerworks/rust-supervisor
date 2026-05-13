@@ -33,16 +33,16 @@
 - [X] T013 [P] 在 `src/dashboard/config.rs` 中定义目标进程 IPC(进程间通信) 配置模型和 path(路径), permissions(权限), bind mode(绑定模式) 校验.
 - [X] T014 [P] 在 `src/dashboard/diagnostics.rs` 中定义目标侧 IPC(进程间通信), sequence(序号), command(命令) 和 dropped count(丢弃数量) 的 tracing(结构化追踪) 字段.
 - [X] T015 在 `src/config/configurable.rs` 中为 FR-001 增加 optional(可选) `ipc` 配置节和 schema(模式) 字段.
-- [X] T016 在 `src/config/state.rs` 中为 FR-001 增加 IPC path(进程间通信路径), target id(目标标识), permissions(权限), bind mode(绑定模式), registration(注册) 入口和 authorization scope(授权范围) 的语义校验.
+- [X] T016 在 `src/config/state.rs` 中为 FR-001 增加 IPC path(进程间通信路径), target id(目标标识), permissions(权限), bind mode(绑定模式), registration(注册) 入口和 lease heartbeat(租约心跳) 的语义校验.
 - [X] T017 在 `src/lib.rs` 中加入 `pub mod dashboard;` 并保持无 compatibility export(兼容导出).
 - [X] T018 在 `examples/config/supervisor.yaml` 中增加目标进程 IPC(进程间通信) 配置示例.
 - [X] T019 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_config_test.rs` 中添加 FR-004, FR-005, FR-013, FR-014, FR-023, FR-026 和 SC-009 的 relay(中继) 配置与注册测试, 覆盖 registration(注册) 入口, 重复 target id(目标标识), 重复 IPC path(进程间通信路径), 无效租约和固定目录边界.
 - [X] T020 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs` 中添加 FR-006, FR-007, FR-013, FR-014 和 SC-005 的 control session(控制会话) 建立顺序测试, 验证 session(会话) 建立前不触发 IPC(进程间通信) 连接, 绑定或事件日志 subscription(订阅).
-- [X] T021 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/config.rs` 中定义 DashboardRelayConfig(看板中继配置), TLSConfig(传输层安全协议配置), TrustedProxyConfig(可信代理配置), RegistrationPolicy(注册策略) 和 authorization defaults(授权默认规则) 校验.
+- [X] T021 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/config.rs` 中定义 DashboardRelayConfig(看板中继配置), TLSConfig(传输层安全协议配置), TrustedProxyConfig(可信代理配置) 和 RegistrationPolicy(注册策略) 校验.
 - [X] T022 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/error.rs` 和 `/Users/0x00/Documents/rust-supervisor-relay/src/diagnostics.rs` 中定义 relay(中继) 结构化错误, tracing(结构化追踪) 字段和可观察失败分类.
 - [X] T023 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/registry.rs` 中实现 TargetProcessRegistry(目标进程注册表), active registration(活动注册), 租约续期, 多连接状态和 partial availability(部分可用) 汇总.
 - [X] T024 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/registration.rs` 和 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中建立 relay(中继) registration(注册) 接收, 已注册目标 IPC(进程间通信) 连接, handshake(握手) 和基础请求响应边界.
-- [X] T025 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/auth.rs` 中实现 mTLS(双向传输层安全协议认证) client certificate(客户端证书) 解析, RemoteIdentity(远程身份) 派生, trusted proxy(可信代理) 校验和授权范围判断.
+- [X] T025 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/auth.rs` 中实现 mTLS(双向传输层安全协议认证) client certificate(客户端证书) 解析, RemoteIdentity(远程身份) 派生和 trusted proxy(可信代理) 校验.
 - [X] T026 [P] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/types/protocol.ts` 中定义和 `contracts/wss-session.md` 对齐的 TypeScript(类型脚本语言) 消息类型, 并确保 Vue(网页界面框架) 状态层可以直接消费.
 
 **Checkpoint(检查点)**: 三个目录的配置和协议模型已经可测试, 用户故事实现可以开始.
@@ -58,7 +58,7 @@
 ### Tests for User Story 1(用户故事一的测试)
 
 - [X] T027 [P] [US1] 在 `tests/dashboard_state_test.rs` 中添加 FR-002, FR-008, FR-009, FR-010, SC-001 和 SC-002 的 state(状态) 集成测试.
-- [X] T028 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs` 中添加 active registration(活动注册) 形成的 target process list(目标进程列表), authorization scope(授权范围), state(状态) 首包和授权后 IPC(进程间通信) 绑定测试.
+- [X] T028 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs` 中添加 active registration(活动注册) 形成的 target process list(目标进程列表), state(状态) 首包和 client_hello(客户端握手) 后 IPC(进程间通信) 绑定测试.
 - [X] T029 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/state-display.spec.ts` 中添加 dashboard client(看板客户端) 首屏渲染测试, 覆盖 target list(目标列表), topology canvas(拓扑画布), node detail(节点详情) 和 unavailable(不可用) 状态.
 
 ### Implementation for User Story 1(用户故事一的实现)
@@ -96,7 +96,7 @@
 - [X] T044 [P] [US2] 在 `src/dashboard/events.rs` 中实现 EventJournal(事件日志缓冲区) 到 EventRecord(事件记录), LogRecord(日志记录), dropped count(丢弃数量) 和 sequence gap(序号缺口) 的转换.
 - [X] T045 [US2] 在 `src/dashboard/ipc_server.rs` 中实现 `events.subscribe`, `logs.tail` 和客户端会话触发 IPC(进程间通信) subscription(订阅) 后的目标进程主动推送循环.
 - [X] T046 [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 只在 session(会话) 绑定目标后建立事件日志订阅, reconnect(重连) 和重连后 state(状态) 刷新.
-- [X] T047 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/relay.rs` 中实现按 target process(目标进程) 和 session(会话) 授权范围 fan out(分发) event(事件), log(日志), state delta(状态增量) 和 error(错误).
+- [X] T047 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/relay.rs` 中实现按 target process(目标进程) 和 session(会话) fan out(分发) event(事件), log(日志), state delta(状态增量) 和 error(错误).
 - [X] T048 [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/session.rs` 中实现 `wss://` server message(服务端消息) 顺序规则, dropped count(丢弃数量) 消息和 connection state(连接状态) 更新.
 - [X] T049 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/state/eventStore.ts` 中实现事件, 日志, dropped count(丢弃数量), sequence(序号) 和 correlation id(关联标识) 状态管理.
 - [X] T050 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/EventLogPanel.vue` 中使用 shadcn-vue(组件库) 和 Tailwind(样式框架) 实现事件日志列表, command audit(命令审计) 记录和 dropped count(丢弃数量) 展示.
@@ -109,13 +109,13 @@
 
 ## Phase 5(阶段五): User Story 3(用户故事三) - 安全执行完整控制命令 (Priority(优先级): P3)
 
-**Goal(目标)**: 已授权操作者在 dashboard client(看板客户端) 中执行全部控制命令, 每个命令绑定身份, 目标和 reason(原因), 并产生 audit event(审计事件).
+**Goal(目标)**: 已认证操作者在 dashboard client(看板客户端) 中执行全部控制命令, 每个命令绑定身份, 目标和 reason(原因), 并产生 audit event(审计事件).
 
-**Independent Test(独立测试)**: 使用已授权远程身份先建立 control session(控制会话), 再对目标 child task(子任务) 执行每一种控制命令. 验证未认证, 未授权或会话未建立时命令不触发 IPC(进程间通信), 命令结果回到当前连接, 状态更新, audit event(审计事件) 完整.
+**Independent Test(独立测试)**: 使用已认证远程身份先建立 control session(控制会话), 再对目标 child task(子任务) 执行每一种控制命令. 验证未认证或会话未建立时命令不触发 IPC(进程间通信), 命令结果回到当前连接, 状态更新, audit event(审计事件) 完整.
 
 ### Tests for User Story 3(用户故事三的测试)
 
-- [X] T053 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_control_security_test.rs` 中添加 FR-003, FR-006, FR-013, FR-016, FR-019, FR-023, SC-005 和 SC-006 的 mTLS(双向传输层安全协议认证), 授权, `ws://` 完整控制拒绝, 目标进程 IPC(进程间通信) 外网不可达, trusted proxy(可信代理) 伪造身份拒绝, session gating(会话门控), requested by(请求者) 派生, 注册后无会话不得推送事件日志和 IPC(进程间通信) 禁止转发测试.
+- [X] T053 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_control_security_test.rs` 中添加 FR-003, FR-006, FR-013, FR-016, FR-019, FR-023, SC-005 和 SC-006 的 mTLS(双向传输层安全协议认证), `ws://` 完整控制拒绝, 目标进程 IPC(进程间通信) 外网不可达, trusted proxy(可信代理) 伪造身份拒绝, session gating(会话门控), requested by(请求者) 派生, 注册后无会话不得推送事件日志和 IPC(进程间通信) 禁止转发测试.
 - [X] T054 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_command_contract_test.rs` 中添加 FR-015, FR-017, FR-018, FR-022 和 SC-004 的全部控制命令, 历史控制命令别名拒绝, 二次确认, 非空 reason(原因), command result(命令结果) 和 audit event(审计事件) 测试.
 - [X] T055 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/control-commands.spec.ts` 中添加危险命令二次确认, reason(原因) 必填, command result(命令结果) 和错误提示测试.
 
@@ -124,11 +124,11 @@
 - [X] T056 [US3] 在 `src/dashboard/ipc_server.rs` 中实现 `command.restart_child`, `command.pause_child`, `command.resume_child`, `command.quarantine_child`, `command.remove_child`, `command.add_child` 和 `command.shutdown_tree` 到 SupervisorHandle(监督器句柄) 控制边界的映射.
 - [X] T057 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/command.rs` 中实现 ControlCommandRequest(控制命令请求) 校验, requested by(请求者) 覆盖保护, dangerous command(危险命令) 二次确认和 reason(原因) 非空规则.
 - [X] T058 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/audit.rs` 中实现 accepted(已接受), rejected(已拒绝) 和 completed(已完成) 命令 audit event(审计事件) 生成.
-- [X] T059 [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/session.rs` 中实现未认证, 未授权, certificate identity(证书身份) 不可解析和 control session(控制会话) 未建立时的拒绝路径.
+- [X] T059 [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/session.rs` 中实现未认证, certificate identity(证书身份) 不可解析和 control session(控制会话) 未建立时的拒绝路径.
 - [X] T060 [US3] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 命令转发, command result(命令结果) 读取, timeout(超时) 和目标不存在错误处理.
 - [X] T061 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/ControlPanel.vue` 中使用 shadcn-vue(组件库) 实现 restart child(重启子任务), pause child(暂停子任务), resume child(恢复子任务), quarantine child(隔离子任务), remove child(移除子任务), add child(添加子任务) 和 shutdown tree(关闭监督树) 控件.
 - [X] T062 [P] [US3] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/ConfirmCommandDialog.vue` 中使用 shadcn-vue(组件库) 实现 shutdown tree(关闭监督树), remove child(移除子任务) 和 add child(添加子任务) 的二次确认和 reason(原因) 必填校验.
-- [X] T063 [US3] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/api/session.ts` 中实现 `wss://` command(命令), filter update(过滤更新), command result(命令结果) 和 error(错误) 客户端协议处理.
+- [X] T063 [US3] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/api/session.ts` 中实现 `wss://` command(命令), log_event_filter_conditions(日志事件筛选条件), command result(命令结果) 和 error(错误) 客户端协议处理.
 
 **Checkpoint(检查点)**: 所有用户故事都可以独立工作, 控制命令具备身份绑定和审计边界.
 

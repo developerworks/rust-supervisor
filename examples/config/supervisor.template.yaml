@@ -27,5 +27,5 @@ ipc:
     enabled: false
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "example target"
-    authorization_scope: "example:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15

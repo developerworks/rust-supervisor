@@ -8,12 +8,12 @@
 
 ## DashboardSession(看板会话)
 
-**Purpose(目的)**: 表达已认证远程连接和它能访问的目标范围.
+**Purpose(目的)**: 表达已认证远程连接, 本地存储标识和自动绑定的目标集合.
 
 **Fields(字段)**:
 - `session_id`: UUID(通用唯一标识), 由 relay(中继) 生成.
 - `remote_identity`: RemoteIdentity(远程身份), 来自 mTLS(双向传输层安全协议认证) 或可信代理身份.
-- `authorization_scopes`: 授权范围集合, 决定可见 target process(目标进程) 和可执行命令.
+- `client_store_id`: 客户端本地持久化库标识, 只用于 cursor(游标) 分区.
 - `connection_state`: `handshaking`, `established`, `closing`, `closed`.
 - `control_state`: `not_established`, `established`, `revoked`.
 - `last_sync`: 每个 target process(目标进程) 的最近 sequence(序号) 和 state generation(快照代次).
@@ -46,10 +46,9 @@
 - `enabled`: 是否打开目标进程 IPC(进程间通信).
 - `permissions`: socket(套接字) 文件权限.
 - `config_version`: 配置版本.
-- `authorization_scope`: 远程身份需要具备的授权范围.
-- `registration`: relay(中继) 注册入口, 租约时长和心跳策略.
+- `registration`: relay(中继) 注册入口, 租约时长, 心跳策略和 supported commands(支持的命令).
 
-**Validation(校验)**: 目标进程启用 IPC(进程间通信) 时 `ipc_path` 必须非空, 且不得是相对路径. `authorization_scope` 必须非空, 否则目标进程不得注册到 relay(中继).
+**Validation(校验)**: 目标进程启用 IPC(进程间通信) 时 `ipc_path` 必须非空, 且不得是相对路径. `lease_seconds` 必须大于 0. `registration_heartbeat_interval_seconds` 必须小于 `lease_seconds`.
 
 ## TargetProcessRegistration(目标进程注册)
 
@@ -59,17 +58,17 @@
 - `target_id`: 目标进程稳定标识.
 - `display_name`: dashboard(看板) 显示名称.
 - `ipc_path`: 目标进程已经打开的 Unix domain socket(Unix 域套接字) path(路径).
-- `authorization_scope`: 远程身份需要具备的授权范围.
 - `lease_seconds`: 注册租约有效时长.
+- `supported_commands`: target(目标) 支持的命令名称, 幂等性和超时时间.
 - `registered_at`, `renewed_at` 和 `expires_at`: 注册和续约时间.
 - `registration_state`: `pending`, `active`, `rejected`, `expired`.
 - `last_rejection`: 最近结构化拒绝原因.
 
-**Validation(校验)**: relay(中继) 必须拒绝重复 `target_id`, 重复 `ipc_path`, 非绝对 `ipc_path`, 空 `authorization_scope` 和无效 `lease_seconds`. 注册过期后, relay(中继) 必须停止把该目标作为可绑定目标展示.
+**Validation(校验)**: relay(中继) 必须拒绝 owner identity(所有者身份) 不匹配的 `target_id` 覆盖, 不同 target(目标) 复用同一个规范化 `ipc_path`, 非绝对 `ipc_path` 和无效 `lease_seconds`. 注册过期后, relay(中继) 必须停止把该目标作为可绑定目标展示.
 
 ## TargetProcessRegistry(目标进程注册表)
 
-**Purpose(目的)**: relay(中继) 保存 active registration(活动注册), IPC path(进程间通信路径), 连接状态, 租约状态和授权范围.
+**Purpose(目的)**: relay(中继) 保存 active registration(活动注册), IPC path(进程间通信路径), 连接状态, 租约状态和 owner identity(所有者身份).
 
 **Fields(字段)**:
 - `registrations`: target id(目标标识) 到 TargetProcessRegistration(目标进程注册) 的映射.
@@ -93,7 +92,7 @@
 
 **State transitions(状态转换)**:
 - `registered -> disconnected`: 目标进程完成 dynamic registration(动态注册), 但没有已认证客户端会话绑定.
-- `disconnected -> connecting`: 已授权 control session(控制会话) 触发连接和 subscription(订阅).
+- `disconnected -> connecting`: 已认证 control session(控制会话) 触发连接和 subscription(订阅).
 - `connecting -> connected`: IPC(进程间通信) 握手成功.
 - `connecting -> unavailable`: path(路径) 不存在, 权限不足或握手失败.
 - `connected -> reconnecting`: 读写失败或目标进程关闭连接.

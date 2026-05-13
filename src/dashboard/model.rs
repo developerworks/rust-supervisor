@@ -9,6 +9,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Supported command metadata sent to the relay.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SupportedCommand {
+    /// Wire command name.
+    pub name: String,
+    /// Whether the command can be retried with the same command identifier.
+    pub idempotent: bool,
+    /// Command timeout in seconds.
+    pub timeout_seconds: u64,
+}
+
 /// Target process registration payload sent to the relay.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct TargetProcessRegistration {
@@ -18,10 +29,10 @@ pub struct TargetProcessRegistration {
     pub display_name: String,
     /// Local Unix domain socket path exposed by the target.
     pub ipc_path: String,
-    /// Authorization scope required for operators.
-    pub authorization_scope: String,
     /// Lease duration in seconds.
     pub lease_seconds: u64,
+    /// Commands supported by this target.
+    pub supported_commands: Vec<SupportedCommand>,
 }
 
 /// Current registration state for a target process.
@@ -61,8 +72,6 @@ pub struct TargetProcessIdentity {
     pub target_id: String,
     /// Human-readable display name.
     pub display_name: String,
-    /// Authorization scope required for this target.
-    pub authorization_scope: String,
     /// Current registration state.
     pub registration_state: RegistrationState,
     /// Current relay connection state.

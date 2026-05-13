@@ -15,8 +15,8 @@ ipc:
     enabled: true
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "payments worker a"
-    authorization_scope: "payments:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15
 ```
 
 预期结果: 目标进程启动后打开本机 Unix domain socket(Unix 域套接字), 并在 IPC(进程间通信) 就绪后向 relay(中继) 提交 dynamic registration(动态注册). 目标进程不会监听外网 TCP(传输控制协议) 端口.
@@ -44,11 +44,9 @@ registration:
     - /run/rust-supervisor/
   default_lease_seconds: 30
   max_lease_seconds: 120
-authorization_defaults:
-  unknown_scope_policy: reject
 ```
 
-预期结果: relay(中继) 配置留在 `/Users/0x00/Documents/rust-supervisor-relay`, 并等待目标进程提交 dynamic registration(动态注册). 重复 `target_id`, 重复 `ipc_path`, 空授权范围或无效租约会在注册阶段失败, 并显示冲突项.
+预期结果: relay(中继) 配置留在 `/Users/0x00/Documents/rust-supervisor-relay`, 并等待目标进程提交 dynamic registration(动态注册). 重复 `target_id`, 重复 `ipc_path`, supported_commands(支持的命令) 结构无效或租约无效会在注册阶段失败, 并显示冲突项.
 
 ## 3. 启动 relay(中继)
 
@@ -86,12 +84,12 @@ npm --prefix /Users/0x00/Documents/rust-supervisor-ui run dev
 
 ## 7. 验证用户故事三
 
-1. 使用已授权身份建立 control session(控制会话).
+1. 使用已认证身份建立 control session(控制会话).
 2. 对一个 child task(子任务) 执行 restart child(重启子任务), pause child(暂停子任务), resume child(恢复子任务) 和 quarantine child(隔离子任务), 并填写 reason(原因).
 3. 对 shutdown tree(关闭监督树), remove child(移除子任务) 和 add child(添加子任务) 验证二次确认.
 4. 确认 command result(命令结果) 返回当前连接, state(状态) 或 state delta(状态增量) 更新页面.
 5. 确认每个 accepted(已接受), rejected(已拒绝) 和 completed(已完成) 命令都有 audit event(审计事件).
-6. 使用未认证连接或未授权身份提交命令, 确认 relay(中继) 拒绝请求, 且不转发到目标进程 IPC(进程间通信).
+6. 使用未认证连接或未建立 control session(控制会话) 的身份提交命令, 确认 relay(中继) 拒绝请求, 且不转发到目标进程 IPC(进程间通信).
 7. 使用 `ws://` 建立远程连接, 确认系统不得建立完整 control session(控制会话).
 8. 尝试从外网直接访问目标进程 IPC(进程间通信), 确认目标进程没有外网可达入口.
 9. 发送旧协议别名或历史控制命令别名, 确认系统返回明确拒绝错误, 且不得执行别名对应行为.

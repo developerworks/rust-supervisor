@@ -8,19 +8,19 @@
 
 ## Decision(决定): 目标进程 IPC path(进程间通信路径) 和注册配置放入公开 supervisor config(监督器配置)
 
-**Rationale(理由)**: `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 并且目标进程必须能把自身注册到 relay(中继). 计划在 `SupervisorConfig`(监督器配置) 中增加 optional(可选) 的 `ipc` 配置节, 包含 `enabled`, `path`, `target_id`, `bind_mode`, `permissions` 和 registration(注册) 信息. 目标进程只在 `enabled` 为 true(真) 时打开本机 IPC(进程间通信), 并在 IPC(进程间通信) 就绪后向 relay(中继) 提交 target id(目标标识), display name(显示名称), IPC path(进程间通信路径), authorization scope(授权范围) 和 registration lease(注册租约).
+**Rationale(理由)**: `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 并且目标进程必须能把自身注册到 relay(中继). 计划在 `SupervisorConfig`(监督器配置) 中增加 optional(可选) 的 `ipc` 配置节, 包含 `enabled`, `path`, `target_id`, `bind_mode`, `permissions` 和 registration(注册) 信息. 目标进程只在 `enabled` 为 true(真) 时打开本机 IPC(进程间通信), 并在 IPC(进程间通信) 就绪后向 relay(中继) 提交 target id(目标标识), display name(显示名称), IPC path(进程间通信路径), registration lease(注册租约), heartbeat interval(心跳间隔) 和 supported commands(支持的命令).
 
 **Alternatives considered(备选方案)**: 使用环境变量被拒绝, 因为现有配置模型已经集中在 YAML(配置文件格式) 和 schema(模式) 中. 自动生成临时 path(路径) 被拒绝, 因为目标进程注册到 relay(中继) 时必须上报明确 IPC path(进程间通信路径), 否则 dashboard(看板) 无法稳定归因.
 
 ## Decision(决定): relay(中继) 使用独立目录和 dynamic registration(动态注册)
 
-**Rationale(理由)**: 第一版采用 dynamic registration(动态注册). relay(中继) 生产实现固定放在 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不承载 relay server(中继服务器) 或 relay binary(中继二进制入口). `DashboardRelayConfig`(看板中继配置) 属于 relay(中继) 目录, 它包含 `listen`, `tls`, `trusted_proxy`, `registration` 和 authorization defaults(授权默认规则), 但不包含静态 `targets` 列表. 目标进程启动 IPC(进程间通信) 后向 relay(中继) 注册 `target_id`, `display_name`, `ipc_path`, `authorization_scope` 和 `lease_seconds`. relay(中继) 只在内存 registry(注册表) 中保存 active registration(活动注册), 拒绝重复 target id(目标标识), 重复 IPC path(进程间通信路径), 无效授权范围和过期租约, 保证 dashboard(看板) 中连接状态和命令目标可以稳定归因.
+**Rationale(理由)**: 第一版采用 dynamic registration(动态注册). relay(中继) 生产实现固定放在 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不承载 relay server(中继服务器) 或 relay binary(中继二进制入口). `DashboardRelayConfig`(看板中继配置) 属于 relay(中继) 目录, 它包含 `listen`, `tls`, `trusted_proxy` 和 `registration`, 但不包含静态 `targets` 列表. 目标进程启动 IPC(进程间通信) 后向 relay(中继) 注册 `target_id`, `display_name`, `ipc_path`, `lease_seconds` 和 `supported_commands`. relay(中继) 只在内存 registry(注册表) 中保存 active registration(活动注册), 拒绝 owner identity(所有者身份) 不匹配的覆盖, 重复 IPC path(进程间通信路径), 无效租约和过期租约, 保证 dashboard(看板) 中连接状态和命令目标可以稳定归因.
 
 **Alternatives considered(备选方案)**: 静态多目标配置被拒绝, 因为用户要求采用 dynamic registration(动态注册), 目标进程数量和 IPC path(进程间通信路径) 需要在运行时进入 relay(中继) registry(注册表). 外部服务发现被拒绝, 因为第一版只需要目标进程主动注册到 relay(中继), 不需要接入额外 discovery service(服务发现组件). 把 relay(中继) 放回当前 `rust-supervisor` 仓库被拒绝, 因为用户明确要求中继在单独目录实现.
 
 ## Decision(决定): 外部远程会话使用 `wss://` 加 mTLS(双向传输层安全协议认证)
 
-**Rationale(理由)**: WebSocket(网络套接字协议) 必须和 mTLS(双向传输层安全协议认证) 通过 `wss://` 协同工作. relay(中继) 使用 `tokio-rustls` 完成 TLS(传输层安全协议) 握手和 client certificate(客户端证书) 验证, 再使用 `tokio-tungstenite` 完成 WebSocket(网络套接字协议) upgrade(升级). control session(控制会话) 建立后, relay(中继) 先发送当前 active registration(活动注册) 形成的 target process list(目标进程列表) 和 authorization scope(授权范围), 再按授权触发 IPC(进程间通信) 连接和事件日志订阅.
+**Rationale(理由)**: WebSocket(网络套接字协议) 必须和 mTLS(双向传输层安全协议认证) 通过 `wss://` 协同工作. relay(中继) 使用 `tokio-rustls` 完成 TLS(传输层安全协议) 握手和 client certificate(客户端证书) 验证, 再使用 `tokio-tungstenite` 完成 WebSocket(网络套接字协议) upgrade(升级). control session(控制会话) 建立后, relay(中继) 先发送 `server_hello`(服务端握手), 等待 `client_hello`(客户端握手), 再发送当前 active registration(活动注册) 形成的 target process list(目标进程列表), 并自动绑定全部 active target(活跃目标).
 
 **Alternatives considered(备选方案)**: `ws://` 被拒绝, 因为规格禁止其访问完整控制能力. Bearer token(持有者令牌) 被拒绝作为第一身份来源, 因为规格要求双方身份认证. TLS(传输层安全协议) 默认由 relay(中继) 终止, 可信代理模式只作为明确配置分支.
 

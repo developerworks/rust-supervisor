@@ -29,7 +29,6 @@ fn dashboard_state_contains_topology_and_runtime_state() {
         DashboardStateInput {
             target_id: "payments-worker-a".to_owned(),
             display_name: "payments worker a".to_owned(),
-            authorization_scope: "payments:operate".to_owned(),
             state_generation: 1,
             recent_limit: 16,
         },

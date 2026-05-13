@@ -45,12 +45,12 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 
 **Why this priority(为什么是这个优先级)**: 远程完整控制会改变目标进程生命周期. 该能力必须建立在可观察状态和可审计身份之上, 否则会增加误操作和不可追踪风险.
 
-**Independent Test(独立测试)**: 使用已授权远程身份先和 relay(中继) 建立控制会话, 再选择目标进程和目标 child task(子任务) 执行每一种控制命令. 测试必须证明命令在控制会话建立前不会触发目标进程 IPC(进程间通信) 通信, 命令结果返回到当前连接, 目标状态更新到 state(状态) 或 state delta(状态增量), 并且 audit event(审计事件) 包含操作者身份, 目标进程, 命令, 目标, reason(原因) 和结果.
+**Independent Test(独立测试)**: 使用已认证远程身份先和 relay(中继) 建立控制会话, 再选择目标进程和目标 child task(子任务) 执行每一种控制命令. 测试必须证明命令在控制会话建立前不会触发目标进程 IPC(进程间通信) 通信, 命令结果返回到当前连接, 目标状态更新到 state(状态) 或 state delta(状态增量), 并且 audit event(审计事件) 包含操作者身份, 目标进程, 命令, 目标, reason(原因) 和结果.
 
 **Acceptance Scenarios(验收场景)**:
 
-1. **Given(假设)** 已授权操作者已经和 relay(中继) 建立控制会话, 并选择一个目标进程中的 child task(子任务), **When(当)** 他提交 pause child(暂停子任务) 并填写 reason(原因), **Then(则)** 系统必须返回 command result(命令结果), 更新该目标进程中的节点状态, 并记录 audit event(审计事件).
-2. **Given(假设)** 未认证连接或未授权身份尝试执行 shutdown tree(关闭监督树), **When(当)** 请求到达 relay(中继), **Then(则)** 系统必须拒绝命令, 不得转发到目标进程 IPC(进程间通信), 并记录拒绝原因.
+1. **Given(假设)** 已认证操作者已经和 relay(中继) 建立控制会话, 并选择一个目标进程中的 child task(子任务), **When(当)** 他提交 pause child(暂停子任务) 并填写 reason(原因), **Then(则)** 系统必须返回 command result(命令结果), 更新该目标进程中的节点状态, 并记录 audit event(审计事件).
+2. **Given(假设)** 未认证连接或未完成 control session(控制会话) 的身份尝试执行 shutdown tree(关闭监督树), **When(当)** 请求到达 relay(中继), **Then(则)** 系统必须拒绝命令, 不得转发到目标进程 IPC(进程间通信), 并记录拒绝原因.
 3. **Given(假设)** 操作者尝试执行 shutdown tree(关闭监督树), remove child(移除子任务) 或 add child(添加子任务), **When(当)** 他没有完成二次确认或没有填写 reason(原因), **Then(则)** dashboard(看板) 必须阻止提交.
 
 ### Edge Cases(边界情况)
@@ -78,7 +78,7 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - **FR-001**: `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 目标进程必须使用该配置打开本机 IPC(进程间通信) 入口.
 - **FR-002**: 目标进程必须通过本机 IPC(进程间通信) 入口供 relay(中继) 读取 supervisor topology(监督拓扑), runtime state(运行时状态), event stream(事件流), log stream(日志流) 和 command result(命令结果).
 - **FR-003**: 目标进程 IPC(进程间通信) 不得直接暴露到外网, 外网访问必须经过 relay(中继).
-- **FR-004**: relay(中继) 必须支持 target process(目标进程) dynamic registration(动态注册), 每个注册必须包含 target process identity(目标进程身份), display name(显示名称), IPC path(进程间通信路径), authorization scope(授权范围) 和 registration lease(注册租约).
+- **FR-004**: relay(中继) 必须支持 target process(目标进程) dynamic registration(动态注册), 每个注册必须包含 target process identity(目标进程身份), display name(显示名称), IPC path(进程间通信路径), registration lease(注册租约) 和 supported_commands(支持的命令).
 - **FR-005**: relay(中继) 必须能同时维护多个已注册目标进程 IPC(进程间通信) 连接, 并把每个目标的 registered(已注册), connected(已连接), reconnecting(重连中), unavailable(不可用) 和 expired(已过期) 状态暴露给远程客户端.
 - **FR-006**: 远程客户端必须先完成与 relay(中继) 的控制会话建立, 然后才能触发 relay(中继) 与目标进程 IPC(进程间通信) 建立或绑定通信.
 - **FR-007**: 已认证远程客户端完成 control session(控制会话) 并触发目标进程 IPC(进程间通信) 绑定后, 目标进程必须主动向 relay(中继) 发送 recent event(最近事件), supervisor event(监督器事件), log record(日志记录) 和可用状态变化.
@@ -88,28 +88,28 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - **FR-011**: event stream(事件流) 必须保留 target process identity(目标进程身份), sequence(序号), correlation id(关联标识), event type(事件类型), target path(目标路径), child id(子任务标识), occurred time(发生时间) 和 config version(配置版本).
 - **FR-012**: log stream(日志流) 必须能和 event stream(事件流) 通过 target process identity(目标进程身份), sequence(序号) 或 correlation id(关联标识) 关联.
 - **FR-013**: relay(中继) 必须对外提供远程 secure session(安全会话), 并且远程控制会话必须在双方身份认证完成后才能建立.
-- **FR-014**: 远程 secure session(安全会话) 必须在建立后先发送可见 target process list(目标进程列表) 和授权范围, 然后才能发送 state(状态), event(事件), log(日志), state delta(状态增量), command result(命令结果) 和 error(错误).
+- **FR-014**: 远程 secure session(安全会话) 必须先完成 `server_hello` 到 `client_hello` 的握手, 然后发送可见 target process list(目标进程列表), 再发送 state(状态), event(事件), log(日志), state delta(状态增量), command result(命令结果) 和 error(错误).
 - **FR-015**: 系统必须支持 restart child(重启子任务), pause child(暂停子任务), resume child(恢复子任务), quarantine child(隔离子任务), remove child(移除子任务), add child(添加子任务) 和 shutdown tree(关闭监督树) 控制命令.
 - **FR-016**: 每个控制命令必须包含 command id(命令标识), target process identity(目标进程身份), target(目标), reason(原因) 和由认证身份派生的 requested by(请求者). 客户端不得覆盖 requested by(请求者).
 - **FR-017**: shutdown tree(关闭监督树), remove child(移除子任务) 和 add child(添加子任务) 必须要求二次确认和非空 reason(原因).
 - **FR-018**: 每个被接受, 被拒绝和已完成的控制命令都必须产生 audit event(审计事件), 并记录身份, 目标进程, 命令, 目标, reason(原因), 时间和结果.
-- **FR-019**: 未认证身份, 未授权身份, 证书身份不可解析或控制会话未建立时, 系统必须拒绝远程会话或控制命令, 并不得把控制请求转发到目标进程 IPC(进程间通信).
+- **FR-019**: 未认证身份, 证书身份不可解析或控制会话未建立时, 系统必须拒绝远程会话或控制命令, 并不得把控制请求转发到目标进程 IPC(进程间通信).
 - **FR-020**: dashboard(看板) 必须支持按 target process identity(目标进程身份), child task(子任务), lifecycle state(生命周期状态), event type(事件类型), severity(严重程度), sequence(序号) 和 correlation id(关联标识) 过滤事件和日志.
 - **FR-021**: dashboard(看板) 必须在连接断开, 目标进程不可用, 认证失败, 控制命令失败和事件丢失时显示可理解诊断.
 - **FR-022**: 系统不得提供 compatibility export(兼容导出), 旧协议别名或历史控制命令别名来表达本功能.
 - **FR-023**: relay(中继) 生产实现必须位于 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不得实现 relay server(中继服务器), `wss://` session(会话) 服务或 relay binary(中继二进制入口).
 - **FR-024**: dashboard client(看板客户端) 生产实现必须位于 `/Users/0x00/Documents/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库不得新增同仓 `dashboard/` 前端实现目录.
 - **FR-025**: 当前 `rust-supervisor` 仓库只负责 target process IPC(目标进程进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, 监督状态读取和共享协议契约, relay(中继) 与 UI(用户界面) 通过这些契约协作.
-- **FR-026**: relay(中继) 必须拒绝缺少授权范围, IPC path(进程间通信路径) 不是绝对路径, target id(目标标识) 重复, IPC path(进程间通信路径) 重复或租约无效的目标进程注册.
+- **FR-026**: relay(中继) 必须拒绝 supported_commands(支持的命令) 结构无效, IPC path(进程间通信路径) 不是绝对路径, target id(目标标识) 被不同 owner identity(所有者身份) 覆盖, IPC path(进程间通信路径) 被不同目标重复使用或租约无效的目标进程注册.
 - **FR-027**: dashboard client(看板客户端) 必须使用 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 作为前端实现基线, 不得使用 React(网页界面库) 组件体系表达本功能界面.
 
 ### Key Entities(关键实体) *(include if feature involves data(涉及数据时填写))*
 
-- **DashboardSession(看板会话)**: 已认证远程连接, 表达操作者身份, 权限范围, 连接状态和最近同步位置.
+- **DashboardSession(看板会话)**: 已认证远程连接, 表达操作者身份, 连接状态和最近同步位置.
 - **TargetProcessConfig(目标进程配置)**: `rust-tokio-supervisor` 使用的 IPC path(进程间通信路径) 配置, 用于确定目标进程监听路径和注册到 relay(中继) 时上报的本机连接路径.
-- **TargetProcessRegistration(目标进程注册)**: 目标进程向 relay(中继) 提交的运行时注册记录, 表达目标进程身份, IPC path(进程间通信路径), 显示名称, 授权范围, 租约和心跳状态.
+- **TargetProcessRegistration(目标进程注册)**: 目标进程向 relay(中继) 提交的运行时注册记录, 表达目标进程身份, IPC path(进程间通信路径), 显示名称, 租约, supported_commands(支持的命令) 和心跳状态.
 - **TargetProcessConnection(目标进程连接)**: relay(中继) 与一个目标进程 IPC(进程间通信) 之间的本机连接, 用于接收目标进程主动推送的事件和日志, 并转发控制命令.
-- **TargetProcessRegistry(目标进程注册表)**: relay(中继) 中保存多个 active registration(活动注册), target process identity(目标进程身份), IPC path(进程间通信路径), 连接状态, 租约状态和授权范围的集合.
+- **TargetProcessRegistry(目标进程注册表)**: relay(中继) 中保存多个 active registration(活动注册), target process identity(目标进程身份), IPC path(进程间通信路径), 连接状态, 租约状态和 supported_commands(支持的命令) 的集合.
 - **DashboardState(看板状态)**: 打开 dashboard(看板) 或重连后返回的完整视图, 包含目标进程身份, 监督拓扑, 当前状态, 最近事件, 最近日志和丢弃数量.
 - **SupervisorTopology(监督拓扑)**: 监督树的可视化结构, 包含节点, 边, 路径, 依赖关系, 标签和声明顺序.
 - **SupervisorNode(监督节点)**: 一个 root supervisor(根监督器) 或 child task(子任务) 的可视化单元, 包含身份, 名称, 路径, 当前状态和关键诊断字段.
@@ -150,7 +150,7 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - **SC-002**: 对 5 个已注册目标进程且总计包含 200 个 child task(子任务) 的监督树集合, dashboard(看板) 必须在 5 秒内完成首次可用展示.
 - **SC-003**: `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 必须使用包含 5 个目标进程, 200 个 child task(子任务), failed(失败), quarantined(隔离) 和 restarting(重启中) 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内从 dashboard(看板) 定位到指定异常 child task(子任务) 及其最近事件.
 - **SC-004**: 100% 接受, 拒绝和完成的控制命令都必须产生 audit event(审计事件).
-- **SC-005**: 100% 未认证远程连接, 未授权控制请求和未建立控制会话的远程客户端不得触发目标进程 IPC(进程间通信) 建立, 绑定或命令转发.
+- **SC-005**: 100% 未认证远程连接和未建立控制会话的远程客户端不得触发目标进程 IPC(进程间通信) 建立, 绑定或命令转发.
 - **SC-006**: 100% 控制命令必须携带非空 reason(原因), 并且 requested by(请求者) 必须来自已认证远程身份.
 - **SC-007**: 每个目标进程主动发送的事件和日志在同一连接内必须按 sequence(序号) 单调展示, 顺序错误次数必须为 0.
 - **SC-008**: 任一目标进程 IPC(进程间通信) 断开后, relay(中继) 必须在 10 秒内向远程客户端显示该目标进程的 unavailable(不可用) 或 reconnecting(重连中) 状态.
@@ -163,7 +163,7 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 
 - 第一版目标平台是 Linux(操作系统) 和 macOS(操作系统), Windows(操作系统) named pipe(命名管道) 不进入本功能范围.
 - `rust-tokio-supervisor` 的目标进程 IPC path(进程间通信路径) 配置属于公开配置输入的一部分, 但具体字段名称在 plan(计划) 阶段确定.
-- relay(中继) 第一版采用 dynamic registration(动态注册). relay(中继) 配置只定义注册入口, 安全策略和授权默认规则, 不写死目标进程列表.
+- relay(中继) 第一版采用 dynamic registration(动态注册). relay(中继) 配置只定义注册入口, 安全策略和租约默认规则, 不写死目标进程列表.
 - 外网远程连接必须使用 `wss://` 和 mTLS(双向传输层安全协议认证), `ws://` 不进入完整控制范围.
 - TLS(传输层安全协议) 默认由 relay(中继) 终止. 如果部署在可信代理后面, 身份传递规则必须在后续 plan(计划) 中写清楚.
 - relay(中继) 不直接持有 `SupervisorHandle`(监督器句柄), 它只能在远程控制会话建立后通过目标进程 IPC(进程间通信) 读取状态和提交控制命令.

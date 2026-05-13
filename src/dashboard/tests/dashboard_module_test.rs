@@ -19,8 +19,8 @@ fn dashboard_registration_payload_uses_validated_target_identity() {
             enabled: true,
             relay_registration_path: Some("/tmp/rust-supervisor-relay/register.sock".into()),
             display_name: Some("Orders Supervisor".to_string()),
-            authorization_scope: Some("ops:orders".to_string()),
             lease_seconds: Some(30),
+            registration_heartbeat_interval_seconds: Some(15),
         }),
     };
 
@@ -32,6 +32,12 @@ fn dashboard_registration_payload_uses_validated_target_identity() {
     assert_eq!(registration.target_id, "orders-supervisor");
     assert_eq!(registration.ipc_path, "/tmp/orders-supervisor.sock");
     assert_eq!(registration.lease_seconds, 30);
+    assert!(
+        registration
+            .supported_commands
+            .iter()
+            .any(|command| command.name == "restart_child")
+    );
 }
 
 /// Verifies that module-owned validation accepts an absolute IPC path.

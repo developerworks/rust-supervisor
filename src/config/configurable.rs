@@ -130,8 +130,8 @@ pub struct DashboardRegistrationConfig {
     pub relay_registration_path: Option<PathBuf>,
     /// Human-readable name shown in the dashboard.
     pub display_name: Option<String>,
-    /// Authorization scope required for remote operators.
-    pub authorization_scope: Option<String>,
     /// Registration lease duration in seconds.
     pub lease_seconds: Option<u64>,
+    /// Registration heartbeat interval in seconds.
+    pub registration_heartbeat_interval_seconds: Option<u64>,
 }

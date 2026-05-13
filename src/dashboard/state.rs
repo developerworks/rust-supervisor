@@ -24,8 +24,6 @@ pub struct DashboardStateInput {
     pub target_id: String,
     /// Human-readable target display name.
     pub display_name: String,
-    /// Authorization scope required for the target.
-    pub authorization_scope: String,
     /// State generation assigned by the target process.
     pub state_generation: u64,
     /// Number of recent records to include.
@@ -65,7 +63,6 @@ pub fn build_dashboard_state(
         target: TargetProcessIdentity {
             target_id: input.target_id,
             display_name: input.display_name,
-            authorization_scope: input.authorization_scope,
             registration_state: RegistrationState::Active,
             connection_state: TargetConnectionState::Registered,
         },

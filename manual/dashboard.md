@@ -19,11 +19,11 @@ ipc:
     enabled: true
     relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
     display_name: "payments worker a"
-    authorization_scope: "payments:operate"
     lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15
 ```
 
-`ipc.path` 必须是 absolute path(绝对路径). `registration.authorization_scope` 必须非空. `registration.lease_seconds` 必须大于 0.
+`ipc.path` 必须是 absolute path(绝对路径). `registration.lease_seconds` 必须大于 0. `registration.registration_heartbeat_interval_seconds` 必须小于 `registration.lease_seconds`.
 
 ## Protocol(协议)
 
