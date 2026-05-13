@@ -84,7 +84,7 @@ src/supervisor/
   observe.rs       # tracing、metrics、subscriber
   shutdown.rs      # 两阶段关闭，grace/abort
   error.rs         # SupervisorError、TaskFailureKind
-  test_support.rs  # paused time、fake task、事件断言工具
+  test_support.rs  # 暂停时间, 确定性抖动, 事件断言工具
 ```
 
 核心接口可以这样定型：

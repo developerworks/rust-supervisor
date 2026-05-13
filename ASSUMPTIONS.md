@@ -27,8 +27,8 @@
 - `ipc.enabled=true` 时, `ipc.path` 和 `registration.relay_registration_path` 必须是 absolute path(绝对路径).
 - dynamic registration(动态注册) 只上报 `target_id`, `display_name`, `ipc_path`, `authorization_scope` 和 `lease_seconds`.
 - event(事件) 和 log(日志) subscription(订阅) 必须由 established dashboard session(已建立看板会话) 触发, registration(注册) 本身不触发主动推送.
-- 本次 UI(用户界面) browser test(浏览器测试) 使用 `mock://dashboard` 静态数据验证交互. 真实 `wss://` relay(中继) 连接适配已经实现, 但是浏览器测试不证明真实 mTLS(双向传输层安全协议认证) 证书链有效.
-- 当前仓库的 target-side IPC server(目标侧进程间通信服务端) 提供可测试 dispatcher(分发器), Unix listener(Unix 监听器) bind(绑定) 和命令映射边界. relay(中继) 测试使用记录型 IPC client(进程间通信客户端) 覆盖会话门控和转发顺序.
+- 本次 UI(用户界面) browser test(浏览器测试) 使用 `wss://` relay(中继) URL(统一资源定位符) 和本地 TLS(传输层安全协议) WebSocket(网络套接字协议) 协议测试服务验证交互. 浏览器测试不证明真实 mTLS(双向传输层安全协议认证) 证书链有效.
+- 当前仓库的 target-side IPC server(目标侧进程间通信服务端) 提供可测试 dispatcher(分发器), Unix listener(Unix 监听器) bind(绑定) 和命令映射边界. relay(中继) 测试使用真实 Unix domain socket IPC(Unix 域套接字进程间通信) 测试目标覆盖会话门控和转发顺序.
 
 ## 发布默认值
 

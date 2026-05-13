@@ -1,9 +1,8 @@
 //! Deterministic helpers for supervisor tests.
 //!
 //! The module provides small reusable fixtures for event collection, paused
-//! time, fake task outcomes, and deterministic jitter.
+//! time, and deterministic jitter.
 
-use crate::error::types::TaskFailure;
 use crate::event::payload::{SupervisorEvent, What, Where};
 use crate::event::time::{CorrelationId, EventSequence, EventSequenceSource, EventTime, When};
 use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
@@ -110,79 +109,6 @@ impl DeterministicJitter {
         let base = i128::from(base_ms);
         let delta = base.saturating_mul(i128::from(self.percent)) / 100;
         base.saturating_add(delta).max(0) as u64
-    }
-}
-
-/// Fake task outcome for tests that do not need a real runtime.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum FakeTaskOutcome {
-    /// Task completes successfully.
-    Complete,
-    /// Task is cancelled.
-    Cancel,
-    /// Task returns a typed failure.
-    Fail {
-        /// Failure payload returned by the task.
-        failure: TaskFailure,
-    },
-}
-
-/// Fake task factory that returns deterministic outcomes in order.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FakeTaskFactory {
-    /// Ordered outcomes returned by attempts.
-    pub outcomes: Vec<FakeTaskOutcome>,
-    /// Next outcome index.
-    pub next_index: usize,
-}
-
-impl FakeTaskFactory {
-    /// Creates a fake task factory.
-    ///
-    /// # Arguments
-    ///
-    /// - `outcomes`: Ordered outcomes returned by attempts.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`FakeTaskFactory`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let mut factory = rust_supervisor::test_support::factory::FakeTaskFactory::new(vec![
-    ///     rust_supervisor::test_support::factory::FakeTaskOutcome::Complete,
-    /// ]);
-    /// assert!(matches!(
-    ///     factory.next_outcome(),
-    ///     rust_supervisor::test_support::factory::FakeTaskOutcome::Complete
-    /// ));
-    /// ```
-    pub fn new(outcomes: Vec<FakeTaskOutcome>) -> Self {
-        Self {
-            outcomes,
-            next_index: 0,
-        }
-    }
-
-    /// Returns the next deterministic outcome.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the next [`FakeTaskOutcome`], or `Complete` after configured
-    /// outcomes are exhausted.
-    pub fn next_outcome(&mut self) -> FakeTaskOutcome {
-        let outcome = self
-            .outcomes
-            .get(self.next_index)
-            .cloned()
-            .unwrap_or(FakeTaskOutcome::Complete);
-        self.next_index = self.next_index.saturating_add(1);
-        outcome
     }
 }
 

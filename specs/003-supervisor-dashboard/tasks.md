@@ -161,8 +161,8 @@
 - **Setup(阶段一)**: 没有依赖, 可以立即开始.
 - **Foundational(阶段二)**: 依赖 Setup(阶段一) 完成, 并阻塞所有用户故事.
 - **User Story 1(用户故事一, P1)**: 依赖 Foundational(阶段二), 是 MVP(最小可用产品).
-- **User Story 2(用户故事二, P2)**: 依赖 Foundational(阶段二). 执行顺序建议在 US1 之后, 但可以用 mock session(模拟会话) 和 mock IPC(模拟进程间通信) 独立测试.
-- **User Story 3(用户故事三, P3)**: 依赖 Foundational(阶段二). 执行顺序建议在 US1 和 US2 之后, 但可以用 mock target process(模拟目标进程) 独立测试认证, 授权和命令契约.
+- **User Story 2(用户故事二, P2)**: 依赖 Foundational(阶段二). 执行顺序建议在 US1 之后, 并通过真实 relay(中继) 连接和 contract sample(契约样例) 独立测试.
+- **User Story 3(用户故事三, P3)**: 依赖 Foundational(阶段二). 执行顺序建议在 US1 和 US2 之后, 并通过真实 Unix domain socket IPC(Unix 域套接字进程间通信) 测试目标独立测试认证, 授权和命令契约.
 - **Polish(阶段六)**: 依赖所有选定用户故事完成.
 
 ### User Story Dependencies(用户故事依赖)

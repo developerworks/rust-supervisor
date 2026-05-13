@@ -60,7 +60,7 @@
 - [X] T020 [P] 在 `src/state/child.rs` 和 `src/state/supervisor.rs` 中实现 `ChildState`(子任务状态) 和 `SupervisorState`(监督器状态) 基础模型,覆盖 FR-025,FR-026 和 SC-009.
 - [X] T021 [P] 在 `src/spec/supervisor.rs` 中实现唯一 `SupervisionStrategy`(监督策略),并在 `src/policy/decision.rs` 中实现 `RestartPolicy`,`RestartDecision` 和 `TaskFailureKind` 到策略输入的基础类型,覆盖 FR-007,FR-008,FR-009 和 FR-012.
 - [X] T022 [P] 在 `src/config/state.rs` 和 `src/config/loader.rs` 中实现 `SupervisorConfig`(监督器配置),`ConfigState`(配置状态) 和配置版本基础结构,覆盖 FR-050.
-- [X] T023 [P] 在 `src/test_support/assertions.rs` 和 `src/test_support/factory.rs` 中实现 paused time(暂停时间),fake task factory(假任务工厂),event collection(事件收集) 和 deterministic jitter(确定性抖动) 支持,覆盖 FR-017,FR-036 和 SC-010.
+- [X] T023 [P] 在 `src/test_support/assertions.rs` 和 `src/test_support/factory.rs` 中实现 paused time(暂停时间),event collection(事件收集) 和 deterministic jitter(确定性抖动) 支持,覆盖 FR-017,FR-036 和 SC-010.
 - [X] T024 在 `src/tests/foundational_gate_test.rs` 中串联基础质量门禁,确认 source layout(源码布局),module boundary(模块边界),import rule(导入规则),naming(命名),configuration boundary(配置边界) 和 glossary(词汇表) 全部可独立运行,覆盖 FR-056,FR-057,FR-063,FR-066,FR-067,FR-077,SC-024,SC-025,SC-031,SC-034,SC-035 和 SC-045.
 
 **Checkpoint(检查点)**: 基础契约,源码布局和质量门禁已经可用,用户故事实现可以开始.
