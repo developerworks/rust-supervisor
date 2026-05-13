@@ -112,6 +112,12 @@ fn is_checked_file(path: &Path) -> bool {
 
 /// Returns whether a path belongs to generated output or third-party dependencies.
 fn is_generated_or_dependency_path(path: &Path) -> bool {
+    if path
+        .to_string_lossy()
+        .contains("rust-supervisor-ui/src/components/ui")
+    {
+        return true;
+    }
     path.components().any(|component| {
         let name = component.as_os_str().to_string_lossy();
         matches!(

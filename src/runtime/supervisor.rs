@@ -5,6 +5,9 @@
 
 use crate::config::state::ConfigState;
 use crate::control::handle::SupervisorHandle;
+use crate::dashboard::config::validate_dashboard_ipc_config;
+use crate::dashboard::error::DashboardError;
+use crate::dashboard::runtime::start_dashboard_ipc_runtime;
 use crate::error::types::SupervisorError;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
 use crate::shutdown::stage::ShutdownPolicy;
@@ -44,8 +47,18 @@ impl Supervisor {
     pub async fn start_from_config_state(
         state: ConfigState,
     ) -> Result<SupervisorHandle, SupervisorError> {
+        let ipc_config = state.ipc.clone();
         let spec = state.to_supervisor_spec()?;
-        Self::start(spec).await
+        let mut handle = Self::start(spec.clone()).await?;
+        let dashboard_config =
+            validate_dashboard_ipc_config(ipc_config.as_ref()).map_err(dashboard_startup_error)?;
+        if let Some(dashboard_config) = dashboard_config {
+            let dashboard_runtime =
+                start_dashboard_ipc_runtime(dashboard_config, spec, handle.clone())
+                    .map_err(dashboard_startup_error)?;
+            handle = handle.with_dashboard_runtime(dashboard_runtime);
+        }
+        Ok(handle)
     }
 
     /// Starts a supervisor runtime from a YAML configuration file.
@@ -107,4 +120,9 @@ fn shutdown_policy_from_spec(spec: &SupervisorSpec) -> ShutdownPolicy {
         spec.default_shutdown_policy.abort_wait,
         true,
     )
+}
+
+/// Converts dashboard startup failures into supervisor startup errors.
+fn dashboard_startup_error(error: DashboardError) -> SupervisorError {
+    SupervisorError::fatal_config(format!("dashboard IPC startup failed: {error}"))
 }

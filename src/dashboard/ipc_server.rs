@@ -25,7 +25,6 @@ use crate::state::supervisor::SupervisorState;
 use serde_json::json;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::net::UnixStream as StdUnixStream;
-use std::path::Path;
 use tokio::net::UnixListener;
 
 /// Target-side dashboard IPC service.
@@ -280,9 +279,19 @@ pub fn bind_dashboard_listener(
 ///
 /// Returns `Ok(())` when binding may continue.
 fn prepare_socket_path(config: &ValidatedDashboardIpcConfig) -> Result<(), DashboardError> {
-    if !Path::new(&config.path).exists() {
-        return Ok(());
-    }
+    let metadata = match std::fs::symlink_metadata(&config.path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(DashboardError::new(
+                "ipc_path_metadata_failed",
+                "ipc_bind",
+                Some(config.target_id.clone()),
+                format!("failed to inspect IPC path: {error}"),
+                false,
+            ));
+        }
+    };
     match config.bind_mode {
         crate::config::configurable::DashboardIpcBindMode::CreateNew => {
             Err(DashboardError::validation(
@@ -292,15 +301,6 @@ fn prepare_socket_path(config: &ValidatedDashboardIpcConfig) -> Result<(), Dashb
             ))
         }
         crate::config::configurable::DashboardIpcBindMode::ReplaceStale => {
-            let metadata = std::fs::symlink_metadata(&config.path).map_err(|error| {
-                DashboardError::new(
-                    "ipc_path_metadata_failed",
-                    "ipc_bind",
-                    Some(config.target_id.clone()),
-                    format!("failed to inspect IPC path: {error}"),
-                    false,
-                )
-            })?;
             if metadata.file_type().is_symlink() {
                 return Err(DashboardError::validation(
                     "ipc_bind",

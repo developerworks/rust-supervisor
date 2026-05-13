@@ -4,9 +4,11 @@
 //! methods. It keeps command construction separate from runtime execution.
 
 use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
+use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::runtime::control_loop::RuntimeCommand;
+use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 /// Cloneable handle used to control a running supervisor.
@@ -16,6 +18,8 @@ pub struct SupervisorHandle {
     command_sender: mpsc::Sender<RuntimeCommand>,
     /// Broadcast sender used to create lifecycle event subscriptions.
     event_sender: broadcast::Sender<String>,
+    /// Optional dashboard IPC runtime guard.
+    dashboard_runtime: Option<Arc<DashboardIpcRuntimeGuard>>,
 }
 
 impl SupervisorHandle {
@@ -36,7 +40,25 @@ impl SupervisorHandle {
         Self {
             command_sender,
             event_sender,
+            dashboard_runtime: None,
         }
+    }
+
+    /// Attaches a dashboard IPC runtime guard to this handle.
+    ///
+    /// # Arguments
+    ///
+    /// - `dashboard_runtime`: Guard that owns dashboard IPC runtime tasks.
+    ///
+    /// # Returns
+    ///
+    /// Returns this handle with dashboard runtime lifecycle attached.
+    pub(crate) fn with_dashboard_runtime(
+        mut self,
+        dashboard_runtime: Arc<DashboardIpcRuntimeGuard>,
+    ) -> Self {
+        self.dashboard_runtime = Some(dashboard_runtime);
+        self
     }
 
     /// Adds a child manifest under a supervisor path.
