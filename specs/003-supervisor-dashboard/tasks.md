@@ -26,7 +26,7 @@
 **Purpose(目的)**: 建立配置, 协议, 领域模型和诊断边界. 本阶段完成前, 任何用户故事实现都不能开始.
 
 - [X] T008 [P] 在 `tests/dashboard_config_test.rs` 中添加 FR-001, FR-023, FR-024 和 FR-025 的配置与目录边界测试, 覆盖 IPC path(进程间通信路径) 外部化, dynamic registration(动态注册) 配置, 当前仓库无 relay binary(中继二进制入口) 和当前仓库无同仓前端目录.
-- [X] T009 [P] 在 `tests/dashboard_protocol_shape_test.rs` 中添加 FR-008 到 FR-012, FR-015 到 FR-018 和 FR-022 的 JSON(数据交换格式) shape(形状) 契约测试, 覆盖 snapshot(快照), event(事件), log(日志), command request(命令请求), command result(命令结果), error(错误), audit event(审计事件) 和旧协议别名拒绝.
+- [X] T009 [P] 在 `tests/dashboard_protocol_shape_test.rs` 中添加 FR-008 到 FR-012, FR-015 到 FR-018 和 FR-022 的 JSON(数据交换格式) shape(形状) 契约测试, 覆盖 state(状态), event(事件), log(日志), command request(命令请求), command result(命令结果), error(错误), audit event(审计事件) 和旧协议别名拒绝.
 - [X] T010 [P] 在 `src/dashboard/error.rs` 中定义目标侧结构化 DashboardError(看板错误) 和错误 code(代码), stage(阶段), target id(目标标识), retryable(可重试) 字段.
 - [X] T011 [P] 在 `src/dashboard/model.rs` 中定义 TargetProcessConfig(目标进程配置), TargetProcessRegistration(目标进程注册), DashboardState(看板状态), SupervisorTopology(监督拓扑), SupervisorNode(监督节点), SupervisorEdge(监督边), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求), ControlCommandResult(控制命令结果) 和 AuditEvent(审计事件) 共享模型.
 - [X] T012 [P] 在 `src/dashboard/protocol.rs` 中定义目标侧 IPC(进程间通信) request(请求), response(响应), server push(服务端主动推送) 和拒绝旧协议别名的解析规则.
@@ -51,29 +51,29 @@
 
 ## Phase 3(阶段三): User Story 1(用户故事一) - 远程查看监督树和状态 (Priority(优先级): P1) MVP(最小可用产品)
 
-**Goal(目标)**: 已认证操作者通过 dashboard client(看板客户端) 看到一个或多个目标进程的 target process list(目标进程列表), connection state(连接状态), snapshot(快照), supervisor topology(监督拓扑) 和 runtime state(运行时状态).
+**Goal(目标)**: 已认证操作者通过 dashboard client(看板客户端) 看到一个或多个目标进程的 target process list(目标进程列表), connection state(连接状态), state(状态), supervisor topology(监督拓扑) 和 runtime state(运行时状态).
 
 **Independent Test(独立测试)**: 启动两个使用不同 IPC path(进程间通信路径) 的目标进程, 并让它们完成 dynamic registration(动态注册). 通过 relay(中继) 暴露的 `wss://` 打开 dashboard client(看板客户端), 验证每个已注册目标进程显示 root supervisor(根监督器), 所有 child task(子任务), 依赖关系, 当前状态和 generated time(生成时间).
 
 ### Tests for User Story 1(用户故事一的测试)
 
-- [X] T027 [P] [US1] 在 `tests/dashboard_snapshot_test.rs` 中添加 FR-002, FR-008, FR-009, FR-010, SC-001 和 SC-002 的 snapshot(快照) 集成测试.
-- [X] T028 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs` 中添加 active registration(活动注册) 形成的 target process list(目标进程列表), authorization scope(授权范围), snapshot(快照) 首包和授权后 IPC(进程间通信) 绑定测试.
-- [X] T029 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/snapshot-view.spec.ts` 中添加 dashboard client(看板客户端) 首屏渲染测试, 覆盖 target list(目标列表), topology canvas(拓扑画布), node detail(节点详情) 和 unavailable(不可用) 状态.
+- [X] T027 [P] [US1] 在 `tests/dashboard_state_test.rs` 中添加 FR-002, FR-008, FR-009, FR-010, SC-001 和 SC-002 的 state(状态) 集成测试.
+- [X] T028 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs` 中添加 active registration(活动注册) 形成的 target process list(目标进程列表), authorization scope(授权范围), state(状态) 首包和授权后 IPC(进程间通信) 绑定测试.
+- [X] T029 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/state-display.spec.ts` 中添加 dashboard client(看板客户端) 首屏渲染测试, 覆盖 target list(目标列表), topology canvas(拓扑画布), node detail(节点详情) 和 unavailable(不可用) 状态.
 
 ### Implementation for User Story 1(用户故事一的实现)
 
 - [X] T030 [P] [US1] 在 `src/dashboard/state.rs` 中实现从 SupervisorHandle(监督器句柄), SupervisorTree(监督树), SupervisorState(监督器状态) 和 EventJournal(事件日志缓冲区) 构建 DashboardState(看板状态).
-- [X] T031 [US1] 在 `src/dashboard/ipc_server.rs` 和 `src/dashboard/registration.rs` 中实现目标进程 Unix domain socket(Unix 域套接字) listener(监听器), dynamic registration(动态注册) payload(载荷), `hello` 方法和 `snapshot` 方法.
-- [X] T032 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 到目标进程 IPC(进程间通信) 的 snapshot(快照) 读取.
+- [X] T031 [US1] 在 `src/dashboard/ipc_server.rs` 和 `src/dashboard/registration.rs` 中实现目标进程 Unix domain socket(Unix 域套接字) listener(监听器), dynamic registration(动态注册) payload(载荷), `hello` 方法和 `state` 方法.
+- [X] T032 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 到目标进程 IPC(进程间通信) 的 state(状态) 读取.
 - [X] T033 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/registry.rs` 中实现 registered(已注册), connected(已连接), reconnecting(重连中), unavailable(不可用), expired(已过期) 状态汇总和可见目标过滤.
 - [X] T034 [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/session.rs` 中实现 `wss://` session(会话) 建立, active registration(活动注册) target process list(目标进程列表) 首包发送和授权后 IPC(进程间通信) 绑定.
 - [X] T035 [US1] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/main.rs` 中实现 relay(中继) 配置加载, registration(注册) 入口, TLS(传输层安全协议) 监听和 session(会话) 入口连接.
-- [X] T036 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/state/snapshotStore.ts` 中实现 target process list(目标进程列表), snapshot(快照) 和 connection state(连接状态) 的状态存储.
+- [X] T036 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/state/stateStore.ts` 中实现 target process list(目标进程列表), state(状态) 和 connection state(连接状态) 的状态存储.
 - [X] T037 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/TargetList.vue` 中使用 shadcn-vue(组件库) 和 Tailwind(样式框架) 实现多目标进程列表和 connected(已连接), reconnecting(重连中), unavailable(不可用) 状态展示.
 - [X] T038 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/TopologyCanvas.vue` 中使用 Vue Flow(流程图组件) 渲染 SupervisorTopology(监督拓扑), SupervisorNode(监督节点) 和 SupervisorEdge(监督边), 并使用 Tailwind(样式框架) 保持画布布局稳定.
 - [X] T039 [P] [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/components/NodeDetailsPanel.vue` 中使用 shadcn-vue(组件库) 实现 lifecycle state(生命周期状态), health(健康状态), readiness(就绪状态), restart count(重启次数), last failure(最近失败), last policy decision(最近策略决定) 和 shutdown state(关闭状态) 详情.
-- [X] T040 [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/main.ts` 和 `/Users/0x00/Documents/rust-supervisor-ui/src/App.vue` 中集成 `wss://` 连接, snapshot store(快照存储), TargetList(目标列表), TopologyCanvas(拓扑画布) 和 NodeDetailsPanel(节点详情面板).
+- [X] T040 [US1] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/main.ts` 和 `/Users/0x00/Documents/rust-supervisor-ui/src/App.vue` 中集成 `wss://` 连接, state store(快照存储), TargetList(目标列表), TopologyCanvas(拓扑画布) 和 NodeDetailsPanel(节点详情面板).
 
 **Checkpoint(检查点)**: 用户故事一可以作为 MVP(最小可用产品) 独立交付.
 
@@ -83,11 +83,11 @@
 
 **Goal(目标)**: dashboard client(看板客户端) 持续显示目标进程主动推送的 supervisor event(监督器事件), log record(日志记录) 和 command audit(命令审计), 并支持过滤和 dropped count(丢弃数量) 诊断.
 
-**Independent Test(独立测试)**: 让多个已注册目标进程产生启动, 失败, 重启, 控制命令和关闭事件, 验证注册本身不会触发事件日志推送. 已认证 dashboard session(看板会话) 建立并绑定目标后, 事件和日志经 relay(中继) 按 target process(目标进程) 分组并按 sequence(序号) 追加, 过滤器生效, IPC(进程间通信) 重连后获得新 snapshot(快照).
+**Independent Test(独立测试)**: 让多个已注册目标进程产生启动, 失败, 重启, 控制命令和关闭事件, 验证注册本身不会触发事件日志推送. 已认证 dashboard session(看板会话) 建立并绑定目标后, 事件和日志经 relay(中继) 按 target process(目标进程) 分组并按 sequence(序号) 追加, 过滤器生效, IPC(进程间通信) 重连后获得新 state(状态).
 
 ### Tests for User Story 2(用户故事二的测试)
 
-- [X] T041 [P] [US2] 在 `tests/dashboard_stream_test.rs` 中添加 FR-007, FR-011, FR-012, SC-007 和 SC-008 的客户端会话触发主动事件推送, 日志关联, sequence(序号) 单调和重连 snapshot(快照) 测试.
+- [X] T041 [P] [US2] 在 `tests/dashboard_stream_test.rs` 中添加 FR-007, FR-011, FR-012, SC-007 和 SC-008 的客户端会话触发主动事件推送, 日志关联, sequence(序号) 单调和重连 state(状态) 测试.
 - [X] T042 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_stream_test.rs` 中添加注册后不推送, session(会话) 绑定后 event(事件), log(日志), state delta(状态增量), dropped count(丢弃数量), sequence gap(序号缺口) 和 reconnect timeout(重连超时) 转发测试.
 - [X] T043 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/events-filter.spec.ts` 中添加 FR-020 和 FR-021 的事件日志过滤, dropped count(丢弃数量) 和诊断展示测试.
 
@@ -95,7 +95,7 @@
 
 - [X] T044 [P] [US2] 在 `src/dashboard/events.rs` 中实现 EventJournal(事件日志缓冲区) 到 EventRecord(事件记录), LogRecord(日志记录), dropped count(丢弃数量) 和 sequence gap(序号缺口) 的转换.
 - [X] T045 [US2] 在 `src/dashboard/ipc_server.rs` 中实现 `events.subscribe`, `logs.tail` 和客户端会话触发 IPC(进程间通信) subscription(订阅) 后的目标进程主动推送循环.
-- [X] T046 [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 只在 session(会话) 绑定目标后建立事件日志订阅, reconnect(重连) 和重连后 snapshot(快照) 刷新.
+- [X] T046 [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/ipc_client.rs` 中实现 relay(中继) 只在 session(会话) 绑定目标后建立事件日志订阅, reconnect(重连) 和重连后 state(状态) 刷新.
 - [X] T047 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/relay.rs` 中实现按 target process(目标进程) 和 session(会话) 授权范围 fan out(分发) event(事件), log(日志), state delta(状态增量) 和 error(错误).
 - [X] T048 [US2] 在 `/Users/0x00/Documents/rust-supervisor-relay/src/session.rs` 中实现 `wss://` server message(服务端消息) 顺序规则, dropped count(丢弃数量) 消息和 connection state(连接状态) 更新.
 - [X] T049 [P] [US2] 在 `/Users/0x00/Documents/rust-supervisor-ui/src/state/eventStore.ts` 中实现事件, 日志, dropped count(丢弃数量), sequence(序号) 和 correlation id(关联标识) 状态管理.
@@ -140,7 +140,7 @@
 
 - [X] T064 [P] 在 `tests/dashboard_performance_test.rs` 中添加 SC-001, SC-002, SC-008, SC-010 和 SC-011 的 2 秒首包, 5 秒 200 child task(子任务), 10 秒断连诊断和目录边界测试.
 - [X] T065 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/tests/relay_performance_test.rs` 中添加 SC-005, SC-008 和 SC-009 的 session gating(会话门控), 断连诊断和 5 个 active registration(活动注册) 测试.
-- [X] T066 [P] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 中添加 SC-003 和 SC-012 的 failed(失败), quarantined(隔离), restarting(重启中) child task(子任务) 定位流程测试, 以及 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) 基线检查.
+- [ ] T066 [P] 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 中添加 SC-003 和 SC-012 的固定数据集定位流程测试, 覆盖 20 次执行中至少 19 次在 30 秒内定位 failed(失败), quarantined(隔离) 或 restarting(重启中) child task(子任务) 及其最近事件, 并检查 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) 基线, `package.json` 中 React(网页界面库) runtime dependency(运行时依赖) 数量为 0, `src/` 下 React(网页界面库) component file(组件文件) 数量为 0.
 - [X] T067 [P] 在 `manual/dashboard.md` 中编写当前仓库目标侧 IPC(进程间通信), 共享契约, 目录边界和验证命令说明.
 - [X] T068 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/manual/dashboard-relay.md` 中编写 relay(中继), `wss://`, mTLS(双向传输层安全协议认证), trusted proxy(可信代理), 控制命令和诊断运行说明.
 - [X] T069 [P] 在 `/Users/0x00/Documents/rust-supervisor-relay/examples/config/dashboard-relay.yaml` 中为 FR-004, FR-013 和 FR-026 编写 dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), trusted proxy(可信代理), allowed IPC path prefixes(允许的进程间通信路径前缀) 和 authorization defaults(授权默认规则) 示例配置.
@@ -195,9 +195,9 @@
 ### User Story 1(用户故事一)
 
 ```bash
-Task(任务): "T027 在 tests/dashboard_snapshot_test.rs 中添加 snapshot(快照) 集成测试"
+Task(任务): "T027 在 tests/dashboard_state_test.rs 中添加 state(状态) 集成测试"
 Task(任务): "T028 在 /Users/0x00/Documents/rust-supervisor-relay/tests/relay_session_contract_test.rs 中添加 session(会话) 建立和首包测试"
-Task(任务): "T029 在 /Users/0x00/Documents/rust-supervisor-ui/tests/snapshot-view.spec.ts 中添加首屏渲染测试"
+Task(任务): "T029 在 /Users/0x00/Documents/rust-supervisor-ui/tests/state-display.spec.ts 中添加首屏渲染测试"
 ```
 
 ### User Story 2(用户故事二)
@@ -224,8 +224,8 @@ Task(任务): "T055 在 /Users/0x00/Documents/rust-supervisor-ui/tests/control-c
 
 1. 完成 Phase 1(阶段一) 和 Phase 2(阶段二).
 2. 完成 Phase 3(阶段三) User Story 1(用户故事一).
-3. 运行 `cargo test dashboard_snapshot_test`, `cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml relay_session_contract_test` 和 `npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e -- snapshot-view`.
-4. 验证已认证操作者可以看到 target process list(目标进程列表), snapshot(快照), supervisor topology(监督拓扑) 和 runtime state(运行时状态).
+3. 运行 `cargo test dashboard_state_test`, `cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml relay_session_contract_test` 和 `npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e -- state-display`.
+4. 验证已认证操作者可以看到 target process list(目标进程列表), state(状态), supervisor topology(监督拓扑) 和 runtime state(运行时状态).
 
 ### Incremental Delivery(增量交付)
 

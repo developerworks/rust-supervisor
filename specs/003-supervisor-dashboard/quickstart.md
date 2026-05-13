@@ -72,7 +72,7 @@ npm --prefix /Users/0x00/Documents/rust-supervisor-ui run dev
 
 1. 启动两个目标进程, 分别使用不同 IPC path(进程间通信路径), 并确认它们向 relay(中继) 完成 dynamic registration(动态注册).
 2. 使用有效 client certificate(客户端证书) 打开 dashboard(看板).
-3. 确认 2 秒内显示 target process list(目标进程列表) 和至少一个 snapshot(快照).
+3. 确认 2 秒内显示 target process list(目标进程列表) 和至少一个 state(状态).
 4. 确认每个可达目标进程显示 root supervisor(根监督器), child task(子任务), dependencies(依赖), lifecycle state(生命周期状态), health(健康状态), readiness(就绪状态), restart count(重启次数), shutdown state(关闭状态) 和 generated time(生成时间).
 
 ## 6. 验证用户故事二
@@ -89,7 +89,7 @@ npm --prefix /Users/0x00/Documents/rust-supervisor-ui run dev
 1. 使用已授权身份建立 control session(控制会话).
 2. 对一个 child task(子任务) 执行 restart child(重启子任务), pause child(暂停子任务), resume child(恢复子任务) 和 quarantine child(隔离子任务), 并填写 reason(原因).
 3. 对 shutdown tree(关闭监督树), remove child(移除子任务) 和 add child(添加子任务) 验证二次确认.
-4. 确认 command result(命令结果) 返回当前连接, snapshot(快照) 或 state delta(状态增量) 更新页面.
+4. 确认 command result(命令结果) 返回当前连接, state(状态) 或 state delta(状态增量) 更新页面.
 5. 确认每个 accepted(已接受), rejected(已拒绝) 和 completed(已完成) 命令都有 audit event(审计事件).
 6. 使用未认证连接或未授权身份提交命令, 确认 relay(中继) 拒绝请求, 且不转发到目标进程 IPC(进程间通信).
 7. 使用 `ws://` 建立远程连接, 确认系统不得建立完整 control session(控制会话).

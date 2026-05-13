@@ -14,7 +14,7 @@
 ```json
 {
   "request_id": "01HV0000000000000000000001",
-  "method": "snapshot",
+  "method": "state",
   "params": {
     "target_id": "payments-worker-a"
   }
@@ -24,7 +24,7 @@
 ### Methods(方法)
 
 - `hello`: relay(中继) 建立 IPC(进程间通信) 后声明协议版本和目标身份.
-- `snapshot`: 读取 DashboardState(看板状态).
+- `state`: 读取 DashboardState(看板状态).
 - `events.subscribe`: 在已认证客户端会话触发目标绑定后, 订阅目标进程主动推送的 EventRecord(事件记录).
 - `logs.tail`: 在已认证客户端会话触发目标绑定后, 订阅 LogRecord(日志记录) 和最近日志.
 - `command.restart_child`: 重启 child task(子任务).
@@ -44,9 +44,9 @@
   "request_id": "01HV0000000000000000000001",
   "ok": true,
   "result": {
-    "type": "snapshot",
+    "type": "state",
     "target_id": "payments-worker-a",
-    "snapshot_generation": 42
+    "state_generation": 42
   }
 }
 ```

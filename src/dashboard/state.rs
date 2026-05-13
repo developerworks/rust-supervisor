@@ -26,8 +26,8 @@ pub struct DashboardStateInput {
     pub display_name: String,
     /// Authorization scope required for the target.
     pub authorization_scope: String,
-    /// Payload generation assigned by the target process.
-    pub snapshot_generation: u64,
+    /// State generation assigned by the target process.
+    pub state_generation: u64,
     /// Number of recent records to include.
     pub recent_limit: usize,
 }
@@ -77,7 +77,7 @@ pub fn build_dashboard_state(
         dropped_log_count: 0,
         config_version,
         generated_at_unix_nanos: state.generated_at_unix_nanos,
-        snapshot_generation: input.snapshot_generation,
+        state_generation: input.state_generation,
     }
 }
 

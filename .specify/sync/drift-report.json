@@ -1,12 +1,12 @@
 {
-  "generated": "2026-05-08T01:18:11+08:00",
+  "generated": "2026-05-12T02:03:03+08:00",
   "project": "rust-tokio-supervisor",
   "summary": {
     "specs_analyzed": 3,
     "requirements_checked": 185,
-    "aligned": 185,
-    "drifted": 0,
-    "not_implemented": 0,
+    "aligned": 183,
+    "drifted": 1,
+    "not_implemented": 1,
     "unspecced_features": 1
   },
   "specs": [
@@ -205,7 +205,6 @@
         "FR-027",
         "SC-001",
         "SC-002",
-        "SC-003",
         "SC-004",
         "SC-005",
         "SC-006",
@@ -213,35 +212,38 @@
         "SC-008",
         "SC-009",
         "SC-010",
-        "SC-011",
-        "SC-012"
+        "SC-011"
       ],
-      "drifted": [],
-      "not_implemented": []
+      "drifted": [
+        {
+          "requirement": "SC-012",
+          "spec_text": "dashboard client 交付物中 Vue, shadcn-vue 和 Tailwind 基线必须可验证, React 运行时依赖和 React 组件文件数量必须为 0.",
+          "actual": "package.json 实际没有 React 依赖, src 下也没有 .tsx 或 .jsx 文件, 但 tests/dashboard-performance.spec.ts 只断言 window.__RUST_SUPERVISOR_UI_BASELINE__, 没有把 React runtime dependency 和 component file 数量为 0 编成自动验证.",
+          "location": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:11; /Users/0x00/Documents/rust-supervisor-ui/package.json:14; specs/003-supervisor-dashboard/tasks.md:143",
+          "severity": "moderate"
+        }
+      ],
+      "not_implemented": [
+        "SC-003"
+      ]
+    }
+  ],
+  "not_implemented_details": [
+    {
+      "requirement": "SC-003",
+      "spec_text": "dashboard-performance.spec.ts 必须使用包含 5 个目标进程, 200 个 child task, failed, quarantined 和 restarting 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内定位到指定异常 child task 及其最近事件.",
+      "actual": "当前测试只执行 1 次定位流程, mock data 只有 3 个 target process 和少量 child task, 并且 T066 仍是未完成状态.",
+      "location": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:3; /Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts:149; specs/003-supervisor-dashboard/tasks.md:143",
+      "severity": "major"
     }
   ],
   "unspecced": [
     {
       "feature": "Spec Kit sync extension 本地命令和技能资产",
-      "location": ".specify/extensions/sync/; .agents/skills/speckit-sync-analyze/SKILL.md",
-      "lines": 1480,
-      "suggested_spec": "005-spec-sync-tooling"
+      "location": ".specify/extensions/sync/, .agents/skills/speckit-sync-*",
+      "lines": 2554,
+      "suggested_spec": "004-spec-sync-tooling"
     }
   ],
-  "conflicts": [
-    {
-      "specs": [
-        "001-create-supervisor-core",
-        "003-supervisor-dashboard"
-      ],
-      "requirements": [
-        "001 FR-063",
-        "001 SC-031",
-        "003 FR-008",
-        "003 FR-014",
-        "003 SC-001"
-      ],
-      "summary": "001 全局禁止 *Snapshot 和 snapshot(), 003 要求 dashboard snapshot 协议对象和快照首包."
-    }
-  ]
+  "conflicts": []
 }

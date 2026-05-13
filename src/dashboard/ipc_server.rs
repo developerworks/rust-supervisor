@@ -39,8 +39,8 @@ pub struct DashboardIpcService {
     journal: EventJournal,
     /// Optional runtime control handle.
     handle: Option<SupervisorHandle>,
-    /// Monotonic payload generation.
-    snapshot_generation: u64,
+    /// Monotonic state generation.
+    state_generation: u64,
 }
 
 impl DashboardIpcService {
@@ -49,7 +49,7 @@ impl DashboardIpcService {
     /// # Arguments
     ///
     /// - `config`: Validated target-side IPC configuration.
-    /// - `spec`: Supervisor declaration used for topology snapshots.
+    /// - `spec`: Supervisor declaration used for topology state.
     /// - `state`: Current supervisor state.
     /// - `journal`: Recent event journal.
     ///
@@ -68,7 +68,7 @@ impl DashboardIpcService {
             state,
             journal,
             handle: None,
-            snapshot_generation: 1,
+            state_generation: 1,
         }
     }
 
@@ -184,7 +184,7 @@ impl DashboardIpcService {
                     .as_ref()
                     .map(|registration| registration.authorization_scope.clone())
                     .unwrap_or_default(),
-                snapshot_generation: self.snapshot_generation,
+                state_generation: self.state_generation,
                 recent_limit: 128,
             },
             &self.spec,

@@ -20,13 +20,13 @@ To execute(执行方式): `/speckit.git.commit`
 | Requirement Key(需求键) | Has Task?(是否有任务) | Task IDs(任务标识) | Notes(说明) |
 |----|----|----|----|
 | FR-001 | Yes(是) | T001, T008, T015, T016 | 覆盖 IPC path(进程间通信路径) 配置, schema(模式) 和语义校验. |
-| FR-002 | Yes(是) | T001, T027, T030, T031, T032 | 覆盖目标侧 IPC(进程间通信) 读取和 snapshot(快照) 读取. |
+| FR-002 | Yes(是) | T001, T027, T030, T031, T032 | 覆盖目标侧 IPC(进程间通信) 读取和 state(状态) 读取. |
 | FR-003 | Yes(是) | T053 | 覆盖目标进程 IPC(进程间通信) 外网不可达和 relay(中继) 边界. |
 | FR-004 | Yes(是) | T019, T023, T024, T069 | 覆盖 dynamic registration(动态注册), registry(注册表) 和示例配置. |
 | FR-005 | Yes(是) | T019, T023, T033 | 覆盖多目标状态维护和可见目标过滤. |
 | FR-006 | Yes(是) | T020, T034, T053 | 覆盖 control session(控制会话) 建立顺序和 IPC(进程间通信) 触发边界. |
 | FR-007 | Yes(是) | T001, T020, T041, T045, T046 | 覆盖 session(会话) 触发后的事件日志主动推送. |
-| FR-008 | Yes(是) | T001, T009, T027, T030 | 覆盖 snapshot(快照) 字段和生成逻辑. |
+| FR-008 | Yes(是) | T001, T009, T027, T030 | 覆盖 state(状态) 字段和生成逻辑. |
 | FR-009 | Yes(是) | T009, T027, T030, T038 | 覆盖 supervisor topology(监督拓扑) 数据和 UI(用户界面) 渲染. |
 | FR-010 | Yes(是) | T009, T027, T030, T039 | 覆盖 runtime state(运行时状态) 字段和节点详情. |
 | FR-011 | Yes(是) | T001, T009, T041, T044, T047, T049 | 覆盖 event stream(事件流), sequence(序号) 和关联字段. |
@@ -46,7 +46,7 @@ To execute(执行方式): `/speckit.git.commit`
 | FR-025 | Yes(是) | T008, T010, T011, T012, T013, T014, T067 | 覆盖当前仓库目标侧 IPC(进程间通信) 和共享协议契约. |
 | FR-026 | Yes(是) | T019, T021, T023, T024, T069 | 覆盖注册拒绝规则, 配置校验和示例配置. |
 | FR-027 | Yes(是) | T004, T005, T006, T026, T037, T038, T039, T050, T051, T061, T062, T066, T070 | 覆盖 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) 和 React(网页界面库) 排除验证. |
-| SC-001 | Yes(是) | T027, T064 | 覆盖 2 秒首包和 100% child task(子任务) snapshot(快照) 覆盖. |
+| SC-001 | Yes(是) | T027, T064 | 覆盖 2 秒首包和 100% child task(子任务) state(状态) 覆盖. |
 | SC-002 | Yes(是) | T027, T064 | 覆盖 5 个目标进程和 200 个 child task(子任务) 首次展示. |
 | SC-003 | Yes(是) | T066 | 覆盖 30 秒定位 failed(失败), quarantined(隔离) 或 restarting(重启中) 子任务. |
 | SC-004 | Yes(是) | T054, T058 | 覆盖控制命令 audit event(审计事件). |

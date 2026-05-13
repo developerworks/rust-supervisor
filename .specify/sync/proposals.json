@@ -1,12 +1,13 @@
 {
-  "generated": "2026-05-08T00:36:41+08:00",
+  "generated": "2026-05-12T02:06:13+08:00",
+  "mode": "interactive",
   "based_on": {
-    "drift_report_generated": "2026-05-08T00:34:25+08:00",
+    "drift_report_generated": "2026-05-12T02:03:03+08:00",
     "path": ".specify/sync/drift-report.json"
   },
   "summary": {
-    "backfill": 2,
-    "align": 0,
+    "backfill": 0,
+    "align": 2,
     "human_decision": 0,
     "new_specs": 1,
     "remove_from_spec": 0
@@ -14,74 +15,115 @@
   "proposals": [
     {
       "id": "P001",
-      "target": "001-create-supervisor-core/FR-063",
-      "direction": "BACKFILL",
+      "target": "003-supervisor-dashboard/SC-003",
+      "direction": "ALIGN",
       "confidence": "HIGH",
       "current_state": {
-        "spec_says": "系统代码命名不得使用任何 *Snapshot 或 *View 后缀, 也不得提供 snapshot() 查询方法.",
-        "code_does": "Before apply, src/dashboard/model.rs defined the old dashboard payload type and src/dashboard/ipc_server.rs exposed the old dashboard query method."
+        "spec_says": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 必须使用包含 5 个目标进程, 200 个 child task, failed, quarantined 和 restarting 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内定位到指定异常 child task 及其最近事件.",
+        "code_does": "当前 dashboard-performance.spec.ts 只执行 1 次定位流程, src/mock/dashboardData.ts 只有 3 个 target process 和少量 child task, T066 仍是未完成状态.",
+        "evidence": [
+          "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:3",
+          "/Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts:149",
+          "specs/003-supervisor-dashboard/tasks.md:143"
+        ]
       },
       "proposed_resolution": {
-        "type": "spec_update",
-        "new_text": "- **FR-063**: 系统核心状态和配置命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得在 `SupervisorHandle`(监督器句柄), runtime(运行时), state(状态) 或 config(配置) 查询接口提供 `snapshot()` 方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). 后续 dashboard(看板) 规格明确拥有的 IPC(进程间通信) 或 UI(用户界面) 协议对象可以使用 `snapshot(快照)` 术语, 但该术语不得替代核心状态查询契约."
+        "type": "test_and_fixture_alignment",
+        "keep_spec": true,
+        "steps": [
+          "在 /Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts 或测试专用 fixture 中生成固定数据集: 5 个 target process, 总计 200 个 child task, 且至少包含 failed, quarantined 和 restarting 节点及对应 recent event.",
+          "在 /Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 中把单次定位流程改为 20 次固定用例定位流程.",
+          "每次定位都必须从 dashboard 找到指定异常 child task, 再验证节点详情或事件区域包含最近事件.",
+          "测试必须记录成功次数, 并要求 20 次中至少 19 次在 30 秒内完成.",
+          "T066 只有在该测试实现并通过后才能重新标记为完成."
+        ]
       },
-      "rationale": "003 是后续规格, 明确要求 dashboard snapshot 协议对象和首包语义. 当前代码有测试覆盖并且 dashboard Cargo 测试通过.",
+      "rationale": "SC-003 是刚收紧的可执行验收口径, 其目的是替代主观的用户成功率表达. 现有代码只覆盖一次页面可见性检查, 不能证明 5 个目标进程和 200 个子任务规模下的 20 次定位成功率. 因此应该让实现和测试追上规格, 而不是降低规格.",
+      "action": "approved",
       "approved": true,
-      "applied_at": "2026-05-08T00:46:58+08:00",
-      "superseded_by": "P002",
-      "superseded_at": "2026-05-08T00:52:04+08:00",
-      "action": "applied_then_superseded"
+      "approved_at": "2026-05-12T02:16:52+08:00",
+      "applied": false
     },
     {
       "id": "P002",
-      "target": "001-create-supervisor-core/SC-031",
-      "direction": "BACKFILL",
+      "target": "003-supervisor-dashboard/SC-012",
+      "direction": "ALIGN",
       "confidence": "HIGH",
       "current_state": {
-        "spec_says": "naming check 必须证明源码, 示例, 公开契约和文档中不存在任何 *Snapshot, *View, snapshot() 查询方法或 state_view 模块名.",
-        "code_does": "Before apply, src/tests/naming_contract_test.rs skipped dashboard sources while dashboard protocol code used the old dashboard payload type and query method."
-      },
-      "proposed_resolution": {
-        "type": "spec_update",
-        "new_text": "- **SC-031**: naming check(命名检查) 必须证明全仓源码, 示例, 公开契约和文档中不存在任何 `*Snapshot`, `*View`, `snapshot()` 查询方法或 `state_view` 模块名, 并且统一使用 `ConfigState`(配置状态), `SupervisorState`(监督器状态), `ChildState`(子任务状态), `current_state`(当前状态) 和 `state`(状态). 检查不得跳过 dashboard(看板), IPC(进程间通信) 或 UI(用户界面) 协议边界.",
-        "acceptance_scenarios": [
-          "Given(假设) 维护者在任意仓库源码, 示例, 公开契约或文档中新增 *Snapshot, *View, snapshot() 或 state_view, When(当) naming check(命名检查) 运行, Then(则) 检查必须失败.",
-          "Given(假设) dashboard(看板), IPC(进程间通信) 或 UI(用户界面) 协议需要表达 snapshot(快照) 语义, When(当) 命名和检查运行, Then(则) 它必须使用不带 *Snapshot 或 *View 的替代命名, 并且不得跳过该协议边界."
+        "spec_says": "dashboard client 交付物中 Vue, shadcn-vue 和 Tailwind 基线必须可验证, React runtime dependency 和 React component file 数量必须为 0.",
+        "code_does": "package.json 实际没有 React 依赖, src 下也没有 .tsx 或 .jsx 文件, 但 dashboard-performance.spec.ts 只断言 window.__RUST_SUPERVISOR_UI_BASELINE__, 没有把 React 依赖和组件文件数量写成自动验证.",
+        "evidence": [
+          "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:11",
+          "/Users/0x00/Documents/rust-supervisor-ui/package.json:14",
+          "specs/003-supervisor-dashboard/tasks.md:143"
         ]
       },
-      "rationale": "用户明确要求全仓禁止 *Snapshot 和 *View, 因此本次应用不采用原 proposal 中的 dashboard 例外, 并同步覆盖 Proposal 1 中已经写入的例外口径.",
+      "proposed_resolution": {
+        "type": "test_alignment",
+        "keep_spec": true,
+        "steps": [
+          "在 /Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 中保留 Vue, shadcn-vue 和 Tailwind baseline 断言.",
+          "在同一个测试或一个新的 Vitest 测试中读取 package.json, 验证 dependencies 中 react, react-dom 和其它 React runtime dependency 数量为 0.",
+          "扫描 /Users/0x00/Documents/rust-supervisor-ui/src/, 验证 .tsx 和 .jsx component file 数量为 0.",
+          "如果要检查 dev dependency, 可以把 @vitejs/plugin-react 也列为拒绝项, 但不得把非运行时开发工具误判为 runtime dependency.",
+          "T066 只有在这些断言进入自动测试并通过后才能重新标记为完成."
+        ]
+      },
+      "rationale": "代码当前看起来符合 SC-012 的结果要求, 但规格要求的是可验证交付物. 缺口不是产品行为错误, 而是 proof 缺失. 正确处置是补测试, 不是修改规格.",
+      "action": "approved",
       "approved": true,
-      "applied_at": "2026-05-08T00:52:04+08:00",
-      "action": "applied_with_modification"
+      "approved_at": "2026-05-12T02:18:57+08:00",
+      "applied": false
     },
     {
-      "id": "P009",
-      "target": "005-spec-sync-tooling",
+      "id": "P003",
+      "target": "004-spec-sync-tooling",
       "direction": "NEW_SPEC",
       "confidence": "MEDIUM",
       "feature": {
         "name": "Spec Kit sync extension 本地命令和技能资产",
-        "location": ".specify/extensions/sync/; .agents/skills/speckit-sync-analyze/SKILL.md"
+        "location": ".specify/extensions/sync/; .agents/skills/speckit-sync-*",
+        "lines": 2554
+      },
+      "current_state": {
+        "code_does": ".specify/extensions/sync/ 和 .agents/skills/speckit-sync-* 已经提供 analyze, propose, apply, backfill 和 conflicts 相关本地资产.",
+        "spec_says": "当前 specs/ 中没有对应产品规格覆盖这些本地工具资产."
       },
       "draft_spec": {
+        "id": "004-spec-sync-tooling",
         "title": "Spec Kit 同步扩展工具",
         "user_stories": [
-          "维护者需要在本地 Spec Kit 工作区运行 sync analyze, 读取规格, 源码, 测试和设计文档, 并生成 Markdown 和 JSON 漂移报告.",
-          "维护者需要在 drift report 基础上生成 backfill, align, human decision 和 new spec 提案.",
-          "维护者需要通过 sync-config.yml 控制 ignore pattern, design doc pattern, artifact directory, history retention 和默认提案策略."
+          "维护者需要在本地 Spec Kit 工作区运行 sync analyze, 读取 specs/*/spec.md, 源码, 测试和设计文档, 并生成 Markdown 和 JSON drift report.",
+          "维护者需要在已有 drift report 基础上生成 backfill, align, human decision 和 new spec proposal, 并把提案保存为可审查文件.",
+          "维护者需要只应用已经批准的 proposal, 并在修改规格或代码前创建 backup, 在完成后写入 apply report."
         ],
         "requirements": [
           "FR-001: 系统必须提供 speckit-sync-analyze, speckit-sync-propose, speckit-sync-apply, speckit-sync-backfill 和 speckit-sync-conflicts 本地技能或命令入口.",
-          "FR-002: 系统必须读取 .specify/extensions/sync/sync-config.yml, 并支持 ignore_patterns, design_doc_patterns, default_strategy, artifacts_dir, keep_history 和 history_limit.",
+          "FR-002: 系统必须读取 .specify/extensions/sync/sync-config.yml, 并支持 analysis design doc pattern, ignore pattern, artifact directory, history retention 和 default strategy.",
           "FR-003: sync analyze 必须输出 .specify/sync/drift-report.md 和 .specify/sync/drift-report.json.",
-          "FR-004: sync propose 必须输出 .specify/sync/proposals.md 和 .specify/sync/proposals.json.",
-          "FR-005: analyze 和 propose 必须保持 read-only 实现行为, 除写入同步产物外不得修改规格或源码.",
-          "FR-006: apply 只能执行已批准的提案, 并且必须保留变更摘要和验证证据.",
+          "FR-004: sync propose 必须输出 .specify/sync/proposals.md 和 .specify/sync/proposals.json, 并记录 proposal id, target, direction, confidence, rationale 和 action.",
+          "FR-005: sync apply 只能执行已批准 proposal, 必须在修改规格前创建 backup, 并写入 .specify/sync/apply-report.md 和 .specify/sync/apply-report.json.",
+          "FR-006: 所有命令必须遵守 ignore pattern, 默认排除 node_modules, target, dist, backup 和 generated artifact.",
           "FR-007: 本扩展不得提供 compatibility export, 历史命令别名或旧规格别名."
+        ],
+        "success_criteria": [
+          "SC-001: 给定存在 drifted requirement 的报告, 当运行 sync propose, 则系统必须生成包含 proposal id, target, direction, confidence, action 和 rationale 的 Markdown 与 JSON 文件.",
+          "SC-002: 给定存在 unspecced feature 的报告, 当运行 sync propose, 则系统必须生成 new spec 草案, 并保持 pending 状态.",
+          "SC-003: 给定没有 approved action, 当运行 sync apply, 则系统不得修改规格或代码, 并必须写入 no-op apply report."
         ]
       },
-      "rationale": "当前 sync extension 文件存在但没有产品规格覆盖. 如果它属于项目工具链, 新规格可以避免持续被判定为 unspecced code.",
-      "action": "pending"
+      "rationale": "这是 drift report 中唯一无规格代码项. 如果这些 sync 资产属于项目交付能力, 应创建 004-spec-sync-tooling; 如果它们只是本地开发工具, 应在 sync config 或漂移报告规则中明确排除.",
+      "action": "approved_create_spec",
+      "approved": true,
+      "approved_at": "2026-05-12T02:21:08+08:00",
+      "applied": true,
+      "applied_at": "2026-05-12T02:21:08+08:00",
+      "created_spec": "specs/004-spec-sync-tooling/spec.md",
+      "apply_result": {
+        "type": "new_spec",
+        "status": "created",
+        "path": "specs/004-spec-sync-tooling/spec.md"
+      }
     }
   ]
 }

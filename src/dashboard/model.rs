@@ -90,8 +90,8 @@ pub struct DashboardState {
     pub config_version: String,
     /// Generated time as Unix nanoseconds.
     pub generated_at_unix_nanos: u128,
-    /// Monotonic payload generation for this target.
-    pub snapshot_generation: u64,
+    /// Monotonic state generation for this target.
+    pub state_generation: u64,
 }
 
 /// Supervisor graph for dashboard rendering.

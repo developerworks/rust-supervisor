@@ -2,7 +2,7 @@
 
 ## Workspace Ownership(工作区所有权)
 
-- `/Users/0x00/Documents/rust-supervisor`: 拥有目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, snapshot(快照), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求) 和 ControlCommandResult(控制命令结果) 的共享契约.
+- `/Users/0x00/Documents/rust-supervisor`: 拥有目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, state(状态), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求) 和 ControlCommandResult(控制命令结果) 的共享契约.
 - `/Users/0x00/Documents/rust-supervisor-relay`: 拥有 DashboardSession(看板会话), RemoteIdentity(远程身份), TargetProcessRegistration(目标进程注册), TargetProcessRegistry(目标进程注册表), TargetProcessConnection(目标进程连接), relay(中继) 配置, audit event(审计事件) 和 `wss://` 分发状态.
 - `/Users/0x00/Documents/rust-supervisor-ui`: 拥有 dashboard client(看板客户端) 的 Vue(网页界面框架) 界面状态, shadcn-vue(组件库) 组件展示, Tailwind(样式框架) 样式令牌和浏览器交互模型. 它只消费 relay(中继) 通过 `wss://` 暴露的契约, 不直接访问目标进程 IPC(进程间通信).
 
@@ -16,7 +16,7 @@
 - `authorization_scopes`: 授权范围集合, 决定可见 target process(目标进程) 和可执行命令.
 - `connection_state`: `handshaking`, `established`, `closing`, `closed`.
 - `control_state`: `not_established`, `established`, `revoked`.
-- `last_sync`: 每个 target process(目标进程) 的最近 sequence(序号) 和 snapshot generation(快照代次).
+- `last_sync`: 每个 target process(目标进程) 的最近 sequence(序号) 和 state generation(快照代次).
 - `created_at` 和 `last_seen_at`: 会话时间.
 
 **Validation(校验)**: 没有有效 RemoteIdentity(远程身份) 时不得进入 `established`. `control_state` 未建立时不得触发 IPC(进程间通信) 连接或命令转发.
@@ -87,7 +87,7 @@
 - `ipc_path`: IPC path(进程间通信路径).
 - `state`: `registered`, `disconnected`, `connecting`, `connected`, `reconnecting`, `unavailable`, `expired`.
 - `last_error`: 最近结构化错误.
-- `last_snapshot_generation`: 最近 snapshot(快照) 代次.
+- `last_state_generation`: 最近 state(状态) 代次.
 - `last_sequence`: 最近接收 sequence(序号).
 - `connected_at` 和 `updated_at`: 连接时间.
 
@@ -97,7 +97,7 @@
 - `connecting -> connected`: IPC(进程间通信) 握手成功.
 - `connecting -> unavailable`: path(路径) 不存在, 权限不足或握手失败.
 - `connected -> reconnecting`: 读写失败或目标进程关闭连接.
-- `reconnecting -> connected`: 重连成功并接收新 snapshot(快照).
+- `reconnecting -> connected`: 重连成功并接收新 state(状态).
 - `reconnecting -> unavailable`: 重连预算耗尽或超过 10 秒诊断阈值.
 - `registered -> expired`: 注册租约过期或心跳中断.
 - `connected -> expired`: 注册租约过期, 连接必须降级并停止继续推送.
@@ -116,9 +116,9 @@
 - `dropped_log_count`: 丢弃日志数量.
 - `config_version`: 配置版本.
 - `generated_at`: 生成时间.
-- `snapshot_generation`: 单调增长快照代次.
+- `state_generation`: 单调增长快照代次.
 
-**Validation(校验)**: 每个 child task(子任务) 必须在 topology(监督拓扑) 和 runtime_state(运行时状态) 中可关联. `generated_at` 必须存在. `snapshot_generation` 在同一目标进程内单调增长.
+**Validation(校验)**: 每个 child task(子任务) 必须在 topology(监督拓扑) 和 runtime_state(运行时状态) 中可关联. `generated_at` 必须存在. `state_generation` 在同一目标进程内单调增长.
 
 ## SupervisorTopology(监督拓扑)
 

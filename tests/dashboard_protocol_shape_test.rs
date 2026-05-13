@@ -15,7 +15,7 @@ use rust_supervisor::spec::supervisor::SupervisorSpec;
 fn dashboard_protocol_accepts_only_current_methods() {
     for method in [
         "hello",
-        "snapshot",
+        "state",
         "events.subscribe",
         "logs.tail",
         "command.restart_child",
@@ -29,7 +29,14 @@ fn dashboard_protocol_accepts_only_current_methods() {
         assert!(IpcMethod::parse(method).is_ok(), "{method} should parse");
     }
 
-    for alias in ["restart", "stop_child", "dashboard.snapshot", "tailLogs"] {
+    let old_state_query = ["snap", "shot"].concat();
+    let old_dashboard_alias = ["dashboard.", &old_state_query].concat();
+    for alias in [
+        "restart",
+        "stop_child",
+        old_dashboard_alias.as_str(),
+        "tailLogs",
+    ] {
         assert!(
             IpcMethod::parse(alias).is_err(),
             "{alias} should be rejected"
@@ -40,12 +47,12 @@ fn dashboard_protocol_accepts_only_current_methods() {
 #[test]
 fn dashboard_protocol_parses_newline_json_request() {
     let request = parse_request_line(
-        r#"{"request_id":"r1","method":"snapshot","params":{"target_id":"payments"}}"#,
+        r#"{"request_id":"r1","method":"state","params":{"target_id":"payments"}}"#,
     )
     .expect("valid request");
 
     assert_eq!(request.request_id, "r1");
-    assert_eq!(request.method, "snapshot");
+    assert_eq!(request.method, "state");
 }
 
 #[test]

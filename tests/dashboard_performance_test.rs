@@ -24,18 +24,18 @@ fn large_spec(count: usize) -> SupervisorSpec {
 }
 
 #[test]
-fn dashboard_snapshot_builds_two_hundred_children_quickly() {
+fn dashboard_state_builds_two_hundred_children_quickly() {
     let spec = large_spec(200);
     let state = declared_state_from_spec(&spec);
     let journal = EventJournal::new(256);
     let started = Instant::now();
 
-    let snapshot = build_dashboard_state(
+    let state = build_dashboard_state(
         DashboardStateInput {
             target_id: "payments".to_owned(),
             display_name: "payments".to_owned(),
             authorization_scope: "payments:operate".to_owned(),
-            snapshot_generation: 1,
+            state_generation: 1,
             recent_limit: 128,
         },
         &spec,
@@ -43,6 +43,6 @@ fn dashboard_snapshot_builds_two_hundred_children_quickly() {
         &journal,
     );
 
-    assert_eq!(snapshot.runtime_state.len(), 200);
+    assert_eq!(state.runtime_state.len(), 200);
     assert!(started.elapsed() < Duration::from_secs(5));
 }

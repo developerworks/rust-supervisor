@@ -20,17 +20,17 @@ fn sample_spec() -> SupervisorSpec {
 }
 
 #[test]
-fn dashboard_snapshot_contains_topology_and_runtime_state() {
+fn dashboard_state_contains_topology_and_runtime_state() {
     let spec = sample_spec();
     let state = declared_state_from_spec(&spec);
     let journal = EventJournal::new(16);
 
-    let snapshot = build_dashboard_state(
+    let state = build_dashboard_state(
         DashboardStateInput {
             target_id: "payments-worker-a".to_owned(),
             display_name: "payments worker a".to_owned(),
             authorization_scope: "payments:operate".to_owned(),
-            snapshot_generation: 1,
+            state_generation: 1,
             recent_limit: 16,
         },
         &spec,
@@ -38,8 +38,8 @@ fn dashboard_snapshot_contains_topology_and_runtime_state() {
         &journal,
     );
 
-    assert_eq!(snapshot.target.target_id, "payments-worker-a");
-    assert_eq!(snapshot.topology.nodes.len(), 2);
-    assert_eq!(snapshot.runtime_state.len(), 1);
-    assert_eq!(snapshot.snapshot_generation, 1);
+    assert_eq!(state.target.target_id, "payments-worker-a");
+    assert_eq!(state.topology.nodes.len(), 2);
+    assert_eq!(state.runtime_state.len(), 1);
+    assert_eq!(state.state_generation, 1);
 }

@@ -28,13 +28,13 @@
 
 **Rationale(理由)**: 规格要求事件和日志由目标进程主动发送, 但主动推送必须由远程客户端完成 control session(控制会话) 后触发. 目标进程完成 dynamic registration(动态注册) 后只进入可见目标列表, 不因为注册本身开始事件日志推送. 当已认证客户端建立 control session(控制会话) 并选择可见目标后, relay(中继) 才连接目标进程 IPC(进程间通信), 建立 subscription(订阅), 请求 recent event(最近事件), 然后目标进程把新的 SupervisorEvent(监督器事件), LogRecord(日志记录) 和 availability change(可用状态变化) 写入同一连接. 每个 target process(目标进程) 内 sequence(序号) 必须单调展示.
 
-**Alternatives considered(备选方案)**: 注册后立即推送被拒绝, 因为它会让没有客户端会话的目标进程产生不必要连接和日志流. relay(中继) polling(轮询) snapshot(快照) 被拒绝, 因为它无法满足主动推送和顺序要求. 只推送文本事件被拒绝, 因为 dashboard(看板) 需要按 target identity(目标身份), child task(子任务), severity(严重程度), sequence(序号) 和 correlation id(关联标识) 过滤.
+**Alternatives considered(备选方案)**: 注册后立即推送被拒绝, 因为它会让没有客户端会话的目标进程产生不必要连接和日志流. relay(中继) polling(轮询) state(状态) 被拒绝, 因为它无法满足主动推送和顺序要求. 只推送文本事件被拒绝, 因为 dashboard(看板) 需要按 target identity(目标身份), child task(子任务), severity(严重程度), sequence(序号) 和 correlation id(关联标识) 过滤.
 
-## Decision(决定): snapshot(快照) 使用单一 typed model(类型化模型)
+## Decision(决定): state(状态) 使用单一 typed model(类型化模型)
 
 **Rationale(理由)**: DashboardState(看板状态) 聚合 target process identity(目标进程身份), SupervisorTopology(监督拓扑), RuntimeState(运行时状态), recent events(最近事件), recent logs(最近日志), dropped count(丢弃数量), config version(配置版本) 和 generated time(生成时间). 该模型同时用于 IPC(进程间通信) response(响应), `wss://` message(消息) 和 dashboard(看板) 前端 TypeScript(类型脚本语言) 类型生成或手工同步, 并由 Vue(网页界面框架) 状态层消费.
 
-**Alternatives considered(备选方案)**: 分散多个接口被拒绝, 因为重连必须获得新的完整 snapshot(快照). 让前端自行拼接监督树被拒绝, 因为操作者不能手工拼接状态.
+**Alternatives considered(备选方案)**: 分散多个接口被拒绝, 因为重连必须获得新的完整 state(状态). 让前端自行拼接监督树被拒绝, 因为操作者不能手工拼接状态.
 
 ## Decision(决定): dashboard client(看板客户端) 放在独立 UI(用户界面) 目录
 

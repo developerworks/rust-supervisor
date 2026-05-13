@@ -38,7 +38,7 @@
 ## Server messages(服务端消息)
 
 ```json
-{ "type": "snapshot", "target_id": "payments-worker-a", "snapshot": {} }
+{ "type": "state", "target_id": "payments-worker-a", "state": {} }
 { "type": "event", "target_id": "payments-worker-a", "event": {} }
 { "type": "log", "target_id": "payments-worker-a", "log": {} }
 { "type": "state_delta", "target_id": "payments-worker-a", "delta": {} }
@@ -48,10 +48,10 @@
 
 ### Ordering rules(顺序规则)
 
-- `session_established` 必须早于 `snapshot`, `event`, `log`, `state_delta`, `command_result` 和 `error`.
+- `session_established` 必须早于 `state`, `event`, `log`, `state_delta`, `command_result` 和 `error`.
 - `session_established` 发送后, relay(中继) 才能按授权目标触发 IPC(进程间通信) 绑定和 event/log subscription(事件日志订阅).
 - 同一 target process(目标进程) 内的 `event.sequence` 必须按单调顺序发送给 dashboard(看板).
-- IPC(进程间通信) 重连成功后, relay(中继) 必须先发送新的 `snapshot`, 再继续发送新的 event(事件) 和 log(日志).
+- IPC(进程间通信) 重连成功后, relay(中继) 必须先发送新的 `state`, 再继续发送新的 event(事件) 和 log(日志).
 
 ## Client command(客户端命令)
 

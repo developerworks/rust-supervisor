@@ -27,7 +27,7 @@ ipc:
 
 ## Protocol(协议)
 
-target IPC(目标进程进程间通信) 使用 newline-delimited JSON(按行分隔的 JSON 数据). 支持的 method(方法) 是 `hello`, `snapshot`, `events.subscribe`, `logs.tail`, `command.restart_child`, `command.pause_child`, `command.resume_child`, `command.quarantine_child`, `command.remove_child`, `command.add_child` 和 `command.shutdown_tree`.
+target IPC(目标进程进程间通信) 使用 newline-delimited JSON(按行分隔的 JSON 数据). 支持的 method(方法) 是 `hello`, `state`, `events.subscribe`, `logs.tail`, `command.restart_child`, `command.pause_child`, `command.resume_child`, `command.quarantine_child`, `command.remove_child`, `command.add_child` 和 `command.shutdown_tree`.
 
 旧协议 alias(别名) 和历史 control command alias(控制命令别名) 会返回 `unsupported_method`.
 
@@ -39,6 +39,6 @@ dynamic registration(动态注册) 只把 target process(目标进程) 放入 re
 
 ```bash
 cargo fmt --check
-cargo test --test dashboard_config_test --test dashboard_protocol_shape_test --test dashboard_snapshot_test --test dashboard_stream_test --test dashboard_performance_test
+cargo test --test dashboard_config_test --test dashboard_protocol_shape_test --test dashboard_state_test --test dashboard_stream_test --test dashboard_performance_test
 cargo test
 ```

@@ -66,7 +66,7 @@ impl IpcMethod {
     pub fn parse(method: &str) -> Result<Self, DashboardError> {
         match method {
             "hello" => Ok(Self::Hello),
-            "snapshot" => Ok(Self::CurrentState),
+            "state" => Ok(Self::CurrentState),
             "events.subscribe" => Ok(Self::EventsSubscribe),
             "logs.tail" => Ok(Self::LogsTail),
             "command.restart_child" => Ok(Self::CommandRestartChild),
@@ -92,7 +92,7 @@ impl IpcMethod {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Hello => "hello",
-            Self::CurrentState => "snapshot",
+            Self::CurrentState => "state",
             Self::EventsSubscribe => "events.subscribe",
             Self::LogsTail => "logs.tail",
             Self::CommandRestartChild => "command.restart_child",
@@ -118,12 +118,10 @@ pub enum IpcResult {
         registration: TargetProcessRegistration,
     },
     /// Full target dashboard state.
-    #[serde(rename = "snapshot")]
     State {
         /// Target process identifier.
         target_id: String,
         /// Dashboard state payload.
-        #[serde(rename = "snapshot")]
         state: Box<DashboardState>,
     },
     /// Subscription acceptance.
