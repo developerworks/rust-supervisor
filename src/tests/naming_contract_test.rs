@@ -44,7 +44,7 @@ fn source_code_uses_approved_state_names() {
 
     assert!(combined.contains("ConfigState"));
     assert!(combined.contains("SupervisorState"));
-    assert!(combined.contains("ChildState"));
+    assert!(combined.contains("ManagedChildState"));
     assert!(combined.contains("current_state"));
 }
 

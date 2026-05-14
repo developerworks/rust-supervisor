@@ -18,25 +18,25 @@ Interactive cursor(交互游标): **DONE(已完成)** — 最后处置: P007 选
 
 ## Proposals(提案)
 
-### Proposal P001: 004-3-child-slot-control/FR-001, FR-003, SC-001..SC-004
+### Proposal P001: 004-3-child-runtime-state-control/FR-001, FR-003, SC-001..SC-004
 
 **Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
 **Current State(当前状态)**:
-- Spec says(规格说明): runtime(运行时) 必须维护完整 `child slot(子任务槽位)`, 并且当前状态和命令结果必须暴露活动尝试, 停止结果, 心跳, 就绪状态和重启预算.
+- Spec says(规格说明): runtime(运行时) 必须维护完整 `child runtime state(子任务运行状态记录)`, 并且当前状态和命令结果必须暴露活动尝试, 停止结果, 心跳, 就绪状态和重启次数限制.
 - Code does(代码行为): `ActiveChildAttempt(活动子任务尝试)` 只服务 `shutdown pipeline(关闭流水线)`, `current_state(当前状态)` 只返回 `child_count` 和 `shutdown_completed`.
 - Evidence(证据): `src/runtime/shutdown_pipeline.rs:17`, `src/control/command.rs:223`, `src/runtime/control_loop.rs:156`.
 
 **Proposed Resolution(拟议处置)**:
 
-保持规格不变, 在 runtime(运行时) 侧实现通用 `ChildSlot(子任务槽位)`:
+保持规格不变, 在 runtime(运行时) 侧实现通用 `ChildRuntimeState(子任务运行状态记录)`:
 
-- 新增 runtime(运行时) 私有槽位模型, 字段覆盖 spec(声明), `generation(代际)`, `attempt(尝试)`, status(状态), `cancellation_token(取消令牌)`, `abort_handle(中止句柄)`, completion receiver(完成接收端), `last_heartbeat(最后心跳)`, `ready_state(就绪状态)` 和 `restart_budget(重启预算)`.
-- 把 `active_attempts` 的职责收敛到 `ChildSlot(子任务槽位)`, 让 `shutdown pipeline(关闭流水线)` 从槽位读取活动尝试, 而不是拥有另一套事实.
-- 扩展 `ControlState(控制状态)` 或新增公开状态结构, 让 `current_state(当前状态)` 返回每个 child(子任务) 的槽位摘要.
-- 为暂停, 恢复, 隔离, 移除和关闭结果增加槽位最终状态字段.
+- 新增 runtime(运行时) 私有运行状态记录模型, 字段覆盖 spec(声明), `generation(代次)`, `attempt(尝试)`, status(状态), `cancellation_token(取消令牌)`, `abort_handle(中止句柄)`, completion receiver(完成接收端), `last_heartbeat(最后心跳)`, `ready_state(就绪状态)` 和 `restart_limit(重启次数限制)`.
+- 把 `active_attempts` 的职责收敛到 `ChildRuntimeState(子任务运行状态记录)`, 让 `shutdown pipeline(关闭流水线)` 从运行状态记录读取活动尝试, 而不是拥有另一套事实.
+- 扩展 `ControlState(控制状态)` 或新增公开状态结构, 让 `current_state(当前状态)` 返回每个 child(子任务) 的运行状态摘要.
+- 为暂停, 恢复, 隔离, 移除和关闭结果增加运行状态记录最终状态字段.
 
-**Rationale(理由)**: 当前代码已经具备取消令牌和活动尝试句柄, 但是这些状态没有形成统一槽位模型. `004-3` 是后续 `004-4` 的基础, 所以应该让代码追上规格, 不应该降低规格.
+**Rationale(理由)**: 当前代码已经具备取消令牌和活动尝试句柄, 但是这些状态没有形成统一运行状态记录模型. `004-3` 是后续 `004-4` 的基础, 所以应该让代码追上规格, 不应该降低规格.
 
 **Confidence(置信度)**: HIGH(高)
 
@@ -50,7 +50,7 @@ Interactive cursor(交互游标): **DONE(已完成)** — 最后处置: P007 选
 
 ---
 
-### Proposal P002: 004-3-child-slot-control/FR-002
+### Proposal P002: 004-3-child-runtime-state-control/FR-002
 
 **Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
@@ -61,12 +61,12 @@ Interactive cursor(交互游标): **DONE(已完成)** — 最后处置: P007 选
 
 **Proposed Resolution(拟议处置)**:
 
-保持规格不变, 把停止类命令接入真实槽位执行:
+保持规格不变, 把停止类命令接入真实运行状态记录执行:
 
-- `pause_child` 应发送 `cancellation_token(取消令牌)`, 等待活动尝试结束或返回超时原因, 然后把槽位状态置为 paused(已暂停).
-- `quarantine_child` 应发送取消, 停止当前活动尝试, 禁止自动重启, 并返回最终槽位状态.
-- `remove_child` 应停止当前活动尝试, 从控制面状态移除或标记 removed(已移除), 并且后续自动重启不得重新创建该槽位.
-- 重复停止同一槽位时必须返回幂等结果, 不得重复启动新的停止流程.
+- `pause_child` 应发送 `cancellation_token(取消令牌)`, 等待活动尝试结束或返回超时原因, 然后把子任务尝试状态置为 paused(已暂停).
+- `quarantine_child` 应发送取消, 停止当前活动尝试, 禁止自动重启, 并返回最终子任务尝试状态.
+- `remove_child` 应停止当前活动尝试, 从控制面状态移除或标记 removed(已移除), 并且后续自动重启不得重新创建该运行状态记录.
+- 重复停止同一运行状态记录时必须返回幂等结果, 不得重复启动新的停止流程.
 
 **Rationale(理由)**: 当前行为会让 UI(用户界面) 和操作者看到状态已经改变, 但是真实任务可能仍在运行. 这正是 `004-3` 要修正的运行时语义缺口.
 
@@ -87,21 +87,21 @@ Interactive cursor(交互游标): **DONE(已完成)** — 最后处置: P007 选
 **Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
 **Current State(当前状态)**:
-- Spec says(规格说明): `restart_child(重启子任务)` 必须先停止当前活动尝试, 再启动新 `generation(代际)`, 并且旧代际迟到报告不得覆盖新状态.
-- Code does(代码行为): `spawn_child_attempt` 会移除旧活动尝试并 `abort(中止)`, 然后立即启动新活动尝试. `record_child_exit` 不校验 `generation(代际)`.
+- Spec says(规格说明): `restart_child(重启子任务)` 必须先停止当前活动尝试, 再启动新 `generation(代次)`, 并且旧代次迟到报告不得覆盖新状态.
+- Code does(代码行为): `spawn_child_attempt` 会移除旧活动尝试并 `abort(中止)`, 然后立即启动新活动尝试. `record_child_exit` 不校验 `generation(代次)`.
 - Evidence(证据): `src/runtime/control_loop.rs:813`, `src/runtime/control_loop.rs:846`, `src/runtime/control_loop.rs:628`, `src/runtime/control_loop.rs:182`.
 
 **Proposed Resolution(拟议处置)**:
 
-保持规格不变, 在 `004-3` 的 `ChildSlot(子任务槽位)` 基础上实现 `generation fencing(代际隔离)`:
+保持规格不变, 在 `004-3` 的 `ChildRuntimeState(子任务运行状态记录)` 基础上实现 `generation fencing(代次隔离)`:
 
 - `restart_child` 和自动重启都进入同一个 `restart pipeline(重启流水线)`.
-- 重启流程必须先向旧活动尝试发送取消, 在预算内等待完成, 超时后再 `abort(中止)`, 最后启动新 `generation(代际)`.
-- `record_child_exit` 必须携带并校验 `generation(代际)` 和 `attempt(尝试)`.
-- 旧代际迟到报告必须被记录为 `stale report(过期报告)`, 不能覆盖当前槽位.
-- `current_state(当前状态)` 必须暴露当前 `generation(代际)` 和冲突或排队结论.
+- 重启流程必须先向旧活动尝试发送取消, 在预算内等待完成, 超时后再 `abort(中止)`, 最后启动新 `generation(代次)`.
+- `record_child_exit` 必须携带并校验 `generation(代次)` 和 `attempt(尝试)`.
+- 旧代次迟到报告必须被记录为 `stale report(过期报告)`, 不能覆盖当前运行状态记录.
+- `current_state(当前状态)` 必须暴露当前 `generation(代次)` 和冲突或排队结论.
 
-**Rationale(理由)**: 只在映射表里替换句柄不能证明旧任务已经停止. 代际隔离必须在真实任务生命周期, 退出报告, 当前状态和测试中同时成立.
+**Rationale(理由)**: 只在映射表里替换句柄不能证明旧任务已经停止. 代次隔离必须在真实任务生命周期, 退出报告, 当前状态和测试中同时成立.
 
 **Confidence(置信度)**: HIGH(高)
 

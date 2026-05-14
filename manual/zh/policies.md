@@ -8,7 +8,7 @@
 
 `restart_scope` 根据 `SupervisorTree`(监督树), 策略和失败 child id(子任务标识)计算重启范围.
 
-`restart_execution_plan`(重启执行计划函数) 会把 supervisor strategy(监督器策略), `GroupStrategy`(分组策略), `ChildStrategyOverride`(子任务级覆盖), `RestartBudget`(重启预算), `EscalationPolicy`(升级策略) 和 `DynamicSupervisorPolicy`(动态监督器策略) 合并成 `StrategyExecutionPlan`(策略执行计划). child override(子任务级覆盖) 优先于 group strategy(分组策略), group strategy(分组策略) 优先于 supervisor-wide strategy(监督器全局策略).
+`restart_execution_plan`(重启执行计划函数) 会把 supervisor strategy(监督器策略), `GroupStrategy`(分组策略), `ChildStrategyOverride`(子任务级覆盖), `RestartLimit`(重启次数限制), `EscalationPolicy`(升级策略) 和 `DynamicSupervisorPolicy`(动态监督器策略) 合并成 `StrategyExecutionPlan`(策略执行计划). child override(子任务级覆盖) 优先于 group strategy(分组策略), group strategy(分组策略) 优先于 supervisor-wide strategy(监督器全局策略).
 
 runtime control loop(运行时控制循环) 现在会接收 child exit(子任务退出), 并在 policy(策略) 返回重启决策时自动执行选定的 `StrategyExecutionPlan`(策略执行计划). runtime lifecycle event(运行时生命周期事件) 使用 `restart_plan`(重启计划), 让 operator(操作者) 可以看到选中的 strategy(策略), group(分组) 和 child scope(子任务范围).
 
@@ -16,9 +16,9 @@ runtime control loop(运行时控制循环) 现在会接收 child exit(子任务
 
 `GroupStrategy`(分组策略) 使用 child tag(子任务标签) 定义更小的重启范围. 一个 child(子任务) 最多只能属于一个已配置 strategy group(策略分组). `ChildStrategyOverride`(子任务级覆盖) 在单个 child(子任务) 需要比 group(分组) 或 supervisor(监督器) 更严格的重启行为时生效.
 
-## 重启预算和升级策略
+## 重启次数限制和升级策略
 
-`RestartBudget`(重启预算) 记录选中计划的最大重启次数和计数窗口. `EscalationPolicy`(升级策略) 记录重启治理不能停留在本地时的后续动作, 包含 parent escalation(父级升级), tree shutdown(整棵树关闭) 或 scope quarantine(范围隔离).
+`RestartLimit`(重启次数限制) 记录选中计划的最大重启次数和计数窗口. `EscalationPolicy`(升级策略) 记录重启治理不能停留在本地时的后续动作, 包含 parent escalation(父级升级), tree shutdown(整棵树关闭) 或 scope quarantine(范围隔离).
 
 ## 动态监督器策略
 

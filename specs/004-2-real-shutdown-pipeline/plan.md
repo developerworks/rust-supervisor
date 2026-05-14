@@ -26,7 +26,7 @@
 - **Module Ownership(模块所有权)**: 通过. `src/shutdown/` 保留阶段模型, 策略和公开报告类型, `src/runtime/shutdown_pipeline.rs` 拥有真实关闭流水线执行, `src/runtime/control_loop.rs` 只负责接收消息和调用流水线, `src/child_runner/runner.rs` 暴露可取消和可中止的运行句柄.
 - **Supervision Contract(监督契约)**: 通过. 本计划明确停止, 取消, 等待, 超时, 强制中止, 对账和调用者可见结果. `ShutdownTree(关闭监督树)` 返回覆盖每个 child(子任务) 的摘要.
 - **Test Gate(测试关口)**: 通过. `tasks.md` 必须先列关闭取消, 顺序等待, 超时中止和对账测试, 再列实现任务. 最终验证命令写入 `quickstart.md`.
-- **Observable Failures(可观察失败)**: 通过. 关闭失败必须说明 child id(子任务标识), phase(阶段), attempt(尝试), generation(代际) 和 reason(原因). event(事件), metrics(指标) 和 audit(审计) 必须覆盖取消送达, 等待完成, 超时和强制中止.
+- **Observable Failures(可观察失败)**: 通过. 关闭失败必须说明 child id(子任务标识), phase(阶段), attempt(尝试), generation(代次) 和 reason(原因). event(事件), metrics(指标) 和 audit(审计) 必须覆盖取消送达, 等待完成, 超时和强制中止.
 - **Small Increment(小增量)**: 通过. 本功能不新增 crate(库). 新增 `shutdown_pipeline` 模块的理由是任务句柄所有权不能放入 `ShutdownCoordinator(关闭协调器)`.
 - **Chinese Writing(中文写作)**: 通过. 本计划, 派生产物和最终汇报使用中文写作, 英文术语写成 `English(中文说明)`.
 

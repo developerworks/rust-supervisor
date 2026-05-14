@@ -1,6 +1,6 @@
 是的, 你的判断是对的. 004 全部实现后, UI(用户界面) 端会有功能性缺口.
 
-关键点是: 004 新增的是 runtime semantics(运行时语义), 但现有 003 dashboard(看板) 契约只覆盖了比较粗的 `runtime_state`, `recent_events`, `recent_logs`, `shutdown_state`, `generation`, `attempt`, `restart_count`. 它还不能完整表达 004 新增的控制面健康, 真实关闭流水线, 子任务槽位, 代际隔离这些事实.
+关键点是: 004 新增的是 runtime semantics(运行时语义), 但现有 003 dashboard(看板) 契约只覆盖了比较粗的 `runtime_state`, `recent_events`, `recent_logs`, `shutdown_state`, `generation`, `attempt`, `restart_count`. 它还不能完整表达 004 新增的控制面健康, 真实关闭流水线, 子任务槽位, 代次隔离这些事实.
 
 需要和 UI(用户界面) 对齐的观测内容至少有这几组:
 
@@ -47,19 +47,19 @@ UI(用户界面) 需要从“声明状态”升级到“真实运行槽位状态
 - `attempt`
 - `last_heartbeat_at`
 - `readiness`
-- `restart_budget_remaining`
+- `restart_limit_remaining`
 - `cancellation_state`
 - `task_handle_state`
 
 否则 004-3 实现后, 控制命令真的作用到运行任务, 但 UI(用户界面) 仍看不到暂停, 移除, 隔离到底有没有作用到真实任务.
 
-4. generation fencing(代际隔离)
+4. generation fencing(代次隔离)
 
 UI(用户界面) 需要能看出重启冲突和旧代报告被丢弃.
 
 需要字段或事件:
 
-- current generation(当前代数)
+- current generation(当前代次)
 - current active attempt(当前活动尝试)
 - stale report count(过期报告数量)
 - rejected stale report event(拒绝过期报告事件)

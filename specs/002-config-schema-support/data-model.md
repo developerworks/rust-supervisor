@@ -33,9 +33,9 @@
 
 **Fields(字段)**:
 
-- `child_restart_limit`: 子任务 restart budget(重启预算) 限制,必须大于 0。
+- `child_restart_limit`: 子任务 restart limit(重启次数限制) 限制,必须大于 0。
 - `child_restart_window_ms`: 子任务 restart window(重启窗口),必须大于 0。
-- `supervisor_failure_limit`: 监督器 failure budget(失败预算),必须大于 0。
+- `supervisor_failure_limit`: 监督器 failure limit(失败次数限制),必须大于 0。
 - `supervisor_failure_window_ms`: 监督器 failure window(失败窗口),必须大于 0。
 - `initial_backoff_ms`: 初始 backoff(退避),必须大于 0。
 - `max_backoff_ms`: 最大 backoff(退避),必须大于 0。

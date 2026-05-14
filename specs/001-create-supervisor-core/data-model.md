@@ -2,7 +2,7 @@
 
 ## Entity Overview(实体概览)
 
-模型分为 centralized configuration(集中化配置),declarative configuration(声明式配置),runtime state(运行时状态),policy decision(策略决定),control-plane command(控制平面命令),current state(当前状态),lifecycle event(生命周期事件),observability plane(可观测性平面),documentation artifact(文档产物),glossary artifact(词汇表产物),coding standard(编码标准),cognitive complexity budget(认知复杂度预算),maintainability profile(可维护性画像),parallel execution governance(并行执行治理),SBOM artifact(软件物料清单产物) 和 release package(发布包).
+模型分为 centralized configuration(集中化配置),declarative configuration(声明式配置),runtime state(运行时状态),policy decision(策略决定),control-plane command(控制平面命令),current state(当前状态),lifecycle event(生命周期事件),observability plane(可观测性平面),documentation artifact(文档产物),glossary artifact(词汇表产物),coding standard(编码标准),cognitive complexity limit(认知复杂度预算),maintainability profile(可维护性画像),parallel execution governance(并行执行治理),SBOM artifact(软件物料清单产物) 和 release package(发布包).
 
 ## Configuration Entities(配置实体)
 
@@ -52,7 +52,7 @@
 - `default_readiness_policy`: 默认 readiness(就绪) 策略.
 - `default_shutdown_policy`: 默认 four-stage shutdown(四阶段关闭) 策略.
 - `config_version`: 派生该规格的配置版本.
-- `restart_budget`: supervisor-level(监督器级) 默认重启预算,可为空.
+- `restart_limit`: supervisor-level(监督器级) 默认重启次数限制,可为空.
 - `escalation_policy`: supervisor-level(监督器级) 默认升级策略,可为空.
 - `group_strategies`: 基于 child tag(子任务标签) 的 group strategy(分组策略) 集合.
 - `child_strategy_overrides`: 单个 child(子任务) 的 per-child override(子任务级覆盖) 集合.
@@ -191,17 +191,17 @@
 
 - `group`: child tag(子任务标签),用于选择组内 child(子任务).
 - `strategy`: 组内使用的 `SupervisionStrategy`(监督策略).
-- `restart_budget`: 可选 group-level(分组级) 重启预算.
+- `restart_limit`: 可选 group-level(分组级) 重启次数限制.
 - `escalation_policy`: 可选 group-level(分组级) 升级策略.
 
 ### ChildStrategyOverride(子任务级覆盖)
 
 - `child_id`: 被覆盖的 child(子任务).
 - `strategy`: 子任务失败时使用的 `SupervisionStrategy`(监督策略).
-- `restart_budget`: 可选 child-level(子任务级) 重启预算.
+- `restart_limit`: 可选 child-level(子任务级) 重启次数限制.
 - `escalation_policy`: 可选 child-level(子任务级) 升级策略.
 
-### RestartBudget(重启预算)
+### RestartLimit(重启次数限制)
 
 - `max_restarts`: 窗口内最大重启次数.
 - `window`: 统计重启次数的窗口.
@@ -223,7 +223,7 @@
 - `strategy`: 本次执行选中的监督策略.
 - `scope`: 本次要重启的 child id(子任务标识) 列表.
 - `group`: 约束本次计划的 group(分组),可为空.
-- `restart_budget`: 本次计划选中的重启预算,可为空.
+- `restart_limit`: 本次计划选中的重启次数限制,可为空.
 - `escalation_policy`: 本次计划选中的升级策略,可为空.
 - `dynamic_supervisor_enabled`: 本次规格下 dynamic supervisor(动态监督器) 是否启用.
 

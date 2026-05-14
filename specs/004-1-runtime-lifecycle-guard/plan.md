@@ -16,7 +16,7 @@
 **Target Platform(目标平台)**: Linux(操作系统) 和 macOS(操作系统) 上运行的 Rust(编程语言) library(库) 和 supervisor runtime(监督器运行时).
 **Project Type(项目类型)**: Rust(编程语言) single crate(单包) library(库), 核心行为位于 `src/runtime/`, 句柄入口位于 `src/control/`.
 **Performance Goals(性能目标)**: 正常启动后, 健康查询必须立即返回 alive(存活). 控制循环异常退出后, 下一次控制命令发送前必须可以读取 not alive(非存活) 状态. 对同一个已结束运行时重复调用 `join` 10 次, 每次都必须在 1 秒内返回相同最终结果.
-**Constraints(约束)**: 不新增 compatibility exports(兼容导出). 不自动重启控制循环. 不在本规格中实现真实 child task(子任务) 关闭和代际隔离, 这些能力由后续规格处理. 不把运行时控制面生命周期逻辑放入 `src/main.rs`. 所有新增测试必须放在外部测试文件中, 不得写入生产模块的内联测试.
+**Constraints(约束)**: 不新增 compatibility exports(兼容导出). 不自动重启控制循环. 不在本规格中实现真实 child task(子任务) 关闭和代次隔离, 这些能力由后续规格处理. 不把运行时控制面生命周期逻辑放入 `src/main.rs`. 所有新增测试必须放在外部测试文件中, 不得写入生产模块的内联测试.
 **Scale/Scope(规模和范围)**: 本规格只覆盖一个 `SupervisorHandle`(监督器控制句柄) 对应的一个运行时控制面. 同一进程可启动多个 Supervisor(监督器), 每个实例必须拥有独立的生命周期状态和最终退出结果.
 
 ## Constitution Check(宪章检查)

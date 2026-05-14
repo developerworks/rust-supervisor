@@ -4,7 +4,7 @@
 
 本报告建议采用一种 `Tokio-first(以 Tokio 为先)` 的 `Supervisor(监督者)` 架构, 而不是直接照搬完整 `actor framework(参与者框架)` 运行时. 具体做法是: 以 `CancellationToken(取消令牌)` 形成层级取消树, 以 `JoinSet(任务集合)` 负责失败回收与重启判定, 以 `TaskTracker(任务跟踪器)` 或等价等待机制负责优雅关闭, 以 `tracing(结构化诊断)` + `OpenTelemetry(开放遥测)` + `metrics(度量门面)` 作为一等能力内建到控制面. 重启语义应吸收 `Erlang/OTP(容错运行时设计原则)` 的 `one_for_one(单点重启)`, `one_for_all(全集重启)`, `rest_for_one(后续重启)`, `permanent/transient/temporary(永久/瞬态/临时)` 子任务类型, 以及 `restart intensity(重启强度)` 限流思想; 关闭语义应吸收 `tokio-graceful-shutdown` 的子系统树与部分子树关闭能力; 可用性与可读性则应吸收 `supervised` 的显式 `readiness(就绪)` 与分离式 `ServicePolicy(服务策略)`; 动态管理与运行时控制则可吸收 `task-supervisor` 和 `foxtive-supervisor` 的任务注册、健康检查、退避、分组与依赖管理能力。citeturn43view0turn45search1turn45search4turn45search2turn28search1turn28search7turn41search0turn29search1turn12view0turn24view2turn26view0turn9view0turn11view0turn15view0turn7view4turn7view3turn17view0
 
-我的核心结论是: 对工业级 `Rust(系统编程语言)` 服务而言, 最稳妥的路线不是选择单一现成 `crate(软件包)` 作为最终形态, 而是组合成熟原语, 构建一个 `typed supervisor(类型化监督者)` 层. 这个层应把 `生命周期(生命周期)`、`失败域(故障边界)`、`重启预算(重启额度)`、`配置版本(配置版本号)` 与 `When/Where/What(何时/何地/何事)` 观测事件统一建模. 这样既能保持 `Tokio(异步运行时)` 生态兼容性与可读性, 又能避免被 `actor runtime(参与者运行时)` 绑定, 还能把日志、追踪与度量放到同一条控制链路上。citeturn8search11turn28search1turn29search1turn32search0turn32search9turn32search3turn33search16
+我的核心结论是: 对工业级 `Rust(系统编程语言)` 服务而言, 最稳妥的路线不是选择单一现成 `crate(软件包)` 作为最终形态, 而是组合成熟原语, 构建一个 `typed supervisor(类型化监督者)` 层. 这个层应把 `生命周期(生命周期)`、`失败域(故障边界)`、`重启次数限制(重启次数限制)`、`配置版本(配置版本号)` 与 `When/Where/What(何时/何地/何事)` 观测事件统一建模. 这样既能保持 `Tokio(异步运行时)` 生态兼容性与可读性, 又能避免被 `actor runtime(参与者运行时)` 绑定, 还能把日志、追踪与度量放到同一条控制链路上。citeturn8search11turn28search1turn29search1turn32search0turn32search9turn32search3turn33search16
 
 ## 现状评估与 crate 比较
 
@@ -19,7 +19,7 @@
 | `tokio-graceful-shutdown` | `subsystem tree(子系统树)` 关闭编排 | 支持 `SIGINT/SIGTERM/Ctrl+C`, 子系统嵌套, 部分子树关闭, 关闭超时与错误传播, 子系统失败或 panic(恐慌) 触发整体关闭 | 文档重点是 `shutdown(关闭)` 编排; 自动 `restart(重启)` 策略未指定 | 作为关闭与错误汇总层 | citeturn15view0 |
 | `tokio-task-supervisor` | `TaskTracker(任务跟踪器)` 封装 | 在 `tokio_util::task::TaskTracker` 外叠加共享 `CancellationToken(取消令牌)`, 提供协调关闭, `spawn_with_token(携带令牌启动)` 与 `shutdown(关闭)` | `restart(重启)`、监督树、失败策略未指定 | 作为最小关闭内核或嵌入式组件 | citeturn21view0 |
 | `foxtive-supervisor` | 功能丰富的任务监督器 | 自动重启, `panic recovery(恐慌恢复)`, 依赖管理, 运行时增删停启, 任务组, `cron schedule(定时计划)`, `jitter(抖动)`, 限流, 持久化状态, 分层关闭, `tracing(结构化诊断)` 集成 | 功能面很宽, 学习和维护成本更高; `hot reload(热更新)` 当前表述为 `Hot Reload Ready(已为未来支持作准备)` | 作为高级策略与扩展点参考 | citeturn1search17turn7view4turn7view3turn7view5turn7view2 |
-| `ractor-supervisor` | `OTP-style(OTP 风格)` `actor supervision(参与者监督)` | 提供静态、动态、任务三类 `supervisor(监督者)`, 支持 `OneForOne/OneForAll/RestForOne`, `Permanent/Transient/Temporary`, `meltdown(熔断式重启风暴保护)` | 绑定 `ractor(参与者框架)` 模型; 更适合参与者系统而非通用 Tokio 服务 | 作为监督树与重启预算语义来源 | citeturn17view0turn18search1turn18search5 |
+| `ractor-supervisor` | `OTP-style(OTP 风格)` `actor supervision(参与者监督)` | 提供静态、动态、任务三类 `supervisor(监督者)`, 支持 `OneForOne/OneForAll/RestForOne`, `Permanent/Transient/Temporary`, `meltdown(熔断式重启风暴保护)` | 绑定 `ractor(参与者框架)` 模型; 更适合参与者系统而非通用 Tokio 服务 | 作为监督树与重启次数限制语义来源 | citeturn17view0turn18search1turn18search5 |
 | `bastion` | 自带运行时的监督系统 | 支持 `OneForOne/OneForAll/RestForOne`, `Always/Never/Tries`, 线性与指数退避, `backtrace(回溯)` 配置 | 不是 `Tokio-native(原生 Tokio)` 路线, 更像独立运行时; 最近文档版本为 `0.4.5` | 作为历史参照与策略来源, 不宜作为 Tokio-first 终态 | citeturn23view0turn23view1turn23view2turn23view3turn40search3 |
 
 如果把范围再扩大, `supertrees` 也值得关注, 因为它明确声明自己受 `Erlang/OTP(容错运行时设计原则)` 启发, 面向 `Tokio(异步运行时)` 使用, 但其文档同时明确说明自己仍属 `experimental(实验性)` 且不建议直接用于生产, 并且 `monitoring/tracing/distributed messaging(监控/追踪/分布式消息)` 仍然缺失。这个结论反过来说明一个现实: `Rust(系统编程语言)` 生态里对于生产级 `supervision(监督)` 的通用答案仍未完全收敛。citeturn22search4
@@ -46,7 +46,7 @@
 
 ## 推荐架构
 
-推荐架构的核心原则是 `control plane(控制面)` 与 `data plane(数据面)` 分离. `control plane(控制面)` 负责注册、拓扑、配置版本、关闭、重启预算和观测; `data plane(数据面)` 只负责真正业务任务的执行. 这样能显著降低业务代码复杂度, 同时使 `When/Where/What(何时/何地/何事)` 观测成为系统级契约, 而不是“出错时再补日志”的事后行为。这个方向与 `tracing(结构化诊断)` 的设计一致, 因为 `tracing(结构化诊断)` 本身就是为了给异步系统提供带时序与因果上下文的结构化事件流。citeturn32search0turn32search8turn32search11
+推荐架构的核心原则是 `control plane(控制面)` 与 `data plane(数据面)` 分离. `control plane(控制面)` 负责注册、拓扑、配置版本、关闭、重启次数限制和观测; `data plane(数据面)` 只负责真正业务任务的执行. 这样能显著降低业务代码复杂度, 同时使 `When/Where/What(何时/何地/何事)` 观测成为系统级契约, 而不是“出错时再补日志”的事后行为。这个方向与 `tracing(结构化诊断)` 的设计一致, 因为 `tracing(结构化诊断)` 本身就是为了给异步系统提供带时序与因果上下文的结构化事件流。citeturn32search0turn32search8turn32search11
 
 ```mermaid
 flowchart TD
@@ -100,7 +100,7 @@ flowchart TD
 | 拓扑管理 | 全局平铺任务表 | 树形节点注册表 | 树形节点注册表 | 便于实现故障域、依赖顺序与子树关闭 |
 | 取消传播 | 广播式共享令牌 | 父子令牌树 | 父子令牌树 | `CancellationToken(取消令牌)` 已原生支持子令牌, 更贴近监督树 |
 | 失败分类 | 只区分成功/失败 | 完成/错误/恐慌/取消/假死 | 细分类 | 便于 `transient(瞬态)` 与 `temporary(临时)` 语义 |
-| 重启预算 | 全局统一预算 | 节点预算 + 组预算 | 双层预算 | 既防单点抖动, 也防子树级重启风暴 |
+| 重启次数限制 | 全局统一预算 | 节点预算 + 组预算 | 双层预算 | 既防单点抖动, 也防子树级重启风暴 |
 | Readiness(就绪) | 启动即就绪 | 显式标记就绪 | 显式标记, 默认立即就绪 | 吸收 `supervised` 经验, 适合缓存预热、连接建立 |
 | Health(健康检查) | 只拉模式 | 推拉结合 | 推拉结合 | 推模式降低耦合, 拉模式利于探针与诊断 |
 | 热更新 | 直接可变共享状态 | 版本化配置状态 | 版本化配置状态 | 更可测, 与 `ArcSwap(原子 Arc 存储)` 契合 |
@@ -112,13 +112,13 @@ flowchart TD
 | 类型 | 关键字段 | 作用 |
 |---|---|---|
 | `SupervisorBuilder<S>` | `root_state`, `default_policy`, `shutdown_timeout`, `telemetry`, `config_source` | 构建根监督者 |
-| `NodeId` | `path`, `stable_name`, `generation` | 提供稳定路径与代际信息 |
-| `GroupSpec` | `strategy`, `budget`, `children`, `dependencies` | 定义子树失败域 |
+| `NodeId` | `path`, `stable_name`, `generation` | 提供稳定路径与代次信息 |
+| `GroupSpec` | `strategy`, `limit`, `children`, `dependencies` | 定义子树失败域 |
 | `ServiceSpec<S>` | `id`, `kind`, `policy`, `readiness`, `health`, `factory` | 定义单个服务节点 |
 | `ServiceContext<S>` | `state`, `node`, `token`, `readiness`, `event_sink`, `config` | 任务运行时上下文 |
 | `RestartPolicy` | `Never`, `Permanent`, `Transient`, `Temporary`, `Attempts` | 何时重启 |
 | `RestartBackoff` | `base`, `factor`, `max_delay`, `jitter`, `reset_after` | 如何退避 |
-| `FailureBudget` | `max_restarts`, `window`, `escalate_to_parent` | 重启风暴保护 |
+| `FailureLimit` | `max_restarts`, `window`, `escalate_to_parent` | 重启风暴保护 |
 | `ServiceExit` | `Completed`, `Error`, `Panicked`, `Cancelled`, `TimedOut` | 任务出口分类 |
 | `RunSummary` | `started_at`, `ended_at`, `shutdown_cause`, `restarts`, `failures` | 运行摘要与诊断输出 |
 | `ConfigState<C>` | `version`, `loaded_at`, `checksum`, `data` | 热更新配置状态 |
@@ -179,7 +179,7 @@ let supervisor = SupervisorBuilder::new(app_state)
     .shutdown_timeout(Duration::from_secs(30))
     .group("ingest", |g| {
         g.strategy(RestartStrategy::OneForOne)
-            .budget(FailureBudget::new(8, Duration::from_secs(60)))
+            .limit(FailureLimit::new(8, Duration::from_secs(60)))
             .service(DbReplicator::new())
             .service(EventConsumer::new().depends_on("db-replicator"));
     })
@@ -341,7 +341,7 @@ async fn supervise(root: CancellationToken) -> anyhow::Result<()> {
 
 建议测试分成五层:
 
-第一层是 `unit test(单元测试)`. 覆盖 `RestartPolicy(重启策略)`、`FailureBudget(失败预算)`、依赖拓扑排序、配置差异比对、事件编码和标签白名单。时间相关逻辑一律跑在冻结时间上。citeturn42search0turn42search1
+第一层是 `unit test(单元测试)`. 覆盖 `RestartPolicy(重启策略)`、`FailureLimit(失败次数限制)`、依赖拓扑排序、配置差异比对、事件编码和标签白名单。时间相关逻辑一律跑在冻结时间上。citeturn42search0turn42search1
 
 第二层是 `integration test(集成测试)`. 覆盖以下场景: 子任务正常退出是否按 `ServicePolicy(服务策略)` 处理; 子任务返回错误后是否按 `permanent/transient/temporary(永久/瞬态/临时)` 生效; `one_for_all(全集重启)` 与 `rest_for_one(后续重启)` 是否按顺序关闭和重启; `shutdown timeout(关闭超时)` 到期后是否只中止可中止任务; 配置热更新是否按差异触发原地调整或子树滚动替换。策略来源直接对应 OTP 监督原则。citeturn45search1turn45search4turn45search5
 
@@ -356,7 +356,7 @@ async fn supervise(root: CancellationToken) -> anyhow::Result<()> {
 | 场景 | 目标 | 关键指标 |
 |---|---|---|
 | 稳态长驻任务 | 验证常驻任务监督开销 | `cpu_percent`, `memory_per_task`, `running_tasks`, `event_rate` |
-| 高频失败重启 | 验证退避、预算与升级故障 | `restart_latency_p50/p99`, `restart_budget_exhaustions`, `escalations_total` |
+| 高频失败重启 | 验证退避、限制与升级故障 | `restart_latency_p50/p99`, `restart_limit_exhaustions`, `escalations_total` |
 | 关闭风暴 | 验证树形关闭与拖尾中止 | `shutdown_duration`, `shutdown_timeout_count`, `orphan_tasks` |
 | 动态扩缩容 | 验证注册表与控制面性能 | `add/remove_latency`, `registry_lock_contention`, `global_queue_depth` |
 | 观测压力 | 验证日志、追踪、指标开销 | `telemetry_overhead`, `events_dropped_total`, `trace_export_backpressure` |

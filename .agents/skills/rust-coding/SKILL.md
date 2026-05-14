@@ -1,6 +1,6 @@
 ---
 name: rust-coding
-description: Use when working on this Rust project for coding, refactoring, module ownership cleanup, API and architecture decisions, rust-analyzer assisted inspection, Rust service or CLI implementation, documentation updates, recurring-pattern capture, and focused validation. This is a project-local combo skill that coordinates the rust, rust-analyzer-workflows, rust-design-patterns, rust-systems, complete-docs, self-improvement, and write-project-commit skills when relevant.
+description: Use when working on this Rust project for coding, refactoring, module ownership cleanup, API and architecture decisions, rust-analyzer assisted inspection, Rust service or CLI implementation, documentation updates, recurring-pattern capture, and focused validation. This is a project-local combo skill that coordinates the rust, rust-analyzer-workflows, rust-design-patterns, and write-project-commit skills when relevant.
 ---
 
 # Rust Coding
@@ -11,9 +11,6 @@ description: Use when working on this Rust project for coding, refactoring, modu
 - `rust`
 - `rust-analyzer-workflows`
 - `rust-design-patterns`
-- `rust-systems`
-- `complete-docs`
-- `self-improvement`
 - `write-project-commit`
 
 ## 组合技能分派
@@ -91,23 +88,7 @@ description: Use when working on this Rust project for coding, refactoring, modu
 - 如果经典模式在 Rust 里有更轻量的等价写法，优先采用 Rust 惯用法；
 - 如果某个模式只会增加层次和认知负担，要明确建议不要使用。
 
-### 4. Rust 系统与应用代码
-
-涉及以下任务时，使用 `rust-systems`：
-
-- CLI、后台服务、tokio 任务、axum 接口、workspace 组织；
-- `Cargo.toml`、依赖治理、lint、format、测试运行器配置；
-- async（异步）并发、channel（通道）、锁、限流、优雅关闭；
-- 应用层错误处理、可观测性、生产健壮性和系统级验证。
-
-默认规则：
-
-- 应用层和系统层 Rust 代码优先对齐现代工具链与工程实践；
-- 需要讨论运行时、并发模型、workspace 分层、服务边界时，不只停留在语法层；
-- 验证命令按风险递增选择，不把重验证默认塞给所有任务；
-- 遇到系统设计问题时，同时回看 owner、依赖方向和未来拆 crate 边界。
-
-### 5. 文档补齐
+### 4. 文档补齐
 
 涉及以下任务时，使用 `complete-docs`：
 
@@ -128,23 +109,7 @@ description: Use when working on this Rust project for coding, refactoring, modu
 - 能写 doctest 的地方尽量写；
 - 不适合 doctest 时，不写伪示例。
 
-### 6. 复盘与经验沉淀
-
-涉及以下情况时，使用 `self-improvement`：
-
-- 命令、工具或集成异常失败；
-- 用户纠正了事实、流程或约束；
-- 发现了反复出现的坏味道、失误模式或更好的稳定做法；
-- 需要把本次 Rust 工作里的经验沉淀到 `.learnings/`。
-
-默认规则：
-
-- 只记录短摘要，不记录 secrets（密钥）、token（令牌）、私密环境变量或整段敏感输出；
-- 优先记录能减少重复犯错的结论，而不是流水账；
-- 对高复发、跨任务适用的经验，考虑再提升到 `AGENTS.md` 或其它长期记忆；
-- 大任务前如果已有 `.learnings/`，优先先回看相关条目。
-
-### 7. 提交准备
+### 5. 提交准备
 
 只有用户明确要求提交时，才使用 `write-project-commit`。
 

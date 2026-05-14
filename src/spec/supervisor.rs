@@ -33,26 +33,26 @@ pub enum EscalationPolicy {
     QuarantineScope,
 }
 
-/// Restart budget attached to a supervisor, group, or child override.
+/// 绑定到监督器, 分组或子任务覆盖的重启次数限制.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RestartBudget {
-    /// Maximum restarts allowed within the window.
+pub struct RestartLimit {
+    /// 统计窗口内允许的最大重启次数.
     pub max_restarts: u32,
-    /// Time window used to count restarts.
+    /// 用于统计重启次数的时间窗口.
     pub window: Duration,
 }
 
-impl RestartBudget {
-    /// Creates a restart budget.
+impl RestartLimit {
+    /// 创建重启次数限制.
     ///
     /// # Arguments
     ///
-    /// - `max_restarts`: Maximum restart count allowed in the window.
-    /// - `window`: Duration used for the restart count window.
+    /// - `max_restarts`: 统计窗口内允许的最大重启次数.
+    /// - `window`: 用于统计重启次数的时间窗口.
     ///
     /// # Returns
     ///
-    /// Returns a [`RestartBudget`] value.
+    /// 返回 [`RestartLimit`] 值.
     pub fn new(max_restarts: u32, window: Duration) -> Self {
         Self {
             max_restarts,
@@ -68,8 +68,8 @@ pub struct GroupStrategy {
     pub group: String,
     /// Restart strategy applied inside the group.
     pub strategy: SupervisionStrategy,
-    /// Optional restart budget for this group.
-    pub restart_budget: Option<RestartBudget>,
+    /// 该分组可选的重启次数限制.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this group.
     pub escalation_policy: Option<EscalationPolicy>,
 }
@@ -84,12 +84,12 @@ impl GroupStrategy {
     ///
     /// # Returns
     ///
-    /// Returns a [`GroupStrategy`] with no budget or escalation override.
+    /// 返回没有重启次数限制和升级覆盖的 [`GroupStrategy`].
     pub fn new(group: impl Into<String>, strategy: SupervisionStrategy) -> Self {
         Self {
             group: group.into(),
             strategy,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
         }
     }
@@ -102,8 +102,8 @@ pub struct ChildStrategyOverride {
     pub child_id: ChildId,
     /// Restart strategy used when this child fails.
     pub strategy: SupervisionStrategy,
-    /// Optional restart budget for this child.
-    pub restart_budget: Option<RestartBudget>,
+    /// 该子任务可选的重启次数限制.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this child.
     pub escalation_policy: Option<EscalationPolicy>,
 }
@@ -123,7 +123,7 @@ impl ChildStrategyOverride {
         Self {
             child_id,
             strategy,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
         }
     }
@@ -199,8 +199,8 @@ pub struct StrategyExecutionPlan {
     pub scope: Vec<ChildId>,
     /// Optional group that constrained the scope.
     pub group: Option<String>,
-    /// Optional restart budget selected for the plan.
-    pub restart_budget: Option<RestartBudget>,
+    /// 该执行计划选中的可选重启次数限制.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy selected for the plan.
     pub escalation_policy: Option<EscalationPolicy>,
     /// Whether dynamic supervisor additions are allowed.
@@ -228,8 +228,8 @@ pub struct SupervisorSpec {
     pub default_shutdown_policy: ShutdownPolicy,
     /// Maximum supervisor failures before parent escalation.
     pub supervisor_failure_limit: u32,
-    /// Optional supervisor-level restart budget.
-    pub restart_budget: Option<RestartBudget>,
+    /// 监督器级可选重启次数限制.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional supervisor-level escalation policy.
     pub escalation_policy: Option<EscalationPolicy>,
     /// Group-level strategy overrides.
@@ -283,7 +283,7 @@ impl SupervisorSpec {
                 Duration::from_secs(1),
             ),
             supervisor_failure_limit: 1,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
             group_strategies: Vec::new(),
             child_strategy_overrides: Vec::new(),
@@ -326,7 +326,7 @@ impl SupervisorSpec {
         for child in &self.children {
             child.validate()?;
         }
-        validate_restart_budget(self.restart_budget)?;
+        validate_restart_limit(self.restart_limit)?;
         validate_group_strategies(&self.group_strategies, &self.children)?;
         validate_child_strategy_overrides(self)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
@@ -334,27 +334,27 @@ impl SupervisorSpec {
     }
 }
 
-/// Validates an optional restart budget.
+/// 校验可选重启次数限制.
 ///
 /// # Arguments
 ///
-/// - `budget`: Optional restart budget to validate.
+/// - `limit`: 需要校验的可选重启次数限制.
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` when the budget is absent or valid.
-fn validate_restart_budget(budget: Option<RestartBudget>) -> Result<(), SupervisorError> {
-    let Some(budget) = budget else {
+/// 当限制不存在或有效时返回 `Ok(())`.
+fn validate_restart_limit(limit: Option<RestartLimit>) -> Result<(), SupervisorError> {
+    let Some(limit) = limit else {
         return Ok(());
     };
-    if budget.max_restarts == 0 {
+    if limit.max_restarts == 0 {
         return Err(SupervisorError::fatal_config(
-            "restart budget max_restarts must be greater than zero",
+            "restart limit max_restarts must be greater than zero",
         ));
     }
-    if budget.window.is_zero() {
+    if limit.window.is_zero() {
         return Err(SupervisorError::fatal_config(
-            "restart budget window must be greater than zero",
+            "restart limit window must be greater than zero",
         ));
     }
     Ok(())
@@ -386,7 +386,7 @@ fn validate_group_strategies(
                 strategy.group
             )));
         }
-        validate_restart_budget(strategy.restart_budget)?;
+        validate_restart_limit(strategy.restart_limit)?;
     }
     validate_group_membership(strategies, children)?;
     Ok(())
@@ -466,7 +466,7 @@ fn validate_child_strategy_overrides(spec: &SupervisorSpec) -> Result<(), Superv
                 strategy.child_id
             )));
         }
-        validate_restart_budget(strategy.restart_budget)?;
+        validate_restart_limit(strategy.restart_limit)?;
     }
     Ok(())
 }

@@ -130,7 +130,7 @@ Required events(必需事件):
 - `ShutdownRequested(关闭已请求)` 必须包含 `cause(原因)`.
 - `ShutdownPhaseChanged(关闭阶段变化)` 必须包含 `from(原阶段)` 和 `to(新阶段)`.
 - `ShutdownCompleted(关闭完成)` 必须包含完整摘要或摘要标识.
-- `ChildShutdownCancelDelivered(子任务取消已送达)` 必须包含 `child_id(子任务标识)`, `generation(代际)` 和 `attempt(尝试)`.
+- `ChildShutdownCancelDelivered(子任务取消已送达)` 必须包含 `child_id(子任务标识)`, `generation(代次)` 和 `attempt(尝试)`.
 - `ChildShutdownGraceful(子任务优雅完成)` 必须包含 child(子任务) 和 exit(退出) 分类.
 - `ChildShutdownAborted(子任务已强制中止)` 必须包含 child(子任务), phase(阶段) 和 reason(原因).
 - `ChildShutdownLateReport(子任务迟到报告)` 必须包含 child(子任务) 和原始 exit(退出) 分类.

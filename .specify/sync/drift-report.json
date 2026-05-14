@@ -162,14 +162,14 @@
       "not_implemented": []
     },
     {
-      "id": "004-3-child-slot-control",
-      "title": "子任务槽位控制",
+      "id": "004-3-child-runtime-state-control",
+      "title": "子任务运行状态控制",
       "aligned_count": 0,
       "drifted": [
         {
           "requirement": "FR-001",
           "severity": "high",
-          "description": "ActiveChildAttempt(活动子任务尝试) 只服务关闭流水线, 没有形成通用 child slot(子任务槽位).",
+          "description": "ActiveChildAttempt(活动子任务尝试) 只服务关闭流水线, 没有形成通用 child runtime state(子任务运行状态记录).",
           "evidence": [
             "src/runtime/shutdown_pipeline.rs:17"
           ]
@@ -187,7 +187,7 @@
         {
           "requirement": "FR-003",
           "severity": "high",
-          "description": "current_state(当前状态) 没有暴露 child slot(子任务槽位) 的 attempt(尝试), generation(代际), readiness(就绪状态), heartbeat(心跳) 和停止结果.",
+          "description": "current_state(当前状态) 没有暴露 child runtime state(子任务运行状态记录) 的 attempt(尝试), generation(代次), readiness(就绪状态), heartbeat(心跳) 和停止结果.",
           "evidence": [
             "src/control/command.rs:223",
             "src/runtime/control_loop.rs:156"
@@ -204,7 +204,7 @@
         {
           "requirement": "SC-002",
           "severity": "medium",
-          "description": "恢复命令没有向外暴露新的 attempt(尝试) 和 generation(代际).",
+          "description": "恢复命令没有向外暴露新的 attempt(尝试) 和 generation(代次).",
           "evidence": [
             "src/runtime/control_loop.rs:151",
             "src/control/command.rs:223"
@@ -230,7 +230,7 @@
     },
     {
       "id": "004-4-generation-fencing",
-      "title": "代际隔离重启",
+      "title": "代次隔离重启",
       "aligned_count": 0,
       "drifted": [
         {
@@ -254,7 +254,7 @@
         {
           "requirement": "FR-003",
           "severity": "high",
-          "description": "record_child_exit 没有校验 generation(代际), 旧 attempt(尝试) 的迟到结果仍可能更新 registry(注册表).",
+          "description": "record_child_exit 没有校验 generation(代次), 旧 attempt(尝试) 的迟到结果仍可能更新 registry(注册表).",
           "evidence": [
             "src/runtime/control_loop.rs:628"
           ]
@@ -272,7 +272,7 @@
         {
           "requirement": "SC-002",
           "severity": "high",
-          "description": "旧 generation(代际) 的迟到退出没有被标记为 stale report(过期报告) 并忽略.",
+          "description": "旧 generation(代次) 的迟到退出没有被标记为 stale report(过期报告) 并忽略.",
           "evidence": [
             "src/runtime/control_loop.rs:182"
           ]
@@ -288,7 +288,7 @@
         {
           "requirement": "SC-004",
           "severity": "medium",
-          "description": "current_state(当前状态) 没有暴露当前 generation(代际).",
+          "description": "current_state(当前状态) 没有暴露当前 generation(代次).",
           "evidence": [
             "src/control/command.rs:223"
           ]
@@ -298,7 +298,7 @@
   ],
   "unspecced_code": [],
   "recommendations": [
-    "先处置 004-3-child-slot-control.",
+    "先处置 004-3-child-runtime-state-control.",
     "再处置 004-4-generation-fencing.",
     "随后补齐 004-1 和 004-2 的 typed event(类型化事件), journal(事件日志), metrics(指标) 落点.",
     "最后闭合 003-supervisor-dashboard 的 T066 验收."

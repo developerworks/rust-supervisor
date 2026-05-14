@@ -144,7 +144,7 @@
 - [X] T056 [P] [US3] 在 `src/policy/meltdown.rs` 中实现 child-level fuse(子任务级熔断),supervisor-level fuse(监督器级熔断) 和计数器重置,覆盖 FR-013,FR-014 和 FR-015.
 - [X] T057 [P] [US3] 在 `src/child_runner/attempt.rs` 中实现任务结果,取消,超时,unhealthy(不健康) 和 panic(恐慌) 到 `TaskExit` 的分类,覆盖 FR-010 和 FR-011.
 - [X] T058 [P] [US3] 在 `src/tree/order.rs` 中实现 `OneForOne`,`OneForAll` 和 `RestForOne` restart scope(重启范围) 选择,覆盖 FR-007.
-- [X] T058A [P] [US3] 在 `src/spec/supervisor.rs`,`src/tree/order.rs`,`src/runtime/control_loop.rs`,`src/tree/tests/tree_test.rs`,`src/control/tests/control_test.rs` 和 `src/tests/supervisor_auto_restart_test.rs` 中实现 group strategy(分组策略),dynamic supervisor(动态监督器),escalation policy(升级策略),per-child override(子任务级覆盖),restart budget(重启预算) 和 strategy execution plan(策略执行计划),覆盖 FR-007,FR-023 和 FR-070.
+- [X] T058A [P] [US3] 在 `src/spec/supervisor.rs`,`src/tree/order.rs`,`src/runtime/control_loop.rs`,`src/tree/tests/tree_test.rs`,`src/control/tests/control_test.rs` 和 `src/tests/supervisor_auto_restart_test.rs` 中实现 group strategy(分组策略),dynamic supervisor(动态监督器),escalation policy(升级策略),per-child override(子任务级覆盖),restart limit(重启次数限制) 和 strategy execution plan(策略执行计划),覆盖 FR-007,FR-023 和 FR-070.
 - [X] T059 [US3] 在 `src/event/payload.rs` 中发送 `ChildPanicked`,`BackoffScheduled`,`ChildRestarting`,`ChildRestarted`,`ChildQuarantined` 和 `Meltdown` 事件,覆盖 FR-028 和 SC-002.
 - [X] T060 [US3] 在 `src/child_runner/runner.rs` 中更新 child restart loop(子任务重启循环),使它使用策略决定并保持 cognitive complexity(认知复杂度) 预算,覆盖 FR-060.
 

@@ -48,7 +48,7 @@
 | `RestForOne` | 从失败处开始 | 重启失败 child(子任务) 以及之后定义的 child(子任务). | 不影响失败节点之前的 child(子任务). |
 | `GroupStrategy` | 分组策略 | 基于 child tag(子任务标签) 限定重启范围的策略覆盖. | 优先级高于 supervisor-wide strategy(监督器全局策略). |
 | `ChildStrategyOverride` | 子任务级覆盖 | 针对单个 child(子任务) 的策略,预算和升级覆盖. | 优先级高于 group strategy(分组策略). |
-| `RestartBudget` | 重启预算 | 策略执行计划使用的最大重启次数和统计窗口. | 不替代 `RestartPolicy`,只约束策略治理. |
+| `RestartLimit` | 重启次数限制 | 策略执行计划使用的最大重启次数和统计窗口. | 不替代 `RestartPolicy`,只约束策略治理. |
 | `EscalationPolicy` | 升级策略 | 本地重启治理无法继续时的后续动作. | 包含 `EscalateToParent`,`ShutdownTree` 和 `QuarantineScope`. |
 | `EscalateToParent` | 升级到父级 | 把失败交给父 supervisor(监督器) 处理. | 用于本地范围无法继续治理的场景. |
 | `ShutdownTree` | 关闭整棵树 | 关闭当前 supervisor tree(监督树). | 既可以是控制命令结果,也可以是升级策略动作. |

@@ -1,4 +1,4 @@
-# Specification Quality Checklist: 代际隔离重启
+# Specification Quality Checklist: 代次隔离重启
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-05-14

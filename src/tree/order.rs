@@ -88,7 +88,7 @@ pub fn restart_execution_plan(
             strategy: override_strategy.strategy,
             scope: restart_scope(tree, override_strategy.strategy, failed_child),
             group: None,
-            restart_budget: override_strategy.restart_budget.or(spec.restart_budget),
+            restart_limit: override_strategy.restart_limit.or(spec.restart_limit),
             escalation_policy: override_strategy
                 .escalation_policy
                 .or(spec.escalation_policy),
@@ -107,7 +107,7 @@ pub fn restart_execution_plan(
                 failed_child,
             ),
             group: Some(group_strategy.group.clone()),
-            restart_budget: group_strategy.restart_budget.or(spec.restart_budget),
+            restart_limit: group_strategy.restart_limit.or(spec.restart_limit),
             escalation_policy: group_strategy.escalation_policy.or(spec.escalation_policy),
             dynamic_supervisor_enabled: spec.dynamic_supervisor_policy.enabled,
         };
@@ -118,7 +118,7 @@ pub fn restart_execution_plan(
         strategy: spec.strategy,
         scope: restart_scope(tree, spec.strategy, failed_child),
         group: None,
-        restart_budget: spec.restart_budget,
+        restart_limit: spec.restart_limit,
         escalation_policy: spec.escalation_policy,
         dynamic_supervisor_enabled: spec.dynamic_supervisor_policy.enabled,
     }

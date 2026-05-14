@@ -4,7 +4,7 @@ Language: [中文](../zh/supervisor-tree.html)
 
 ## Declaration Model
 
-`SupervisorSpec` describes one supervisor node. It contains `path`, `strategy`, `children`, `config_version`, default restart policy, default backoff policy, default health policy, default shutdown policy, supervisor-level fuse limits, `restart_budget`, `escalation_policy`, `group_strategies`, `child_strategy_overrides`, and `dynamic_supervisor_policy`.
+`SupervisorSpec` describes one supervisor node. It contains `path`, `strategy`, `children`, `config_version`, default restart policy, default backoff policy, default health policy, default shutdown policy, supervisor-level fuse limits, `restart_limit`, `escalation_policy`, `group_strategies`, `child_strategy_overrides`, and `dynamic_supervisor_policy`.
 
 `ChildSpec` describes one child. It contains `id`, `name`, `kind`, `factory`, `restart_policy`, `shutdown_policy`, `health_policy`, `readiness_policy`, `backoff_policy`, `dependencies`, `tags`, and `criticality`.
 
@@ -20,7 +20,7 @@ Language: [中文](../zh/supervisor-tree.html)
 
 ## Restart Planning
 
-`restart_execution_plan` resolves the runtime restart scope from the tree and `SupervisorSpec`. It keeps per-child overrides, group strategies, restart budgets, escalation policies, and dynamic supervisor policy in one plan so the runtime control loop does not duplicate strategy selection logic.
+`restart_execution_plan` resolves the runtime restart scope from the tree and `SupervisorSpec`. It keeps per-child overrides, group strategies, restart limits, escalation policies, and dynamic supervisor policy in one plan so the runtime control loop does not duplicate strategy selection logic.
 
 ## Registry
 

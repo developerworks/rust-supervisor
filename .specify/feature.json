@@ -1,10 +1,10 @@
 {
-  "feature_directory": "specs/004-3-child-slot-control",
-  "active_feature_directory": "specs/004-3-child-slot-control",
+  "feature_directory": "specs/004-3-child-runtime-state-control",
+  "active_feature_directory": "specs/004-3-child-runtime-state-control",
   "feature_directories": [
     "specs/004-1-runtime-lifecycle-guard",
     "specs/004-2-real-shutdown-pipeline",
-    "specs/004-3-child-slot-control",
+    "specs/004-3-child-runtime-state-control",
     "specs/004-4-generation-fencing"
   ]
 }

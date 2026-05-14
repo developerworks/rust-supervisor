@@ -35,7 +35,7 @@
 - [X] T005 在 `src/shutdown/coordinator.rs` 中为 `ShutdownResult` 增加 `report: Option<ShutdownPipelineReport>`, 并保持原有 `phase`, `cause` 和 `idempotent` 语义, 同时避免 `src/shutdown/` 依赖 `src/runtime/`.
 - [X] T006 [P] 在 `src/task/context.rs` 中新增使用外部 `CancellationToken(取消令牌)` 创建 `TaskContext(任务上下文)` 的构造函数.
 - [X] T007 在 `src/child_runner/runner.rs` 中新增可持有 `CancellationToken(取消令牌)` 和真实 child future(子任务 future) `AbortHandle(强制中止句柄)` 的 `ChildRunHandle(子任务运行句柄)` 或等价类型.
-- [X] T008 在 `src/runtime/control_loop.rs` 中新增 active attempt(活动尝试) 集合, 用来保存 `child_id(子任务标识)`, `generation(代际)`, `attempt(尝试)`, token(令牌), abort handle(强制中止句柄) 和完成接收端.
+- [X] T008 在 `src/runtime/control_loop.rs` 中新增 active attempt(活动尝试) 集合, 用来保存 `child_id(子任务标识)`, `generation(代次)`, `attempt(尝试)`, token(令牌), abort handle(强制中止句柄) 和完成接收端.
 - [X] T009 在 `src/control/command.rs` 中确认 `CommandResult::Shutdown(关闭命令结果)` 继续返回扩展后的 `ShutdownResult(关闭结果)`, 并且不新增控制命令变体.
 
 **Checkpoint(检查点)**: 运行时已经能表达真实关闭流水线所需的句柄, token(令牌) 和报告类型.

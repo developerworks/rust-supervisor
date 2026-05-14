@@ -6,15 +6,15 @@ Approved Proposals(已批准提案): `P001`, `P002`, `P003`, `P004`, `P005`, `P0
 
 ---
 
-## Task P001: Align 004-3-child-slot-control/FR-001, FR-003, SC-001..SC-004
+## Task P001: Align 004-3-child-runtime-state-control/FR-001, FR-003, SC-001..SC-004
 
-**Spec Requirement(规格需求)**: `004-3-child-slot-control` — `FR-001`, `FR-003`, `SC-001`..`SC-004`
+**Spec Requirement(规格需求)**: `004-3-child-runtime-state-control` — `FR-001`, `FR-003`, `SC-001`..`SC-004`
 
 **Direction(方向)**: ALIGN(规格到代码)
 
 **Current Code(当前代码)**: `ActiveChildAttempt` 仅服务关闭流水线, `current_state` 仅返回子任务数量与是否已关闭.
 
-**Required Change(需要变更)**: 引入运行时私有 `ChildSlot` 模型, 收敛 `active_attempts`, 关闭流水线从槽位读取活动尝试, 扩展 `current_state` 返回每子任务槽位摘要, 为暂停, 恢复, 隔离, 移除与关闭结果增加槽位终态字段.
+**Required Change(需要变更)**: 引入运行时私有 `ChildRuntimeState` 模型, 收敛 `active_attempts`, 关闭流水线从运行状态记录读取活动尝试, 扩展 `current_state` 返回每子任务运行状态摘要, 为暂停, 恢复, 隔离, 移除与关闭结果增加运行状态终态字段.
 
 **Files to Modify(需要修改的文件)**:
 
@@ -29,22 +29,22 @@ Approved Proposals(已批准提案): `P001`, `P002`, `P003`, `P004`, `P005`, `P0
 
 ### Acceptance Criteria(验收标准)
 
-- [ ] 每个声明子任务在运行时有唯一槽位视图, 含 `generation`, `attempt`, 活动句柄与预算字段中与规格一致子集.
-- [ ] `ShutdownTree` 关闭路径从槽位读取活动尝试, 不维护第二套并行事实源.
+- [ ] 每个声明子任务在运行时有唯一运行状态记录视图, 含 `generation`, `attempt`, 活动句柄与次数额度字段中与规格一致子集.
+- [ ] `ShutdownTree` 关闭路径从运行状态记录读取活动尝试, 不维护第二套并行事实源.
 - [ ] `current_state` 或等价查询返回每子任务摘要, 满足 `FR-003` 可测试子集.
-- [ ] 新增或更新测试证明槽位摘要在暂停, 运行与关闭后一致.
+- [ ] 新增或更新测试证明运行状态摘要在暂停, 运行与关闭后一致.
 
 ---
 
-## Task P002: Align 004-3-child-slot-control/FR-002
+## Task P002: Align 004-3-child-runtime-state-control/FR-002
 
-**Spec Requirement(规格需求)**: `004-3-child-slot-control` — `FR-002`
+**Spec Requirement(规格需求)**: `004-3-child-runtime-state-control` — `FR-002`
 
 **Direction(方向)**: ALIGN(规格到代码)
 
 **Current Code(当前代码)**: `pause_child`, `remove_child`, `quarantine_child` 主要 `set_child_state`, 未停止真实任务.
 
-**Required Change(需要变更)**: 暂停发取消并等待结束或超时, 隔离停止尝试并禁止自动重启, 移除停止尝试并移除或标记槽位, 重复命令幂等.
+**Required Change(需要变更)**: 暂停发取消并等待结束或超时, 隔离停止尝试并禁止自动重启, 移除停止尝试并移除或标记运行状态记录, 重复命令幂等.
 
 **Files to Modify(需要修改的文件)**:
 
@@ -68,22 +68,22 @@ Approved Proposals(已批准提案): `P001`, `P002`, `P003`, `P004`, `P005`, `P0
 
 **Direction(方向)**: ALIGN(规格到代码)
 
-**Current Code(当前代码)**: `spawn_child_attempt` 立即 `abort` 旧尝试并启动新尝试, `record_child_exit` 未校验代际.
+**Current Code(当前代码)**: `spawn_child_attempt` 立即 `abort` 旧尝试并启动新尝试, `record_child_exit` 未校验代次.
 
-**Required Change(需要变更)**: 统一重启流水线: 取消, 等待, 超时中止, 再升代际, 退出记录校验 `(child_id, generation, attempt)`, 旧代际迟到标 stale, `current_state` 暴露代际.
+**Required Change(需要变更)**: 统一重启流水线: 取消, 等待, 超时中止, 再升代次, 退出记录校验 `(child_id, generation, attempt)`, 旧代次迟到标 stale, `current_state` 暴露代次.
 
 **Files to Modify(需要修改的文件)**:
 
 - `src/runtime/control_loop.rs`
 - `src/runtime/shutdown_pipeline.rs`
-- `src/tests/` 下代际与重启相关集成测试
+- `src/tests/` 下代次与重启相关集成测试
 
 **Estimated Effort(预估工作量)**: LARGE(大)
 
 ### Acceptance Criteria(验收标准)
 
 - [ ] 连续重启仅最后一代可处于运行中语义有测试覆盖.
-- [ ] 旧代际迟到退出不覆盖注册表中当前代际槽位.
+- [ ] 旧代次迟到退出不覆盖注册表中当前代次运行状态记录.
 - [ ] `current_state` 或等价结构暴露 `generation` 与冲突诊断字段.
 
 ---
