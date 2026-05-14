@@ -67,7 +67,7 @@ Contract rules(契约规则):
 - 初次接受的停止命令通常只返回 `stop_state = CancelDelivered(已送达取消)` 与 `failure = None(无值)`, 不同步等待失败结果. 后续 `CurrentState(当前状态)` 或重复停止命令必须先运行 `reconcile_stop_deadlines(调和停止截止时间)`, 然后把已经超时的 `last_control_failure(最近控制失败原因)` 写入 `failure(失败原因)`.
 - 当运行状态记录没有活动 attempt(尝试) 时, 结果必须返回 `attempt = None(无值)`, `generation = None(无值)`, `status = None(无值)`, `cancel_delivered = false(否)`, `stop_state = NoActiveAttempt(无活动尝试)`.
 - 当运行状态记录没有活动 attempt(尝试) 时, `idempotent(幂等)` 仍必须按操作和删除动作判定. 如果本次命令改变 `operation(操作)` 或触发 `RemoveChild(移除子任务)` 的物理删除, `idempotent(幂等)` 必须为 `false(否)`.
-- 当运行状态记录存在活动 attempt(尝试), 但 `operation_before(命令前操作)` 已经等于本次命令目标操作且 `cancel_delivered(取消已送达)` 已经是 `true(是)` 时, 本次命令必须返回 `idempotent = true(幂等是)`, `cancel_delivered = false(否)`, 不得再次调用 `CancellationToken::cancel(取消)`, 不得再次发布 `ChildControlCancelDelivered(子任务控制取消已送达)` 事件.
+- 当运行状态记录存在活动 attempt(尝试), 但 `operation_before(命令前操作)` 已经等于本次命令目标操作且 `attempt_cancel_delivered(尝试取消已送达)` 已经是 `true(是)` 时, 本次命令必须返回 `idempotent = true(幂等是)`, `cancel_delivered = false(否)`, 不得再次调用 `CancellationToken::cancel(取消)`, 不得再次发布 `ChildControlCancelDelivered(子任务控制取消已送达)` 事件.
 
 ## Operation Mapping(操作映射)
 
@@ -92,16 +92,16 @@ Contract rules(契约规则):
 ### `PauseChild(暂停子任务)`
 
 - runtime(运行时) 必须把 `ChildRuntimeState.operation(子任务控制操作)` 设为 `Paused(已暂停)`.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Paused(已暂停)` 或既有 `cancel_delivered(取消已送达)` 为 `false(否)`, runtime(运行时) 必须调用一次 `ChildRuntimeState::cancel(运行状态记录取消)`, 把 `stop_state(停止状态)` 推进到 `CancelDelivered(已送达取消)`, 把 `status(状态)` 推进到 `Cancelling(取消中)`.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Paused(已暂停)` 并且既有 `cancel_delivered(取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Paused(已暂停)` 或既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `false(否)`, runtime(运行时) 必须调用一次 `ChildRuntimeState::cancel(运行状态记录取消)`, 把 `stop_state(停止状态)` 推进到 `CancelDelivered(已送达取消)`, 把 `status(状态)` 推进到 `Cancelling(取消中)`.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Paused(已暂停)` 并且既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
 - 如果运行状态记录没有活动 attempt(尝试), runtime(运行时) 必须把 `stop_state(停止状态)` 设为 `NoActiveAttempt(无活动尝试)`, `cancel_delivered(取消已送达)` 设为 `false(否)`. 如果 `operation_before(命令前操作)` 已经是 `Paused(已暂停)`, `idempotent(幂等)` 必须为 `true(是)`; 否则本次命令是操作变化, `idempotent(幂等)` 必须为 `false(否)`, 并且只发布 `ChildControlOperationChanged(子任务控制操作变化)` 事件.
 - 暂停期间, supervision strategy(监督策略) 必须不能针对该运行状态记录触发自动重启.
 
 ### `RemoveChild(移除子任务)`
 
 - runtime(运行时) 必须把 `operation(操作)` 设为 `Removed(已移除)`.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Removed(已移除)` 或既有 `cancel_delivered(取消已送达)` 为 `false(否)`, runtime(运行时) 必须调用一次 `ChildRuntimeState::cancel(运行状态记录取消)`, 推进 `stop_state(停止状态)` 与 `status(状态)`.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Removed(已移除)` 并且既有 `cancel_delivered(取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Removed(已移除)` 或既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `false(否)`, runtime(运行时) 必须调用一次 `ChildRuntimeState::cancel(运行状态记录取消)`, 推进 `stop_state(停止状态)` 与 `status(状态)`.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Removed(已移除)` 并且既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
 - 当前 attempt(尝试) 退出后, exit handler(退出处理) 必须从 `RuntimeControlState.child_runtime_states` 中物理删除运行状态记录, 并发出 `ChildRuntimeStateRemoved(子任务运行状态记录已移除)` 事件.
 - 如果运行状态记录没有活动 attempt(尝试), runtime(运行时) 必须构造 `stop_state = NoActiveAttempt(无活动尝试)`, `attempt = None(无值)`, `generation = None(无值)`, `status = None(无值)`, `cancel_delivered = false(否)` 的结果. 当 `operation_before(命令前操作)` 不是 `Removed(已移除)` 时, 该结果的 `idempotent(幂等)` 必须为 `false(否)`, 并且 runtime(运行时) 必须在结果构造和事件发布后从 `RuntimeControlState.child_runtime_states` 中物理删除运行状态记录. `ChildRuntimeStateRemoved(子任务运行状态记录已移除)` 事件的 `final_status(最终子任务尝试状态)` 必须为 `None(无值)`.
 - 同一运行状态记录在仍存在且 `operation(操作)` 已经是 `Removed(已移除)` 时重复 `RemoveChild(移除子任务)` 必须返回 `idempotent = true(幂等是)`, 不得重复发送取消或操作变化事件. 运行状态记录已经物理删除后的再次命令使用既有 unknown child(未知子任务) 处理路径, 不属于本契约的运行状态记录级幂等返回.
@@ -109,8 +109,8 @@ Contract rules(契约规则):
 ### `QuarantineChild(隔离子任务)`
 
 - runtime(运行时) 必须把 `operation(操作)` 设为 `Quarantined(已隔离)`.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Quarantined(已隔离)` 或既有 `cancel_delivered(取消已送达)` 为 `false(否)`, runtime(运行时) 必须 `cancel(取消)` 该 attempt(尝试). 运行状态记录继续存在于 `RuntimeControlState.child_runtime_states` 中, 但 supervision strategy(监督策略) 必须不再触发自动重启.
-- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Quarantined(已隔离)` 并且既有 `cancel_delivered(取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 不是 `Quarantined(已隔离)` 或既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `false(否)`, runtime(运行时) 必须 `cancel(取消)` 该 attempt(尝试). 运行状态记录继续存在于 `RuntimeControlState.child_runtime_states` 中, 但 supervision strategy(监督策略) 必须不再触发自动重启.
+- 如果运行状态记录存在活动 attempt(尝试), 且 `operation_before(命令前操作)` 已经是 `Quarantined(已隔离)` 并且既有 `attempt_cancel_delivered(尝试取消已送达)` 为 `true(是)`, runtime(运行时) 必须按幂等返回处理, 不得重复取消.
 - 如果运行状态记录没有活动 attempt(尝试), runtime(运行时) 必须返回 `stop_state = NoActiveAttempt(无活动尝试)` 且 `cancel_delivered = false(否)`. 当 `operation_before(命令前操作)` 已经是 `Quarantined(已隔离)` 时, `idempotent(幂等)` 必须为 `true(是)`; 否则本次命令是操作变化, `idempotent(幂等)` 必须为 `false(否)`.
 - 同一运行状态记录重复 `QuarantineChild(隔离子任务)` 必须返回 `idempotent = true(幂等是)`.
 

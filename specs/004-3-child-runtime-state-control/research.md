@@ -93,12 +93,12 @@
 - `PauseChild(暂停子任务)` 真实向活动尝试发送取消并标记 `operation = Paused(已暂停)`.
 - `RemoveChild(移除子任务)` 发起取消, 然后由 exit handler(退出处理) 删除运行状态记录.
 - `QuarantineChild(隔离子任务)` 发起取消并阻止自动重启.
-- 对已停止或从未启动的运行状态记录重复执行停止类命令 10 次, 控制结果幂等且不重复发取消.
+- 对已经向活动 attempt(尝试) 送达取消且 `operation(操作)` 已经等于目标操作的运行状态记录重复执行同一停止类命令 10 次, 控制结果幂等且不重复发取消. 对无活动 attempt(尝试) 且不会触发物理删除的暂停和隔离运行状态记录重复执行对应停止命令时, 控制结果同样幂等.
 - 自动重启已经推进到新 `attempt(尝试)` 时, 控制命令仅作用于运行状态记录中当前 attempt, 不跨 attempt 误送取消.
 - `restart_limit(重启次数限制)` 耗尽时控制结果说明 `remaining = 0(剩余为零)` 且 `exhausted = true(已耗尽)`.
 - 控制命令与自动重启同刻发生时, 运行状态记录 operation 优先于新的策略决策.
 
-**Rationale(理由)**: spec.md SC-001 至 SC-004 要求 100% 测试场景覆盖. 只测试 control_loop 的 enum 状态不能证明真实取消, 必须通过 task factory(任务工厂) 观察 token(令牌) 是否被任务感知, 也必须通过事件流验证 cancel_delivered 与 stop_completed 事件序列.
+**Rationale(理由)**: spec.md SC-001 至 SC-004 要求 100% 测试场景覆盖. 只测试 control_loop 的 enum(枚举) 状态不能证明真实取消, 必须通过 task factory(任务工厂) 观察 token(令牌) 是否被任务感知, 也必须通过事件流验证 `ChildControlCancelDelivered(子任务控制取消已送达)` 与 `ChildControlStopCompleted(子任务控制停止完成)` 事件序列.
 
 **Alternatives considered(备选方案)**:
 

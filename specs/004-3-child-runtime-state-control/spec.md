@@ -68,7 +68,7 @@
 
 ### Functional Requirements(功能需求)
 
-- **FR-001**: 系统必须为每个 child(子任务) 维护一个 child runtime state(子任务运行状态记录), 该运行状态记录必须真实表达声明, generation(代次), 当前 attempt(尝试), status(状态), cancellation_token(取消令牌), runtime_handle(运行时句柄), last_heartbeat(最后心跳), readiness(就绪状态) 和 restart_limit(重启次数限制), 并且这些字段必须可以被外部读取. 当运行状态记录已经声明但尚无活动 attempt(尝试) 时, generation(代次), attempt(尝试), status(状态), cancellation_token(取消令牌), runtime_handle(运行时句柄), heartbeat(心跳) receiver(接收端) 和 readiness(就绪状态) receiver(接收端) 必须显式为 `None(无值)` 或等价空状态, 不得伪造活动尝试.
+- **FR-001**: 系统必须为每个 child(子任务) 维护一个 child runtime state(子任务运行状态记录), 该运行状态记录必须真实表达声明, generation(代次), 当前 attempt(尝试), status(状态), cancellation_token(取消令牌), runtime_handle(运行时句柄), last_heartbeat(最后心跳), readiness(就绪状态) 和 restart_limit(重启次数限制), 并且这些字段必须可以被外部读取. 当运行状态记录已经声明但尚无活动 attempt(尝试) 时, generation(代次), attempt(尝试), status(状态), cancellation_token(取消令牌), runtime_handle(运行时句柄), heartbeat(心跳) receiver(接收端) 和 readiness(就绪状态) receiver(接收端) 必须显式为 `None(无值)`, 不得使用其他空状态, 也不得伪造活动尝试.
 - **FR-002**: PauseChild(暂停子任务), RemoveChild(移除子任务) 和 QuarantineChild(隔离子任务) 必须作用于 child runtime state(子任务运行状态记录) 当前活动尝试的真实生命周期, 包括 cancellation_token(取消令牌) 送达和等待结果, 而不仅仅是更新 ManagedChildState(受管子任务状态) 枚举. 此处「等待结果」指在 control loop(控制循环) 单跳返回之后, 由 `ChildAttemptMessage::Exited(子任务退出消息)` 与 `stop_state(停止状态)` 等字段表达的可观察完成或失败事实, 不是要求在控制命令处理函数内同步 `await(异步等待)` child future(子任务 future) 终止. 注意: 强制中止 (abort) 不属于单条控制命令的行为范围, 它由 `004-2-real-shutdown-pipeline` 的 `ShutdownPipeline`(关闭流水线) 在关闭 supervisor tree(监督树) 时统一处理.
 - **FR-003**: 控制命令的返回结果和当前状态读取必须反映 child runtime state(子任务运行状态记录) 的真实事实, 包括目标 child id(子任务标识), 目标 attempt(尝试) 标识, cancellation_token(取消令牌) 送达情况, 等待结果, restart_limit(重启次数限制) 剩余次数, 以及失败阶段和原因. 此处「等待结果」含义与 FR-002 中相同, 均指异步可观察的停止进度, 不是控制路径上的阻塞等待.
 

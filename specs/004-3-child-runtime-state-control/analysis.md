@@ -1,6 +1,6 @@
 # Specification Analysis Report(规格分析报告) - 2026-05-15 最新复核
 
-> 本报告由 `speckit-fix-findings(规格发现项修复)` 流程刷新. 本轮针对上一份 Specification Analysis Report(规格分析报告) 表格中的 9 个问题逐项修复, 当前没有延期发现项.
+> 本报告由 `speckit-fix-findings(规格发现项修复)` 流程刷新. 本轮针对上一份 Specification Analysis Report(规格分析报告) 表格中的 5 个问题逐项修复, 当前没有延期发现项.
 
 ## Artifacts Analyzed(已分析工件)
 
@@ -19,15 +19,11 @@
 
 | ID | Category(类别) | Severity(严重级别) | Current Status(当前状态) | Resolution(处理方式) |
 |----|----------------|--------------------|--------------------------|----------------------|
-| C1 | Constitution(宪章) | CRITICAL(严重) | Resolved(已解决) | `checklists/requirements.md` 已把英文句子改为中文句子, `Notes(说明)` 标题补齐中文说明. `findings.fixed.md` 摘要行已改为中文写作. |
-| I1 | Inconsistency(不一致) | HIGH(高) | Resolved(已解决) | `contracts/child-runtime-state-control.md` 和 `tasks.md` 已明确: 活动 attempt(尝试) 已经处于目标操作且既有取消已送达时, 重复停止命令必须返回幂等结果, 不得重复调用 `CancellationToken::cancel(取消)`. |
-| G1 | Coverage Gap(覆盖缺口) | HIGH(高) | Resolved(已解决) | SC-003, T035 和 quickstart(快速开始) 已覆盖 3 条停止命令的重复幂等路径, 包括已经取消送达的活动 attempt(尝试), 以及无活动 attempt(尝试) 且不会物理删除的暂停和隔离记录. |
-| U1 | Underspecification(规格不足) | HIGH(高) | Resolved(已解决) | `data-model.md` 和 T019 已定义 `RuntimeTimeBase(运行时时间基准)` 与精确换算公式, 禁止用 `SystemTime::UNIX_EPOCH.elapsed()` 代表历史心跳时刻. |
-| U2 | Underspecification(规格不足) | MEDIUM(中) | Resolved(已解决) | `RestartLimitState.updated_at_unix_nanos(重启次数限制状态更新时间)` 已规定通过 `RuntimeTimeBase(运行时时间基准)` 生成, 并用 `previous + 1(前值加一)` 规则保证单调递增. |
-| G2 | Coverage Gap(覆盖缺口) | MEDIUM(中) | Resolved(已解决) | `plan.md` 已删除本切片对 `dynamic_child_count(动态子任务数量)` 的未覆盖承诺, 明确动态子任务数量统计由后续切片处理. |
-| T1 | Terminology Drift(术语漂移) | MEDIUM(中) | Resolved(已解决) | `plan.md` 和 `research.md` 已统一使用 `stop_state(停止状态)`, 不再使用 `stop completion(停止完成)` 或 `stop_completed(停止完成)` 表达字段. |
-| I2 | Inconsistency(不一致) | MEDIUM(中) | Resolved(已解决) | 本文件已刷新为当前复核结果, 指标计数与本轮修复状态一致. |
-| I3 | Inconsistency(不一致) | MEDIUM(中) | Resolved(已解决) | `findings.fixed.md` 已修正总迭代次数, 已解决数量和迭代顺序, 第 11 次迭代位于第 10 次迭代之后, 第 12 次迭代记录本轮 9 个修复. |
+| I1 | Inconsistency(不一致) | HIGH(高) | Resolved(已解决) | `findings.fixed.md` 已恢复, 并记录第 13 次迭代的 5 个修复项. |
+| A1 | Ambiguity(歧义) | HIGH(高) | Resolved(已解决) | `data-model.md`, `contracts/child-runtime-state-control.md` 和 `tasks.md` 已区分 `attempt_cancel_delivered(尝试取消已送达)` 内部历史字段与 `ChildControlResult.cancel_delivered(子任务控制结果取消已送达)` 本次命令结果字段. |
+| I2 | Inconsistency(不一致) | MEDIUM(中) | Resolved(已解决) | `research.md` 已同步 SC-003 的新幂等验收口径, 并改用 `ChildControlStopCompleted(子任务控制停止完成)` 事件名称. |
+| U1 | Underspecification(规格不足) | MEDIUM(中) | Resolved(已解决) | `data-model.md` 与 T019 已明确 `RuntimeControlState(运行时控制状态)` 持有唯一 `RuntimeTimeBase(运行时时间基准)`, 并以只读引用传入需要生成时间戳的函数. |
+| A2 | Ambiguity(歧义) | MEDIUM(中) | Resolved(已解决) | `spec.md` FR-001 已删除等价空状态表述, 无活动 attempt(尝试) 的相关字段必须显式为 `None(无值)`. |
 
 ## Coverage Summary Table(覆盖汇总表)
 
