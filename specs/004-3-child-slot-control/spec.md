@@ -5,7 +5,7 @@
 **Status(状态)**: Draft(草稿)
 **Input(输入)**: 用户描述: "当前 TaskContext(任务上下文) 有 CancellationToken(取消令牌), 但是 ChildRunner(子任务运行器) 创建的取消令牌没有被 runtime registry(运行时注册表) 保存, 因此控制命令无法真正取消任务. PauseChild(暂停子任务), RemoveChild(移除子任务), QuarantineChild(隔离子任务) 基本只是改 ManagedChildState(受管子任务状态). 工业级版本需要把每个 child slot(子任务槽位) 设计为: spec(声明) + generation(代数) + attempt(尝试次数) + status(状态) + cancellation_token(取消令牌) + join_handle(任务句柄) + last_heartbeat(最后心跳) + ready_state(就绪状态) + restart_budget(重启预算). 所有控制命令必须作用在这个真实状态上."
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 查看真实子任务槽位状态 (Priority(优先级): P1)
 
@@ -57,7 +57,7 @@
 - 任务上报 heartbeat(心跳) 后立即退出时, 当前状态必须以最终退出结果为准.
 - 控制命令和自动重启同时触发时, 系统必须以槽位中当前治理状态为准.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
@@ -68,10 +68,10 @@
 ### Key Entities(关键实体)
 
 - **ChildSlot(子任务槽位)**: 表示一个 child(子任务) 的声明, 活动尝试和运行时治理状态.
-- **ChildControlOutcome(子任务控制结果)**: 表示控制命令对槽位产生的真实停止, 等待, 幂等或失败结果.
+- **ChildControlResult(子任务控制结果)**: 表示控制命令对槽位产生的真实停止, 等待, 幂等或失败结果.
 - **RestartBudget(重启预算)**: 表示当前 child(子任务) 在策略窗口内还可以使用的重启额度.
 
-## Constitution Alignment(宪章对齐) *(mandatory(必填))*
+## Constitution Alignment(宪章对齐) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -92,7 +92,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English(中文说明)`.
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 

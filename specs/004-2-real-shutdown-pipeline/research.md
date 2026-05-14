@@ -18,15 +18,15 @@
 
 ## 决策三: `ShutdownCoordinator(关闭协调器)` 只保留阶段状态
 
-**Decision(决定)**: `ShutdownCoordinator(关闭协调器)` 继续拥有 `ShutdownPhase(关闭阶段)`, `ShutdownCause(关闭原因)` 和 `ShutdownPolicy(关闭策略)`. 真实取消, 等待, 强制中止和对账逻辑放入 `src/runtime/shutdown_pipeline.rs`.
+**Decision(决定)**: `ShutdownCoordinator(关闭协调器)` 继续拥有 `ShutdownPhase(关闭阶段)`, `ShutdownCause(关闭原因)` 和 `ShutdownPolicy(关闭策略)`. `ShutdownPipelineReport(关闭流水线报告)` 和相关公开报告类型放入 `src/shutdown/report.rs`. 真实取消, 等待, 强制中止和对账逻辑放入 `src/runtime/shutdown_pipeline.rs`.
 
-**Rationale(理由)**: 任务句柄, registry(注册表), event(事件), metrics(指标) 和 control loop mailbox(控制循环邮箱) 都属于 runtime(运行时) 边界. 如果把句柄放入 shutdown(关闭) 模块, shutdown(关闭) 模块会越过原有职责.
+**Rationale(理由)**: `ShutdownResult(关闭结果)` 属于 shutdown(关闭) 模块, 所以它引用的公开报告类型也必须属于 shutdown(关闭) 模块. 任务句柄, registry(注册表), event(事件), metrics(指标) 和 control loop mailbox(控制循环邮箱) 都属于 runtime(运行时) 边界. 如果把句柄放入 shutdown(关闭) 模块, shutdown(关闭) 模块会越过原有职责. 如果把报告类型放入 runtime(运行时) 模块, shutdown(关闭) 模块会反向依赖 runtime(运行时) 模块.
 
 **Alternatives considered(备选方案)**: 把所有逻辑塞入 `src/runtime/control_loop.rs` 会让控制循环同时承担消息路由和关闭执行, 不利于并行开发和测试. 把 `ShutdownCoordinator(关闭协调器)` 改成拥有句柄会破坏现有阶段状态机的清晰职责.
 
 ## 决策四: `ShutdownTree(关闭监督树)` 返回完整 `ShutdownResult(关闭结果)`
 
-**Decision(决定)**: `CommandResult::Shutdown(关闭命令结果)` 继续作为调用者入口. `ShutdownResult(关闭结果)` 需要增加可序列化的 pipeline report(流水线报告), 用来返回每个 child(子任务) 的取消送达, 等待结果, 强制中止结果和最终对账状态.
+**Decision(决定)**: `CommandResult::Shutdown(关闭命令结果)` 继续作为调用者入口. `ShutdownResult(关闭结果)` 需要增加可序列化的 pipeline report(流水线报告), 用来返回每个 child(子任务) 的取消送达, 等待结果, 强制中止结果和最终对账状态. 该报告类型必须来自 `src/shutdown/report.rs`.
 
 **Rationale(理由)**: 当前公开命令语义不能改变, 但是操作者需要看到每个 child(子任务) 的最终结果. 在 `ShutdownResult(关闭结果)` 中加入报告可以让 dashboard(仪表盘), 测试和库调用者读取同一个结构化事实.
 
@@ -42,15 +42,15 @@
 
 ## 决策六: 对账要区分 runtime-owned(运行时拥有) 和 not-owned(非运行时拥有) 资源
 
-**Decision(决定)**: 关闭对账报告必须分别说明 registry(注册表), runtime handles(运行时句柄), journal(日志), metrics(指标) 和 socket(套接字) 的状态. 核心 runtime(运行时) 当前不直接拥有 dashboard IPC socket(仪表盘进程间通信套接字), 所以 socket(套接字) 对账状态记录为 `not_owned(非运行时拥有)` 或 `not_applicable(不适用)`.
+**Decision(决定)**: 关闭对账报告必须分别说明 registry(注册表), runtime handles(运行时句柄), journal(日志), metrics(指标) 和 socket(套接字) 的状态. 核心 runtime(运行时) 当前不直接拥有 dashboard IPC socket(仪表盘进程间通信套接字), 所以 socket(套接字) 对账状态必须记录为 `NotOwned(非运行时拥有)`.
 
-**Rationale(理由)**: 功能规格要求清理 socket(套接字), journal(日志) 和 metrics(指标). 当前仓库中核心 supervisor runtime(监督器运行时) 只拥有运行时句柄和注册表, 观测管线拥有 event(事件), audit(审计) 和 metrics(指标) 输出. 对账报告必须反映真实所有权, 不能伪造资源清理.
+**Rationale(理由)**: 功能规格要求处理 socket(套接字), journal(日志) 和 metrics(指标) 的最终状态. 当前仓库中核心 supervisor runtime(监督器运行时) 只拥有运行时句柄和注册表, 观测管线拥有 event(事件), audit(审计) 和 metrics(指标) 输出. 对账报告必须反映真实所有权, 不能伪造资源清理.
 
 **Alternatives considered(备选方案)**: 在运行时内新增 socket(套接字) 管理会扩大本功能范围. 省略 socket(套接字) 字段会让规格和实现之间继续存在观测缺口.
 
 ## 决策七: 测试必须覆盖合作关闭和非合作关闭
 
-**Decision(决定)**: 新增 `supervisor_real_shutdown_pipeline_test` 覆盖所有任务收到取消, 已退出任务不重复取消, `shutdown_order(关闭顺序)` 等待, 忽略取消的任务被强制中止, 重复关闭返回缓存结果和迟到报告归并.
+**Decision(决定)**: 新增 `supervisor_real_shutdown_pipeline_test` 覆盖所有任务收到取消, 已退出任务不重复取消, 没有运行中任务时输出 `AlreadyExited(已经退出)`, `shutdown_order(关闭顺序)` 等待, 忽略取消的任务被强制中止, 重复关闭返回缓存结果和迟到报告归并.
 
 **Rationale(理由)**: 真实关闭流水线的风险集中在异步边界. 只测试阶段枚举无法证明任务真的停止. 测试必须通过真实 task factory(任务工厂) 观察 token(令牌), completion(完成), abort(强制中止) 和最终摘要.
 
