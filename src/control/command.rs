@@ -3,6 +3,7 @@
 //! This module owns auditable command inputs and command results. Runtime code
 //! executes these commands and records state changes.
 
+use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::shutdown::coordinator::ShutdownResult;
 use serde::{Deserialize, Serialize};
@@ -74,6 +75,20 @@ impl CommandMeta {
             requested_by: requested_by.into(),
             reason: reason.into(),
         }
+    }
+
+    /// Validates audit metadata before command dispatch.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when actor and reason fields are non-empty.
+    pub(crate) fn validate(&self) -> Result<(), SupervisorError> {
+        validate_required_text(&self.requested_by, "requested_by")?;
+        validate_required_text(&self.reason, "reason")
     }
 }
 
@@ -158,6 +173,38 @@ impl ControlCommand {
             | Self::CurrentState { meta } => meta,
         }
     }
+
+    /// Validates audit metadata attached to this command.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when the command carries auditable metadata.
+    pub(crate) fn validate_audit_metadata(&self) -> Result<(), SupervisorError> {
+        self.meta().validate()
+    }
+}
+
+/// Validates one required text field.
+///
+/// # Arguments
+///
+/// - `value`: Text value supplied by the command caller.
+/// - `field`: Field name used in the diagnostic message.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when the value is not blank.
+fn validate_required_text(value: &str, field: &str) -> Result<(), SupervisorError> {
+    if value.trim().is_empty() {
+        return Err(SupervisorError::InvalidTransition {
+            message: format!("control command {field} must not be empty"),
+        });
+    }
+    Ok(())
 }
 
 /// State assigned to a managed child by the control loop.

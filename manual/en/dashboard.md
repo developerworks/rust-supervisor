@@ -10,7 +10,7 @@ The screenshot below shows the dashboard client view for target lists, topology,
 
 ## Three-End Responsibilities
 
-- `rust-supervisor`: The target process reads `SupervisorConfig`, opens a Unix domain socket when `ipc.enabled=true`, and produces snapshots, event records, log records, command results, and registration heartbeats.
+- `rust-supervisor`: The target process reads `SupervisorConfig`, opens a Unix domain socket when `ipc.enabled=true`, and produces state, event records, log records, command results, and registration heartbeats.
 - `rust-supervisor-relay`: The relay listens on the registration socket, stores the target registry, exposes external `wss://` dashboard sessions, validates mTLS and allowed IPC path prefixes, and forwards session commands to the target process.
 - `rust-supervisor-ui`: The dashboard client connects to the relay through `wss://` and displays the target list, topology, state, event stream, log tail, and command audit.
 
