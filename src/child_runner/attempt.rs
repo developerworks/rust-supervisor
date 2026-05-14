@@ -5,9 +5,10 @@
 
 use crate::error::types::{TaskFailure, TaskFailureKind};
 use crate::task::factory::TaskResult;
+use serde::{Deserialize, Serialize};
 
 /// Exit classification for one task attempt.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskExit {
     /// The task returned success.
     Succeeded,

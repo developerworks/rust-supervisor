@@ -8,7 +8,7 @@ use crate::journal::ring::EventJournal;
 use crate::observe::metrics::{MetricSample, MetricsFacade};
 use crate::observe::tracing::{AttemptSpan, TracingEvent};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 /// Structured log entry derived from a supervisor event.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,6 +38,10 @@ pub struct AuditRecord {
     pub reason: String,
     /// Runtime or command phase.
     pub phase: String,
+    /// Child identifier when the fact belongs to one child.
+    pub child_id: Option<String>,
+    /// Additional bounded context for shutdown audit facts.
+    pub context: BTreeMap<String, String>,
 }
 
 /// Test recorder for observability assertions.
@@ -252,6 +256,8 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             result: audit.result.clone(),
             reason: audit.reason.clone(),
             phase: "control_command".to_owned(),
+            child_id: None,
+            context: BTreeMap::new(),
         }),
         What::RuntimeControlLoopShutdownRequested {
             command_id,
@@ -264,6 +270,8 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             result: "accepted".to_owned(),
             reason: reason.clone(),
             phase: "shutdown".to_owned(),
+            child_id: None,
+            context: BTreeMap::new(),
         }),
         What::RuntimeControlLoopJoinCompleted {
             command_id,
@@ -278,6 +286,8 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             result: state.clone(),
             reason: reason.clone(),
             phase: phase.clone(),
+            child_id: None,
+            context: BTreeMap::new(),
         }),
         What::RuntimeControlLoopFailed { phase, reason, .. } => Some(AuditRecord {
             sequence: event.sequence.value,
@@ -286,7 +296,107 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             result: "failed".to_owned(),
             reason: reason.clone(),
             phase: phase.clone(),
+            child_id: None,
+            context: BTreeMap::new(),
         }),
+        What::ShutdownCompleted {
+            phase,
+            result,
+            duration_ms,
+        } => {
+            let mut context = BTreeMap::new();
+            context.insert("duration_ms".to_owned(), duration_ms.to_string());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "shutdown-pipeline".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: result.clone(),
+                reason: "shutdown pipeline completed".to_owned(),
+                phase: phase.clone(),
+                child_id: None,
+                context,
+            })
+        }
+        What::ChildShutdownCancelDelivered {
+            child_id,
+            generation,
+            attempt,
+            phase,
+        } => Some(AuditRecord {
+            sequence: event.sequence.value,
+            command_id: "shutdown-pipeline".to_owned(),
+            requested_by: "runtime".to_owned(),
+            result: "cancel_delivered".to_owned(),
+            reason: "cancellation token delivered".to_owned(),
+            phase: phase.clone(),
+            child_id: Some(child_id.to_string()),
+            context: child_attempt_context(generation.value, attempt.value),
+        }),
+        What::ChildShutdownGraceful {
+            child_id,
+            generation,
+            attempt,
+            phase,
+            exit,
+        } => {
+            let mut context = child_attempt_context(generation.value, attempt.value);
+            context.insert("exit".to_owned(), exit.clone());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "shutdown-pipeline".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "graceful".to_owned(),
+                reason: "child completed during graceful drain".to_owned(),
+                phase: phase.clone(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildShutdownAborted {
+            child_id,
+            generation,
+            attempt,
+            phase,
+            result,
+            reason,
+        } => Some(AuditRecord {
+            sequence: event.sequence.value,
+            command_id: "shutdown-pipeline".to_owned(),
+            requested_by: "runtime".to_owned(),
+            result: result.clone(),
+            reason: reason.clone(),
+            phase: phase.clone(),
+            child_id: Some(child_id.to_string()),
+            context: child_attempt_context(generation.value, attempt.value),
+        }),
+        What::ChildShutdownLateReport {
+            child_id,
+            generation,
+            attempt,
+            phase,
+            exit,
+        } => {
+            let mut context = child_attempt_context(generation.value, attempt.value);
+            context.insert("exit".to_owned(), exit.clone());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "shutdown-pipeline".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "late_report".to_owned(),
+                reason: "child reported after shutdown accounting window".to_owned(),
+                phase: phase.clone(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
         _ => None,
     }
+}
+
+/// Builds compact child attempt context for audit records.
+fn child_attempt_context(generation: u64, attempt: u64) -> BTreeMap<String, String> {
+    let mut context = BTreeMap::new();
+    context.insert("generation".to_owned(), generation.to_string());
+    context.insert("attempt".to_owned(), attempt.to_string());
+    context
 }

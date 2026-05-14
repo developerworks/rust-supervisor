@@ -20,7 +20,7 @@
 - 配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式), 运行时可调常量不得散落到模块内部.
 - `SupervisorConfig`(监督器配置) 是公开 root configuration struct(根配置结构体), 它同时支持 `confique::Config`(配置派生), `schemars::JsonSchema`(结构模式生成特征), `Serialize`(序列化) 和 `Deserialize`(反序列化).
 - dashboard IPC(看板进程间通信) 只属于 target process(目标进程) 本机入口. 当前仓库只实现 Unix domain socket(Unix 域套接字), snapshot(快照), event record(事件记录), log record(日志记录), command mapping(命令映射) 和 shared contract(共享契约).
-- shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账).
+- shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制中止滞留任务) 和 reconcile(状态对账). `ShutdownTree`(关闭监督树) 会向运行中的 child task(子任务) 发送 `CancellationToken`(取消令牌), 按 shutdown order(关闭顺序) 等待任务返回, 超时后使用 `AbortHandle`(强制中止句柄) 终止滞留任务, 并在 `ShutdownResult`(关闭结果) 中返回 per-child outcome(逐子任务结果) 和 reconcile report(对账报告).
 - 关闭术语统一使用 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
 
 ## Capability Boundary(能力边界)
@@ -31,6 +31,7 @@
 - 从 typed failure(类型化失败), backoff(退避), jitter(抖动), fuse rule(熔断规则) 和 policy engine(策略引擎) 生成 `RestartDecision`(重启决策).
 - 通过 `SupervisorHandle`(监督器句柄) 控制运行中的树, 包括 `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state`, `subscribe_events`, `is_alive`, `health`, `join` 和 `shutdown`.
 - 控制命令必须携带非空 `requested_by`(请求者) 和 `reason`(原因), 公共控制入口和 runtime control loop(运行时控制循环) 都会在执行前校验审计字段.
+- `shutdown_tree`(关闭监督树) 返回完成后的 `ShutdownPipelineReport`(关闭流水线报告), 其中包含 `ChildShutdownStatus`(子任务关闭状态), `ShutdownReconcileReport`(关闭对账报告) 和 socket status(套接字状态). 核心 runtime(运行时) 不拥有 dashboard IPC socket(看板进程间通信套接字) 时, socket status(套接字状态) 会记录为 `NotOwned`(非运行时拥有).
 - `is_alive`(是否存活) 和 `health`(健康报告) 暴露 runtime control plane(运行时控制面)状态. `join`(等待结束) 可以重复读取同一个最终 `RuntimeExitReport`(运行时退出报告). `shutdown`(关闭) 只关闭控制面, 不替代 `shutdown_tree`(监督树关闭).
 - 从 `examples/config/supervisor.yaml` 加载主 YAML(数据序列化格式) 配置.
 - 复用 `rust_supervisor::config::configurable::SupervisorConfig` 完成 YAML(数据序列化格式) 加载, template generation(模板生成) 和 JSON Schema(JSON 结构模式) 生成.

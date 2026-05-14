@@ -6,7 +6,7 @@
 
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
-use crate::id::types::{ChildId, SupervisorPath};
+use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
 use serde::{Deserialize, Serialize};
 
 /// Location data attached to a supervisor event.
@@ -247,8 +247,64 @@ pub enum What {
     },
     /// Shutdown completed.
     ShutdownCompleted {
+        /// Final shutdown phase.
+        phase: String,
         /// Shutdown result summary.
         result: String,
+        /// Full pipeline duration in milliseconds.
+        duration_ms: u64,
+    },
+    /// Shutdown cancellation reached one child attempt.
+    ChildShutdownCancelDelivered {
+        /// Child that received cancellation.
+        child_id: ChildId,
+        /// Generation associated with the child attempt.
+        generation: Generation,
+        /// Attempt associated with the child run.
+        attempt: Attempt,
+        /// Shutdown phase that delivered cancellation.
+        phase: String,
+    },
+    /// Child finished during graceful shutdown draining.
+    ChildShutdownGraceful {
+        /// Child that completed gracefully.
+        child_id: ChildId,
+        /// Generation associated with the child attempt.
+        generation: Generation,
+        /// Attempt associated with the child run.
+        attempt: Attempt,
+        /// Shutdown phase that recorded the outcome.
+        phase: String,
+        /// Exit classification reported by the child.
+        exit: String,
+    },
+    /// Child was aborted during shutdown.
+    ChildShutdownAborted {
+        /// Child that was aborted.
+        child_id: ChildId,
+        /// Generation associated with the child attempt.
+        generation: Generation,
+        /// Attempt associated with the child run.
+        attempt: Attempt,
+        /// Shutdown phase that recorded the outcome.
+        phase: String,
+        /// Low-cardinality abort result.
+        result: String,
+        /// Human-readable abort reason.
+        reason: String,
+    },
+    /// Child reported after its normal shutdown accounting window.
+    ChildShutdownLateReport {
+        /// Child that produced a late report.
+        child_id: ChildId,
+        /// Generation associated with the child attempt.
+        generation: Generation,
+        /// Attempt associated with the child run.
+        attempt: Attempt,
+        /// Shutdown phase that received the late report.
+        phase: String,
+        /// Exit classification reported by the child.
+        exit: String,
     },
     /// Control command was accepted.
     CommandAccepted {
@@ -353,6 +409,10 @@ impl What {
             Self::ShutdownRequested { .. } => "ShutdownRequested",
             Self::ShutdownPhaseChanged { .. } => "ShutdownPhaseChanged",
             Self::ShutdownCompleted { .. } => "ShutdownCompleted",
+            Self::ChildShutdownCancelDelivered { .. } => "ChildShutdownCancelDelivered",
+            Self::ChildShutdownGraceful { .. } => "ChildShutdownGraceful",
+            Self::ChildShutdownAborted { .. } => "ChildShutdownAborted",
+            Self::ChildShutdownLateReport { .. } => "ChildShutdownLateReport",
             Self::CommandAccepted { .. } => "CommandAccepted",
             Self::CommandCompleted { .. } => "CommandCompleted",
             Self::RuntimeControlLoopStarted { .. } => "RuntimeControlLoopStarted",

@@ -22,7 +22,7 @@ async fn shutdown_tree_completes_without_orphaned_runtime_state() {
         shutdown,
         CommandResult::Shutdown {
             result: rust_supervisor::shutdown::coordinator::ShutdownResult {
-                phase: ShutdownPhase::RequestStop,
+                phase: ShutdownPhase::Completed,
                 ..
             }
         }

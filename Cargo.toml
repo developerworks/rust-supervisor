@@ -109,6 +109,10 @@ name = "supervisor_shutdown_test"
 path = "src/tests/supervisor_shutdown_test.rs"
 
 [[test]]
+name = "supervisor_real_shutdown_pipeline_test"
+path = "src/tests/supervisor_real_shutdown_pipeline_test.rs"
+
+[[test]]
 name = "supervisor_event_shape_test"
 path = "src/tests/supervisor_event_shape_test.rs"
 

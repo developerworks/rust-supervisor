@@ -47,14 +47,14 @@ impl Drop for DashboardIpcRuntimeGuard {
         if let Some(task) = self.heartbeat_task.as_ref() {
             task.abort();
         }
-        if let Err(error) = std::fs::remove_file(&self.ipc_path) {
-            if error.kind() != std::io::ErrorKind::NotFound {
-                tracing::warn!(
-                    ipc_path = %self.ipc_path.display(),
-                    ?error,
-                    "failed to remove dashboard IPC socket"
-                );
-            }
+        if let Err(error) = std::fs::remove_file(&self.ipc_path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(
+                ipc_path = %self.ipc_path.display(),
+                ?error,
+                "failed to remove dashboard IPC socket"
+            );
         }
     }
 }

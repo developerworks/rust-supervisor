@@ -4,7 +4,7 @@
 //! and applies supervisor restart strategy decisions.
 
 use crate::child_runner::attempt::TaskExit;
-use crate::child_runner::runner::{ChildRunReport, ChildRunner};
+use crate::child_runner::runner::{ChildRunReport, ChildRunner, wait_for_report};
 use crate::control::command::{CommandResult, ControlCommand, CurrentState, ManagedChildState};
 use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
@@ -16,23 +16,33 @@ use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
 use crate::runtime::lifecycle::RuntimeExitReport;
 use crate::runtime::message::{ChildAttemptMessage, ControlPlaneMessage, RuntimeLoopMessage};
-use crate::shutdown::coordinator::ShutdownCoordinator;
-use crate::shutdown::stage::{ShutdownCause, ShutdownPolicy};
+use crate::runtime::shutdown_pipeline::{ActiveChildAttempt, ShutdownPipeline};
+use crate::shutdown::coordinator::{ShutdownCoordinator, ShutdownResult};
+use crate::shutdown::report::{
+    ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ShutdownPipelineReport,
+    ShutdownReconcileReport,
+};
+use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use crate::spec::child::RestartPolicy as ChildRestartPolicy;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::tree::builder::SupervisorTree;
-use crate::tree::order::{restart_execution_plan, startup_order};
+use crate::tree::order::{restart_execution_plan, shutdown_order, startup_order};
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::{broadcast, mpsc};
+use tokio::time::{Instant, timeout};
 
 /// Mutable state owned by the control loop.
 #[derive(Debug)]
 pub struct RuntimeControlState {
     /// Shutdown state machine used by tree-level shutdown commands.
     shutdown: ShutdownCoordinator,
+    /// Runtime-owned shutdown pipeline state and cached report.
+    shutdown_pipeline: ShutdownPipeline,
     /// Runtime child states set by explicit control commands.
     children: HashMap<ChildId, ManagedChildState>,
+    /// Active child attempts that can be cancelled or aborted.
+    active_attempts: HashMap<ChildId, ActiveChildAttempt>,
     /// Dynamic child manifests accepted after startup.
     manifests: Vec<String>,
     /// Registry that owns declared child runtime records.
@@ -69,7 +79,9 @@ impl RuntimeControlState {
         registry.register_tree(&tree)?;
         Ok(Self {
             shutdown: ShutdownCoordinator::new(shutdown_policy),
+            shutdown_pipeline: ShutdownPipeline::new(),
             children: HashMap::new(),
+            active_attempts: HashMap::new(),
             manifests: Vec::new(),
             registry,
             tree,
@@ -103,13 +115,15 @@ impl RuntimeControlState {
     /// # Arguments
     ///
     /// - `command`: Command received by the runtime.
+    /// - `event_sender`: Event channel used for lifecycle text.
     ///
     /// # Returns
     ///
     /// Returns a command result.
-    pub fn execute_control(
+    pub async fn execute_control(
         &mut self,
         command: ControlCommand,
+        event_sender: &broadcast::Sender<String>,
     ) -> Result<CommandResult, SupervisorError> {
         command.validate_audit_metadata()?;
         match command {
@@ -135,13 +149,9 @@ impl RuntimeControlState {
                 Ok(self.set_child_state(child_id, ManagedChildState::Quarantined))
             }
             ControlCommand::ShutdownTree { meta } => {
-                let cause = ShutdownCause::new(meta.requested_by, meta.reason);
-                let result = self.shutdown.request_stop(cause);
-                self.shutdown.advance();
-                self.shutdown.advance();
-                self.shutdown.advance();
-                self.shutdown.advance();
-                self.shutdown.complete();
+                let result = self
+                    .execute_shutdown(meta.requested_by, meta.reason, event_sender)
+                    .await?;
                 Ok(CommandResult::Shutdown { result })
             }
             ControlCommand::CurrentState { .. } => Ok(CommandResult::CurrentState {
@@ -170,8 +180,13 @@ impl RuntimeControlState {
         event_sender: &broadcast::Sender<String>,
     ) {
         let child_id = report.runtime.id.clone();
+        let was_active = self.active_attempts.remove(&child_id).is_some();
+        let late_report = !was_active && self.shutdown.phase() == ShutdownPhase::Completed;
         self.record_child_exit(report);
         let _ignored = event_sender.send(format!("child_exit:{child_id}"));
+        if late_report {
+            let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
+        }
         if !self.should_apply_automatic_policy(&child_id) {
             return;
         }
@@ -200,6 +215,388 @@ impl RuntimeControlState {
     ) {
         let _ignored = event_sender.send(format!("child_start_failed:{child_id}:{message}"));
         let _result = self.set_child_state(child_id, ManagedChildState::Quarantined);
+    }
+
+    /// Executes the real shutdown pipeline.
+    ///
+    /// # Arguments
+    ///
+    /// - `requested_by`: Actor that requested shutdown.
+    /// - `reason`: Human-readable shutdown reason.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`ShutdownResult`] with a completed report attached.
+    async fn execute_shutdown(
+        &mut self,
+        requested_by: String,
+        reason: String,
+        event_sender: &broadcast::Sender<String>,
+    ) -> Result<ShutdownResult, SupervisorError> {
+        if let Some(report) = self.shutdown_pipeline.cached_report() {
+            return Ok(self
+                .shutdown
+                .result_with_report(report.as_idempotent(), true));
+        }
+
+        let cause = ShutdownCause::new(requested_by, reason);
+        let requested = self.shutdown.request_stop(cause);
+        let started_at_unix_nanos = unix_epoch_nanos();
+        let wait_order = self.shutdown_wait_order();
+        let mut outcomes = HashMap::<ChildId, ChildShutdownOutcome>::new();
+        let _ignored = event_sender.send(format!(
+            "shutdown_phase_changed:{:?}:{:?}",
+            ShutdownPhase::Idle,
+            self.shutdown.phase()
+        ));
+        self.deliver_shutdown_cancellations(&wait_order, event_sender);
+
+        self.advance_shutdown_phase(event_sender);
+        self.drain_graceful_children(&wait_order, &mut outcomes, event_sender)
+            .await;
+
+        self.advance_shutdown_phase(event_sender);
+        self.abort_remaining_children(&wait_order, &mut outcomes, event_sender)
+            .await;
+
+        self.advance_shutdown_phase(event_sender);
+        self.reconcile_shutdown_outcomes(&wait_order, &mut outcomes);
+        let reconcile = ShutdownReconcileReport::core_runtime_completed();
+
+        let from = self.shutdown.phase();
+        self.shutdown.complete();
+        let _ignored = event_sender.send(format!(
+            "shutdown_phase_changed:{from:?}:{:?}",
+            self.shutdown.phase()
+        ));
+        let ordered_outcomes = wait_order
+            .iter()
+            .filter_map(|child_id| outcomes.remove(child_id))
+            .collect::<Vec<_>>();
+        let report = ShutdownPipelineReport {
+            cause: requested.cause,
+            started_at_unix_nanos,
+            completed_at_unix_nanos: unix_epoch_nanos(),
+            phase: self.shutdown.phase(),
+            outcomes: ordered_outcomes,
+            reconcile,
+            idempotent: false,
+        };
+        let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
+        self.shutdown_pipeline.cache_report(report.clone());
+        Ok(self.shutdown.result_with_report(report, false))
+    }
+
+    /// Advances the shutdown phase and emits a phase event.
+    ///
+    /// # Arguments
+    ///
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// Returns the phase after advancing.
+    fn advance_shutdown_phase(
+        &mut self,
+        event_sender: &broadcast::Sender<String>,
+    ) -> ShutdownPhase {
+        let from = self.shutdown.phase();
+        let to = self.shutdown.advance();
+        let _ignored = event_sender.send(format!("shutdown_phase_changed:{from:?}:{to:?}"));
+        to
+    }
+
+    /// Returns declared children in shutdown wait order.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns child identifiers in shutdown order.
+    fn shutdown_wait_order(&self) -> Vec<ChildId> {
+        shutdown_order(&self.tree)
+            .into_iter()
+            .map(|node| node.child.id.clone())
+            .collect()
+    }
+
+    /// Delivers cancellation to every active child attempt.
+    ///
+    /// # Arguments
+    ///
+    /// - `wait_order`: Stable shutdown order for declared children.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn deliver_shutdown_cancellations(
+        &mut self,
+        wait_order: &[ChildId],
+        event_sender: &broadcast::Sender<String>,
+    ) {
+        for child_id in wait_order {
+            let Some(attempt) = self.active_attempts.get_mut(child_id) else {
+                continue;
+            };
+            attempt.cancel();
+            let _ignored = event_sender.send(format!(
+                "child_shutdown_cancel_delivered:{}:{}:{}",
+                attempt.child_id, attempt.generation.value, attempt.attempt.value
+            ));
+        }
+    }
+
+    /// Drains cooperative child attempts within the graceful timeout budget.
+    ///
+    /// # Arguments
+    ///
+    /// - `wait_order`: Stable shutdown order for declared children.
+    /// - `outcomes`: Output map for completed child outcomes.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    async fn drain_graceful_children(
+        &mut self,
+        wait_order: &[ChildId],
+        outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
+        event_sender: &broadcast::Sender<String>,
+    ) {
+        let deadline = Instant::now() + self.shutdown.policy.graceful_timeout;
+        for child_id in wait_order {
+            if outcomes.contains_key(child_id) {
+                continue;
+            }
+            let Some(mut attempt) = self.active_attempts.remove(child_id) else {
+                continue;
+            };
+            let completed = match remaining_duration(deadline) {
+                Some(remaining) => timeout(remaining, attempt.wait_for_report()).await.ok(),
+                None => None,
+            };
+            match completed {
+                Some(Ok(report)) => {
+                    let outcome = outcome_from_report(
+                        &attempt,
+                        &report,
+                        ChildShutdownStatus::Graceful,
+                        ShutdownPhase::GracefulDrain,
+                        "child completed during graceful drain",
+                    );
+                    self.record_child_exit(report);
+                    let _ignored = event_sender.send(format!("child_shutdown_graceful:{child_id}"));
+                    outcomes.insert(child_id.clone(), outcome);
+                }
+                Some(Err(error)) => {
+                    outcomes.insert(
+                        child_id.clone(),
+                        outcome_from_error(
+                            &attempt,
+                            ChildShutdownStatus::Graceful,
+                            ShutdownPhase::GracefulDrain,
+                            error,
+                        ),
+                    );
+                }
+                None => {
+                    self.active_attempts.insert(child_id.clone(), attempt);
+                }
+            }
+        }
+    }
+
+    /// Aborts children that did not complete during graceful drain.
+    ///
+    /// # Arguments
+    ///
+    /// - `wait_order`: Stable shutdown order for declared children.
+    /// - `outcomes`: Output map for completed child outcomes.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    async fn abort_remaining_children(
+        &mut self,
+        wait_order: &[ChildId],
+        outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
+        event_sender: &broadcast::Sender<String>,
+    ) {
+        let policy = self.shutdown.policy;
+        for child_id in wait_order {
+            if outcomes.contains_key(child_id) {
+                continue;
+            }
+            let Some(mut attempt) = self.active_attempts.remove(child_id) else {
+                continue;
+            };
+            if !policy.abort_after_timeout {
+                self.wait_for_late_report(
+                    child_id,
+                    attempt,
+                    policy.abort_wait,
+                    outcomes,
+                    event_sender,
+                )
+                .await;
+                continue;
+            }
+            attempt.abort();
+            let _ignored = event_sender.send(format!(
+                "child_shutdown_abort_requested:{}",
+                attempt.child_id
+            ));
+            match timeout(policy.abort_wait, attempt.wait_for_report()).await {
+                Ok(Ok(report)) => {
+                    let outcome = outcome_from_report(
+                        &attempt,
+                        &report,
+                        ChildShutdownStatus::Aborted,
+                        ShutdownPhase::AbortStragglers,
+                        "child completed after abort request",
+                    );
+                    self.record_child_exit(report);
+                    let _ignored = event_sender.send(format!("child_shutdown_aborted:{child_id}"));
+                    outcomes.insert(child_id.clone(), outcome);
+                }
+                Ok(Err(error)) => {
+                    outcomes.insert(
+                        child_id.clone(),
+                        outcome_from_error(
+                            &attempt,
+                            ChildShutdownStatus::AbortFailed,
+                            ShutdownPhase::AbortStragglers,
+                            error,
+                        ),
+                    );
+                }
+                Err(_elapsed) => {
+                    outcomes.insert(
+                        child_id.clone(),
+                        ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+                            child_id: attempt.child_id,
+                            path: attempt.path,
+                            generation: attempt.generation,
+                            attempt: attempt.attempt,
+                            status: ChildShutdownStatus::AbortFailed,
+                            cancel_delivered: attempt.cancel_delivered,
+                            exit: None,
+                            phase: ShutdownPhase::AbortStragglers,
+                            reason: "child did not complete after abort request".to_owned(),
+                        }),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Waits for a late report when abort is disabled by policy.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child whose attempt is being reconciled.
+    /// - `attempt`: Active attempt removed from runtime tracking.
+    /// - `wait`: Late report wait budget.
+    /// - `outcomes`: Output map for completed child outcomes.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    async fn wait_for_late_report(
+        &mut self,
+        child_id: &ChildId,
+        mut attempt: ActiveChildAttempt,
+        wait: Duration,
+        outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
+        event_sender: &broadcast::Sender<String>,
+    ) {
+        match timeout(wait, attempt.wait_for_report()).await {
+            Ok(Ok(report)) => {
+                let outcome = outcome_from_report(
+                    &attempt,
+                    &report,
+                    ChildShutdownStatus::LateReport,
+                    ShutdownPhase::AbortStragglers,
+                    "child reported after graceful timeout",
+                );
+                self.record_child_exit(report);
+                let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
+                outcomes.insert(child_id.clone(), outcome);
+            }
+            Ok(Err(error)) => {
+                outcomes.insert(
+                    child_id.clone(),
+                    outcome_from_error(
+                        &attempt,
+                        ChildShutdownStatus::LateReport,
+                        ShutdownPhase::AbortStragglers,
+                        error,
+                    ),
+                );
+            }
+            Err(_elapsed) => {
+                outcomes.insert(
+                    child_id.clone(),
+                    ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+                        child_id: attempt.child_id,
+                        path: attempt.path,
+                        generation: attempt.generation,
+                        attempt: attempt.attempt,
+                        status: ChildShutdownStatus::AbortFailed,
+                        cancel_delivered: attempt.cancel_delivered,
+                        exit: None,
+                        phase: ShutdownPhase::AbortStragglers,
+                        reason: "abort disabled and child did not report before reconcile"
+                            .to_owned(),
+                    }),
+                );
+            }
+        }
+    }
+
+    /// Adds already-exited outcomes for declared children with no active task.
+    ///
+    /// # Arguments
+    ///
+    /// - `wait_order`: Stable shutdown order for declared children.
+    /// - `outcomes`: Output map for completed child outcomes.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn reconcile_shutdown_outcomes(
+        &self,
+        wait_order: &[ChildId],
+        outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
+    ) {
+        for child_id in wait_order {
+            if outcomes.contains_key(child_id) {
+                continue;
+            }
+            let Some(runtime) = self.registry.child(child_id) else {
+                continue;
+            };
+            outcomes.insert(
+                child_id.clone(),
+                ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+                    child_id: runtime.id.clone(),
+                    path: runtime.path.clone(),
+                    generation: runtime.generation,
+                    attempt: runtime.attempt,
+                    status: ChildShutdownStatus::AlreadyExited,
+                    cancel_delivered: false,
+                    exit: runtime.last_exit.clone(),
+                    phase: ShutdownPhase::Reconcile,
+                    reason: "child had no active attempt during shutdown".to_owned(),
+                }),
+            );
+        }
     }
 
     /// Sets a child state and reports whether the operation was idempotent.
@@ -401,14 +798,41 @@ impl RuntimeControlState {
             return;
         };
         let sender = self.command_sender.clone();
-        tokio::spawn(async move {
-            if !delay.is_zero() {
+        if !delay.is_zero() {
+            tokio::spawn(async move {
                 tokio::time::sleep(delay).await;
+                let child_id = runtime.id.clone();
+                let result = ChildRunner::new().run_once(runtime).await;
+                send_child_result(sender, child_id, result).await;
+            });
+            return;
+        }
+
+        let child_id = runtime.id.clone();
+        let path = runtime.path.clone();
+        let generation = runtime.generation;
+        let attempt = runtime.attempt;
+        if let Some(mut existing) = self.active_attempts.remove(&child_id) {
+            existing.abort();
+        }
+        match ChildRunner::new().spawn_once(runtime) {
+            Ok(handle) => {
+                let mut completion_receiver = handle.completion_receiver.clone();
+                self.active_attempts.insert(
+                    child_id.clone(),
+                    ActiveChildAttempt::new(child_id.clone(), path, generation, attempt, handle),
+                );
+                tokio::spawn(async move {
+                    let result = wait_for_report(&mut completion_receiver).await;
+                    send_child_result(sender, child_id, result).await;
+                });
             }
-            let child_id = runtime.id.clone();
-            let result = ChildRunner::new().run_once(runtime).await;
-            send_child_result(sender, child_id, result).await;
-        });
+            Err(error) => {
+                tokio::spawn(async move {
+                    send_child_result(sender, child_id, Err(error)).await;
+                });
+            }
+        }
     }
 
     /// Prepares registry state for one child attempt.
@@ -463,7 +887,7 @@ pub async fn run_control_loop(
                 reply_sender,
             } => {
                 let command_name = command_name(&command);
-                let result = state.execute_control(command);
+                let result = state.execute_control(command, &event_sender).await;
                 let _ignored = event_sender.send(format!("control_command:{command_name}"));
                 let _ignored = reply_sender.send(result);
             }
@@ -621,4 +1045,96 @@ fn child_scope_label(scope: &[ChildId]) -> String {
         .map(|child_id| child_id.value.clone())
         .collect::<Vec<_>>()
         .join(",")
+}
+
+/// Builds a child shutdown outcome from a completed run report.
+///
+/// # Arguments
+///
+/// - `attempt`: Active attempt that produced the report.
+/// - `report`: Completed child run report.
+/// - `status`: Shutdown status assigned to the report.
+/// - `phase`: Shutdown phase where the report was consumed.
+/// - `reason`: Human-readable diagnostic reason.
+///
+/// # Returns
+///
+/// Returns a [`ChildShutdownOutcome`].
+fn outcome_from_report(
+    attempt: &ActiveChildAttempt,
+    report: &ChildRunReport,
+    status: ChildShutdownStatus,
+    phase: ShutdownPhase,
+    reason: impl Into<String>,
+) -> ChildShutdownOutcome {
+    ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+        child_id: attempt.child_id.clone(),
+        path: attempt.path.clone(),
+        generation: attempt.generation,
+        attempt: attempt.attempt,
+        status,
+        cancel_delivered: attempt.cancel_delivered,
+        exit: Some(report.exit.clone()),
+        phase,
+        reason: reason.into(),
+    })
+}
+
+/// Builds a child shutdown outcome from a run report error.
+///
+/// # Arguments
+///
+/// - `attempt`: Active attempt that produced the error.
+/// - `status`: Shutdown status assigned to the error.
+/// - `phase`: Shutdown phase where the error was consumed.
+/// - `error`: Error returned by the child run observer.
+///
+/// # Returns
+///
+/// Returns a [`ChildShutdownOutcome`].
+fn outcome_from_error(
+    attempt: &ActiveChildAttempt,
+    status: ChildShutdownStatus,
+    phase: ShutdownPhase,
+    error: SupervisorError,
+) -> ChildShutdownOutcome {
+    ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+        child_id: attempt.child_id.clone(),
+        path: attempt.path.clone(),
+        generation: attempt.generation,
+        attempt: attempt.attempt,
+        status,
+        cancel_delivered: attempt.cancel_delivered,
+        exit: None,
+        phase,
+        reason: error.to_string(),
+    })
+}
+
+/// Returns the remaining duration before a deadline.
+///
+/// # Arguments
+///
+/// - `deadline`: Monotonic deadline.
+///
+/// # Returns
+///
+/// Returns `None` when the deadline has already passed.
+fn remaining_duration(deadline: Instant) -> Option<Duration> {
+    deadline.checked_duration_since(Instant::now())
+}
+
+/// Returns the current Unix epoch timestamp in nanoseconds.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns a nanosecond timestamp, or zero if system time is before epoch.
+fn unix_epoch_nanos() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_nanos())
 }

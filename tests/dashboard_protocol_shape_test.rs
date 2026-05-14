@@ -101,6 +101,31 @@ fn command_validation_rejects_empty_reason_and_missing_confirmation() {
     assert!(validate_command(&command).is_err());
 }
 
+#[test]
+fn shutdown_tree_command_request_shape_stays_stable() {
+    let request = ControlCommandRequest {
+        command_id: "cmd-2".to_owned(),
+        target_id: "payments".to_owned(),
+        command: ControlCommandKind::ShutdownTree,
+        target: ControlCommandTarget {
+            child_path: None,
+            child_manifest: None,
+        },
+        reason: "operator requested shutdown".to_owned(),
+        requested_by: "operator@example.test".to_owned(),
+        confirmed: true,
+        requested_at_unix_nanos: 42,
+    };
+
+    let value = serde_json::to_value(&request).expect("command request should serialize");
+
+    assert_eq!(value["command"], "shutdown_tree");
+    assert_eq!(value["target"]["child_path"], serde_json::Value::Null);
+    assert_eq!(value["target"]["child_manifest"], serde_json::Value::Null);
+    assert!(value.get("report").is_none());
+    assert!(value.get("shutdown_result").is_none());
+}
+
 #[tokio::test]
 async fn target_ipc_rejects_command_for_different_target_id() {
     let config = ValidatedDashboardIpcConfig {
