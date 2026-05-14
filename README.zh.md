@@ -4,7 +4,15 @@
 
 发布包名是 `rust-tokio-supervisor`. Library crate name(库包名) 是 `rust_supervisor`.
 
-## 设计原则
+## Project Links(项目链接)
+
+- core library(核心库): [rust-supervisor](https://github.com/developerworks/rust-supervisor)
+- relay(中继): [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay)
+- user interface(用户界面): [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui)
+- manual(手册): [language selector(语言选择页)](https://developerworks.github.io/rust-supervisor/), [English manual(英文手册)](https://developerworks.github.io/rust-supervisor/en/), [Chinese manual(中文手册)](https://developerworks.github.io/rust-supervisor/zh/)
+- dashboard workflow(看板流程): [English(英文)](https://developerworks.github.io/rust-supervisor/en/dashboard.html), [Chinese(中文)](https://developerworks.github.io/rust-supervisor/zh/dashboard.html)
+
+## Design Principles(设计原则)
 
 - 公开 API(接口) 只来自本项目自有模型.
 - 不提供 compatibility wrapper(兼容包装函数), deprecated facade(废弃门面) 或 migration layer(迁移层).
@@ -15,17 +23,35 @@
 - shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制终止拖尾任务) 和 reconcile(状态对账).
 - 关闭术语统一使用 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
 
-## Dashboard(看板) 三目录边界
+## Capability Boundary(能力边界)
+
+- 声明 `ChildSpec`(子任务规格) 和 `SupervisorSpec`(监督器规格).
+- 通过 `TaskFactory`(任务工厂) 或 `service_fn`(服务函数) 启动全新的 future(异步任务).
+- 使用 `OneForOne`(一对一), `OneForAll`(一对全部) 和 `RestForOne`(后续一组) supervision strategy(监督策略).
+- 从 typed failure(类型化失败), backoff(退避), jitter(抖动), fuse rule(熔断规则) 和 policy engine(策略引擎) 生成 `RestartDecision`(重启决策).
+- 通过 `SupervisorHandle`(监督器句柄) 控制运行中的树, 包括 `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state` 和 `subscribe_events`.
+- 从 `examples/config/supervisor.yaml` 加载主 YAML(数据序列化格式) 配置.
+- 复用 `rust_supervisor::config::configurable::SupervisorConfig` 完成 YAML(数据序列化格式) 加载, template generation(模板生成) 和 JSON Schema(JSON 结构模式) 生成.
+- 发出 structured log(结构化日志), tracing span(追踪跨度), metrics(指标), audit event(审计事件), event journal entry(事件日志条目) 和 `RunSummary`(运行摘要) diagnostics(诊断信息).
+- 通过可选 `ipc` 配置启用 target-side dashboard IPC(目标侧看板进程间通信). target process(目标进程) 只拥有本机 Unix domain socket IPC(Unix 域套接字进程间通信), snapshot(快照) 生成, event conversion(事件转换), command mapping(命令映射) 和 shared JSON contract(共享 JSON 契约).
+
+## Dashboard Boundary(看板边界)
 
 dashboard(看板) 功能固定拆成三个目录.
 
-- `~/rust-supervisor`: 目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, snapshot(快照) 生成和共享契约.
-- `~/rust-supervisor-relay`: relay(中继), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
-- `~/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
+- [rust-supervisor](https://github.com/developerworks/rust-supervisor) 位于 `~/rust-supervisor`: target process IPC(目标进程进程间通信) 和 shared contract(共享契约).
+- [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay) 位于 `~/rust-supervisor-relay`: relay server(中继服务), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
+- [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui) 位于 `~/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
 
 target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `ipc.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
 
-## 配置结构模式
+![rust-supervisor dashboard(看板) screenshot(截图)](docs/screenshot.png)
+
+## No Compatibility(不兼容承诺)
+
+No Compatibility(不兼容承诺): 本 crate(包) 是新项目, 不提供 legacy API alias(旧接口别名). 使用者应该从类型所属模块路径导入 public type(公开类型), 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
+
+## Configuration Schema(配置结构模式)
 
 `rust_supervisor::config::configurable::SupervisorConfig` 是 crate user(crate 使用者) 可以复用的配置入口. 它用于 YAML(数据序列化格式) 加载, template generation(模板生成) 和 schema generation(结构模式生成). 使用者不需要为 template(模板) 或 schema(结构模式) 维护第二套模型.
 
@@ -55,7 +81,13 @@ ipc:
 
 当 `ipc.enabled=true` 时, `ipc.path` 和 `ipc.registration.relay_registration_path` 必须是 absolute path(绝对路径). registration(注册) 使用 dynamic registration(动态注册). relay config(中继配置) 不允许写死 target list(目标列表).
 
-## 最小使用方式
+## Quick Start(快速开始)
+
+```bash
+cargo run --example supervisor_quickstart
+```
+
+示例按下面的路径执行.
 
 ```rust
 use rust_supervisor::runtime::supervisor::Supervisor;
@@ -70,9 +102,10 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 }
 ```
 
-## 示例命令
+## Examples(示例命令)
 
 ```bash
+cargo run --example demo -- --config examples/config/supervisor.yaml
 cargo run --example supervisor_quickstart
 cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
@@ -84,12 +117,21 @@ cargo run --example policy_failure_matrix
 cargo run --example diagnostic_replay
 ```
 
-## 手册入口
+`cargo run --example demo -- --config examples/config/supervisor.yaml` 是 three-end supervisor demo(三端监督器演示). 它从同一个配置文件启动 library-only supervisor runtime(仅库监督器运行时), 然后在 `examples/demo` 内启动 demo-only dashboard IPC service(仅演示看板进程间通信服务) 和 registration heartbeat(注册心跳). 这个入口不是本 crate(包) 的 production binary(生产二进制程序), 也不会把 demo state(演示状态) 写入核心 `src` 模块.
 
-- `manual/zh/index.md`: 中文手册入口, 覆盖配置, 监督树, 任务模型, 策略, 运行时控制, 关闭, 可观测性, 示例和质量门禁.
-- `manual/en/index.md`: 同构手册入口, 与中文手册保持相同页面结构.
+## Manuals(手册入口)
 
-## 发布检查
+- [Published manual(已发布手册)](https://developerworks.github.io/rust-supervisor/): generated mdBook site(生成的 mdBook 站点) 的 language selector(语言选择页).
+- [English manual(英文手册)](https://developerworks.github.io/rust-supervisor/en/): generated English user manual(生成的英文用户手册).
+- [Chinese manual(中文手册)](https://developerworks.github.io/rust-supervisor/zh/): generated Chinese user manual(生成的中文用户手册).
+- [Dashboard workflow(看板流程)](https://developerworks.github.io/rust-supervisor/en/dashboard.html): generated three-end dashboard workflow(生成的三端看板流程) 的英文页面.
+- [Chinese dashboard workflow(中文看板流程)](https://developerworks.github.io/rust-supervisor/zh/dashboard.html): generated three-end dashboard workflow(生成的三端看板流程) 的中文页面.
+- `manual/en/index.md`: English user manual(英文用户手册).
+- `manual/zh/index.md`: Chinese user manual(中文用户手册).
+- `docs/en/index.md`: English engineering documentation(英文工程文档).
+- `docs/zh/index.md`: Chinese engineering documentation(中文工程文档).
+
+## Quality Gates(质量门禁)
 
 ```bash
 cargo fmt --check
@@ -115,11 +157,8 @@ npm --prefix ~/rust-supervisor-ui run build
 npm --prefix ~/rust-supervisor-ui run test:e2e
 ```
 
-## 文档入口
+工程门禁详情写在 `docs/en/quality-gates.md` 和 `docs/zh/quality-gates.md`. Parallel implementation governance(并行实现治理) 写在 `docs/en/parallel-governance.md` 和 `docs/zh/parallel-governance.md`.
 
-- `manual/zh/index.md`: 使用者手册入口.
-- `manual/en/index.md`: 同构手册入口.
-- `docs/zh/index.md`: 工程文档入口.
-- `docs/en/index.md`: 同构工程文档入口.
-- `docs/zh/quality-gates.md`: 质量门禁说明.
-- `docs/zh/parallel-governance.md`: 并行治理说明.
+## License(许可证)
+
+本项目使用 MIT license(MIT 许可证). 详情见 `LICENSE`.

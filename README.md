@@ -14,6 +14,17 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - manual: [language selector](https://developerworks.github.io/rust-supervisor/), [English manual](https://developerworks.github.io/rust-supervisor/en/), [Chinese manual](https://developerworks.github.io/rust-supervisor/zh/)
 - dashboard workflow: [English](https://developerworks.github.io/rust-supervisor/en/dashboard.html), [Chinese](https://developerworks.github.io/rust-supervisor/zh/dashboard.html)
 
+## Design Principles
+
+- Public API models come only from this project.
+- No Compatibility: this crate has no legacy aliases or transition API surfaces.
+- `current_state` answers only the current runtime state. It does not replace lifecycle event history.
+- Configuration must be loaded through rust-config-tree v0.1.9, and runtime-tunable constants must not be scattered across internal modules.
+- `SupervisorConfig` is the public root configuration struct. It supports `confique::Config`, `schemars::JsonSchema`, `serde::Serialize`, and `serde::Deserialize`.
+- Dashboard IPC belongs only to the target process local entry point. This repository implements Unix domain socket IPC, snapshot generation, event records, log records, command mapping, and shared contracts.
+- Shutdown must run request stop, graceful drain, abort stragglers, and reconcile.
+- Shutdown terminology uses Shutdown Without Orphaned Tasks.
+
 ## Capability Boundary
 
 - Declare `ChildSpec` and `SupervisorSpec`.
@@ -34,7 +45,9 @@ The supervisor dashboard feature uses three directories.
 - [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay) at `~/rust-supervisor-relay`: relay server, dynamic registration, `wss://`, mTLS, session gating, and command audit.
 - [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui) at `~/rust-supervisor-ui`: Vue, shadcn-vue, Tailwind dashboard client.
 
-The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots and can request `events.subscribe` or `logs.tail`, but those subscriptions must be triggered by an established remote dashboard session.
+The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots, but event and log subscriptions must be triggered by an established remote dashboard session.
+
+![rust-supervisor dashboard screenshot](docs/screenshot.png)
 
 ## No Compatibility
 
@@ -79,7 +92,6 @@ cargo run --example supervisor_quickstart
 The example follows this path:
 
 ```rust
-use rust_supervisor::config::loader::load_config_state;
 use rust_supervisor::runtime::supervisor::Supervisor;
 
 #[tokio::main]
