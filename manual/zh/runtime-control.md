@@ -29,3 +29,5 @@
 ## 审计数据
 
 每个控制命令都带有 `requested_by`(请求者), `reason`(原因), `target_path`(目标路径), `accepted_at`(接受时间)和 `command_id`(命令标识). 这些字段用于 audit event(审计事件)和问题追踪.
+
+`requested_by`(请求者) 和 `reason`(原因) 必须提供非空文本. `SupervisorHandle`(监督器句柄) 会在命令进入 channel(通道) 前拒绝空值, runtime control loop(运行时控制循环) 也会在执行命令前再次校验. 这样做可以保证人工操作, dashboard IPC(看板进程间通信) 转发和内部控制调用都留下可追踪的审计来源.

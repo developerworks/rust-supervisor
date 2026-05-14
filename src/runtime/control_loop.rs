@@ -133,6 +133,7 @@ impl RuntimeControlState {
         &mut self,
         command: ControlCommand,
     ) -> Result<CommandResult, SupervisorError> {
+        command.validate_audit_metadata()?;
         match command {
             ControlCommand::AddChild { child_manifest, .. } => {
                 self.ensure_dynamic_child_allowed()?;

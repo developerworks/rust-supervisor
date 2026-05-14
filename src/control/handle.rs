@@ -263,6 +263,7 @@ impl SupervisorHandle {
     ///
     /// Returns a command result or a supervisor error when the runtime is gone.
     async fn send(&self, command: ControlCommand) -> Result<CommandResult, SupervisorError> {
+        command.validate_audit_metadata()?;
         let (reply_sender, reply_receiver) = oneshot::channel();
         self.command_sender
             .send(RuntimeCommand::Control {
