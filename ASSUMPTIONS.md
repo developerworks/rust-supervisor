@@ -19,9 +19,9 @@
 ## Dashboard(看板) 默认值
 
 - supervisor target(监督器目标进程), relay(中继) 和 UI(用户界面) 使用三个独立目录实现.
-- 当前仓库 `/Users/0x00/Documents/rust-supervisor` 只拥有 target process IPC(目标进程进程间通信) 和 shared contract(共享契约).
-- relay(中继) 实现在 `/Users/0x00/Documents/rust-supervisor-relay`, 并通过 dynamic registration(动态注册) 发现目标进程, 不使用静态目标清单.
-- UI(用户界面) 实现在 `/Users/0x00/Documents/rust-supervisor-ui`, 技术栈固定为 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架).
+- 当前仓库 `~/rust-supervisor` 只拥有 target process IPC(目标进程进程间通信) 和 shared contract(共享契约).
+- relay(中继) 实现在 `~/rust-supervisor-relay`, 并通过 dynamic registration(动态注册) 发现目标进程, 不使用静态目标清单.
+- UI(用户界面) 实现在 `~/rust-supervisor-ui`, 技术栈固定为 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架).
 - target IPC(目标进程进程间通信) 使用 Unix domain socket(Unix 域套接字) 和 newline-delimited JSON(按行分隔的 JSON 数据).
 - `ipc.enabled=false` 或缺少 `ipc` section(配置节) 时, target process(目标进程) 不打开 IPC(进程间通信).
 - `ipc.enabled=true` 时, `ipc.path` 和 `registration.relay_registration_path` 必须是 absolute path(绝对路径).

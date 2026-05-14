@@ -19,9 +19,9 @@
 
 dashboard(看板) 功能固定拆成三个目录.
 
-- `/Users/0x00/Documents/rust-supervisor`: 目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, snapshot(快照) 生成和共享契约.
-- `/Users/0x00/Documents/rust-supervisor-relay`: relay(中继), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
-- `/Users/0x00/Documents/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
+- `~/rust-supervisor`: 目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, snapshot(快照) 生成和共享契约.
+- `~/rust-supervisor-relay`: relay(中继), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
+- `~/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
 
 target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `ipc.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
 
@@ -108,11 +108,11 @@ dashboard(看板) 的验证需要覆盖三个目录.
 
 ```bash
 cargo test
-cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui install
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run build
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e
+cargo test --manifest-path ~/rust-supervisor-relay/Cargo.toml
+npm --prefix ~/rust-supervisor-ui install
+npm --prefix ~/rust-supervisor-ui run test
+npm --prefix ~/rust-supervisor-ui run build
+npm --prefix ~/rust-supervisor-ui run test:e2e
 ```
 
 ## 文档入口

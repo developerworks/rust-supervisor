@@ -7,9 +7,9 @@
 ## 完成内容
 
 - 完成 003-supervisor-dashboard(监督器看板) 的三目录实现.
-- `/Users/0x00/Documents/rust-supervisor` 完成 target-side IPC(目标侧进程间通信), shared JSON contract(共享数据交换格式契约), snapshot(快照), event stream(事件流), log stream(日志流), dynamic registration payload(动态注册载荷), command mapping(命令映射) 和配置校验.
-- `/Users/0x00/Documents/rust-supervisor-relay` 完成 relay(中继) crate(包), dynamic registration(动态注册), registry(注册表), `wss://` session(会话), mTLS(双向传输层安全协议认证) 身份边界, session gating(会话门控), IPC client(进程间通信客户端), command validation(命令校验), audit event(审计事件) 和诊断.
-- `/Users/0x00/Documents/rust-supervisor-ui` 完成 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架), Vue Flow(流程图组件), Vitest(前端测试工具) 和 Playwright(浏览器测试工具) 的 dashboard client(看板客户端).
+- `~/rust-supervisor` 完成 target-side IPC(目标侧进程间通信), shared JSON contract(共享数据交换格式契约), snapshot(快照), event stream(事件流), log stream(日志流), dynamic registration payload(动态注册载荷), command mapping(命令映射) 和配置校验.
+- `~/rust-supervisor-relay` 完成 relay(中继) crate(包), dynamic registration(动态注册), registry(注册表), `wss://` session(会话), mTLS(双向传输层安全协议认证) 身份边界, session gating(会话门控), IPC client(进程间通信客户端), command validation(命令校验), audit event(审计事件) 和诊断.
+- `~/rust-supervisor-ui` 完成 Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架), Vue Flow(流程图组件), Vitest(前端测试工具) 和 Playwright(浏览器测试工具) 的 dashboard client(看板客户端).
 - 更新 README.md(说明文档), README.zh.md(中文说明文档), ASSUMPTIONS.md(假设记录), `manual/dashboard.md` 和 `specs/003-supervisor-dashboard/tasks.md`.
 - `specs/003-supervisor-dashboard/tasks.md` 中 T001 到 T076 已全部完成.
 
@@ -18,14 +18,14 @@
 - `cargo fmt --check`: 通过.
 - `cargo check`: 通过.
 - `cargo test`: 通过, 包含当前仓库全部 integration test(集成测试), module test(模块测试) 和 52 个 doctest(文档测试).
-- `cargo fmt --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml --check`: 通过.
-- `cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml`: 通过, 18 个 integration test(集成测试) 和 4 个 doctest(文档测试) 全部通过.
+- `cargo fmt --manifest-path ~/rust-supervisor-relay/Cargo.toml --check`: 通过.
+- `cargo test --manifest-path ~/rust-supervisor-relay/Cargo.toml`: 通过, 18 个 integration test(集成测试) 和 4 个 doctest(文档测试) 全部通过.
 - `npm install`: 通过, 依赖已经是最新状态.
 - `npm audit --audit-level=moderate`: 通过, 0 个漏洞.
 - `npm run test`: 通过, 3 个 test file(测试文件) 和 11 个 test(测试) 全部通过.
 - `npm run build`: 通过, `vue-tsc --noEmit` 和 `vite build` 成功.
 - `npm run test:e2e`: 通过, 8 个 browser test(浏览器测试) 全部通过.
-- `curl -I http://127.0.0.1:5174/`: 通过, 返回 `200 OK`, 当前服务提供 `/Users/0x00/Documents/rust-supervisor-ui/dist`.
+- `curl -I http://127.0.0.1:5174/`: 通过, 返回 `200 OK`, 当前服务提供 `~/rust-supervisor-ui/dist`.
 
 ## 失败和修复记录
 

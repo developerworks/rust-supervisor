@@ -1,5 +1,7 @@
 # 关闭协议
 
+语言: [English](../en/shutdown.html)
+
 ## 正式术语
 
 本项目使用 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务) 描述关闭目标. root shutdown(根关闭)完成后, runtime(运行时)不应该留下 orphan task(孤儿任务).

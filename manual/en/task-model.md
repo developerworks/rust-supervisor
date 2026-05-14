@@ -1,5 +1,7 @@
 # Task Model
 
+Language: [中文](../zh/task-model.html)
+
 ## Task Kinds
 
 `TaskKind` distinguishes `AsyncWorker`, `BlockingWorker`, and `Supervisor`. A blocking worker must not be treated as a normal asynchronous worker that can always be aborted immediately.

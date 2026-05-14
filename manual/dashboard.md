@@ -1,8 +1,10 @@
 # Dashboard IPC(看板进程间通信)
 
+手册入口: [中文](zh/dashboard.md), [English](en/dashboard.md)
+
 ## Ownership(所有权)
 
-当前 `rust-supervisor` 仓库只实现 target process IPC(目标进程进程间通信) 和 shared contract(共享契约). relay(中继) 必须在 `/Users/0x00/Documents/rust-supervisor-relay` 实现. dashboard client(看板客户端) 必须在 `/Users/0x00/Documents/rust-supervisor-ui` 实现.
+当前 `rust-supervisor` 仓库只实现 target process IPC(目标进程进程间通信) 和 shared contract(共享契约). relay(中继) 必须在 `~/rust-supervisor-relay` 实现. dashboard client(看板客户端) 必须在 `~/rust-supervisor-ui` 实现.
 
 ## Target config(目标配置)
 

@@ -1,5 +1,7 @@
 # 监督树
 
+语言: [English](../en/supervisor-tree.html)
+
 ## 声明模型
 
 `SupervisorSpec`(监督器规格) 描述一个 supervisor(监督器)节点. 它包含 `path`, `strategy`, `children`, `config_version`, 默认重启策略, 默认退避策略, 默认健康策略, 默认关闭策略, supervisor-level fuse(监督器级熔断)限制, `restart_budget`(重启预算), `escalation_policy`(升级策略), `group_strategies`(分组策略集合), `child_strategy_overrides`(子任务级覆盖集合) 和 `dynamic_supervisor_policy`(动态监督器策略).

@@ -1,5 +1,7 @@
 # 配置模型和结构模式
 
+语言: [English](../en/configuration.html)
+
 ## 配置入口
 
 配置入口是 `rust_supervisor::config::loader::load_config_state`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.

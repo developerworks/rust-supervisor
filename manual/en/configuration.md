@@ -1,5 +1,7 @@
 # Configuration and Schema
 
+Language: [中文](../zh/configuration.html)
+
 ## Entry Point
 
 The configuration entry point is `rust_supervisor::config::loader::load_config_state`. It accepts only the YAML primary configuration file. The repository example path is `examples/config/supervisor.yaml`.

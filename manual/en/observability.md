@@ -1,5 +1,7 @@
 # Observability
 
+Language: [中文](../zh/observability.html)
+
 ## Event Model
 
 `SupervisorEvent` describes one lifecycle fact. It contains `When`, `Where`, `What`, sequence, and correlation identifier.

@@ -1,5 +1,7 @@
 # 任务模型
 
+语言: [English](../en/task-model.html)
+
 ## 任务类型
 
 `TaskKind`(任务类型) 区分 `AsyncWorker`(异步工作任务), `BlockingWorker`(阻塞工作任务) 和 `Supervisor`(监督器节点). blocking worker(阻塞工作任务)不能被当作普通 async worker(异步工作任务)立即强制终止.

@@ -1,5 +1,7 @@
 # 示例程序
 
+语言: [English](../en/examples.html)
+
 ## 快速开始
 
 ```bash

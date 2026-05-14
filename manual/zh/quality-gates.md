@@ -1,5 +1,7 @@
 # 质量门禁
 
+语言: [English](../en/quality-gates.html)
+
 ## 基线命令
 
 ```bash

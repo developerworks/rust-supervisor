@@ -23,7 +23,7 @@ ipc:
 
 ## 2. 配置 relay(中继)
 
-在 `/Users/0x00/Documents/rust-supervisor-relay` 创建 `examples/config/dashboard-relay.yaml`.
+在 `~/rust-supervisor-relay` 创建 `examples/config/dashboard-relay.yaml`.
 
 ```yaml
 listen:
@@ -46,12 +46,12 @@ registration:
   max_lease_seconds: 120
 ```
 
-预期结果: relay(中继) 配置留在 `/Users/0x00/Documents/rust-supervisor-relay`, 并等待目标进程提交 dynamic registration(动态注册). 重复 `target_id`, 重复 `ipc_path`, supported_commands(支持的命令) 结构无效或租约无效会在注册阶段失败, 并显示冲突项.
+预期结果: relay(中继) 配置留在 `~/rust-supervisor-relay`, 并等待目标进程提交 dynamic registration(动态注册). 重复 `target_id`, 重复 `ipc_path`, supported_commands(支持的命令) 结构无效或租约无效会在注册阶段失败, 并显示冲突项.
 
 ## 3. 启动 relay(中继)
 
 ```bash
-cargo run --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml -- --config /Users/0x00/Documents/rust-supervisor-relay/examples/config/dashboard-relay.yaml
+cargo run --manifest-path ~/rust-supervisor-relay/Cargo.toml -- --config ~/rust-supervisor-relay/examples/config/dashboard-relay.yaml
 ```
 
 预期结果: relay(中继) 监听 `wss://localhost:9443/supervisor`, 并打开本机 registration(注册) 入口. 目标进程注册后进入 target process list(目标进程列表), 但在远程客户端 control session(控制会话) 建立前, relay(中继) 不连接或绑定目标进程 IPC(进程间通信), 也不触发事件日志主动推送.
@@ -59,12 +59,12 @@ cargo run --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
 ## 4. 启动 dashboard client(看板客户端)
 
 ```bash
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui install
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run dev
+npm --prefix ~/rust-supervisor-ui install
+npm --prefix ~/rust-supervisor-ui run dev
 ```
 
-预期结果: dashboard client(看板客户端) 从 `/Users/0x00/Documents/rust-supervisor-ui` 启动, 浏览器通过 `wss://` 连接 relay(中继). client certificate(客户端证书) 由操作系统或浏览器证书库选择, 页面脚本不直接读取证书私钥.
-前端实现必须使用 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架). `package.json`, `components.json`, `tailwind.config.ts` 和 `src/assets/main.css` 必须位于 `/Users/0x00/Documents/rust-supervisor-ui`.
+预期结果: dashboard client(看板客户端) 从 `~/rust-supervisor-ui` 启动, 浏览器通过 `wss://` 连接 relay(中继). client certificate(客户端证书) 由操作系统或浏览器证书库选择, 页面脚本不直接读取证书私钥.
+前端实现必须使用 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架). `package.json`, `components.json`, `tailwind.config.ts` 和 `src/assets/main.css` 必须位于 `~/rust-supervisor-ui`.
 
 ## 5. 验证用户故事一
 
@@ -98,9 +98,9 @@ npm --prefix /Users/0x00/Documents/rust-supervisor-ui run dev
 
 ```bash
 cargo test
-cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui test
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e
+cargo test --manifest-path ~/rust-supervisor-relay/Cargo.toml
+npm --prefix ~/rust-supervisor-ui test
+npm --prefix ~/rust-supervisor-ui run test:e2e
 ```
 
 预期结果: 当前仓库 Rust(编程语言) 契约测试, relay(中继) 集成测试, dashboard client(看板客户端) 单元测试和浏览器测试全部通过, 并且前端基线显示为 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架).

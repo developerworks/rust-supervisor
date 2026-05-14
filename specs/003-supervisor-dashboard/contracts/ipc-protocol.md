@@ -1,6 +1,6 @@
 # Contract(契约): Target process IPC(目标进程进程间通信)
 
-**Owner(所有者)**: 目标侧 IPC server(进程间通信服务端) 由 `/Users/0x00/Documents/rust-supervisor` 实现. IPC client(进程间通信客户端) 由 `/Users/0x00/Documents/rust-supervisor-relay` 实现. `/Users/0x00/Documents/rust-supervisor-ui` 不直接访问本契约.
+**Owner(所有者)**: 目标侧 IPC server(进程间通信服务端) 由 `~/rust-supervisor` 实现. IPC client(进程间通信客户端) 由 `~/rust-supervisor-relay` 实现. `~/rust-supervisor-ui` 不直接访问本契约.
 
 ## Transport(传输)
 

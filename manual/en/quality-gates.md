@@ -1,5 +1,7 @@
 # Quality Gates
 
+Language: [中文](../zh/quality-gates.html)
+
 ## Baseline Commands
 
 ```bash

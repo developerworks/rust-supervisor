@@ -1,5 +1,7 @@
 # 策略模型
 
+语言: [English](../en/policies.html)
+
 ## 监督策略
 
 `SupervisionStrategy`(监督策略)决定失败后的重启范围. `OneForOne`(一对一)只选择失败 child(子任务). `OneForAll`(一对全部)选择已选范围内的全部 child(子任务). `RestForOne`(从失败处开始)选择已选范围内的失败 child(子任务)和之后声明的 child(子任务).

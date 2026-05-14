@@ -7,6 +7,7 @@ use std::path::Path;
 /// Manual pages that must exist in both language directories.
 const MANUAL_PAGES: &[&str] = &[
     "index.md",
+    "language.md",
     "getting-started.md",
     "configuration.md",
     "supervisor-tree.md",

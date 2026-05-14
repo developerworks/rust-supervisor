@@ -3,7 +3,7 @@
 **Feature Branch(功能分支)**: `003-supervisor-dashboard`
 **Created(创建日期)**: 2026-05-05
 **Status(状态)**: Draft(草稿)
-**Input(输入)**: 用户描述:"依据 `tmp/supervisor-dashboard-plan.md` 创建 feature 003(功能 003). 目标进程必须打开 IPC(进程间通信), 中继必须通过 IPC(进程间通信) 和目标进程通信, 并读取监督树, 状态, 事件和日志. 中继必须对外提供服务器接口, 例如 WebSocket(网络套接字协议). mTLS(双向传输层安全协议认证) 和 WebSocket(网络套接字协议) 必须通过 `wss://` 协同工作. 规格修订要求: 中继可以和多个 IPC(进程间通信) 进行通信. `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 目标进程使用该配置打开 IPC(进程间通信). 中继必须采用 dynamic registration(动态注册) 方案接收目标进程注册, 而不是在中继配置中写死目标列表. 事件和日志由目标进程在 IPC(进程间通信) 订阅建立后主动推送, 但必须由客户端建立会话后触发该订阅. 远程客户端必须先完成和中继的控制会话建立, 然后才能触发中继与目标进程 IPC(进程间通信) 建立或绑定通信. 最新修订要求: 中继必须在 `/Users/0x00/Documents/rust-supervisor-relay` 单独目录实现, 前端必须在 `/Users/0x00/Documents/rust-supervisor-ui` 单独目录实现, 并且前端必须使用 shadcn-vue(组件库) 和 Tailwind(样式框架)."
+**Input(输入)**: 用户描述:"依据 `tmp/supervisor-dashboard-plan.md` 创建 feature 003(功能 003). 目标进程必须打开 IPC(进程间通信), 中继必须通过 IPC(进程间通信) 和目标进程通信, 并读取监督树, 状态, 事件和日志. 中继必须对外提供服务器接口, 例如 WebSocket(网络套接字协议). mTLS(双向传输层安全协议认证) 和 WebSocket(网络套接字协议) 必须通过 `wss://` 协同工作. 规格修订要求: 中继可以和多个 IPC(进程间通信) 进行通信. `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 目标进程使用该配置打开 IPC(进程间通信). 中继必须采用 dynamic registration(动态注册) 方案接收目标进程注册, 而不是在中继配置中写死目标列表. 事件和日志由目标进程在 IPC(进程间通信) 订阅建立后主动推送, 但必须由客户端建立会话后触发该订阅. 远程客户端必须先完成和中继的控制会话建立, 然后才能触发中继与目标进程 IPC(进程间通信) 建立或绑定通信. 最新修订要求: 中继必须在 `~/rust-supervisor-relay` 单独目录实现, 前端必须在 `~/rust-supervisor-ui` 单独目录实现, 并且前端必须使用 shadcn-vue(组件库) 和 Tailwind(样式框架)."
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
 
@@ -97,8 +97,8 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - **FR-020**: dashboard(看板) 必须支持按 target process identity(目标进程身份), child task(子任务), lifecycle state(生命周期状态), event type(事件类型), severity(严重程度), sequence(序号) 和 correlation id(关联标识) 过滤事件和日志.
 - **FR-021**: dashboard(看板) 必须在连接断开, 目标进程不可用, 认证失败, 控制命令失败和事件丢失时显示可理解诊断.
 - **FR-022**: 系统不得提供 compatibility export(兼容导出), 旧协议别名或历史控制命令别名来表达本功能.
-- **FR-023**: relay(中继) 生产实现必须位于 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不得实现 relay server(中继服务器), `wss://` session(会话) 服务或 relay binary(中继二进制入口).
-- **FR-024**: dashboard client(看板客户端) 生产实现必须位于 `/Users/0x00/Documents/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库不得新增同仓 `dashboard/` 前端实现目录.
+- **FR-023**: relay(中继) 生产实现必须位于 `~/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不得实现 relay server(中继服务器), `wss://` session(会话) 服务或 relay binary(中继二进制入口).
+- **FR-024**: dashboard client(看板客户端) 生产实现必须位于 `~/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库不得新增同仓 `dashboard/` 前端实现目录.
 - **FR-025**: 当前 `rust-supervisor` 仓库只负责 target process IPC(目标进程进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, 监督状态读取和共享协议契约, relay(中继) 与 UI(用户界面) 通过这些契约协作.
 - **FR-026**: relay(中继) 必须拒绝 supported_commands(支持的命令) 结构无效, IPC path(进程间通信路径) 不是绝对路径, target id(目标标识) 被不同 owner identity(所有者身份) 覆盖, IPC path(进程间通信路径) 被不同目标重复使用或租约无效的目标进程注册.
 - **FR-027**: dashboard client(看板客户端) 必须使用 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 作为前端实现基线, 不得使用 React(网页界面库) 组件体系表达本功能界面.
@@ -131,7 +131,7 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 
 ### Rust Boundary and Observability Requirements(Rust 边界和可观察性需求)
 
-- **Module ownership(模块所有权)**: 当前 `rust-supervisor` 仓库只拥有目标进程 IPC(进程间通信) 路径配置, 目标侧 IPC(进程间通信) 协议, 目标侧 state(状态) 生成和目标进程主动事件推送. relay(中继) 拥有多目标连接, 远程会话, mTLS(双向传输层安全协议认证), command audit(命令审计) 和 `wss://` 分发, 且必须在 `/Users/0x00/Documents/rust-supervisor-relay` 实现. dashboard client(看板客户端) 拥有基于 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 的浏览器 UI(用户界面), 且必须在 `/Users/0x00/Documents/rust-supervisor-ui` 实现. 三个目录必须通过明确契约协作, 不得绕过运行时控制循环.
+- **Module ownership(模块所有权)**: 当前 `rust-supervisor` 仓库只拥有目标进程 IPC(进程间通信) 路径配置, 目标侧 IPC(进程间通信) 协议, 目标侧 state(状态) 生成和目标进程主动事件推送. relay(中继) 拥有多目标连接, 远程会话, mTLS(双向传输层安全协议认证), command audit(命令审计) 和 `wss://` 分发, 且必须在 `~/rust-supervisor-relay` 实现. dashboard client(看板客户端) 拥有基于 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 的浏览器 UI(用户界面), 且必须在 `~/rust-supervisor-ui` 实现. 三个目录必须通过明确契约协作, 不得绕过运行时控制循环.
 - **Compatibility exports(兼容导出)**: None(无).
 - **Diagnostics(诊断)**: IPC(进程间通信), IPC path(进程间通信路径) 配置, 多目标连接, 远程会话, 事件丢失, 认证失败, 命令拒绝和命令完成都必须提供结构化诊断, 并能指向目标进程, 连接, 命令和操作者身份.
 - **Dependency impact(依赖影响)**: 本功能涉及 IPC(进程间通信), secure remote session(安全远程会话), event streaming(事件流), dashboard rendering(看板渲染) 和 mTLS(双向传输层安全协议认证). 新依赖必须在 plan(计划) 阶段按 `rust-supervisor`, `rust-supervisor-relay` 和 `rust-supervisor-ui` 三个目录逐项说明理由, 并保持可选边界.
@@ -148,15 +148,15 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 
 - **SC-001**: 已认证操作者在打开 dashboard(看板) 后 2 秒内看到首个由 active registration(活动注册) 形成的 target process list(目标进程列表) 和至少一个 state(状态), 每个可达目标进程的 state(状态) 必须覆盖 100% 已声明 child task(子任务).
 - **SC-002**: 对 5 个已注册目标进程且总计包含 200 个 child task(子任务) 的监督树集合, dashboard(看板) 必须在 5 秒内完成首次可用展示.
-- **SC-003**: `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 必须使用包含 5 个目标进程, 200 个 child task(子任务), failed(失败), quarantined(隔离) 和 restarting(重启中) 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内从 dashboard(看板) 定位到指定异常 child task(子任务) 及其最近事件.
+- **SC-003**: `~/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 必须使用包含 5 个目标进程, 200 个 child task(子任务), failed(失败), quarantined(隔离) 和 restarting(重启中) 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内从 dashboard(看板) 定位到指定异常 child task(子任务) 及其最近事件.
 - **SC-004**: 100% 接受, 拒绝和完成的控制命令都必须产生 audit event(审计事件).
 - **SC-005**: 100% 未认证远程连接和未建立控制会话的远程客户端不得触发目标进程 IPC(进程间通信) 建立, 绑定或命令转发.
 - **SC-006**: 100% 控制命令必须携带非空 reason(原因), 并且 requested by(请求者) 必须来自已认证远程身份.
 - **SC-007**: 每个目标进程主动发送的事件和日志在同一连接内必须按 sequence(序号) 单调展示, 顺序错误次数必须为 0.
 - **SC-008**: 任一目标进程 IPC(进程间通信) 断开后, relay(中继) 必须在 10 秒内向远程客户端显示该目标进程的 unavailable(不可用) 或 reconnecting(重连中) 状态.
 - **SC-009**: relay(中继) 必须能同时接收并区分至少 5 个 active registration(活动注册), 并且重复 IPC path(进程间通信路径), 重复目标身份或过期租约的接受次数必须为 0.
-- **SC-010**: 100% relay(中继) 生产代码, relay(中继) 测试和 relay(中继) 运行配置必须落在 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库中对应实现文件数量必须为 0.
-- **SC-011**: 100% dashboard client(看板客户端) 生产代码, 前端测试和前端构建配置必须落在 `/Users/0x00/Documents/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库中同仓前端实现目录数量必须为 0.
+- **SC-010**: 100% relay(中继) 生产代码, relay(中继) 测试和 relay(中继) 运行配置必须落在 `~/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库中对应实现文件数量必须为 0.
+- **SC-011**: 100% dashboard client(看板客户端) 生产代码, 前端测试和前端构建配置必须落在 `~/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库中同仓前端实现目录数量必须为 0.
 - **SC-012**: dashboard client(看板客户端) 交付物中 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 基线必须可验证, React(网页界面库) 运行时依赖和 React(网页界面库) 组件文件数量必须为 0.
 
 ## Assumptions(假设)
@@ -169,5 +169,5 @@ operator(操作者) 需要在完成身份认证后从 dashboard(看板) 执行 r
 - relay(中继) 不直接持有 `SupervisorHandle`(监督器句柄), 它只能在远程控制会话建立后通过目标进程 IPC(进程间通信) 读取状态和提交控制命令.
 - 第一版不引入持久化数据库. 事件和日志以目标进程内存中的 recent data(最近数据) 和实时流为准.
 - 浏览器使用 mTLS(双向传输层安全协议认证) 时, 客户端证书由操作系统或浏览器证书库管理, dashboard(看板) 不直接从网页脚本选择证书.
-- `/Users/0x00/Documents/rust-supervisor-relay` 和 `/Users/0x00/Documents/rust-supervisor-ui` 是本功能的固定实现目录. 后续 plan(计划), tasks(任务), quickstart(快速开始) 和实现工作必须使用这两个目录.
-- `/Users/0x00/Documents/rust-supervisor-ui` 的前端实现基线是 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架), 该目录不得回退到 React(网页界面库) 组件体系.
+- `~/rust-supervisor-relay` 和 `~/rust-supervisor-ui` 是本功能的固定实现目录. 后续 plan(计划), tasks(任务), quickstart(快速开始) 和实现工作必须使用这两个目录.
+- `~/rust-supervisor-ui` 的前端实现基线是 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架), 该目录不得回退到 React(网页界面库) 组件体系.

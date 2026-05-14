@@ -6,6 +6,14 @@ Terminology: rust-config-tree v0.1.9 is the centralized configuration loader, an
 
 Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 
+## Project Links
+
+- core library: [rust-supervisor](https://github.com/developerworks/rust-supervisor)
+- relay: [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay)
+- user interface: [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui)
+- manual: [language selector](https://developerworks.github.io/rust-supervisor/), [English manual](https://developerworks.github.io/rust-supervisor/en/), [Chinese manual](https://developerworks.github.io/rust-supervisor/zh/)
+- dashboard workflow: [English](https://developerworks.github.io/rust-supervisor/en/dashboard.html), [Chinese](https://developerworks.github.io/rust-supervisor/zh/dashboard.html)
+
 ## Capability Boundary
 
 - Declare `ChildSpec` and `SupervisorSpec`.
@@ -22,9 +30,9 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 
 The supervisor dashboard feature uses three directories.
 
-- `/Users/0x00/Documents/rust-supervisor`: target process IPC and shared contracts.
-- `/Users/0x00/Documents/rust-supervisor-relay`: relay server, dynamic registration, `wss://`, mTLS, session gating, and command audit.
-- `/Users/0x00/Documents/rust-supervisor-ui`: Vue, shadcn-vue, Tailwind dashboard client.
+- [rust-supervisor](https://github.com/developerworks/rust-supervisor) at `~/rust-supervisor`: target process IPC and shared contracts.
+- [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay) at `~/rust-supervisor-relay`: relay server, dynamic registration, `wss://`, mTLS, session gating, and command audit.
+- [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui) at `~/rust-supervisor-ui`: Vue, shadcn-vue, Tailwind dashboard client.
 
 The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots and can request `events.subscribe` or `logs.tail`, but those subscriptions must be triggered by an established remote dashboard session.
 
@@ -99,10 +107,15 @@ cargo run --example policy_failure_matrix
 cargo run --example diagnostic_replay
 ```
 
-`cargo run --example demo -- --config examples/config/supervisor.yaml` 是三端联调用 supervisor(监督器) demo(演示程序). 它从同一份配置启动纯 library supervisor(库包监督器) 运行时, 并在 `examples/demo` 内部启动演示专用 dashboard IPC(看板进程间通信) 和 registration heartbeat(注册心跳). 这个入口不是 crate(库包) 的生产 binary(二进制目标), 也不会把 demo(演示程序) 状态写进核心 `src` 模块.
+`cargo run --example demo -- --config examples/config/supervisor.yaml` is the three-end supervisor demo. It starts the library-only supervisor runtime from the same configuration file, then starts the demo-only dashboard IPC service and registration heartbeat inside `examples/demo`. This entry point is not the production binary for the crate, and it does not write demo state into the core `src` modules.
 
 ## Manuals
 
+- [Published manual](https://developerworks.github.io/rust-supervisor/): language selector for the generated mdBook site.
+- [English manual](https://developerworks.github.io/rust-supervisor/en/): generated English user manual.
+- [Chinese manual](https://developerworks.github.io/rust-supervisor/zh/): generated Chinese user manual.
+- [Dashboard workflow](https://developerworks.github.io/rust-supervisor/en/dashboard.html): generated three-end dashboard workflow in English.
+- [Chinese dashboard workflow](https://developerworks.github.io/rust-supervisor/zh/dashboard.html): generated three-end dashboard workflow in Chinese.
 - `manual/en/index.md`: English user manual.
 - `manual/zh/index.md`: Chinese user manual.
 - `docs/en/index.md`: English engineering documentation.
@@ -127,11 +140,11 @@ Dashboard validation spans all three directories:
 
 ```bash
 cargo test
-cargo test --manifest-path /Users/0x00/Documents/rust-supervisor-relay/Cargo.toml
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui install
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run build
-npm --prefix /Users/0x00/Documents/rust-supervisor-ui run test:e2e
+cargo test --manifest-path ~/rust-supervisor-relay/Cargo.toml
+npm --prefix ~/rust-supervisor-ui install
+npm --prefix ~/rust-supervisor-ui run test
+npm --prefix ~/rust-supervisor-ui run build
+npm --prefix ~/rust-supervisor-ui run test:e2e
 ```
 
 Engineering gate details are documented in `docs/en/quality-gates.md` and `docs/zh/quality-gates.md`. Parallel implementation governance is documented in `docs/en/parallel-governance.md` and `docs/zh/parallel-governance.md`.

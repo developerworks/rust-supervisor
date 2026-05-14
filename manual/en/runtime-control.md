@@ -1,5 +1,7 @@
 # Runtime Control
 
+Language: [中文](../zh/runtime-control.html)
+
 ## Control Entry Point
 
 `SupervisorHandle` is the runtime control entry point. It sends requests to the runtime control loop through a command channel and returns `CommandResult`.

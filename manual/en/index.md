@@ -1,5 +1,7 @@
 # rust-supervisor Manual
 
+Language: [中文](../zh/index.html)
+
 ## Project Scope
 
 `rust-supervisor` is a Rust task supervision core for Tokio services. It uses declarative models to manage child startup, stop, restart, quarantine, state query, event recording, health checks, and Shutdown Without Orphaned Tasks.
@@ -16,6 +18,7 @@ This project has no legacy interface burden. Users should import public types fr
 - [Task Model](task-model.md): understand `ChildSpec`, `TaskFactory`, `TaskContext`, and readiness.
 - [Policies](policies.md): understand restart decisions, backoff, fuse rules, quarantine, and task exit classification.
 - [Runtime Control](runtime-control.md): understand `SupervisorHandle` commands and idempotent behavior.
+- [Dashboard](dashboard.md): understand the three-end workflow across the target process, relay, and dashboard client.
 - [Shutdown](shutdown.md): understand four-stage shutdown and blocking worker boundaries.
 - [Observability](observability.md): understand events, logs, tracing, metrics, audit data, and run summaries.
 - [Examples](examples.md): run each learning example under `examples/`.

@@ -14,7 +14,7 @@
 
 ## Decision(决定): relay(中继) 使用独立目录和 dynamic registration(动态注册)
 
-**Rationale(理由)**: 第一版采用 dynamic registration(动态注册). relay(中继) 生产实现固定放在 `/Users/0x00/Documents/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不承载 relay server(中继服务器) 或 relay binary(中继二进制入口). `DashboardRelayConfig`(看板中继配置) 属于 relay(中继) 目录, 它包含 `listen`, `tls`, `trusted_proxy` 和 `registration`, 但不包含静态 `targets` 列表. 目标进程启动 IPC(进程间通信) 后向 relay(中继) 注册 `target_id`, `display_name`, `ipc_path`, `lease_seconds` 和 `supported_commands`. relay(中继) 只在内存 registry(注册表) 中保存 active registration(活动注册), 拒绝 owner identity(所有者身份) 不匹配的覆盖, 重复 IPC path(进程间通信路径), 无效租约和过期租约, 保证 dashboard(看板) 中连接状态和命令目标可以稳定归因.
+**Rationale(理由)**: 第一版采用 dynamic registration(动态注册). relay(中继) 生产实现固定放在 `~/rust-supervisor-relay`, 当前 `rust-supervisor` 仓库不承载 relay server(中继服务器) 或 relay binary(中继二进制入口). `DashboardRelayConfig`(看板中继配置) 属于 relay(中继) 目录, 它包含 `listen`, `tls`, `trusted_proxy` 和 `registration`, 但不包含静态 `targets` 列表. 目标进程启动 IPC(进程间通信) 后向 relay(中继) 注册 `target_id`, `display_name`, `ipc_path`, `lease_seconds` 和 `supported_commands`. relay(中继) 只在内存 registry(注册表) 中保存 active registration(活动注册), 拒绝 owner identity(所有者身份) 不匹配的覆盖, 重复 IPC path(进程间通信路径), 无效租约和过期租约, 保证 dashboard(看板) 中连接状态和命令目标可以稳定归因.
 
 **Alternatives considered(备选方案)**: 静态多目标配置被拒绝, 因为用户要求采用 dynamic registration(动态注册), 目标进程数量和 IPC path(进程间通信路径) 需要在运行时进入 relay(中继) registry(注册表). 外部服务发现被拒绝, 因为第一版只需要目标进程主动注册到 relay(中继), 不需要接入额外 discovery service(服务发现组件). 把 relay(中继) 放回当前 `rust-supervisor` 仓库被拒绝, 因为用户明确要求中继在单独目录实现.
 
@@ -38,7 +38,7 @@
 
 ## Decision(决定): dashboard client(看板客户端) 放在独立 UI(用户界面) 目录
 
-**Rationale(理由)**: 规格要求远程 dashboard(看板) 可视化监督树, 状态, 事件, 日志和控制命令. dashboard client(看板客户端) 生产实现固定放在 `/Users/0x00/Documents/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库不新增同仓 `dashboard/` 前端目录. 用户明确要求前端使用 shadcn-vue(组件库) 和 Tailwind(样式框架), 因此前端基线为 `Vite(前端构建工具)`, `Vue(网页界面框架)`, `TypeScript(类型脚本语言)`, `shadcn-vue(组件库)`, `Tailwind(样式框架)` 和 `Vue Flow(流程图组件)`. shadcn-vue(组件库) 负责常规控制, 表单, 对话框, 提示和布局组件, Tailwind(样式框架) 负责设计 token(设计令牌) 和布局样式, Vue Flow(流程图组件) 负责监督拓扑画布. 前端只依赖 `wss://` contract(契约), 不直接访问 IPC(进程间通信).
+**Rationale(理由)**: 规格要求远程 dashboard(看板) 可视化监督树, 状态, 事件, 日志和控制命令. dashboard client(看板客户端) 生产实现固定放在 `~/rust-supervisor-ui`, 当前 `rust-supervisor` 仓库不新增同仓 `dashboard/` 前端目录. 用户明确要求前端使用 shadcn-vue(组件库) 和 Tailwind(样式框架), 因此前端基线为 `Vite(前端构建工具)`, `Vue(网页界面框架)`, `TypeScript(类型脚本语言)`, `shadcn-vue(组件库)`, `Tailwind(样式框架)` 和 `Vue Flow(流程图组件)`. shadcn-vue(组件库) 负责常规控制, 表单, 对话框, 提示和布局组件, Tailwind(样式框架) 负责设计 token(设计令牌) 和布局样式, Vue Flow(流程图组件) 负责监督拓扑画布. 前端只依赖 `wss://` contract(契约), 不直接访问 IPC(进程间通信).
 
 **Alternatives considered(备选方案)**: 纯命令行 dashboard(看板) 被拒绝, 因为用户故事要求远程可视化界面. React(网页界面库) 和 React Flow(流程图组件) 被拒绝, 因为用户明确要求 shadcn-vue(组件库) 和 Tailwind(样式框架). 服务端渲染被拒绝, 因为实时事件和交互式拓扑更适合浏览器长连接. 把前端放在当前仓库 `dashboard/` 目录被拒绝, 因为用户明确要求前端在单独目录实现.
 

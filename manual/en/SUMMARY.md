@@ -1,5 +1,6 @@
 # Summary
 
+- [中文手册](language.md)
 - [Home](index.md)
 - [Getting Started](getting-started.md)
 - [Configuration and Schema](configuration.md)
@@ -7,6 +8,7 @@
 - [Task Model](task-model.md)
 - [Policies](policies.md)
 - [Runtime Control](runtime-control.md)
+- [Dashboard](dashboard.md)
 - [Shutdown](shutdown.md)
 - [Observability](observability.md)
 - [Examples](examples.md)

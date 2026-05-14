@@ -1,5 +1,7 @@
 # Getting Started
 
+Language: [中文](../zh/getting-started.html)
+
 ## Prerequisites
 
 This project is a Rust library. The examples require Cargo and a Tokio application environment. Repository examples include their required dependencies.

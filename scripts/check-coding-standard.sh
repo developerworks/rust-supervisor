@@ -49,6 +49,8 @@ require_file manual/zh/book.toml
 require_file manual/en/book.toml
 require_file manual/zh/SUMMARY.md
 require_file manual/en/SUMMARY.md
+require_file manual/zh/language.md
+require_file manual/en/language.md
 require_file manual/zh/getting-started.md
 require_file manual/en/getting-started.md
 require_file manual/zh/configuration.md
@@ -61,6 +63,8 @@ require_file manual/zh/policies.md
 require_file manual/en/policies.md
 require_file manual/zh/runtime-control.md
 require_file manual/en/runtime-control.md
+require_file manual/zh/dashboard.md
+require_file manual/en/dashboard.md
 require_file manual/zh/shutdown.md
 require_file manual/en/shutdown.md
 require_file manual/zh/observability.md

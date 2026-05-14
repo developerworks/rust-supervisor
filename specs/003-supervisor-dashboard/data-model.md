@@ -2,9 +2,9 @@
 
 ## Workspace Ownership(工作区所有权)
 
-- `/Users/0x00/Documents/rust-supervisor`: 拥有目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, state(状态), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求) 和 ControlCommandResult(控制命令结果) 的共享契约.
-- `/Users/0x00/Documents/rust-supervisor-relay`: 拥有 DashboardSession(看板会话), RemoteIdentity(远程身份), TargetProcessRegistration(目标进程注册), TargetProcessRegistry(目标进程注册表), TargetProcessConnection(目标进程连接), relay(中继) 配置, audit event(审计事件) 和 `wss://` 分发状态.
-- `/Users/0x00/Documents/rust-supervisor-ui`: 拥有 dashboard client(看板客户端) 的 Vue(网页界面框架) 界面状态, shadcn-vue(组件库) 组件展示, Tailwind(样式框架) 样式令牌和浏览器交互模型. 它只消费 relay(中继) 通过 `wss://` 暴露的契约, 不直接访问目标进程 IPC(进程间通信).
+- `~/rust-supervisor`: 拥有目标进程 IPC(进程间通信) 配置, 目标侧 IPC(进程间通信) 服务端, state(状态), EventRecord(事件记录), LogRecord(日志记录), ControlCommandRequest(控制命令请求) 和 ControlCommandResult(控制命令结果) 的共享契约.
+- `~/rust-supervisor-relay`: 拥有 DashboardSession(看板会话), RemoteIdentity(远程身份), TargetProcessRegistration(目标进程注册), TargetProcessRegistry(目标进程注册表), TargetProcessConnection(目标进程连接), relay(中继) 配置, audit event(审计事件) 和 `wss://` 分发状态.
+- `~/rust-supervisor-ui`: 拥有 dashboard client(看板客户端) 的 Vue(网页界面框架) 界面状态, shadcn-vue(组件库) 组件展示, Tailwind(样式框架) 样式令牌和浏览器交互模型. 它只消费 relay(中继) 通过 `wss://` 暴露的契约, 不直接访问目标进程 IPC(进程间通信).
 
 ## DashboardSession(看板会话)
 

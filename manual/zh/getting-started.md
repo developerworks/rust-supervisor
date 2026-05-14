@@ -1,5 +1,7 @@
 # 快速开始
 
+语言: [English](../en/getting-started.html)
+
 ## 前置条件
 
 本项目是 Rust(编程语言) library(库), 需要 Cargo(构建工具) 和 Tokio(异步运行时) 应用环境. 本仓库示例已经包含运行所需依赖.

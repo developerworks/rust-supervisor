@@ -1,6 +1,6 @@
 # Contract(契约): Remote `wss://` session(远程安全会话)
 
-**Owner(所有者)**: `wss://` session(会话) 服务端由 `/Users/0x00/Documents/rust-supervisor-relay` 实现. dashboard client(看板客户端) 由 `/Users/0x00/Documents/rust-supervisor-ui` 实现. 当前 `rust-supervisor` 仓库不实现该远程会话服务端或前端客户端.
+**Owner(所有者)**: `wss://` session(会话) 服务端由 `~/rust-supervisor-relay` 实现. dashboard client(看板客户端) 由 `~/rust-supervisor-ui` 实现. 当前 `rust-supervisor` 仓库不实现该远程会话服务端或前端客户端.
 
 ## Transport(传输)
 

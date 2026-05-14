@@ -1,5 +1,7 @@
 # 运行时控制
 
+语言: [English](../en/runtime-control.html)
+
 ## 控制入口
 
 `SupervisorHandle`(监督器句柄)是运行时控制入口. 它通过命令通道把请求发送给 runtime control loop(运行时控制循环), 并返回 `CommandResult`(命令结果).

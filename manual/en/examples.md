@@ -1,5 +1,7 @@
 # Examples
 
+Language: [中文](../zh/examples.html)
+
 ## Quick Start
 
 ```bash

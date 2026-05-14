@@ -1,6 +1,6 @@
 # Contract(契约): 配置结构
 
-**Owner(所有者)**: 目标进程配置由 `/Users/0x00/Documents/rust-supervisor` 实现. relay(中继) 配置由 `/Users/0x00/Documents/rust-supervisor-relay` 实现. UI(用户界面) 不直接读取目标进程 IPC(进程间通信) 配置.
+**Owner(所有者)**: 目标进程配置由 `~/rust-supervisor` 实现. relay(中继) 配置由 `~/rust-supervisor-relay` 实现. UI(用户界面) 不直接读取目标进程 IPC(进程间通信) 配置.
 
 ## Target process config(目标进程配置)
 
@@ -35,7 +35,7 @@ ipc:
 
 ## Relay config(中继配置)
 
-relay(中继) 使用独立 YAML(配置文件格式) 配置 `wss://` 监听地址, mTLS(双向传输层安全协议认证), trusted proxy(可信代理), registration(注册) 入口和租约规则. 目标进程列表不得写死在 relay(中继) 配置中. 该配置文件必须放在 `/Users/0x00/Documents/rust-supervisor-relay`.
+relay(中继) 使用独立 YAML(配置文件格式) 配置 `wss://` 监听地址, mTLS(双向传输层安全协议认证), trusted proxy(可信代理), registration(注册) 入口和租约规则. 目标进程列表不得写死在 relay(中继) 配置中. 该配置文件必须放在 `~/rust-supervisor-relay`.
 
 ```yaml
 listen:

@@ -35,6 +35,6 @@
 - `IPC(进程间通信)`, `wss://`, `WebSocket(网络套接字协议)` 和 `mTLS(双向传输层安全协议认证)` 来自用户给定计划, 因此在本规格中作为可见集成和安全约束保留.
 - 本次规格修订已经加入多个 IPC path(进程间通信路径), 目标进程外部化 IPC path(进程间通信路径) 配置, relay(中继) dynamic registration(动态注册), 目标进程注册后不立即推送事件日志, 以及远程控制会话建立后才允许绑定目标 IPC(进程间通信) 并触发主动推送的顺序要求.
 - 本次覆盖修订已经加入 `ws://` 完整控制拒绝, 目标进程 IPC(进程间通信) 外网绕过拒绝, trusted proxy(可信代理) 伪造身份拒绝, 旧协议别名拒绝和历史控制命令别名拒绝.
-- 本次目录边界修订已经加入 `/Users/0x00/Documents/rust-supervisor-relay` relay(中继) 实现目录和 `/Users/0x00/Documents/rust-supervisor-ui` dashboard client(看板客户端) 实现目录. 这些路径来自明确用户约束, 因此作为范围约束保留.
+- 本次目录边界修订已经加入 `~/rust-supervisor-relay` relay(中继) 实现目录和 `~/rust-supervisor-ui` dashboard client(看板客户端) 实现目录. 这些路径来自明确用户约束, 因此作为范围约束保留.
 - 本次前端基线修订已经加入 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架), 并明确拒绝 React(网页界面库) 组件体系. 这些技术名来自明确用户约束, 因此作为范围约束保留.
 - 本规格没有遗留 [NEEDS CLARIFICATION] 标记. 后续 plan(计划) 阶段需要继续收敛具体模块, 协议字段, 依赖和验证命令.

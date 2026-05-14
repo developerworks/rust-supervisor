@@ -1,5 +1,7 @@
 # Policies
 
+Language: [中文](../zh/policies.html)
+
 ## Supervision Strategy
 
 `SupervisionStrategy` decides the restart scope after a failure. `OneForOne` selects only the failed child. `OneForAll` selects every child in the selected scope. `RestForOne` selects the failed child and every child declared after it in the selected scope.

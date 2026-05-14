@@ -1,5 +1,7 @@
 # 可观测性
 
+语言: [English](../en/observability.html)
+
 ## 事件模型
 
 `SupervisorEvent`(监督器事件)描述一次 lifecycle fact(生命周期事实). 它包含 `When`(何时), `Where`(何处), `What`(发生内容), sequence(序号)和 correlation id(关联标识).

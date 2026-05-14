@@ -1,5 +1,7 @@
 # Supervisor Tree
 
+Language: [中文](../zh/supervisor-tree.html)
+
 ## Declaration Model
 
 `SupervisorSpec` describes one supervisor node. It contains `path`, `strategy`, `children`, `config_version`, default restart policy, default backoff policy, default health policy, default shutdown policy, supervisor-level fuse limits, `restart_budget`, `escalation_policy`, `group_strategies`, `child_strategy_overrides`, and `dynamic_supervisor_policy`.
