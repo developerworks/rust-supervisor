@@ -16,6 +16,7 @@ fn docs_reference_current_config_and_examples() {
         "manual/zh/getting-started.md",
         "manual/zh/configuration.md",
         "manual/zh/examples.md",
+        "manual/zh/observability.md",
         "manual/en/index.md",
         "manual/en/getting-started.md",
         "manual/en/configuration.md",
@@ -39,6 +40,9 @@ fn docs_reference_current_config_and_examples() {
     assert!(docs.contains("health"));
     assert!(docs.contains("join"));
     assert!(docs.contains("shutdown"));
+    assert!(docs.contains("真实 shutdown pipeline(关闭流水线)"));
+    assert!(docs.contains("ChildShutdownCancelDelivered"));
+    assert!(docs.contains("supervisor_shutdown_child_outcomes_total"));
 }
 
 /// Verifies that configuration schema documentation mentions every public field.

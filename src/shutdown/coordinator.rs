@@ -3,6 +3,7 @@
 //! This module owns idempotent phase transitions. Runtime code supplies concrete
 //! task cancellation and join behavior around these transitions.
 
+use crate::shutdown::report::ShutdownPipelineReport;
 use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +16,8 @@ pub struct ShutdownResult {
     pub cause: ShutdownCause,
     /// Whether this result reused an existing shutdown request.
     pub idempotent: bool,
+    /// Optional complete shutdown pipeline report.
+    pub report: Option<ShutdownPipelineReport>,
 }
 
 /// Coordinates idempotent shutdown phases.
@@ -121,6 +124,42 @@ impl ShutdownCoordinator {
         self.phase
     }
 
+    /// Returns the recorded shutdown cause.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the recorded shutdown cause when shutdown has been requested.
+    pub fn cause(&self) -> Option<&ShutdownCause> {
+        self.cause.as_ref()
+    }
+
+    /// Builds a shutdown result with a completed pipeline report.
+    ///
+    /// # Arguments
+    ///
+    /// - `report`: Completed shutdown pipeline report.
+    /// - `idempotent`: Whether the caller reused an existing shutdown request.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`ShutdownResult`] with `report` attached.
+    pub fn result_with_report(
+        &self,
+        report: ShutdownPipelineReport,
+        idempotent: bool,
+    ) -> ShutdownResult {
+        ShutdownResult {
+            phase: self.phase,
+            cause: report.cause.clone(),
+            idempotent,
+            report: Some(report),
+        }
+    }
+
     /// Builds a shutdown result.
     ///
     /// # Arguments
@@ -136,6 +175,7 @@ impl ShutdownCoordinator {
             phase: self.phase,
             cause,
             idempotent,
+            report: None,
         }
     }
 }

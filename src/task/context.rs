@@ -95,6 +95,38 @@ impl TaskContext {
         attempt: Attempt,
         ready_signal: ReadySignal,
     ) -> (Self, watch::Receiver<Option<Instant>>) {
+        Self::with_ready_signal_and_cancellation_token(
+            child_id,
+            path,
+            generation,
+            attempt,
+            ready_signal,
+            CancellationToken::new(),
+        )
+    }
+
+    /// Creates a task context with an existing readiness signal and token.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child identifier.
+    /// - `path`: Full supervisor tree path for this child.
+    /// - `generation`: Runtime slot generation.
+    /// - `attempt`: Attempt number for this execution.
+    /// - `ready_signal`: Signal used to publish readiness.
+    /// - `cancellation_token`: Token shared with runtime shutdown.
+    ///
+    /// # Returns
+    ///
+    /// Returns the context and a heartbeat receiver for runtime observers.
+    pub fn with_ready_signal_and_cancellation_token(
+        child_id: ChildId,
+        path: SupervisorPath,
+        generation: Generation,
+        attempt: Attempt,
+        ready_signal: ReadySignal,
+        cancellation_token: CancellationToken,
+    ) -> (Self, watch::Receiver<Option<Instant>>) {
         let (heartbeat_sender, heartbeat_receiver) = watch::channel(None);
         (
             Self {
@@ -102,7 +134,7 @@ impl TaskContext {
                 path,
                 generation,
                 attempt,
-                cancellation_token: CancellationToken::new(),
+                cancellation_token,
                 ready_signal,
                 heartbeat_sender,
             },

@@ -24,6 +24,12 @@ pub enum SupervisorMetricName {
     MeltdownTotal,
     /// Shutdown duration in seconds.
     ShutdownDurationSeconds,
+    /// Total child shutdown outcomes.
+    ShutdownChildOutcomesTotal,
+    /// Total shutdown abort outcomes.
+    ShutdownAbortTotal,
+    /// Total late child shutdown reports.
+    ShutdownLateReportsTotal,
     /// Total event lag.
     EventLagTotal,
     /// Current configuration version.
@@ -60,6 +66,9 @@ impl SupervisorMetricName {
             Self::HealthcheckLatencySeconds => "supervisor_healthcheck_latency_seconds",
             Self::MeltdownTotal => "supervisor_meltdown_total",
             Self::ShutdownDurationSeconds => "supervisor_shutdown_duration_seconds",
+            Self::ShutdownChildOutcomesTotal => "supervisor_shutdown_child_outcomes_total",
+            Self::ShutdownAbortTotal => "supervisor_shutdown_abort_total",
+            Self::ShutdownLateReportsTotal => "supervisor_shutdown_late_reports_total",
             Self::EventLagTotal => "supervisor_event_lag_total",
             Self::ConfigVersion => "supervisor_config_version",
             Self::RuntimeControlLoopExitTotal => "supervisor_runtime_control_loop_exit_total",
@@ -197,6 +206,29 @@ impl MetricsFacade {
                 1.0,
                 labels_for_event(event),
             )],
+            What::ShutdownCompleted {
+                phase,
+                result,
+                duration_ms,
+            } => vec![MetricSample::new(
+                SupervisorMetricName::ShutdownDurationSeconds,
+                *duration_ms as f64 / 1000.0,
+                shutdown_completed_labels_for_event(event, phase, result),
+            )],
+            What::ChildShutdownGraceful { phase, .. } => vec![MetricSample::new(
+                SupervisorMetricName::ShutdownChildOutcomesTotal,
+                1.0,
+                shutdown_child_outcome_labels_for_event(event, "graceful", phase),
+            )],
+            What::ChildShutdownAborted {
+                phase,
+                result,
+                reason,
+                ..
+            } => shutdown_aborted_samples(event, phase, result, reason),
+            What::ChildShutdownLateReport { phase, .. } => {
+                shutdown_late_report_samples(event, phase)
+            }
             What::SubscriberLagged { missed } => vec![MetricSample::new(
                 SupervisorMetricName::EventLagTotal,
                 *missed as f64,
@@ -207,30 +239,12 @@ impl MetricsFacade {
                 1.0,
                 runtime_labels_for_event(event, "alive", phase),
             )],
-            What::RuntimeControlLoopCompleted { phase, .. } => vec![
-                MetricSample::new(
-                    SupervisorMetricName::RuntimeControlLoopExitTotal,
-                    1.0,
-                    runtime_labels_for_event(event, "completed", phase),
-                ),
-                MetricSample::new(
-                    SupervisorMetricName::RuntimeControlPlaneAlive,
-                    0.0,
-                    runtime_labels_for_event(event, "completed", phase),
-                ),
-            ],
-            What::RuntimeControlLoopFailed { phase, .. } => vec![
-                MetricSample::new(
-                    SupervisorMetricName::RuntimeControlLoopExitTotal,
-                    1.0,
-                    runtime_labels_for_event(event, "failed", phase),
-                ),
-                MetricSample::new(
-                    SupervisorMetricName::RuntimeControlPlaneAlive,
-                    0.0,
-                    runtime_labels_for_event(event, "failed", phase),
-                ),
-            ],
+            What::RuntimeControlLoopCompleted { phase, .. } => {
+                runtime_terminal_samples(event, "completed", phase)
+            }
+            What::RuntimeControlLoopFailed { phase, .. } => {
+                runtime_terminal_samples(event, "failed", phase)
+            }
             _ => Vec::new(),
         }
     }
@@ -255,7 +269,15 @@ impl Default for MetricsFacade {
 fn allowed_label_key(key: &str) -> bool {
     matches!(
         key,
-        "supervisor_path" | "child_id" | "state" | "phase" | "decision" | "failure_category"
+        "supervisor_path"
+            | "child_id"
+            | "state"
+            | "phase"
+            | "status"
+            | "result"
+            | "reason"
+            | "decision"
+            | "failure_category"
     )
 }
 
@@ -283,6 +305,93 @@ fn labels_for_event(event: &SupervisorEvent) -> BTreeMap<String, String> {
     labels
 }
 
+/// Builds metric samples for an aborted shutdown child.
+///
+/// # Arguments
+///
+/// - `event`: Lifecycle event used as the label source.
+/// - `phase`: Shutdown phase label.
+/// - `result`: Child shutdown result label.
+/// - `reason`: Abort reason supplied by the event.
+///
+/// # Returns
+///
+/// Returns child outcome and abort counter samples.
+fn shutdown_aborted_samples(
+    event: &SupervisorEvent,
+    phase: &str,
+    result: &str,
+    reason: &str,
+) -> Vec<MetricSample> {
+    vec![
+        MetricSample::new(
+            SupervisorMetricName::ShutdownChildOutcomesTotal,
+            1.0,
+            shutdown_child_outcome_labels_for_event(event, result, phase),
+        ),
+        MetricSample::new(
+            SupervisorMetricName::ShutdownAbortTotal,
+            1.0,
+            shutdown_abort_labels_for_event(event, phase, reason),
+        ),
+    ]
+}
+
+/// Builds metric samples for a late shutdown child report.
+///
+/// # Arguments
+///
+/// - `event`: Lifecycle event used as the label source.
+/// - `phase`: Shutdown phase label.
+///
+/// # Returns
+///
+/// Returns child outcome and late-report counter samples.
+fn shutdown_late_report_samples(event: &SupervisorEvent, phase: &str) -> Vec<MetricSample> {
+    vec![
+        MetricSample::new(
+            SupervisorMetricName::ShutdownChildOutcomesTotal,
+            1.0,
+            shutdown_child_outcome_labels_for_event(event, "late_report", phase),
+        ),
+        MetricSample::new(
+            SupervisorMetricName::ShutdownLateReportsTotal,
+            1.0,
+            shutdown_late_report_labels_for_event(event, phase),
+        ),
+    ]
+}
+
+/// Builds metric samples for a terminal runtime control loop event.
+///
+/// # Arguments
+///
+/// - `event`: Lifecycle event used as the label source.
+/// - `state`: Terminal runtime state.
+/// - `phase`: Runtime phase label.
+///
+/// # Returns
+///
+/// Returns exit counter and alive gauge samples.
+fn runtime_terminal_samples(
+    event: &SupervisorEvent,
+    state: &str,
+    phase: &str,
+) -> Vec<MetricSample> {
+    vec![
+        MetricSample::new(
+            SupervisorMetricName::RuntimeControlLoopExitTotal,
+            1.0,
+            runtime_labels_for_event(event, state, phase),
+        ),
+        MetricSample::new(
+            SupervisorMetricName::RuntimeControlPlaneAlive,
+            0.0,
+            runtime_labels_for_event(event, state, phase),
+        ),
+    ]
+}
+
 /// Builds labels for runtime control plane metrics.
 fn runtime_labels_for_event(
     event: &SupervisorEvent,
@@ -293,4 +402,85 @@ fn runtime_labels_for_event(
     labels.insert("state".to_owned(), state.to_owned());
     labels.insert("phase".to_owned(), phase.to_owned());
     labels
+}
+
+/// Builds low-cardinality labels for shutdown completion duration.
+fn shutdown_completed_labels_for_event(
+    event: &SupervisorEvent,
+    phase: &str,
+    result: &str,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert(
+        "supervisor_path".to_owned(),
+        event.r#where.supervisor_path.to_string(),
+    );
+    labels.insert("phase".to_owned(), phase.to_owned());
+    labels.insert("result".to_owned(), result.to_owned());
+    labels
+}
+
+/// Builds labels for child shutdown outcome counters.
+fn shutdown_child_outcome_labels_for_event(
+    event: &SupervisorEvent,
+    status: &str,
+    phase: &str,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert(
+        "supervisor_path".to_owned(),
+        event.r#where.supervisor_path.to_string(),
+    );
+    labels.insert("status".to_owned(), status.to_owned());
+    labels.insert("phase".to_owned(), phase.to_owned());
+    labels
+}
+
+/// Builds labels for shutdown abort counters.
+fn shutdown_abort_labels_for_event(
+    event: &SupervisorEvent,
+    phase: &str,
+    reason: &str,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert(
+        "supervisor_path".to_owned(),
+        event.r#where.supervisor_path.to_string(),
+    );
+    labels.insert("phase".to_owned(), phase.to_owned());
+    labels.insert(
+        "reason".to_owned(),
+        shutdown_abort_reason(reason).to_owned(),
+    );
+    labels
+}
+
+/// Builds labels for late shutdown report counters.
+fn shutdown_late_report_labels_for_event(
+    event: &SupervisorEvent,
+    phase: &str,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert(
+        "supervisor_path".to_owned(),
+        event.r#where.supervisor_path.to_string(),
+    );
+    labels.insert("phase".to_owned(), phase.to_owned());
+    labels
+}
+
+/// Converts an abort reason into a bounded metric label value.
+fn shutdown_abort_reason(reason: &str) -> &'static str {
+    let reason = reason.to_ascii_lowercase();
+    if reason.contains("timeout") {
+        "timeout"
+    } else if reason.contains("failed") {
+        "abort_failed"
+    } else if reason.contains("operator") {
+        "operator"
+    } else if reason.is_empty() {
+        "unspecified"
+    } else {
+        "runtime"
+    }
 }
