@@ -1,148 +1,239 @@
-# Drift Resolution Proposals(漂移处置提案)
+# Drift Resolution Proposals(偏差处置提案)
 
-Generated(生成时间): 2026-05-12T02:06:13+08:00
-Based on(基于): drift-report from 2026-05-12T02:03:03+08:00
-Mode(模式): INTERACTIVE(交互式)
+Generated(生成时间): 2026-05-15T01:14:53+08:00
+Based on(基于): drift-report from 2026-05-15T01:14:53+08:00
+Mode(模式): INTERACTIVE(交互式) — **会话已完成**, 全部 7 条提案已审查.
+
+Interactive cursor(交互游标): **DONE(已完成)** — 最后处置: P007 选择 Option C(选项 C), 后续可在 `speckit.sync.apply` 或实现任务中落实已批准的 ALIGN 项与漂移 superseded 标记策略.
 
 ## Summary(摘要)
 
 | Resolution Type(处置类型) | Count(数量) |
 |---|---:|
 | BACKFILL(回填, Code to Spec(代码到规格)) | 0 |
-| ALIGN(对齐, Spec to Code(规格到代码)) | 2 |
-| HUMAN_DECISION(人工决策) | 0 |
-| NEW_SPEC(新规格) | 1 |
+| ALIGN(对齐, Spec to Code(规格到代码)) | 6 |
+| HUMAN_DECISION(人工决策) | 1 |
+| NEW_SPEC(新规格) | 0 |
 | REMOVE_FROM_SPEC(从规格移除) | 0 |
 
 ## Proposals(提案)
 
-### Proposal 1: 003-supervisor-dashboard/SC-003
+### Proposal P001: 004-3-child-slot-control/FR-001, FR-003, SC-001..SC-004
 
 **Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
 **Current State(当前状态)**:
-- Spec says(规格说明): `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 必须使用包含 5 个目标进程, 200 个 child task(子任务), failed(失败), quarantined(隔离) 和 restarting(重启中) 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内定位到指定异常 child task(子任务) 及其最近事件.
-- Code does(代码行为): 当前 `dashboard-performance.spec.ts` 只执行 1 次定位流程, `src/mock/dashboardData.ts` 只有 3 个 target process(目标进程) 和少量 child task(子任务), `T066` 仍是未完成状态.
-- Evidence(证据): `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:3`, `/Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts:149`, `specs/003-supervisor-dashboard/tasks.md:143`.
+- Spec says(规格说明): runtime(运行时) 必须维护完整 `child slot(子任务槽位)`, 并且当前状态和命令结果必须暴露活动尝试, 停止结果, 心跳, 就绪状态和重启预算.
+- Code does(代码行为): `ActiveChildAttempt(活动子任务尝试)` 只服务 `shutdown pipeline(关闭流水线)`, `current_state(当前状态)` 只返回 `child_count` 和 `shutdown_completed`.
+- Evidence(证据): `src/runtime/shutdown_pipeline.rs:17`, `src/control/command.rs:223`, `src/runtime/control_loop.rs:156`.
 
 **Proposed Resolution(拟议处置)**:
 
-保持 `SC-003` 不变, 并补齐 UI(用户界面) 性能定位测试和固定数据集.
+保持规格不变, 在 runtime(运行时) 侧实现通用 `ChildSlot(子任务槽位)`:
 
-```markdown
-- 在 `/Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts` 或测试专用 fixture(测试夹具) 中生成固定数据集: 5 个 target process(目标进程), 总计 200 个 child task(子任务), 且至少包含 failed(失败), quarantined(隔离) 和 restarting(重启中) 节点及对应 recent event(最近事件).
-- 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 中把单次定位流程改为 20 次固定用例定位流程.
-- 每次定位都必须从 dashboard(看板) 找到指定异常 child task(子任务), 再验证节点详情或事件区域包含最近事件.
-- 测试必须记录成功次数, 并要求 20 次中至少 19 次在 30 秒内完成.
-- `T066` 只有在该测试实现并通过后才能重新标记为完成.
-```
+- 新增 runtime(运行时) 私有槽位模型, 字段覆盖 spec(声明), `generation(代际)`, `attempt(尝试)`, status(状态), `cancellation_token(取消令牌)`, `abort_handle(中止句柄)`, completion receiver(完成接收端), `last_heartbeat(最后心跳)`, `ready_state(就绪状态)` 和 `restart_budget(重启预算)`.
+- 把 `active_attempts` 的职责收敛到 `ChildSlot(子任务槽位)`, 让 `shutdown pipeline(关闭流水线)` 从槽位读取活动尝试, 而不是拥有另一套事实.
+- 扩展 `ControlState(控制状态)` 或新增公开状态结构, 让 `current_state(当前状态)` 返回每个 child(子任务) 的槽位摘要.
+- 为暂停, 恢复, 隔离, 移除和关闭结果增加槽位最终状态字段.
 
-**Rationale(理由)**: `SC-003` 是刚收紧的可执行验收口径, 其目的是替代主观的用户成功率表达. 现有代码只覆盖一次页面可见性检查, 不能证明 5 个目标进程和 200 个子任务规模下的 20 次定位成功率. 因此应该让实现和测试追上规格, 而不是降低规格.
+**Rationale(理由)**: 当前代码已经具备取消令牌和活动尝试句柄, 但是这些状态没有形成统一槽位模型. `004-3` 是后续 `004-4` 的基础, 所以应该让代码追上规格, 不应该降低规格.
 
 **Confidence(置信度)**: HIGH(高)
 
-**Review Status(审查状态)**: APPROVED(已批准), 2026-05-12T02:16:52+08:00.
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
 
 **Action(操作)**:
-- [x] Approve(批准)
+- [X] Approve(批准)
 - [ ] Reject(拒绝)
 - [ ] Modify(修改)
+- [ ] Skip(跳过)
 
 ---
 
-### Proposal 2: 003-supervisor-dashboard/SC-012
+### Proposal P002: 004-3-child-slot-control/FR-002
 
 **Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
 **Current State(当前状态)**:
-- Spec says(规格说明): dashboard client(看板客户端) 交付物中 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) 基线必须可验证, React(网页界面库) runtime dependency(运行时依赖) 和 React(网页界面库) component file(组件文件) 数量必须为 0.
-- Code does(代码行为): `package.json` 实际没有 React(网页界面库) 依赖, `src/` 下也没有 `.tsx` 或 `.jsx` 文件, 但 `dashboard-performance.spec.ts` 只断言 `window.__RUST_SUPERVISOR_UI_BASELINE__`, 没有把 React(网页界面库) 依赖和组件文件数量写成自动验证.
-- Evidence(证据): `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:11`, `/Users/0x00/Documents/rust-supervisor-ui/package.json:14`, `specs/003-supervisor-dashboard/tasks.md:143`.
+- Spec says(规格说明): `pause_child`, `remove_child` 和 `quarantine_child` 必须作用于真实活动任务.
+- Code does(代码行为): 这些命令当前主要调用 `set_child_state`, 只写 `ManagedChildState(受管子任务状态)`.
+- Evidence(证据): `src/runtime/control_loop.rs:134`, `src/runtime/control_loop.rs:142`, `src/runtime/control_loop.rs:145`.
 
 **Proposed Resolution(拟议处置)**:
 
-保持 `SC-012` 不变, 并把当前真实状态固化为自动测试.
+保持规格不变, 把停止类命令接入真实槽位执行:
 
-```markdown
-- 在 `/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts` 中保留 Vue(网页界面框架), shadcn-vue(组件库) 和 Tailwind(样式框架) baseline(基线) 断言.
-- 在同一个测试或一个新的 Vitest(前端测试工具) 测试中读取 `package.json`, 验证 `dependencies` 中 `react`, `react-dom` 和其它 React(网页界面库) runtime dependency(运行时依赖) 数量为 0.
-- 扫描 `/Users/0x00/Documents/rust-supervisor-ui/src/`, 验证 `.tsx` 和 `.jsx` component file(组件文件) 数量为 0.
-- 如果要检查 dev dependency(开发依赖), 可以把 `@vitejs/plugin-react` 也列为拒绝项, 但不得把非运行时开发工具误判为 runtime dependency(运行时依赖).
-- `T066` 只有在这些断言进入自动测试并通过后才能重新标记为完成.
-```
+- `pause_child` 应发送 `cancellation_token(取消令牌)`, 等待活动尝试结束或返回超时原因, 然后把槽位状态置为 paused(已暂停).
+- `quarantine_child` 应发送取消, 停止当前活动尝试, 禁止自动重启, 并返回最终槽位状态.
+- `remove_child` 应停止当前活动尝试, 从控制面状态移除或标记 removed(已移除), 并且后续自动重启不得重新创建该槽位.
+- 重复停止同一槽位时必须返回幂等结果, 不得重复启动新的停止流程.
 
-**Rationale(理由)**: 代码当前看起来符合 `SC-012` 的结果要求, 但规格要求的是可验证交付物. 缺口不是产品行为错误, 而是 proof(证明) 缺失. 正确处置是补测试, 不是修改规格.
+**Rationale(理由)**: 当前行为会让 UI(用户界面) 和操作者看到状态已经改变, 但是真实任务可能仍在运行. 这正是 `004-3` 要修正的运行时语义缺口.
 
 **Confidence(置信度)**: HIGH(高)
 
-**Review Status(审查状态)**: APPROVED(已批准), 2026-05-12T02:18:57+08:00.
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
 
 **Action(操作)**:
-- [x] Approve(批准)
+- [X] Approve(批准)
 - [ ] Reject(拒绝)
 - [ ] Modify(修改)
+- [ ] Skip(跳过)
 
 ---
 
-### Proposal 3: New Spec for Spec Kit sync extension(规格工具同步扩展)
+### Proposal P003: 004-4-generation-fencing/FR-001..FR-003, SC-001..SC-004
 
-**Direction(方向)**: NEW_SPEC(新规格)
-
-**Feature(功能)**: Spec Kit sync extension(规格工具同步扩展) 本地命令和技能资产
-
-**Location(位置)**: `.specify/extensions/sync/`, `.agents/skills/speckit-sync-*`
-
-**Suggested Spec(建议规格)**: `004-spec-sync-tooling`
+**Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
 **Current State(当前状态)**:
-- Code does(代码行为): `.specify/extensions/sync/` 和 `.agents/skills/speckit-sync-*` 已经提供 analyze(分析), propose(提案), apply(应用), backfill(回填) 和 conflicts(冲突检测) 相关本地资产, 当前统计 2554 行.
-- Spec says(规格说明): 当前 `specs/` 中没有对应产品规格覆盖这些本地工具资产.
+- Spec says(规格说明): `restart_child(重启子任务)` 必须先停止当前活动尝试, 再启动新 `generation(代际)`, 并且旧代际迟到报告不得覆盖新状态.
+- Code does(代码行为): `spawn_child_attempt` 会移除旧活动尝试并 `abort(中止)`, 然后立即启动新活动尝试. `record_child_exit` 不校验 `generation(代际)`.
+- Evidence(证据): `src/runtime/control_loop.rs:813`, `src/runtime/control_loop.rs:846`, `src/runtime/control_loop.rs:628`, `src/runtime/control_loop.rs:182`.
 
-**Draft Spec(规格草案)**:
+**Proposed Resolution(拟议处置)**:
 
-```markdown
-# Feature Specification(功能规格): Spec Kit 同步扩展工具
+保持规格不变, 在 `004-3` 的 `ChildSlot(子任务槽位)` 基础上实现 `generation fencing(代际隔离)`:
 
-## User Scenarios(用户场景)
+- `restart_child` 和自动重启都进入同一个 `restart pipeline(重启流水线)`.
+- 重启流程必须先向旧活动尝试发送取消, 在预算内等待完成, 超时后再 `abort(中止)`, 最后启动新 `generation(代际)`.
+- `record_child_exit` 必须携带并校验 `generation(代际)` 和 `attempt(尝试)`.
+- 旧代际迟到报告必须被记录为 `stale report(过期报告)`, 不能覆盖当前槽位.
+- `current_state(当前状态)` 必须暴露当前 `generation(代际)` 和冲突或排队结论.
 
-### User Story 1(用户故事一) - 分析规格和实现漂移
+**Rationale(理由)**: 只在映射表里替换句柄不能证明旧任务已经停止. 代际隔离必须在真实任务生命周期, 退出报告, 当前状态和测试中同时成立.
 
-维护者需要在本地 Spec Kit(规格工具) 工作区运行 sync analyze(同步分析), 读取 `specs/*/spec.md`, 源码, 测试和设计文档, 并生成 Markdown(标记语言) 和 JSON(数据交换格式) drift report(漂移报告).
+**Confidence(置信度)**: HIGH(高)
 
-### User Story 2(用户故事二) - 生成漂移处置提案
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
 
-维护者需要在已有 drift report(漂移报告) 基础上生成 backfill(回填), align(对齐), human decision(人工决策) 和 new spec(新规格) proposal(提案), 并把提案保存为可审查文件.
+**Action(操作)**:
+- [X] Approve(批准)
+- [ ] Reject(拒绝)
+- [ ] Modify(修改)
+- [ ] Skip(跳过)
 
-### User Story 3(用户故事三) - 应用已批准处置
+---
 
-维护者需要只应用已经批准的 proposal(提案), 并在修改规格或代码前创建 backup(备份), 在完成后写入 apply report(应用报告).
+### Proposal P004: 004-1-runtime-lifecycle-guard/FR-002, SC-002
 
-## Requirements(需求)
+**Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
 
-- **FR-001**: 系统必须提供 `speckit-sync-analyze`, `speckit-sync-propose`, `speckit-sync-apply`, `speckit-sync-backfill` 和 `speckit-sync-conflicts` 本地技能或命令入口.
-- **FR-002**: 系统必须读取 `.specify/extensions/sync/sync-config.yml`, 并支持 analysis design doc pattern(设计文档规则), ignore pattern(忽略规则), artifact directory(产物目录), history retention(历史保留) 和 default strategy(默认策略).
-- **FR-003**: sync analyze(同步分析) 必须输出 `.specify/sync/drift-report.md` 和 `.specify/sync/drift-report.json`.
-- **FR-004**: sync propose(同步提案) 必须输出 `.specify/sync/proposals.md` 和 `.specify/sync/proposals.json`, 并记录 proposal id(提案编号), target(目标), direction(方向), confidence(置信度), rationale(理由) 和 action(操作).
-- **FR-005**: sync apply(同步应用) 只能执行已批准 proposal(提案), 必须在修改规格前创建 backup(备份), 并写入 `.specify/sync/apply-report.md` 和 `.specify/sync/apply-report.json`.
-- **FR-006**: 所有命令必须遵守 ignore pattern(忽略规则), 默认排除 `node_modules`, `target`, `dist`, backup(备份) 和 generated artifact(生成产物).
-- **FR-007**: 本扩展不得提供 compatibility export(兼容导出), 历史命令别名或旧规格别名.
+**Current State(当前状态)**:
+- Spec says(规格说明): 控制循环异常退出时必须主动发出 `typed event(类型化事件)`, `metrics(指标)`, `audit log(审计日志)` 和结构化健康状态.
+- Code does(代码行为): `watchdog(看门狗)` 更新健康状态并发送字符串 `broadcast(广播)`, 但是没有把 `RuntimeControlLoopFailed(运行时控制循环失败)` 写入 `observability pipeline(观测流水线)`.
+- Evidence(证据): `src/runtime/watchdog.rs:49`, `src/event/payload.rs:344`, `src/observe/metrics.rs:242`, `src/observe/pipeline.rs:292`.
 
-## Success Criteria(成功标准)
+**Proposed Resolution(拟议处置)**:
 
-- **SC-001**: 给定存在 drifted requirement(漂移需求) 的报告, 当运行 sync propose(同步提案), 则系统必须生成包含 proposal id(提案编号), target(目标), direction(方向), confidence(置信度), action(操作) 和 rationale(理由) 的 Markdown(标记语言) 与 JSON(数据交换格式) 文件.
-- **SC-002**: 给定存在 unspecced feature(无规格功能) 的报告, 当运行 sync propose(同步提案), 则系统必须生成 new spec(新规格) 草案, 并保持 pending(待处理) 状态.
-- **SC-003**: 给定没有 approved(已批准) action(操作), 当运行 sync apply(同步应用), 则系统不得修改规格或代码, 并必须写入 no-op(无操作) apply report(应用报告).
-```
+保持规格不变, 把 runtime watchdog(运行时看门狗) 接入现有 `ObservabilityPipeline(观测流水线)`:
 
-**Rationale(理由)**: 这是 drift report(漂移报告) 中唯一无规格代码项. 如果这些 sync(同步) 资产属于项目交付能力, 应创建 `004-spec-sync-tooling`; 如果它们只是本地开发工具, 应在 sync config(同步配置) 或漂移报告规则中明确排除.
+- 让 `SupervisorHandle(监督器控制句柄)` 或 runtime bootstrap(运行时启动路径) 持有观测发送入口.
+- 控制循环异常退出时构造 `SupervisorEvent::RuntimeControlLoopFailed(监督器事件:运行时控制循环失败)`.
+- 通过 `ObservabilityPipeline::emit` 写入 `journal(事件日志)`, `metrics(指标)`, `audit log(审计日志)` 和 test recorder(测试记录器).
+- 保留现有字符串 `broadcast(广播)` 只作为 dashboard(仪表盘) 兼容事件源, 不作为唯一观测事实.
+
+**Rationale(理由)**: 事件模型, 指标映射和审计映射已经存在. 当前缺口是发送方没有接入真实 pipeline(流水线), 所以应改代码.
+
+**Confidence(置信度)**: HIGH(高)
+
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
+
+**Action(操作)**:
+- [X] Approve(批准)
+- [ ] Reject(拒绝)
+- [ ] Modify(修改)
+- [ ] Skip(跳过)
+
+---
+
+### Proposal P005: 004-2-real-shutdown-pipeline/FR-003
+
+**Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
+
+**Current State(当前状态)**:
+- Spec says(规格说明): 关闭完成时必须清理运行时拥有资源, 记录非运行时拥有资源对账状态, 并返回覆盖每个 child(子任务) 的关闭摘要.
+- Code does(代码行为): 关闭报告返回了 `journal(事件日志)` 和 `metrics(指标)` 状态, 但是这些状态来自 `core_runtime_completed()` 默认值, 不是来自真实 sink(接收端) 写入结果.
+- Evidence(证据): `src/shutdown/report.rs:163`, `src/runtime/control_loop.rs:230`.
+
+**Proposed Resolution(拟议处置)**:
+
+保持规格不变, 让关闭流水线实际发出 typed shutdown event(类型化关闭事件):
+
+- 在 `execute_shutdown` 阶段发出 shutdown phase changed(关闭阶段变化), child graceful(子任务优雅结束), child aborted(子任务被强制中止), late report(迟到报告) 和 shutdown completed(关闭完成) 的 `SupervisorEvent(监督器事件)`.
+- `ShutdownReconcileReport(关闭对账报告)` 的 `journal_status` 和 `metrics_status` 应来自 emit(发送) 结果或 pipeline(流水线) 可观测状态, 不应无条件写成 recorded(已记录).
+- 对 dashboard IPC socket(仪表盘进程间通信套接字) 保持 `NotOwned(非运行时拥有)`, 不伪造清理动作.
+
+**Rationale(理由)**: `004-2` 的核心行为已经实现, 这条偏差不是关闭算法缺失, 而是观测和对账证明缺失. 应通过真实事件落点闭合.
+
+**Confidence(置信度)**: HIGH(高)
+
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
+
+**Action(操作)**:
+- [X] Approve(批准)
+- [ ] Reject(拒绝)
+- [ ] Modify(修改)
+- [ ] Skip(跳过)
+
+---
+
+### Proposal P006: 003-supervisor-dashboard/SC-003, SC-012
+
+**Direction(方向)**: ALIGN(对齐, Spec to Code(规格到代码))
+
+**Current State(当前状态)**:
+- Spec says(规格说明): dashboard(仪表盘) 需要固定数据集 20 轮定位验收, 并且需要自动验证 `React(前端框架)` 运行时依赖和组件文件数量为 0.
+- Code does(代码行为): 当前任务层 `T066` 仍未完成.
+- Evidence(证据): `specs/003-supervisor-dashboard/tasks.md:143`.
+
+**Proposed Resolution(拟议处置)**:
+
+保持规格不变, 继续沿用已批准的旧提案:
+
+- 在相邻 `rust-supervisor-ui` 仓库补齐 5 个 target process(目标进程), 200 个 child task(子任务), 20 次定位, 至少 19 次成功, 总耗时小于 30 秒的 Playwright(浏览器测试工具) 验收.
+- 增加 `package.json` 无 `React(前端框架)` runtime dependency(运行时依赖) 和 `src/` 下无 `.tsx` / `.jsx` 文件的自动验证.
+- 该提案只影响 UI(用户界面) 仓库, 不阻塞当前 runtime(运行时) 规格实现顺序.
+
+**Rationale(理由)**: 这两项在旧提案中已经审批为 ALIGN(对齐), 当前仍未在任务层闭合, 所以保留为实现项.
 
 **Confidence(置信度)**: MEDIUM(中)
 
-**Review Status(审查状态)**: APPROVED_AND_CREATED_SPEC(已批准并已创建规格), 2026-05-12T02:21:08+08:00.
-
-**Created Spec(已创建规格)**: `specs/004-spec-sync-tooling/spec.md`
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查于对话中确认
 
 **Action(操作)**:
-- [x] Approve and create spec(批准并创建规格)
+- [X] Approve(批准)
 - [ ] Reject(拒绝)
 - [ ] Modify(修改)
+- [ ] Skip(跳过)
+
+---
+
+### Proposal P007: 001-create-supervisor-core broad runtime semantics(宽口径运行时语义)
+
+**Direction(方向)**: HUMAN_DECISION(人工决策)
+
+**Current State(当前状态)**:
+- Spec says(规格说明): 001 早期核心规格覆盖事件 sink(接收端), 多层监督树, 失败分类, 阻塞任务语义, 关闭观测和运行时观测.
+- Code does(代码行为): 当前项目已经把这些能力拆到 `004-1`, `004-2`, `004-3` 和 `004-4` 逐步实现, 001 中仍有宽口径条款和当前阶段实现不完全一致.
+- Evidence(证据): `src/task/context.rs:14`, `src/tree/builder.rs:1`, `src/error/types.rs:56`, `src/child_runner/runner.rs:80`, `src/runtime/watchdog.rs:49`.
+
+**Options(选项)**:
+
+- Option A(选项 A): 保留 001 原文, 把这些偏差全部作为后续代码实现项.
+- Option B(选项 B): 更新 001, 明确 004 系列规格是运行时语义的分阶段细化, 001 只保留核心能力边界.
+- Option C(选项 C): 不改 001, 但在 drift(偏差) 规则中把已由 004 系列覆盖的条款标记为 superseded(已被后续规格细化).
+
+**Recommendation(建议)**:
+
+选择 Option C(选项 C). 这样不会裁剪 001 的核心原则, 也不会把已拆分到 004 系列的同一问题重复计入实现缺口.
+
+**Confidence(置信度)**: MEDIUM(中)
+
+**Review Status(审查状态)**: APPROVED(已批准) — 交互式审查选择 **Option C(选项 C)**
+
+**Action(操作)**:
+- [X] Approve Option C(批准选项 C)
+- [ ] Reject(拒绝)
+- [ ] Modify(修改)
+- [ ] Skip(跳过)

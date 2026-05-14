@@ -30,11 +30,13 @@
 Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Completed
 ```
 
+**阶段计数说明**: 与 `001-create-supervisor-core` 规格 `FR-045` 一致, 四个**执行阶段**为 `RequestStop`, `GracefulDrain`, `AbortStragglers`, `Reconcile`. `Idle` 为未开始, `Completed` 为终止态, 二者不计入四个执行阶段.
+
 每次转换必须产生 `ShutdownPhaseChanged(关闭阶段变化)` 事件或等价诊断. `Completed(已完成)` 后不能再次启动新流水线.
 
-## Entity(实体): `RunningChildAttempt(运行中子任务尝试)`
+## Entity(实体): `ActiveChildAttempt(活动子任务尝试)`
 
-`RunningChildAttempt(运行中子任务尝试)` 表示当前 control loop(控制循环) 认为仍然运行中的一个 child attempt(子任务尝试).
+`ActiveChildAttempt(活动子任务尝试)` 表示当前 control loop(控制循环) 认为仍然运行中的一个 child attempt(子任务尝试). 实现源码中的类型名为 `ActiveChildAttempt`, 与本文档实体一一对应.
 
 ### Fields(字段)
 

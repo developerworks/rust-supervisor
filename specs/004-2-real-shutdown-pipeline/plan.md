@@ -75,6 +75,8 @@ src/
     ├── supervisor_control_test.rs
     ├── supervisor_real_shutdown_pipeline_test.rs
     └── supervisor_shutdown_test.rs
+tests/
+└── dashboard_protocol_shape_test.rs
 ```
 
 **Structure Decision(结构决定)**: 采用 Rust single crate(Rust 单包) 结构. `src/shutdown/report.rs` 承接 `ShutdownResult(关闭结果)` 需要引用的公开报告类型, 防止 shutdown(关闭) 模块反向依赖 runtime(运行时) 模块. `src/runtime/shutdown_pipeline.rs` 承接真实关闭流水线执行, 因为它需要访问运行时 attempt(尝试) 句柄和控制循环状态. `src/shutdown/coordinator.rs` 不接收任务句柄, 继续保持纯阶段状态机.
@@ -99,7 +101,7 @@ src/
 
 ## Post-Design Constitution Check(设计后宪章检查)
 
-- **Module Ownership(模块所有权)**: 通过. 数据模型把 `ShutdownPipeline(关闭流水线)` 和 `RunningChildAttempt(运行中子任务尝试)` 分配到运行时边界, 把 `ChildShutdownOutcome(子任务关闭结果)` 和 `ShutdownReconcileReport(关闭对账报告)` 分配到 shutdown report(关闭报告) 边界.
+- **Module Ownership(模块所有权)**: 通过. 数据模型把 `ShutdownPipeline(关闭流水线)` 和 `ActiveChildAttempt(活动子任务尝试)` 分配到运行时边界, 把 `ChildShutdownOutcome(子任务关闭结果)` 和 `ShutdownReconcileReport(关闭对账报告)` 分配到 shutdown report(关闭报告) 边界.
 - **Supervision Contract(监督契约)**: 通过. 契约定义了 `ShutdownResult(关闭结果)` 的返回扩展和每个 child(子任务) 的最终结果.
 - **Test Gate(测试关口)**: 通过. 任务生成必须先写 `supervisor_real_shutdown_pipeline_test` 的行为测试, 再实现生产代码.
 - **Observable Failures(可观察失败)**: 通过. 契约要求 event(事件), metrics(指标) 和 audit(审计) 同步记录关闭阶段和 per-child(逐子任务) 结果.

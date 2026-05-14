@@ -66,7 +66,7 @@
 
 ### Key Entities(关键实体)
 
-- **ShutdownPipeline(关闭流水线)**: 表示取消, 等待, 强制中止和对账四个关闭阶段.
+- **ShutdownPipeline(关闭流水线)**: 表示一次关闭执行中的四个**执行阶段**, 即 `RequestStop(请求停止)`, `GracefulDrain(优雅排空)`, `AbortStragglers(强制中止滞留任务)`, `Reconcile(状态对账)`. `Idle(空闲)` 表示尚未开始, `Completed(已完成)` 表示终止态, **不计入**上述四个执行阶段, 与 `001-create-supervisor-core` 规格中 `FR-045` 的四阶段关闭协议口径一致.
 - **ChildShutdownOutcome(子任务关闭结果)**: 表示每个 child(子任务) 是优雅完成, 被强制中止, 已经退出, 还是关闭失败.
 - **ShutdownReconcileReport(关闭对账报告)**: 表示关闭后注册表, socket(套接字), journal(日志) 和 metrics(指标) 的最终状态.
 
@@ -97,11 +97,12 @@
 
 - **SC-001**: 关闭请求发出后, 100% 的运行中任务都能在关闭结果中显示取消送达状态.
 - **SC-002**: 有依赖关系的监督树在 100% 的测试场景中按 shutdown_order(关闭顺序) 记录等待顺序.
-- **SC-003**: 忽略取消信号的任务在超出关闭预算后, 100% 被记录为强制中止或关闭失败.
+- **SC-003**: 忽略取消信号的任务在超出关闭预算后, 100% 在 `ChildShutdownOutcome(子任务关闭结果)` 中体现为非优雅结束, 即 `status` 为 `Aborted(已强制中止)` 或 `AbortFailed(强制中止失败)` 之一, 此处「关闭失败」专指**该子任务**的强制中止路径未在预算内收敛, **不**表示整次 `ShutdownTree(关闭监督树)` 命令必然返回错误变体.
 - **SC-004**: 关闭完成后, 100% 的测试场景都能获得覆盖全部声明 child(子任务) 的关闭摘要.
 
 ## Assumptions(假设)
 
 - 本规格依赖 `004-1-runtime-lifecycle-guard` 提供的运行时健康和等待语义.
+- 功能目录名为 `004-2-real-shutdown-pipeline`, 与功能分支名 `004-runtime-semantics` 可能一对多: 同分支上可并列其它运行时语义规格, 以目录名区分交付单元.
 - ShutdownCoordinator(关闭协调器) 继续作为阶段状态机, 不直接拥有任务句柄.
 - 本规格不改变 supervision strategy(监督策略) 的重启决策, 只改变关闭执行语义.

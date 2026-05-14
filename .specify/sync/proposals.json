@@ -1,129 +1,239 @@
 {
-  "generated": "2026-05-12T02:06:13+08:00",
+  "generated": "2026-05-15T01:14:53+08:00",
   "mode": "interactive",
   "based_on": {
-    "drift_report_generated": "2026-05-12T02:03:03+08:00",
+    "drift_report_generated": "2026-05-15T01:14:53+08:00",
     "path": ".specify/sync/drift-report.json"
   },
   "summary": {
     "backfill": 0,
-    "align": 2,
-    "human_decision": 0,
-    "new_specs": 1,
+    "align": 6,
+    "human_decision": 1,
+    "new_specs": 0,
     "remove_from_spec": 0
   },
   "proposals": [
     {
       "id": "P001",
-      "target": "003-supervisor-dashboard/SC-003",
+      "target": "004-3-child-slot-control/FR-001,FR-003,SC-001..SC-004",
       "direction": "ALIGN",
       "confidence": "HIGH",
       "current_state": {
-        "spec_says": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 必须使用包含 5 个目标进程, 200 个 child task, failed, quarantined 和 restarting 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内定位到指定异常 child task 及其最近事件.",
-        "code_does": "当前 dashboard-performance.spec.ts 只执行 1 次定位流程, src/mock/dashboardData.ts 只有 3 个 target process 和少量 child task, T066 仍是未完成状态.",
+        "spec_says": "runtime(运行时) 必须维护完整 child slot(子任务槽位), 并且当前状态和命令结果必须暴露活动尝试, 停止结果, 心跳, 就绪状态和重启预算.",
+        "code_does": "ActiveChildAttempt(活动子任务尝试) 只服务 shutdown pipeline(关闭流水线), current_state(当前状态) 只返回 child_count 和 shutdown_completed.",
         "evidence": [
-          "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:3",
-          "/Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts:149",
-          "specs/003-supervisor-dashboard/tasks.md:143"
+          "src/runtime/shutdown_pipeline.rs:17",
+          "src/control/command.rs:223",
+          "src/runtime/control_loop.rs:156"
         ]
       },
       "proposed_resolution": {
-        "type": "test_and_fixture_alignment",
+        "type": "code_alignment",
         "keep_spec": true,
         "steps": [
-          "在 /Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts 或测试专用 fixture 中生成固定数据集: 5 个 target process, 总计 200 个 child task, 且至少包含 failed, quarantined 和 restarting 节点及对应 recent event.",
-          "在 /Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 中把单次定位流程改为 20 次固定用例定位流程.",
-          "每次定位都必须从 dashboard 找到指定异常 child task, 再验证节点详情或事件区域包含最近事件.",
-          "测试必须记录成功次数, 并要求 20 次中至少 19 次在 30 秒内完成.",
-          "T066 只有在该测试实现并通过后才能重新标记为完成."
+          "新增 runtime(运行时) 私有 ChildSlot(子任务槽位) 模型.",
+          "把 active_attempts 的职责收敛到 ChildSlot(子任务槽位).",
+          "让 current_state(当前状态) 返回每个 child(子任务) 的槽位摘要.",
+          "为暂停, 恢复, 隔离, 移除和关闭结果增加槽位最终状态字段."
         ]
       },
-      "rationale": "SC-003 是刚收紧的可执行验收口径, 其目的是替代主观的用户成功率表达. 现有代码只覆盖一次页面可见性检查, 不能证明 5 个目标进程和 200 个子任务规模下的 20 次定位成功率. 因此应该让实现和测试追上规格, 而不是降低规格.",
+      "rationale": "当前代码已经具备取消令牌和活动尝试句柄, 但是这些状态没有形成统一槽位模型. 004-3 是 004-4 的基础, 所以应该让代码追上规格.",
       "action": "approved",
       "approved": true,
-      "approved_at": "2026-05-12T02:16:52+08:00",
-      "applied": false
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
     },
     {
       "id": "P002",
-      "target": "003-supervisor-dashboard/SC-012",
+      "target": "004-3-child-slot-control/FR-002",
       "direction": "ALIGN",
       "confidence": "HIGH",
       "current_state": {
-        "spec_says": "dashboard client 交付物中 Vue, shadcn-vue 和 Tailwind 基线必须可验证, React runtime dependency 和 React component file 数量必须为 0.",
-        "code_does": "package.json 实际没有 React 依赖, src 下也没有 .tsx 或 .jsx 文件, 但 dashboard-performance.spec.ts 只断言 window.__RUST_SUPERVISOR_UI_BASELINE__, 没有把 React 依赖和组件文件数量写成自动验证.",
+        "spec_says": "pause_child, remove_child 和 quarantine_child 必须作用于真实活动任务.",
+        "code_does": "这些命令当前主要调用 set_child_state, 只写 ManagedChildState(受管子任务状态).",
         "evidence": [
-          "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:11",
-          "/Users/0x00/Documents/rust-supervisor-ui/package.json:14",
+          "src/runtime/control_loop.rs:134",
+          "src/runtime/control_loop.rs:142",
+          "src/runtime/control_loop.rs:145"
+        ]
+      },
+      "proposed_resolution": {
+        "type": "code_alignment",
+        "keep_spec": true,
+        "steps": [
+          "pause_child 应发送 cancellation_token(取消令牌), 等待活动尝试结束或返回超时原因.",
+          "quarantine_child 应停止当前活动尝试, 禁止自动重启, 并返回最终槽位状态.",
+          "remove_child 应停止当前活动尝试, 从控制面状态移除或标记 removed(已移除).",
+          "重复停止同一槽位时必须返回幂等结果."
+        ]
+      },
+      "rationale": "当前行为会让 UI(用户界面) 和操作者看到状态已经改变, 但是真实任务可能仍在运行.",
+      "action": "approved",
+      "approved": true,
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
+    },
+    {
+      "id": "P003",
+      "target": "004-4-generation-fencing/FR-001..FR-003,SC-001..SC-004",
+      "direction": "ALIGN",
+      "confidence": "HIGH",
+      "current_state": {
+        "spec_says": "restart_child(重启子任务) 必须先停止当前活动尝试, 再启动新 generation(代际), 并且旧代际迟到报告不得覆盖新状态.",
+        "code_does": "spawn_child_attempt 会移除旧活动尝试并 abort(中止), 然后立即启动新活动尝试. record_child_exit 不校验 generation(代际).",
+        "evidence": [
+          "src/runtime/control_loop.rs:813",
+          "src/runtime/control_loop.rs:846",
+          "src/runtime/control_loop.rs:628",
+          "src/runtime/control_loop.rs:182"
+        ]
+      },
+      "proposed_resolution": {
+        "type": "code_alignment",
+        "keep_spec": true,
+        "steps": [
+          "restart_child 和自动重启都进入同一个 restart pipeline(重启流水线).",
+          "重启流程必须先向旧活动尝试发送取消, 在预算内等待完成, 超时后再 abort(中止), 最后启动新 generation(代际).",
+          "record_child_exit 必须携带并校验 generation(代际) 和 attempt(尝试).",
+          "旧代际迟到报告必须被记录为 stale report(过期报告), 不能覆盖当前槽位.",
+          "current_state(当前状态) 必须暴露当前 generation(代际) 和冲突或排队结论."
+        ]
+      },
+      "rationale": "只在映射表里替换句柄不能证明旧任务已经停止. 代际隔离必须在真实任务生命周期, 退出报告, 当前状态和测试中同时成立.",
+      "action": "approved",
+      "approved": true,
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
+    },
+    {
+      "id": "P004",
+      "target": "004-1-runtime-lifecycle-guard/FR-002,SC-002",
+      "direction": "ALIGN",
+      "confidence": "HIGH",
+      "current_state": {
+        "spec_says": "控制循环异常退出时必须主动发出 typed event(类型化事件), metrics(指标), audit log(审计日志) 和结构化健康状态.",
+        "code_does": "watchdog(看门狗) 更新健康状态并发送字符串 broadcast(广播), 但是没有把 RuntimeControlLoopFailed(运行时控制循环失败) 写入 observability pipeline(观测流水线).",
+        "evidence": [
+          "src/runtime/watchdog.rs:49",
+          "src/event/payload.rs:344",
+          "src/observe/metrics.rs:242",
+          "src/observe/pipeline.rs:292"
+        ]
+      },
+      "proposed_resolution": {
+        "type": "code_alignment",
+        "keep_spec": true,
+        "steps": [
+          "让 SupervisorHandle(监督器控制句柄) 或 runtime bootstrap(运行时启动路径) 持有观测发送入口.",
+          "控制循环异常退出时构造 SupervisorEvent::RuntimeControlLoopFailed(监督器事件:运行时控制循环失败).",
+          "通过 ObservabilityPipeline::emit 写入 journal(事件日志), metrics(指标), audit log(审计日志) 和 test recorder(测试记录器).",
+          "保留现有字符串 broadcast(广播) 只作为 dashboard(仪表盘) 兼容事件源."
+        ]
+      },
+      "rationale": "事件模型, 指标映射和审计映射已经存在. 当前缺口是发送方没有接入真实 pipeline(流水线).",
+      "action": "approved",
+      "approved": true,
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
+    },
+    {
+      "id": "P005",
+      "target": "004-2-real-shutdown-pipeline/FR-003",
+      "direction": "ALIGN",
+      "confidence": "HIGH",
+      "current_state": {
+        "spec_says": "关闭完成时必须清理运行时拥有资源, 记录非运行时拥有资源对账状态, 并返回覆盖每个 child(子任务) 的关闭摘要.",
+        "code_does": "关闭报告返回了 journal(事件日志) 和 metrics(指标) 状态, 但是这些状态来自 core_runtime_completed() 默认值, 不是来自真实 sink(接收端) 写入结果.",
+        "evidence": [
+          "src/shutdown/report.rs:163",
+          "src/runtime/control_loop.rs:230"
+        ]
+      },
+      "proposed_resolution": {
+        "type": "code_alignment",
+        "keep_spec": true,
+        "steps": [
+          "在 execute_shutdown 阶段发出 typed shutdown event(类型化关闭事件).",
+          "ShutdownReconcileReport(关闭对账报告) 的 journal_status 和 metrics_status 应来自 emit(发送) 结果或 pipeline(流水线) 可观测状态.",
+          "对 dashboard IPC socket(仪表盘进程间通信套接字) 保持 NotOwned(非运行时拥有)."
+        ]
+      },
+      "rationale": "004-2 的核心行为已经实现, 这条偏差是观测和对账证明缺失.",
+      "action": "approved",
+      "approved": true,
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
+    },
+    {
+      "id": "P006",
+      "target": "003-supervisor-dashboard/SC-003,SC-012",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "current_state": {
+        "spec_says": "dashboard(仪表盘) 需要固定数据集 20 轮定位验收, 并且需要自动验证 React(前端框架) 运行时依赖和组件文件数量为 0.",
+        "code_does": "当前任务层 T066 仍未完成.",
+        "evidence": [
           "specs/003-supervisor-dashboard/tasks.md:143"
         ]
       },
       "proposed_resolution": {
-        "type": "test_alignment",
+        "type": "code_alignment",
         "keep_spec": true,
         "steps": [
-          "在 /Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts 中保留 Vue, shadcn-vue 和 Tailwind baseline 断言.",
-          "在同一个测试或一个新的 Vitest 测试中读取 package.json, 验证 dependencies 中 react, react-dom 和其它 React runtime dependency 数量为 0.",
-          "扫描 /Users/0x00/Documents/rust-supervisor-ui/src/, 验证 .tsx 和 .jsx component file 数量为 0.",
-          "如果要检查 dev dependency, 可以把 @vitejs/plugin-react 也列为拒绝项, 但不得把非运行时开发工具误判为 runtime dependency.",
-          "T066 只有在这些断言进入自动测试并通过后才能重新标记为完成."
+          "在相邻 rust-supervisor-ui 仓库补齐 5 个 target process(目标进程), 200 个 child task(子任务), 20 次定位, 至少 19 次成功, 总耗时小于 30 秒的 Playwright(浏览器测试工具) 验收.",
+          "增加 package.json 无 React(前端框架) runtime dependency(运行时依赖) 和 src/ 下无 .tsx 或 .jsx 文件的自动验证.",
+          "该提案只影响 UI(用户界面) 仓库, 不阻塞当前 runtime(运行时) 规格实现顺序."
         ]
       },
-      "rationale": "代码当前看起来符合 SC-012 的结果要求, 但规格要求的是可验证交付物. 缺口不是产品行为错误, 而是 proof 缺失. 正确处置是补测试, 不是修改规格.",
+      "rationale": "这两项在旧提案中已经审批为 ALIGN(对齐), 当前仍未在任务层闭合, 所以保留为实现项.",
       "action": "approved",
       "approved": true,
-      "approved_at": "2026-05-12T02:18:57+08:00",
-      "applied": false
+      "applied": true,
+      "review_note": "interactive session approve",
+      "applied_at": "2026-05-15T01:30:16+08:00"
     },
     {
-      "id": "P003",
-      "target": "004-spec-sync-tooling",
-      "direction": "NEW_SPEC",
+      "id": "P007",
+      "target": "001-create-supervisor-core/broad-runtime-semantics",
+      "direction": "HUMAN_DECISION",
       "confidence": "MEDIUM",
-      "feature": {
-        "name": "Spec Kit sync extension 本地命令和技能资产",
-        "location": ".specify/extensions/sync/; .agents/skills/speckit-sync-*",
-        "lines": 2554
-      },
       "current_state": {
-        "code_does": ".specify/extensions/sync/ 和 .agents/skills/speckit-sync-* 已经提供 analyze, propose, apply, backfill 和 conflicts 相关本地资产.",
-        "spec_says": "当前 specs/ 中没有对应产品规格覆盖这些本地工具资产."
-      },
-      "draft_spec": {
-        "id": "004-spec-sync-tooling",
-        "title": "Spec Kit 同步扩展工具",
-        "user_stories": [
-          "维护者需要在本地 Spec Kit 工作区运行 sync analyze, 读取 specs/*/spec.md, 源码, 测试和设计文档, 并生成 Markdown 和 JSON drift report.",
-          "维护者需要在已有 drift report 基础上生成 backfill, align, human decision 和 new spec proposal, 并把提案保存为可审查文件.",
-          "维护者需要只应用已经批准的 proposal, 并在修改规格或代码前创建 backup, 在完成后写入 apply report."
-        ],
-        "requirements": [
-          "FR-001: 系统必须提供 speckit-sync-analyze, speckit-sync-propose, speckit-sync-apply, speckit-sync-backfill 和 speckit-sync-conflicts 本地技能或命令入口.",
-          "FR-002: 系统必须读取 .specify/extensions/sync/sync-config.yml, 并支持 analysis design doc pattern, ignore pattern, artifact directory, history retention 和 default strategy.",
-          "FR-003: sync analyze 必须输出 .specify/sync/drift-report.md 和 .specify/sync/drift-report.json.",
-          "FR-004: sync propose 必须输出 .specify/sync/proposals.md 和 .specify/sync/proposals.json, 并记录 proposal id, target, direction, confidence, rationale 和 action.",
-          "FR-005: sync apply 只能执行已批准 proposal, 必须在修改规格前创建 backup, 并写入 .specify/sync/apply-report.md 和 .specify/sync/apply-report.json.",
-          "FR-006: 所有命令必须遵守 ignore pattern, 默认排除 node_modules, target, dist, backup 和 generated artifact.",
-          "FR-007: 本扩展不得提供 compatibility export, 历史命令别名或旧规格别名."
-        ],
-        "success_criteria": [
-          "SC-001: 给定存在 drifted requirement 的报告, 当运行 sync propose, 则系统必须生成包含 proposal id, target, direction, confidence, action 和 rationale 的 Markdown 与 JSON 文件.",
-          "SC-002: 给定存在 unspecced feature 的报告, 当运行 sync propose, 则系统必须生成 new spec 草案, 并保持 pending 状态.",
-          "SC-003: 给定没有 approved action, 当运行 sync apply, 则系统不得修改规格或代码, 并必须写入 no-op apply report."
+        "spec_says": "001 早期核心规格覆盖事件 sink(接收端), 多层监督树, 失败分类, 阻塞任务语义, 关闭观测和运行时观测.",
+        "code_does": "当前项目已经把这些能力拆到 004-1, 004-2, 004-3 和 004-4 逐步实现, 001 中仍有宽口径条款和当前阶段实现不完全一致.",
+        "evidence": [
+          "src/task/context.rs:14",
+          "src/tree/builder.rs:1",
+          "src/error/types.rs:56",
+          "src/child_runner/runner.rs:80",
+          "src/runtime/watchdog.rs:49"
         ]
       },
-      "rationale": "这是 drift report 中唯一无规格代码项. 如果这些 sync 资产属于项目交付能力, 应创建 004-spec-sync-tooling; 如果它们只是本地开发工具, 应在 sync config 或漂移报告规则中明确排除.",
-      "action": "approved_create_spec",
+      "options": [
+        {
+          "id": "A",
+          "description": "保留 001 原文, 把这些偏差全部作为后续代码实现项."
+        },
+        {
+          "id": "B",
+          "description": "更新 001, 明确 004 系列规格是运行时语义的分阶段细化, 001 只保留核心能力边界."
+        },
+        {
+          "id": "C",
+          "description": "不改 001, 但在 drift(偏差) 规则中把已由 004 系列覆盖的条款标记为 superseded(已被后续规格细化)."
+        }
+      ],
+      "recommendation": "选择 Option C(选项 C).",
+      "action": "approved",
       "approved": true,
-      "approved_at": "2026-05-12T02:21:08+08:00",
       "applied": true,
-      "applied_at": "2026-05-12T02:21:08+08:00",
-      "created_spec": "specs/004-spec-sync-tooling/spec.md",
-      "apply_result": {
-        "type": "new_spec",
-        "status": "created",
-        "path": "specs/004-spec-sync-tooling/spec.md"
-      }
+      "human_decision": "C",
+      "review_note": "interactive session: Option C superseded-by-004",
+      "applied_at": "2026-05-15T01:30:16+08:00"
     }
   ]
 }

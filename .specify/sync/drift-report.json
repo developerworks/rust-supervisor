@@ -1,249 +1,306 @@
 {
-  "generated": "2026-05-12T02:03:03+08:00",
-  "project": "rust-tokio-supervisor",
+  "generated": "2026-05-15T01:14:53+08:00",
+  "project": "rust-supervisor",
   "summary": {
-    "specs_analyzed": 3,
-    "requirements_checked": 185,
-    "aligned": 183,
-    "drifted": 1,
-    "not_implemented": 1,
-    "unspecced_features": 1
+    "specs_analyzed": 7,
+    "requirements_checked": 213,
+    "aligned": 185,
+    "drifted": 16,
+    "not_implemented": 12,
+    "unspecced_features": 0
   },
   "specs": [
     {
       "id": "001-create-supervisor-core",
       "title": "创建监督器核心",
-      "aligned": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "FR-004",
-        "FR-005",
-        "FR-006",
-        "FR-007",
-        "FR-008",
-        "FR-009",
-        "FR-010",
-        "FR-011",
-        "FR-012",
-        "FR-013",
-        "FR-014",
-        "FR-015",
-        "FR-016",
-        "FR-017",
-        "FR-018",
-        "FR-019",
-        "FR-020",
-        "FR-021",
-        "FR-022",
-        "FR-023",
-        "FR-024",
-        "FR-025",
-        "FR-026",
-        "FR-027",
-        "FR-028",
-        "FR-029",
-        "FR-030",
-        "FR-031",
-        "FR-032",
-        "FR-033",
-        "FR-034",
-        "FR-035",
-        "FR-036",
-        "FR-037",
-        "FR-038",
-        "FR-039",
-        "FR-040",
-        "FR-041",
-        "FR-042",
-        "FR-043",
-        "FR-044",
-        "FR-045",
-        "FR-046",
-        "FR-047",
-        "FR-048",
-        "FR-049",
-        "FR-050",
-        "FR-051",
-        "FR-052",
-        "FR-053",
-        "FR-054",
-        "FR-055",
-        "FR-056",
-        "FR-057",
-        "FR-058",
-        "FR-059",
-        "FR-060",
-        "FR-061",
-        "FR-062",
-        "FR-063",
-        "FR-064",
-        "FR-065",
-        "FR-066",
-        "FR-067",
-        "FR-068",
-        "FR-069",
-        "FR-070",
-        "FR-071",
-        "FR-072",
-        "FR-073",
-        "FR-074",
-        "FR-075",
-        "FR-076",
-        "FR-077",
-        "SC-001",
-        "SC-002",
-        "SC-003",
-        "SC-004",
-        "SC-005",
-        "SC-006",
-        "SC-007",
-        "SC-008",
-        "SC-009",
-        "SC-010",
-        "SC-011",
-        "SC-012",
-        "SC-013",
-        "SC-014",
-        "SC-015",
-        "SC-016",
-        "SC-017",
-        "SC-018",
-        "SC-019",
-        "SC-020",
-        "SC-021",
-        "SC-022",
-        "SC-023",
-        "SC-024",
-        "SC-025",
-        "SC-026",
-        "SC-027",
-        "SC-028",
-        "SC-029",
-        "SC-030",
-        "SC-031",
-        "SC-032",
-        "SC-033",
-        "SC-034",
-        "SC-035",
-        "SC-036",
-        "SC-037",
-        "SC-038",
-        "SC-039",
-        "SC-040",
-        "SC-041",
-        "SC-042",
-        "SC-043",
-        "SC-044",
-        "SC-045"
+      "aligned_count": 114,
+      "drifted": [
+        {
+          "requirement": "FR-004",
+          "severity": "medium",
+          "description": "TaskContext 缺少事件发布 sink(接收端).",
+          "evidence": [
+            "src/task/context.rs:14"
+          ]
+        },
+        {
+          "requirement": "FR-005",
+          "severity": "medium",
+          "description": "树构建没有把多层监督树作为统一启动树递归展开.",
+          "evidence": [
+            "src/tree/builder.rs:1"
+          ]
+        },
+        {
+          "requirement": "FR-010",
+          "severity": "low",
+          "description": "TaskExit 没有独立 Unhealthy(不健康) 终态.",
+          "evidence": [
+            "src/child_runner/attempt.rs:12"
+          ]
+        },
+        {
+          "requirement": "FR-011",
+          "severity": "medium",
+          "description": "TaskFailureKind 没有把 Recoverable(可恢复), FatalBug(致命缺陷), ExternalDependency(外部依赖) 建模为稳定分类.",
+          "evidence": [
+            "src/error/types.rs:56"
+          ]
+        },
+        {
+          "requirement": "FR-044",
+          "severity": "medium",
+          "description": "BlockingWorker(阻塞工作任务) 没有独立执行和关闭语义.",
+          "evidence": [
+            "src/spec/child.rs:16",
+            "src/child_runner/runner.rs:80"
+          ]
+        },
+        {
+          "requirement": "FR-045",
+          "severity": "medium",
+          "description": "关闭路径没有直接写入真实 journal sink(事件日志接收端) 和 metrics sink(指标接收端).",
+          "evidence": [
+            "src/shutdown/report.rs:163",
+            "src/runtime/control_loop.rs:230"
+          ]
+        },
+        {
+          "requirement": "FR-049",
+          "severity": "medium",
+          "description": "runtime watchdog(运行时看门狗) 仍通过字符串 broadcast(广播) 发布控制循环事件.",
+          "evidence": [
+            "src/runtime/watchdog.rs:49",
+            "src/observe/pipeline.rs:292"
+          ]
+        },
+        {
+          "requirement": "SC-015",
+          "severity": "medium",
+          "description": "阻塞任务关闭边界尚未通过独立执行和关闭路径体现.",
+          "evidence": [
+            "src/child_runner/runner.rs:80"
+          ]
+        }
       ],
-      "drifted": [],
       "not_implemented": []
     },
     {
       "id": "002-config-schema-support",
       "title": "配置结构体模式支持",
-      "aligned": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "FR-004",
-        "FR-005",
-        "FR-006",
-        "FR-007",
-        "FR-008",
-        "FR-009",
-        "FR-010",
-        "FR-011",
-        "FR-012",
-        "FR-013",
-        "FR-014",
-        "FR-015",
-        "FR-016",
-        "FR-017",
-        "SC-001",
-        "SC-002",
-        "SC-003",
-        "SC-004",
-        "SC-005",
-        "SC-006",
-        "SC-007"
-      ],
+      "aligned_count": 24,
       "drifted": [],
       "not_implemented": []
     },
     {
       "id": "003-supervisor-dashboard",
       "title": "监督任务可视化界面",
-      "aligned": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "FR-004",
-        "FR-005",
-        "FR-006",
-        "FR-007",
-        "FR-008",
-        "FR-009",
-        "FR-010",
-        "FR-011",
-        "FR-012",
-        "FR-013",
-        "FR-014",
-        "FR-015",
-        "FR-016",
-        "FR-017",
-        "FR-018",
-        "FR-019",
-        "FR-020",
-        "FR-021",
-        "FR-022",
-        "FR-023",
-        "FR-024",
-        "FR-025",
-        "FR-026",
-        "FR-027",
-        "SC-001",
-        "SC-002",
-        "SC-004",
-        "SC-005",
-        "SC-006",
-        "SC-007",
-        "SC-008",
-        "SC-009",
-        "SC-010",
-        "SC-011"
-      ],
+      "aligned_count": 37,
       "drifted": [
         {
           "requirement": "SC-012",
-          "spec_text": "dashboard client 交付物中 Vue, shadcn-vue 和 Tailwind 基线必须可验证, React 运行时依赖和 React 组件文件数量必须为 0.",
-          "actual": "package.json 实际没有 React 依赖, src 下也没有 .tsx 或 .jsx 文件, 但 tests/dashboard-performance.spec.ts 只断言 window.__RUST_SUPERVISOR_UI_BASELINE__, 没有把 React runtime dependency 和 component file 数量为 0 编成自动验证.",
-          "location": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:11; /Users/0x00/Documents/rust-supervisor-ui/package.json:14; specs/003-supervisor-dashboard/tasks.md:143",
-          "severity": "moderate"
+          "severity": "medium",
+          "description": "目标侧和前端侧 React(前端框架) 排除验收仍有未完成任务.",
+          "evidence": [
+            "specs/003-supervisor-dashboard/tasks.md:143"
+          ]
         }
       ],
       "not_implemented": [
-        "SC-003"
+        {
+          "requirement": "SC-003",
+          "severity": "medium",
+          "description": "固定数据集和 20 轮刷新性能验收任务仍未闭合.",
+          "evidence": [
+            "specs/003-supervisor-dashboard/tasks.md:143"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "004-1-runtime-lifecycle-guard",
+      "title": "运行时生命周期守卫",
+      "aligned_count": 5,
+      "drifted": [
+        {
+          "requirement": "FR-002",
+          "severity": "medium",
+          "description": "RuntimeControlLoopFailed(运行时控制循环失败) 没有由 watchdog(看门狗) 作为 typed event(类型化事件) 写入 observability pipeline(观测流水线).",
+          "evidence": [
+            "src/runtime/watchdog.rs:49",
+            "src/event/payload.rs:344",
+            "src/observe/metrics.rs:242",
+            "src/observe/pipeline.rs:292"
+          ]
+        },
+        {
+          "requirement": "SC-002",
+          "severity": "medium",
+          "description": "控制循环崩溃还没有稳定进入 typed event(类型化事件) 观测链路.",
+          "evidence": [
+            "src/runtime/watchdog.rs:49"
+          ]
+        }
+      ],
+      "not_implemented": []
+    },
+    {
+      "id": "004-2-real-shutdown-pipeline",
+      "title": "真实关闭流水线",
+      "aligned_count": 6,
+      "drifted": [
+        {
+          "requirement": "FR-003",
+          "severity": "medium",
+          "description": "reconcile report(对账报告) 已经生成, 但是 journal(事件日志) 和 metrics(指标) 使用报告默认值, 没有证明真实 sink(接收端) 已经持久化.",
+          "evidence": [
+            "src/shutdown/report.rs:163",
+            "src/runtime/control_loop.rs:230"
+          ]
+        }
+      ],
+      "not_implemented": []
+    },
+    {
+      "id": "004-3-child-slot-control",
+      "title": "子任务槽位控制",
+      "aligned_count": 0,
+      "drifted": [
+        {
+          "requirement": "FR-001",
+          "severity": "high",
+          "description": "ActiveChildAttempt(活动子任务尝试) 只服务关闭流水线, 没有形成通用 child slot(子任务槽位).",
+          "evidence": [
+            "src/runtime/shutdown_pipeline.rs:17"
+          ]
+        }
+      ],
+      "not_implemented": [
+        {
+          "requirement": "FR-002",
+          "severity": "high",
+          "description": "pause_child, remove_child 和 quarantine_child 只写 ManagedChildState(受管子任务状态), 没有停止真实运行中的 child attempt(子任务尝试).",
+          "evidence": [
+            "src/runtime/control_loop.rs:134"
+          ]
+        },
+        {
+          "requirement": "FR-003",
+          "severity": "high",
+          "description": "current_state(当前状态) 没有暴露 child slot(子任务槽位) 的 attempt(尝试), generation(代际), readiness(就绪状态), heartbeat(心跳) 和停止结果.",
+          "evidence": [
+            "src/control/command.rs:223",
+            "src/runtime/control_loop.rs:156"
+          ]
+        },
+        {
+          "requirement": "SC-001",
+          "severity": "high",
+          "description": "暂停命令不会等待目标子任务停止, 也不会返回可观察停止结果.",
+          "evidence": [
+            "src/runtime/control_loop.rs:134"
+          ]
+        },
+        {
+          "requirement": "SC-002",
+          "severity": "medium",
+          "description": "恢复命令没有向外暴露新的 attempt(尝试) 和 generation(代际).",
+          "evidence": [
+            "src/runtime/control_loop.rs:151",
+            "src/control/command.rs:223"
+          ]
+        },
+        {
+          "requirement": "SC-003",
+          "severity": "high",
+          "description": "隔离命令只写状态, 没有强制停止当前运行 attempt(尝试), 也没有完整阻止后续自动重启.",
+          "evidence": [
+            "src/runtime/control_loop.rs:145"
+          ]
+        },
+        {
+          "requirement": "SC-004",
+          "severity": "high",
+          "description": "移除命令只写状态, 没有停止真实任务, 也没有从控制面状态中移除子任务.",
+          "evidence": [
+            "src/runtime/control_loop.rs:142"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "004-4-generation-fencing",
+      "title": "代际隔离重启",
+      "aligned_count": 0,
+      "drifted": [
+        {
+          "requirement": "FR-001",
+          "severity": "high",
+          "description": "restart_child(重启子任务) 会 abort(中止) 旧 active attempt(活动尝试) 并立即启动新 attempt(尝试), 没有先 cancel(取消) 并等待旧 attempt(尝试) 完成.",
+          "evidence": [
+            "src/runtime/control_loop.rs:137",
+            "src/runtime/control_loop.rs:813"
+          ]
+        },
+        {
+          "requirement": "FR-002",
+          "severity": "high",
+          "description": "旧 future(异步任务) 被 abort(中止) 后到 join(汇合) 完成前仍可能存活.",
+          "evidence": [
+            "src/runtime/control_loop.rs:813",
+            "src/runtime/shutdown_pipeline.rs:95"
+          ]
+        },
+        {
+          "requirement": "FR-003",
+          "severity": "high",
+          "description": "record_child_exit 没有校验 generation(代际), 旧 attempt(尝试) 的迟到结果仍可能更新 registry(注册表).",
+          "evidence": [
+            "src/runtime/control_loop.rs:628"
+          ]
+        }
+      ],
+      "not_implemented": [
+        {
+          "requirement": "SC-001",
+          "severity": "high",
+          "description": "连续两次 restart(重启) 没有验证只有最后一代可以进入 running(运行中).",
+          "evidence": [
+            "src/runtime/control_loop.rs:846"
+          ]
+        },
+        {
+          "requirement": "SC-002",
+          "severity": "high",
+          "description": "旧 generation(代际) 的迟到退出没有被标记为 stale report(过期报告) 并忽略.",
+          "evidence": [
+            "src/runtime/control_loop.rs:182"
+          ]
+        },
+        {
+          "requirement": "SC-003",
+          "severity": "high",
+          "description": "重启期间还没有 cancel-wait-start(取消, 等待, 启动) 顺序.",
+          "evidence": [
+            "src/runtime/control_loop.rs:813"
+          ]
+        },
+        {
+          "requirement": "SC-004",
+          "severity": "medium",
+          "description": "current_state(当前状态) 没有暴露当前 generation(代际).",
+          "evidence": [
+            "src/control/command.rs:223"
+          ]
+        }
       ]
     }
   ],
-  "not_implemented_details": [
-    {
-      "requirement": "SC-003",
-      "spec_text": "dashboard-performance.spec.ts 必须使用包含 5 个目标进程, 200 个 child task, failed, quarantined 和 restarting 节点的固定测试数据集重复执行 20 次定位流程, 其中至少 19 次必须在 30 秒内定位到指定异常 child task 及其最近事件.",
-      "actual": "当前测试只执行 1 次定位流程, mock data 只有 3 个 target process 和少量 child task, 并且 T066 仍是未完成状态.",
-      "location": "/Users/0x00/Documents/rust-supervisor-ui/tests/dashboard-performance.spec.ts:3; /Users/0x00/Documents/rust-supervisor-ui/src/mock/dashboardData.ts:149; specs/003-supervisor-dashboard/tasks.md:143",
-      "severity": "major"
-    }
-  ],
-  "unspecced": [
-    {
-      "feature": "Spec Kit sync extension 本地命令和技能资产",
-      "location": ".specify/extensions/sync/, .agents/skills/speckit-sync-*",
-      "lines": 2554,
-      "suggested_spec": "004-spec-sync-tooling"
-    }
-  ],
-  "conflicts": []
+  "unspecced_code": [],
+  "recommendations": [
+    "先处置 004-3-child-slot-control.",
+    "再处置 004-4-generation-fencing.",
+    "随后补齐 004-1 和 004-2 的 typed event(类型化事件), journal(事件日志), metrics(指标) 落点.",
+    "最后闭合 003-supervisor-dashboard 的 T066 验收."
+  ]
 }
