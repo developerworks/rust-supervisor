@@ -4,7 +4,7 @@
 
 use rust_supervisor::event::payload::{SupervisorEvent, What, Where};
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
-use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::observe::metrics::MetricsFacade;
 use rust_supervisor::observe::pipeline::ObservabilityPipeline;
 use uuid::Uuid;
@@ -19,7 +19,7 @@ fn event(sequence: u64, what: What) -> SupervisorEvent {
             sequence as u128,
             0,
             Generation::initial(),
-            Attempt::first(),
+            ChildStartCount::first(),
         )),
         Where::new(SupervisorPath::root().join("worker")).with_child(child_id, "Worker"),
         what,

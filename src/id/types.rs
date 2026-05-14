@@ -1,6 +1,6 @@
 //! Identifier value types for supervised trees.
 //!
-//! The module owns stable IDs, paths, attempts, and generations used across the
+//! The module owns stable IDs, paths, start_counts, and generations used across the
 //! supervisor runtime.
 
 use serde::{Deserialize, Serialize};
@@ -162,15 +162,15 @@ impl Display for SupervisorPath {
     }
 }
 
-/// Monotonic attempt number for a child run.
+/// Monotonic child_start_count number for a child run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Attempt {
-    /// One-based attempt number.
+pub struct ChildStartCount {
+    /// One-based child_start_count number.
     pub value: u64,
 }
 
-impl Attempt {
-    /// Creates the first attempt value.
+impl ChildStartCount {
+    /// Creates the first child_start_count value.
     ///
     /// # Arguments
     ///
@@ -178,12 +178,12 @@ impl Attempt {
     ///
     /// # Returns
     ///
-    /// Returns attempt number one.
+    /// Returns child_start_count number one.
     pub fn first() -> Self {
         Self { value: 1 }
     }
 
-    /// Advances this attempt value.
+    /// Advances this child_start_count value.
     ///
     /// # Arguments
     ///
@@ -191,7 +191,7 @@ impl Attempt {
     ///
     /// # Returns
     ///
-    /// Returns the next attempt value.
+    /// Returns the next child_start_count value.
     pub fn next(self) -> Self {
         Self {
             value: self.value.saturating_add(1),

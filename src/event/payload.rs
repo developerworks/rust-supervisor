@@ -6,7 +6,7 @@
 
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use serde::{Deserialize, Serialize};
 
 /// Location data attached to a supervisor event.
@@ -254,14 +254,14 @@ pub enum What {
         /// Full pipeline duration in milliseconds.
         duration_ms: u64,
     },
-    /// Shutdown cancellation reached one child attempt.
+    /// Shutdown cancellation reached one child child_start_count.
     ChildShutdownCancelDelivered {
         /// Child that received cancellation.
         child_id: ChildId,
-        /// Generation associated with the child attempt.
+        /// Generation associated with the child child_start_count.
         generation: Generation,
-        /// Attempt associated with the child run.
-        attempt: Attempt,
+        /// ChildStartCount associated with the child run.
+        child_start_count: ChildStartCount,
         /// Shutdown phase that delivered cancellation.
         phase: String,
     },
@@ -269,10 +269,10 @@ pub enum What {
     ChildShutdownGraceful {
         /// Child that completed gracefully.
         child_id: ChildId,
-        /// Generation associated with the child attempt.
+        /// Generation associated with the child child_start_count.
         generation: Generation,
-        /// Attempt associated with the child run.
-        attempt: Attempt,
+        /// ChildStartCount associated with the child run.
+        child_start_count: ChildStartCount,
         /// Shutdown phase that recorded the outcome.
         phase: String,
         /// Exit classification reported by the child.
@@ -282,10 +282,10 @@ pub enum What {
     ChildShutdownAborted {
         /// Child that was aborted.
         child_id: ChildId,
-        /// Generation associated with the child attempt.
+        /// Generation associated with the child child_start_count.
         generation: Generation,
-        /// Attempt associated with the child run.
-        attempt: Attempt,
+        /// ChildStartCount associated with the child run.
+        child_start_count: ChildStartCount,
         /// Shutdown phase that recorded the outcome.
         phase: String,
         /// Low-cardinality abort result.
@@ -297,10 +297,10 @@ pub enum What {
     ChildShutdownLateReport {
         /// Child that produced a late report.
         child_id: ChildId,
-        /// Generation associated with the child attempt.
+        /// Generation associated with the child child_start_count.
         generation: Generation,
-        /// Attempt associated with the child run.
-        attempt: Attempt,
+        /// ChildStartCount associated with the child run.
+        child_start_count: ChildStartCount,
         /// Shutdown phase that received the late report.
         phase: String,
         /// Exit classification reported by the child.
@@ -472,7 +472,7 @@ impl SupervisorEvent {
     ///             1,
     ///             0,
     ///             rust_supervisor::id::types::Generation::initial(),
-    ///             rust_supervisor::id::types::Attempt::first(),
+    ///             rust_supervisor::id::types::ChildStartCount::first(),
     ///         ),
     ///     ),
     ///     rust_supervisor::event::payload::Where::new(

@@ -4,7 +4,7 @@
 //! capture. It does not depend on the runtime so tests can create deterministic
 //! event timestamps.
 
-use crate::id::types::{Attempt, Generation};
+use crate::id::types::{ChildStartCount, Generation};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -94,7 +94,7 @@ impl Default for EventSequenceSource {
 /// Identifier that connects related lifecycle facts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CorrelationId {
-    /// UUID used by commands, attempts, and derived observability signals.
+    /// UUID used by commands, start_counts, and derived observability signals.
     pub value: Uuid,
 }
 
@@ -153,8 +153,8 @@ pub struct EventTime {
     pub supervisor_uptime_ms: u64,
     /// Child generation related to the event.
     pub generation: Generation,
-    /// Child attempt related to the event.
-    pub attempt: Attempt,
+    /// Child child_start_count related to the event.
+    pub child_start_count: ChildStartCount,
 }
 
 impl EventTime {
@@ -165,7 +165,7 @@ impl EventTime {
     /// - `monotonic_nanos`: Runtime monotonic clock value in nanoseconds.
     /// - `supervisor_uptime_ms`: Supervisor uptime in milliseconds.
     /// - `generation`: Child generation for this lifecycle fact.
-    /// - `attempt`: Child attempt for this lifecycle fact.
+    /// - `child_start_count`: Child child_start_count for this lifecycle fact.
     ///
     /// # Returns
     ///
@@ -178,7 +178,7 @@ impl EventTime {
     ///     10,
     ///     2,
     ///     rust_supervisor::id::types::Generation::initial(),
-    ///     rust_supervisor::id::types::Attempt::first(),
+    ///     rust_supervisor::id::types::ChildStartCount::first(),
     /// );
     /// assert_eq!(time.monotonic_nanos, 10);
     /// ```
@@ -186,14 +186,14 @@ impl EventTime {
         monotonic_nanos: u128,
         supervisor_uptime_ms: u64,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
     ) -> Self {
         Self {
             unix_nanos: system_time_nanos(SystemTime::now()),
             monotonic_nanos,
             supervisor_uptime_ms,
             generation,
-            attempt,
+            child_start_count,
         }
     }
 
@@ -205,7 +205,7 @@ impl EventTime {
     /// - `monotonic_nanos`: Monotonic timestamp in nanoseconds.
     /// - `supervisor_uptime_ms`: Supervisor uptime in milliseconds.
     /// - `generation`: Child generation for this event.
-    /// - `attempt`: Child attempt for this event.
+    /// - `child_start_count`: Child child_start_count for this event.
     ///
     /// # Returns
     ///
@@ -215,14 +215,14 @@ impl EventTime {
         monotonic_nanos: u128,
         supervisor_uptime_ms: u64,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
     ) -> Self {
         Self {
             unix_nanos,
             monotonic_nanos,
             supervisor_uptime_ms,
             generation,
-            attempt,
+            child_start_count,
         }
     }
 }
@@ -254,7 +254,7 @@ impl When {
     ///         1,
     ///         0,
     ///         rust_supervisor::id::types::Generation::initial(),
-    ///         rust_supervisor::id::types::Attempt::first(),
+    ///         rust_supervisor::id::types::ChildStartCount::first(),
     ///     ),
     /// );
     /// assert_eq!(when.time.unix_nanos, 1);

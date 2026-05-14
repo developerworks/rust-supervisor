@@ -199,8 +199,8 @@ pub struct RuntimeState {
     pub readiness: String,
     /// Child generation.
     pub generation: u64,
-    /// Child attempt.
-    pub attempt: u64,
+    /// Child child_start_count.
+    pub child_start_count: u64,
     /// Restart count.
     pub restart_count: u64,
     /// Optional last failure summary.

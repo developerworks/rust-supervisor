@@ -9,7 +9,7 @@
 **Alternatives considered(备选方案)**:
 
 - 把 `ChildRuntimeState(子任务运行状态记录)` 放入 `src/registry/child_runtime_state.rs`, 让 registry(注册表) 同时拥有声明事实和运行时句柄. 该方案让 registry(注册表) 失去 `Clone(克隆)` 特性, 且会让 shutdown(关闭) 模块需要反向访问 registry(注册表) 才能拿到运行时句柄.
-- 把 `ChildRuntimeState(子任务运行状态记录)` 拆为两半, 声明字段留在 registry(注册表), 运行时字段留在 runtime(运行时). 该方案制造两个真相, 不符合 spec.md FR-001 "运行状态记录必须真实表达声明, 代次, 当前尝试, 状态, 取消令牌, runtime_handle(运行时句柄), 最后心跳, readiness(就绪状态) 和 restart_limit(重启次数限制)" 的单一来源约束, 其中 `runtime_handle(运行时句柄)` 的字段映射见 `data-model.md` Field Mapping(字段映射) 表.
+- 把 `ChildRuntimeState(子任务运行状态记录)` 拆为两半, 声明字段留在 registry(注册表), 运行时字段留在 runtime(运行时). 该方案制造两个真相, 不符合 spec.md FR-001 "运行状态记录必须真实表达声明, 代次, 活动尝试, 状态, 取消令牌, runtime_handle(运行时句柄), 最后心跳, readiness(就绪状态) 和 restart_limit(重启次数限制)" 的单一来源约束, 其中 `runtime_handle(运行时句柄)` 的字段映射见 `data-model.md` Field Mapping(字段映射) 表.
 
 ## 决策二: `RestartLimit(重启次数限制)` 由 runtime(运行时) 侧跟踪并暴露状态记录
 

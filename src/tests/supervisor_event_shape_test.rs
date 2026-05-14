@@ -4,7 +4,7 @@
 
 use rust_supervisor::event::payload::{SupervisorEvent, What, Where};
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
-use rust_supervisor::id::types::{Attempt, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildStartCount, Generation, SupervisorPath};
 use uuid::Uuid;
 
 /// Verifies that a lifecycle event keeps `When`, `Where`, and `What` fields.
@@ -16,7 +16,7 @@ fn supervisor_event_serializes_typed_shape() {
             2,
             3,
             Generation::initial(),
-            Attempt::first(),
+            ChildStartCount::first(),
         )),
         Where::new(SupervisorPath::root()),
         What::ChildRunning { transition: None },

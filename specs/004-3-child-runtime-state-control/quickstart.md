@@ -18,6 +18,8 @@ cargo test --test supervisor_child_runtime_state_control_test
 
 期望结果: 该测试证明 `PauseChild(暂停子任务)`, `RemoveChild(移除子任务)`, `QuarantineChild(隔离子任务)` 会向当前活动尝试发送 `CancellationToken(取消令牌)`, `CurrentState(当前状态)` 中的 `child_runtime_records(子任务运行状态记录集合)` 包含心跳, 就绪状态, 重启次数限制和 `operation(操作)`, 并且代表性测试场景中连续 20 次 `CurrentState(当前状态)` 调用结果构造每次都低于 1 毫秒. `Cargo.toml` 必须已经注册 `supervisor_child_runtime_state_control_test(子任务运行状态控制测试)` 目标, 否则本命令不算可执行验收. 对已经处于目标操作且仍存在于 `child_runtime_states(子任务运行状态记录集合)` 中的运行状态记录重复执行停止类命令时返回幂等结果且不重复发送取消. `RemoveChild(移除子任务)` 首次命中无活动 attempt(尝试) 的占位运行状态记录时会物理删除该运行状态记录, 该首次删除不是幂等返回. `restart_limit(重启次数限制)` 耗尽时控制结果指出 `remaining = 0(剩余为零)` 与 `exhausted = true(已耗尽)`, 自动重启推进到新 `attempt(尝试)` 后控制命令不跨 attempt(尝试) 误送取消.
 
+**CI(持续集成) 说明**: 若并行测试负载导致 1 毫秒断言偶发失败, 可在同一提交上先以 `RUST_TEST_THREADS=1 cargo test --test supervisor_child_runtime_state_control_test` 串行重跑定位环境抖动, 再保留默认 `cargo test --test supervisor_child_runtime_state_control_test` 作为 PR(拉取请求) 预检硬目标.
+
 ## 3. 运行控制和关闭回归测试
 
 ```bash

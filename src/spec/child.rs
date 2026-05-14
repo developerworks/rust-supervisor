@@ -197,7 +197,7 @@ impl ChildSpec {
     /// - `id`: Stable child identifier.
     /// - `name`: Human-readable child name.
     /// - `kind`: Worker task kind.
-    /// - `factory`: Task factory used to build each attempt.
+    /// - `factory`: Task factory used to build each child_start_count.
     ///
     /// # Returns
     ///

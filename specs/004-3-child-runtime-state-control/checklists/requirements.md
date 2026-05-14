@@ -33,5 +33,5 @@
 ## Notes(说明)
 
 - 2026-05-15 修订: 原检查清单错误沿用了通用非技术模板, 与当前技术向运行时规格发生冲突. 本次已改为运行时语义检查口径.
-- `generation(代次)`, `attempt(尝试)`, `cancellation_token(取消令牌)`, `runtime_handle(运行时句柄)`, `last_heartbeat(最后心跳)`, `readiness(就绪状态)` 和 `restart_limit(重启次数限制)` 是本功能必须表达的运行状态事实, 不是需要隐藏的实现泄漏.
+- `generation(代次)`, `attempt(尝试)`, `cancellation_token(取消令牌)`, `runtime_handle(运行时句柄)`, `last_heartbeat(最后心跳)`, `readiness(就绪状态)` 和 `restart_limit(重启次数限制)` 是本功能必须真实维护的运行状态事实. 其中 `cancellation_token(取消令牌)` 和 `runtime_handle(运行时句柄)` 属于 runtime(运行时) 内部 raw handle(原始句柄), 公开结果只暴露取消送达, 停止状态和存活状态等派生事实.
 - 后续 `/speckit-plan` 必须以 `004-2-real-shutdown-pipeline` 已交付的取消和等待语义为基础, 不另起一套关闭路径.

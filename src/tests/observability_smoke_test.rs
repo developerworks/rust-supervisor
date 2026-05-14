@@ -3,7 +3,7 @@
 //! These tests verify fan-out from lifecycle events to retained diagnostics.
 
 use rust_supervisor::event::payload::What;
-use rust_supervisor::id::types::{Attempt, ChildId, Generation};
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation};
 use rust_supervisor::observe::metrics::SupervisorMetricName;
 use rust_supervisor::observe::pipeline::ObservabilityPipeline;
 use rust_supervisor::test_support::assertions::assert_recorder_has_metrics;
@@ -81,7 +81,7 @@ fn observability_pipeline_records_shutdown_pipeline_events() {
 /// Emits representative shutdown pipeline events.
 fn emit_shutdown_pipeline_events(fixture: &EventFixture, pipeline: &mut ObservabilityPipeline) {
     let generation = Generation::initial();
-    let attempt = Attempt::first();
+    let child_start_count = ChildStartCount::first();
     let worker_id = ChildId::new("worker");
     let slow_worker_id = ChildId::new("slow-worker");
     let late_worker_id = ChildId::new("late-worker");
@@ -92,7 +92,7 @@ fn emit_shutdown_pipeline_events(fixture: &EventFixture, pipeline: &mut Observab
         What::ChildShutdownCancelDelivered {
             child_id: worker_id.clone(),
             generation,
-            attempt,
+            child_start_count,
             phase: "RequestStop".to_owned(),
         },
     ));
@@ -102,7 +102,7 @@ fn emit_shutdown_pipeline_events(fixture: &EventFixture, pipeline: &mut Observab
         What::ChildShutdownGraceful {
             child_id: worker_id.clone(),
             generation,
-            attempt,
+            child_start_count,
             phase: "GracefulDrain".to_owned(),
             exit: "succeeded".to_owned(),
         },
@@ -113,7 +113,7 @@ fn emit_shutdown_pipeline_events(fixture: &EventFixture, pipeline: &mut Observab
         What::ChildShutdownAborted {
             child_id: slow_worker_id.clone(),
             generation,
-            attempt,
+            child_start_count,
             phase: "AbortStragglers".to_owned(),
             result: "aborted".to_owned(),
             reason: "graceful_timeout".to_owned(),
@@ -125,7 +125,7 @@ fn emit_shutdown_pipeline_events(fixture: &EventFixture, pipeline: &mut Observab
         What::ChildShutdownLateReport {
             child_id: late_worker_id.clone(),
             generation,
-            attempt,
+            child_start_count,
             phase: "Reconcile".to_owned(),
             exit: "cancelled".to_owned(),
         },

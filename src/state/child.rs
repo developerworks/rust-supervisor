@@ -6,7 +6,7 @@
 use crate::error::types::TaskFailure;
 use crate::event::payload::PolicyDecision;
 use crate::event::time::EventSequence;
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use serde::{Deserialize, Serialize};
 
 /// Lifecycle phase for a child.
@@ -119,8 +119,8 @@ pub struct ChildState {
     pub health: ChildHealth,
     /// Current generation.
     pub generation: Generation,
-    /// Current attempt.
-    pub attempt: Attempt,
+    /// Current child_start_count.
+    pub child_start_count: ChildStartCount,
     /// Restart count inside the active restart window.
     pub restart_count: u64,
     /// Last typed task failure.
@@ -164,7 +164,7 @@ impl ChildState {
             state: ChildLifecycleState::Declared,
             health: ChildHealth::Unknown,
             generation: Generation::initial(),
-            attempt: Attempt::first(),
+            child_start_count: ChildStartCount::first(),
             restart_count: 0,
             last_failure: None,
             last_event_sequence: None,

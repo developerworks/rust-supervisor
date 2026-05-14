@@ -18,16 +18,16 @@ pub enum JitterMode {
     },
 }
 
-/// Exponential backoff configuration for restart attempts.
+/// Exponential backoff configuration for restart start_counts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackoffPolicy {
-    /// Initial delay for the first restart attempt.
+    /// Initial delay for the first restart child_start_count.
     pub initial: Duration,
     /// Maximum delay allowed after exponential growth and jitter.
     pub max: Duration,
     /// Jitter percentage in the inclusive range from zero to one hundred.
     pub jitter_percent: u8,
-    /// Stable runtime duration after which attempt counters may be reset.
+    /// Stable runtime duration after which child_start_count counters may be reset.
     pub reset_after: Duration,
     /// Jitter mode used by the calculation.
     pub jitter_mode: JitterMode,
@@ -58,7 +58,7 @@ impl BackoffPolicy {
     ///     0,
     ///     Duration::from_secs(1),
     /// );
-    /// assert_eq!(policy.delay_for_attempt(1), Duration::from_millis(10));
+    /// assert_eq!(policy.delay_for_child_start_count(1), Duration::from_millis(10));
     /// ```
     pub fn new(
         initial: Duration,
@@ -89,17 +89,17 @@ impl BackoffPolicy {
         self
     }
 
-    /// Calculates a restart delay for a one-based attempt number.
+    /// Calculates a restart delay for a one-based child_start_count number.
     ///
     /// # Arguments
     ///
-    /// - `attempt`: One-based restart attempt. Zero is treated as one.
+    /// - `child_start_count`: One-based restart child_start_count. Zero is treated as one.
     ///
     /// # Returns
     ///
     /// Returns a delay capped by [`BackoffPolicy::max`].
-    pub fn delay_for_attempt(&self, attempt: u64) -> Duration {
-        let exponential = self.exponential_delay(attempt.max(1));
+    pub fn delay_for_child_start_count(&self, child_start_count: u64) -> Duration {
+        let exponential = self.exponential_delay(child_start_count.max(1));
         self.apply_jitter(exponential).min(self.max)
     }
 
@@ -120,13 +120,13 @@ impl BackoffPolicy {
     ///
     /// # Arguments
     ///
-    /// - `attempt`: One-based restart attempt.
+    /// - `child_start_count`: One-based restart child_start_count.
     ///
     /// # Returns
     ///
     /// Returns the exponential delay before jitter is applied.
-    fn exponential_delay(&self, attempt: u64) -> Duration {
-        let shift = attempt.saturating_sub(1).min(32);
+    fn exponential_delay(&self, child_start_count: u64) -> Duration {
+        let shift = child_start_count.saturating_sub(1).min(32);
         let multiplier = 1_u128 << shift;
         let millis = self.initial.as_millis().saturating_mul(multiplier);
         duration_from_millis(millis).min(self.max)

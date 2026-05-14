@@ -1,9 +1,9 @@
 //! Minimal child runner.
 //!
-//! This module starts one child attempt, advances readiness state, and records
+//! This module starts one child child_start_count, advances readiness state, and records
 //! the resulting task exit.
 
-use crate::child_runner::attempt::TaskExit;
+use crate::child_runner::run_exit::TaskExit;
 use crate::error::types::SupervisorError;
 use crate::readiness::signal::{ReadinessPolicy, ReadySignal};
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
@@ -12,18 +12,18 @@ use tokio::sync::{watch, watch::Receiver};
 use tokio::task::{AbortHandle, JoinHandle};
 use tokio_util::sync::CancellationToken;
 
-/// Result of running one child attempt.
+/// Result of running one child child_start_count.
 #[derive(Debug, Clone)]
 pub struct ChildRunReport {
-    /// Runtime record after the attempt.
+    /// Runtime record after the child_start_count.
     pub runtime: ChildRuntime,
     /// Final task exit classification.
     pub exit: TaskExit,
-    /// Whether the task became ready during the attempt.
+    /// Whether the task became ready during the child_start_count.
     pub became_ready: bool,
 }
 
-/// Handle for one running child attempt.
+/// Handle for one running child child_start_count.
 #[derive(Debug)]
 pub struct ChildRunHandle {
     /// Runtime cancellation token shared with the task context.
@@ -34,7 +34,7 @@ pub struct ChildRunHandle {
     pub completion_receiver: Receiver<Option<Result<ChildRunReport, SupervisorError>>>,
 }
 
-/// Runner that executes one child attempt.
+/// Runner that executes one child child_start_count.
 #[derive(Debug, Clone, Default)]
 pub struct ChildRunner;
 
@@ -58,11 +58,11 @@ impl ChildRunner {
         Self
     }
 
-    /// Runs one child attempt.
+    /// Runs one child child_start_count.
     ///
     /// # Arguments
     ///
-    /// - `runtime`: Runtime record for the child attempt.
+    /// - `runtime`: Runtime record for the child child_start_count.
     ///
     /// # Returns
     ///
@@ -72,11 +72,11 @@ impl ChildRunner {
         wait_for_report(&mut completion_receiver).await
     }
 
-    /// Spawns one child attempt and returns cancellation and abort handles.
+    /// Spawns one child child_start_count and returns cancellation and abort handles.
     ///
     /// # Arguments
     ///
-    /// - `runtime`: Runtime record for the child attempt.
+    /// - `runtime`: Runtime record for the child child_start_count.
     ///
     /// # Returns
     ///
@@ -93,7 +93,7 @@ impl ChildRunner {
             runtime.id.clone(),
             runtime.path.clone(),
             runtime.generation,
-            runtime.attempt,
+            runtime.child_start_count,
             ready_signal,
             cancellation_token.clone(),
         );
@@ -137,7 +137,7 @@ fn mark_immediate_ready(policy: ReadinessPolicy, ctx: &TaskContext, runtime: &mu
 /// # Arguments
 ///
 /// - `factory`: Task factory for this child.
-/// - `ctx`: Per-attempt task context.
+/// - `ctx`: Per-child_start_count task context.
 ///
 /// # Returns
 ///

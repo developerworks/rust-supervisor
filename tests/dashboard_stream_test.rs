@@ -1,7 +1,7 @@
 use rust_supervisor::dashboard::events::{event_to_record, log_record_for_event};
 use rust_supervisor::event::payload::{SupervisorEvent, What, Where};
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
-use rust_supervisor::id::types::{Attempt, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildStartCount, Generation, SupervisorPath};
 use uuid::Uuid;
 
 fn event(sequence: u64) -> SupervisorEvent {
@@ -11,7 +11,7 @@ fn event(sequence: u64) -> SupervisorEvent {
             sequence as u128,
             0,
             Generation::initial(),
-            Attempt::first(),
+            ChildStartCount::first(),
         )),
         Where::new(SupervisorPath::root().join("payment_loop")),
         What::ChildRestarted { restart_count: 1 },

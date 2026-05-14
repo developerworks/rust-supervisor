@@ -1,4 +1,4 @@
-//! Task attempt exit classification.
+//! Task run exit classification.
 //!
 //! This module converts task results and runtime failures into a typed exit
 //! model that policy code can consume without string parsing.
@@ -7,7 +7,7 @@ use crate::error::types::{TaskFailure, TaskFailureKind};
 use crate::task::factory::TaskResult;
 use serde::{Deserialize, Serialize};
 
-/// Exit classification for one task attempt.
+/// Exit classification for one task run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskExit {
     /// The task returned success.
@@ -36,7 +36,7 @@ impl TaskExit {
     /// # Examples
     ///
     /// ```
-    /// let exit = rust_supervisor::child_runner::attempt::TaskExit::from_task_result(
+    /// let exit = rust_supervisor::child_runner::run_exit::TaskExit::from_task_result(
     ///     rust_supervisor::task::factory::TaskResult::Succeeded,
     /// );
     /// assert!(exit.is_success());

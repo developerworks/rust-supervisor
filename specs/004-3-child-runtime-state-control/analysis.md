@@ -1,6 +1,6 @@
-# Specification Analysis Report(规格分析报告) - 2026-05-15 最新复核
+# Specification Analysis Report(规格分析报告) - 2026-05-15 第 14 次复核
 
-> 本报告由 `speckit-fix-findings(规格发现项修复)` 流程刷新. 本轮针对上一份 Specification Analysis Report(规格分析报告) 表格中的 5 个问题逐项修复, 当前没有延期发现项.
+> 本报告由 `speckit-fix-findings(规格发现项修复)` 流程刷新. 本轮针对最新 Specification Analysis Report(规格分析报告) 表格中的 8 个问题逐项修复, 当前没有延期发现项.
 
 ## Artifacts Analyzed(已分析工件)
 
@@ -19,11 +19,14 @@
 
 | ID | Category(类别) | Severity(严重级别) | Current Status(当前状态) | Resolution(处理方式) |
 |----|----------------|--------------------|--------------------------|----------------------|
-| I1 | Inconsistency(不一致) | HIGH(高) | Resolved(已解决) | `findings.fixed.md` 已恢复, 并记录第 13 次迭代的 5 个修复项. |
-| A1 | Ambiguity(歧义) | HIGH(高) | Resolved(已解决) | `data-model.md`, `contracts/child-runtime-state-control.md` 和 `tasks.md` 已区分 `attempt_cancel_delivered(尝试取消已送达)` 内部历史字段与 `ChildControlResult.cancel_delivered(子任务控制结果取消已送达)` 本次命令结果字段. |
-| I2 | Inconsistency(不一致) | MEDIUM(中) | Resolved(已解决) | `research.md` 已同步 SC-003 的新幂等验收口径, 并改用 `ChildControlStopCompleted(子任务控制停止完成)` 事件名称. |
-| U1 | Underspecification(规格不足) | MEDIUM(中) | Resolved(已解决) | `data-model.md` 与 T019 已明确 `RuntimeControlState(运行时控制状态)` 持有唯一 `RuntimeTimeBase(运行时时间基准)`, 并以只读引用传入需要生成时间戳的函数. |
-| A2 | Ambiguity(歧义) | MEDIUM(中) | Resolved(已解决) | `spec.md` FR-001 已删除等价空状态表述, 无活动 attempt(尝试) 的相关字段必须显式为 `None(无值)`. |
+| I1 | Inconsistency(不一致) | HIGH(高) | Resolved(已解决) | `spec.md`, `checklists/requirements.md` 和 `data-model.md` 已明确 raw handle(原始句柄) 只属于 runtime(运行时) 内部, 外部只读取可序列化派生事实. |
+| I2 | Inconsistency(不一致) | HIGH(高) | Resolved(已解决) | `tasks.md` 已移除 T009/T010 的 `[P]` 标记, 并写明 T007 -> T009 -> T010 的类型依赖顺序. |
+| I3 | Inconsistency(不一致) | MEDIUM(中) | Resolved(已解决) | `tasks.md` T023 已把运行状态记录字段修正为 `attempt_cancel_delivered(尝试取消已送达)`, 并单独断言 `ChildControlResult.cancel_delivered(子任务控制结果取消已送达)`. |
+| U1 | Underspecification(规格不足) | HIGH(高) | Resolved(已解决) | `plan.md`, `contracts/child-runtime-state-control.md` 和 `tasks.md` 已明确 typed observability sink(类型化可观测发送边界), control loop(控制循环) 必须构造 `SupervisorEvent(监督器事件)` 并发送到 `ObservabilityPipeline(可观测流水线)`. |
+| U2 | Underspecification(规格不足) | MEDIUM(中) | Resolved(已解决) | `tasks.md` T040 已给 `build_child_control_outcome(构造子任务控制结果)` 增加 `time_base: &RuntimeTimeBase(运行时时间基准)` 参数. |
+| U3 | Underspecification(规格不足) | MEDIUM(中) | Resolved(已解决) | `plan.md` Source Code(源代码) 树已补齐 `src/readiness/`, `src/dashboard/` 和 `src/event/time.rs`. |
+| A1 | Ambiguity(歧义) | LOW(低) | Resolved(已解决) | `data-model.md` 已把 `NoActiveAttempt(无活动尝试)` 限定为无活动 attempt(尝试) 路径, 不再覆盖存在活动 attempt(尝试) 的幂等返回. |
+| A2 | Ambiguity(歧义) | LOW(低) | Resolved(已解决) | `tasks.md` 已把 T003 改为 post-setup verification(占位后验证), 并保留纯 baseline(基线) 的独立运行说明. |
 
 ## Coverage Summary Table(覆盖汇总表)
 

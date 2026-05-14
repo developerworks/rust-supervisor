@@ -1,28 +1,28 @@
 //! Runtime-owned shutdown pipeline helpers.
 //!
-//! This module stores active child attempt handles and cached shutdown reports.
+//! This module stores active child child_start_count handles and cached shutdown reports.
 //! It deliberately depends on public shutdown report types instead of moving
 //! task handles into the shutdown module.
 
 use crate::child_runner::runner::{ChildRunHandle, ChildRunReport, wait_for_report};
 use crate::error::types::SupervisorError;
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::shutdown::report::ShutdownPipelineReport;
 use tokio::sync::watch::Receiver;
 use tokio::task::AbortHandle;
 use tokio_util::sync::CancellationToken;
 
-/// Running child attempt observed by the shutdown pipeline.
+/// Running child child_start_count observed by the shutdown pipeline.
 #[derive(Debug)]
-pub(crate) struct ActiveChildAttempt {
+pub(crate) struct ActiveChildStart {
     /// Stable child identifier.
     pub child_id: ChildId,
     /// Child path in the supervisor tree.
     pub path: SupervisorPath,
     /// Runtime slot generation.
     pub generation: Generation,
-    /// Runtime attempt number.
-    pub attempt: Attempt,
+    /// Runtime child_start_count number.
+    pub child_start_count: ChildStartCount,
     /// Cancellation token shared with the task context.
     pub cancellation_token: CancellationToken,
     /// Abort handle attached to the real child future.
@@ -35,32 +35,32 @@ pub(crate) struct ActiveChildAttempt {
     pub abort_requested: bool,
 }
 
-impl ActiveChildAttempt {
-    /// Builds an active attempt from a child run handle.
+impl ActiveChildStart {
+    /// Builds an active child_start_count from a child run handle.
     ///
     /// # Arguments
     ///
     /// - `child_id`: Stable child identifier.
     /// - `path`: Child path in the supervisor tree.
     /// - `generation`: Runtime slot generation.
-    /// - `attempt`: Runtime attempt number.
+    /// - `child_start_count`: Runtime child_start_count number.
     /// - `handle`: Child run handle returned by the runner.
     ///
     /// # Returns
     ///
-    /// Returns an [`ActiveChildAttempt`].
+    /// Returns an [`ActiveChildStart`].
     pub(crate) fn new(
         child_id: ChildId,
         path: SupervisorPath,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
         handle: ChildRunHandle,
     ) -> Self {
         Self {
             child_id,
             path,
             generation,
-            attempt,
+            child_start_count,
             cancellation_token: handle.cancellation_token,
             abort_handle: handle.abort_handle,
             completion_receiver: handle.completion_receiver,
@@ -69,7 +69,7 @@ impl ActiveChildAttempt {
         }
     }
 
-    /// Delivers cancellation to the running child attempt.
+    /// Delivers cancellation to the running child child_start_count.
     ///
     /// # Arguments
     ///
@@ -83,7 +83,7 @@ impl ActiveChildAttempt {
         self.cancel_delivered = true;
     }
 
-    /// Requests abort for the running child attempt.
+    /// Requests abort for the running child child_start_count.
     ///
     /// # Arguments
     ///
@@ -97,7 +97,7 @@ impl ActiveChildAttempt {
         self.abort_requested = true;
     }
 
-    /// Waits for the child attempt report.
+    /// Waits for the child child_start_count report.
     ///
     /// # Arguments
     ///

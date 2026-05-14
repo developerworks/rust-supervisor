@@ -5,7 +5,7 @@
 
 use crate::event::payload::{SupervisorEvent, What, Where};
 use crate::event::time::{CorrelationId, EventSequence, EventSequenceSource, EventTime, When};
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport};
 use crate::runtime::watchdog::RuntimeWatchdog;
 use crate::{control::handle::SupervisorHandle, runtime::message::RuntimeLoopMessage};
@@ -56,18 +56,22 @@ impl PausedTime {
     /// # Arguments
     ///
     /// - `generation`: Child generation for the event.
-    /// - `attempt`: Child attempt for the event.
+    /// - `child_start_count`: Child child_start_count for the event.
     ///
     /// # Returns
     ///
     /// Returns an [`EventTime`] value.
-    pub fn event_time(&self, generation: Generation, attempt: Attempt) -> EventTime {
+    pub fn event_time(
+        &self,
+        generation: Generation,
+        child_start_count: ChildStartCount,
+    ) -> EventTime {
         EventTime::deterministic(
             self.unix_nanos,
             self.monotonic_nanos,
             self.uptime_ms,
             generation,
-            attempt,
+            child_start_count,
         )
     }
 }
@@ -219,7 +223,7 @@ impl EventFixture {
         SupervisorEvent::new(
             When::new(
                 self.paused_time
-                    .event_time(Generation::initial(), Attempt::first()),
+                    .event_time(Generation::initial(), ChildStartCount::first()),
             ),
             location,
             what,
@@ -242,7 +246,7 @@ impl EventFixture {
         SupervisorEvent::new(
             When::new(
                 self.paused_time
-                    .event_time(Generation::initial(), Attempt::first()),
+                    .event_time(Generation::initial(), ChildStartCount::first()),
             ),
             Where::new(SupervisorPath::root()),
             what,

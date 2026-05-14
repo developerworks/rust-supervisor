@@ -136,13 +136,24 @@ Contract rules(契约规则):
 
 ## Runtime Internal Message(运行时内部消息)
 
-本功能不新增 `RuntimeLoopMessage(运行时循环消息)` 变体. 子任务退出仍通过 `RuntimeLoopMessage::ChildAttempt(子任务尝试消息)` 进入 control loop(控制循环).
+本功能不新增 `RuntimeLoopMessage(运行时循环消息)` 变体. 子任务退出仍通过 `RuntimeLoopMessage::ChildInstance(子任务尝试消息)` 进入 control loop(控制循环).
 
 Runtime contract(运行时契约):
 
 - control loop(控制循环) 每次处理 `ControlCommand(控制命令)`, `CurrentState(当前状态)` 或 child exit(子任务退出) 收尾前, 必须调用 `reconcile_stop_deadlines(调和停止截止时间)`. 该函数遍历等待中的运行状态记录, 当 `stop_deadline_at_unix_nanos(停止截止时间)` 已经过期且 `ChildAttemptMessage::Exited(子任务退出消息)` 尚未到达时, 把 `stop_state(停止状态)` 推进到 `Failed(停止失败)`, 写入 `last_control_failure(最近控制失败原因)`, 并发布 `ChildControlStopFailed(子任务控制停止失败)` 事件. 该函数不得调用 `runtime_state.abort(运行状态记录强制中止)`. 本契约采用 lazy-only(惰性触发) 语义, 不新增 timer(定时器) 或内部唤醒消息; 若没有后续控制命令, `CurrentState(当前状态)` 或 child exit(子任务退出), 停止失败事件不会单独按时钟自动发布.
-- `ChildAttemptMessage::Exited(子任务退出消息)` 到达时, exit handler(退出处理) 必须读取运行状态记录 `operation(操作)`. `Active(活跃)` 允许执行常规策略评估, 并允许 runtime(运行时) 侧重启次数限制跟踪器更新 `restart_limit(重启次数限制)` 状态. `Paused(已暂停)` 必须只保存最近一次 `restart_limit(重启次数限制)` 状态, 不启动新 attempt(尝试), 也不得记录新的重启尝试次数. `Quarantined(已隔离)` 必须既不评估策略也不启动新 attempt(尝试). `Removed(已移除)` 必须从 `child_runtime_states(子任务运行状态记录集合)` 中删除运行状态记录.
-- 控制命令路径不得直接调用 `wait_for_report(等待报告)`. 等待 child future(子任务 future) 终止仍由 spawn 时挂上的观察任务通过 `RuntimeLoopMessage::ChildAttempt(子任务尝试消息)` 完成.
+- `ChildAttemptMessage::Exited(子任务退出消息)` 到达时, exit handler(退出处理) 必须读取运行状态记录 `operation(操作)`. `Active(活跃)` 允许执行常规策略评估, 并允许 runtime(运行时) 侧重启次数限制跟踪器更新 `restart_limit(重启次数限制)` 状态. `Paused(已暂停)` 必须只保存最近一次 `restart_limit(重启次数限制)` 状态, 不启动新 attempt(尝试), 也不得记录新的重启尝试. `Quarantined(已隔离)` 必须既不评估策略也不启动新 attempt(尝试). `Removed(已移除)` 必须从 `child_runtime_states(子任务运行状态记录集合)` 中删除运行状态记录.
+- 控制命令路径不得直接调用 `wait_for_report(等待报告)`. 等待 child future(子任务 future) 终止仍由 spawn 时挂上的观察任务通过 `RuntimeLoopMessage::ChildInstance(子任务尝试消息)` 完成.
+
+## Observability Emission Path(可观测事件发送路径)
+
+控制命令事件必须从 control loop(控制循环) 进入 `ObservabilityPipeline(可观测流水线)`. `src/event/payload.rs` 只定义 typed payload(类型化载荷), 不能单独视为已经发布事件.
+
+Contract rules(契约规则):
+
+- control loop(控制循环) 必须为 `ChildControlCancelDelivered(子任务控制取消已送达)`, `ChildControlStopCompleted(子任务控制停止完成)`, `ChildControlStopFailed(子任务控制停止失败)`, `ChildControlOperationChanged(子任务控制操作变化)`, `ChildRuntimeStateRemoved(子任务运行状态记录已移除)` 和 `ChildHeartbeatStale(子任务运行状态记录心跳陈旧)` 构造 `SupervisorEvent(监督器事件)`.
+- 每个 `SupervisorEvent(监督器事件)` 必须包含 `EventSequence(事件序列)`, `CorrelationId(关联标识)`, `Where(位置)` 和 `What(事件载荷)`. `Where(位置)` 必须至少包含 supervisor path(监督器路径) 与相关 `child_id(子任务标识)`.
+- control loop(控制循环) 必须调用 `ObservabilityPipeline::emit(可观测流水线发送)` 或等价的 typed event sink(类型化事件发送边界). 仅向 `broadcast::Sender<String>(广播字符串发送器)` 发送文本不得满足本契约.
+- metrics(指标), audit(审计), tracing(追踪), journal(事件日志) 和 test recorder(测试记录器) 必须从同一个 `SupervisorEvent(监督器事件)` 派生, 不得由各任务分别手写不一致的事实.
 
 ## Race Determinism Contract(竞态可复现契约)
 

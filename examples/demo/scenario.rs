@@ -741,7 +741,7 @@ fn runtime_row(child: &DemoChild) -> RuntimeState {
         // Include the generation number.
         generation: child.restart_count,
         // Include the attempt number.
-        attempt: child.restart_count.saturating_add(1),
+        child_start_count: child.restart_count.saturating_add(1),
         // Include restart count.
         restart_count: child.restart_count,
         // Include last failure when present.

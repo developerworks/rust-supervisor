@@ -6,7 +6,7 @@
 use crate::event::payload::{SupervisorEvent, What};
 use crate::journal::ring::EventJournal;
 use crate::observe::metrics::{MetricSample, MetricsFacade};
-use crate::observe::tracing::{AttemptSpan, TracingEvent};
+use crate::observe::tracing::{ChildStartCountSpan, TracingEvent};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
 
@@ -52,7 +52,7 @@ pub struct TestRecorder {
     /// Structured log records seen by the recorder.
     pub logs: Vec<StructuredLogRecord>,
     /// Tracing spans seen by the recorder.
-    pub spans: Vec<AttemptSpan>,
+    pub spans: Vec<ChildStartCountSpan>,
     /// Tracing events seen by the recorder.
     pub tracing_events: Vec<TracingEvent>,
     /// Metric samples seen by the recorder.
@@ -167,7 +167,7 @@ impl ObservabilityPipeline {
     pub fn emit(&mut self, event: SupervisorEvent) -> u64 {
         let metrics = self.metrics.samples_for_event(&event);
         let log = structured_log(&event);
-        let span = AttemptSpan::from_event(&event);
+        let span = ChildStartCountSpan::from_event(&event);
         let tracing_event = TracingEvent::from_event(&event);
         let audit = audit_record(&event);
         let lagged = self.fan_out(event.clone());
@@ -320,7 +320,7 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
         What::ChildShutdownCancelDelivered {
             child_id,
             generation,
-            attempt,
+            child_start_count,
             phase,
         } => Some(AuditRecord {
             sequence: event.sequence.value,
@@ -330,16 +330,17 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             reason: "cancellation token delivered".to_owned(),
             phase: phase.clone(),
             child_id: Some(child_id.to_string()),
-            context: child_attempt_context(generation.value, attempt.value),
+            context: child_child_start_count_context(generation.value, child_start_count.value),
         }),
         What::ChildShutdownGraceful {
             child_id,
             generation,
-            attempt,
+            child_start_count,
             phase,
             exit,
         } => {
-            let mut context = child_attempt_context(generation.value, attempt.value);
+            let mut context =
+                child_child_start_count_context(generation.value, child_start_count.value);
             context.insert("exit".to_owned(), exit.clone());
             Some(AuditRecord {
                 sequence: event.sequence.value,
@@ -355,7 +356,7 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
         What::ChildShutdownAborted {
             child_id,
             generation,
-            attempt,
+            child_start_count,
             phase,
             result,
             reason,
@@ -367,16 +368,17 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             reason: reason.clone(),
             phase: phase.clone(),
             child_id: Some(child_id.to_string()),
-            context: child_attempt_context(generation.value, attempt.value),
+            context: child_child_start_count_context(generation.value, child_start_count.value),
         }),
         What::ChildShutdownLateReport {
             child_id,
             generation,
-            attempt,
+            child_start_count,
             phase,
             exit,
         } => {
-            let mut context = child_attempt_context(generation.value, attempt.value);
+            let mut context =
+                child_child_start_count_context(generation.value, child_start_count.value);
             context.insert("exit".to_owned(), exit.clone());
             Some(AuditRecord {
                 sequence: event.sequence.value,
@@ -393,10 +395,16 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
     }
 }
 
-/// Builds compact child attempt context for audit records.
-fn child_attempt_context(generation: u64, attempt: u64) -> BTreeMap<String, String> {
+/// Builds compact child child_start_count context for audit records.
+fn child_child_start_count_context(
+    generation: u64,
+    child_start_count: u64,
+) -> BTreeMap<String, String> {
     let mut context = BTreeMap::new();
     context.insert("generation".to_owned(), generation.to_string());
-    context.insert("attempt".to_owned(), attempt.to_string());
+    context.insert(
+        "child_start_count".to_owned(),
+        child_start_count.to_string(),
+    );
     context
 }

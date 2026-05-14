@@ -19,7 +19,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 
-/// Verifies that shutdown cancels every running child attempt.
+/// Verifies that shutdown cancels every running child child_start_count.
 #[tokio::test]
 async fn shutdown_tree_cancels_all_running_children() {
     let (cancel_sender, mut cancel_receiver) = mpsc::channel(4);

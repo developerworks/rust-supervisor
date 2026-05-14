@@ -4,15 +4,15 @@
 //! execution. Runtime code fills these values without making the shutdown
 //! module depend on runtime internals.
 
-use crate::child_runner::attempt::TaskExit;
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::child_runner::run_exit::TaskExit;
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::shutdown::stage::{ShutdownCause, ShutdownPhase};
 use serde::{Deserialize, Serialize};
 
 /// Final status for one child during shutdown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChildShutdownStatus {
-    /// The child had no running attempt when shutdown began.
+    /// The child had no running child_start_count when shutdown began.
     AlreadyExited,
     /// The child returned before the graceful timeout expired.
     Graceful,
@@ -33,11 +33,11 @@ pub struct ChildShutdownOutcome {
     pub path: SupervisorPath,
     /// Runtime slot generation observed during shutdown.
     pub generation: Generation,
-    /// Attempt number observed during shutdown.
-    pub attempt: Attempt,
+    /// ChildStartCount number observed during shutdown.
+    pub child_start_count: ChildStartCount,
     /// Final shutdown status for the child.
     pub status: ChildShutdownStatus,
-    /// Whether runtime delivered cancellation to the running attempt.
+    /// Whether runtime delivered cancellation to the running child_start_count.
     pub cancel_delivered: bool,
     /// Exit classification when one was available.
     pub exit: Option<TaskExit>,
@@ -56,11 +56,11 @@ pub struct ChildShutdownOutcomeInput {
     pub path: SupervisorPath,
     /// Runtime slot generation observed during shutdown.
     pub generation: Generation,
-    /// Runtime attempt number observed during shutdown.
-    pub attempt: Attempt,
+    /// Runtime child_start_count number observed during shutdown.
+    pub child_start_count: ChildStartCount,
     /// Final shutdown status for the child.
     pub status: ChildShutdownStatus,
-    /// Whether runtime delivered cancellation to the running attempt.
+    /// Whether runtime delivered cancellation to the running child_start_count.
     pub cancel_delivered: bool,
     /// Exit classification when one was available.
     pub exit: Option<TaskExit>,
@@ -84,7 +84,7 @@ impl ChildShutdownOutcome {
     /// # Examples
     ///
     /// ```
-    /// use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+    /// use rust_supervisor::id::types::{ChildStartCount, ChildId, Generation, SupervisorPath};
     /// use rust_supervisor::shutdown::report::{
     ///     ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus,
     /// };
@@ -94,7 +94,7 @@ impl ChildShutdownOutcome {
     ///     child_id: ChildId::new("worker"),
     ///     path: SupervisorPath::root().join("worker"),
     ///     generation: Generation::initial(),
-    ///     attempt: Attempt::first(),
+    ///     child_start_count: ChildStartCount::first(),
     ///     status: ChildShutdownStatus::Graceful,
     ///     cancel_delivered: true,
     ///     exit: None,
@@ -109,7 +109,7 @@ impl ChildShutdownOutcome {
             child_id: input.child_id,
             path: input.path,
             generation: input.generation,
-            attempt: input.attempt,
+            child_start_count: input.child_start_count,
             status: input.status,
             cancel_delivered: input.cancel_delivered,
             exit: input.exit,

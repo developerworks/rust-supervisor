@@ -162,7 +162,7 @@ pub fn runtime_state_rows(state: &SupervisorState) -> Vec<RuntimeState> {
             health: format!("{:?}", child.health).to_lowercase(),
             readiness: format!("{:?}", child.readiness).to_lowercase(),
             generation: child.generation.value,
-            attempt: child.attempt.value,
+            child_start_count: child.child_start_count.value,
             restart_count: child.restart_count,
             last_failure: child
                 .last_failure
