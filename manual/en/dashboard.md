@@ -6,7 +6,7 @@ The dashboard feature is delivered by three repositories. `rust-supervisor` owns
 
 The screenshot below shows the dashboard client view for target lists, topology, state, and runtime streams.
 
-![rust-supervisor dashboard screenshot](../docs/screenshot.png)
+![rust-supervisor dashboard screenshot](../../docs/screenshot.png)
 
 ## Three-End Responsibilities
 

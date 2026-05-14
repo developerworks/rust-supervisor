@@ -6,7 +6,7 @@ dashboard(看板) 功能由三个仓库共同完成. `rust-supervisor` 只负责
 
 下面的 screenshot(截图) 展示 dashboard client(看板客户端) 的 target list(目标列表), topology(拓扑), state(状态) 和 runtime stream(运行时流) 集中视图.
 
-![rust-supervisor dashboard(看板) screenshot(截图)](../docs/screenshot.png)
+![rust-supervisor dashboard(看板) screenshot(截图)](../../docs/screenshot.png)
 
 ## 三端职责
 

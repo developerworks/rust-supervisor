@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Builds localized mdBook manuals into one static Pages artifact.
+# 构建本地化 mdBook(文档构建工具) 手册, 并输出为统一的 Pages(页面托管) 静态产物.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${ROOT_DIR}/target/mdbook"
@@ -18,6 +18,10 @@ cp "${ROOT_DIR}/docs/screenshot.png" "${OUT_DIR}/docs/screenshot.png"
 
 mdbook build -d "${OUT_DIR}/en" "${ROOT_DIR}/manual/en"
 mdbook build -d "${OUT_DIR}/zh" "${ROOT_DIR}/manual/zh"
+
+perl -0pi -e 's#\.\./\.\./docs/screenshot\.png#../docs/screenshot.png#g' \
+  "${OUT_DIR}/en/dashboard.html" \
+  "${OUT_DIR}/zh/dashboard.html"
 
 cat >"${OUT_DIR}/index.html" <<'HTML'
 <!doctype html>
