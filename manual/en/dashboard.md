@@ -4,6 +4,10 @@ Language: [中文](../zh/dashboard.html)
 
 The dashboard feature is delivered by three repositories. `rust-supervisor` owns only target-process local IPC and shared contracts. `~/rust-supervisor-relay` owns the relay and external `wss://` sessions. `~/rust-supervisor-ui` owns the browser dashboard client.
 
+The screenshot below shows the dashboard client view for target lists, topology, state, and runtime streams.
+
+![rust-supervisor dashboard screenshot](../docs/screenshot.png)
+
 ## Three-End Responsibilities
 
 - `rust-supervisor`: The target process reads `SupervisorConfig`, opens a Unix domain socket when `ipc.enabled=true`, and produces snapshots, event records, log records, command results, and registration heartbeats.

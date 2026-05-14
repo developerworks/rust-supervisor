@@ -13,6 +13,8 @@ command -v mdbook >/dev/null 2>&1 || {
 
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
+mkdir -p "${OUT_DIR}/docs"
+cp "${ROOT_DIR}/docs/screenshot.png" "${OUT_DIR}/docs/screenshot.png"
 
 mdbook build -d "${OUT_DIR}/en" "${ROOT_DIR}/manual/en"
 mdbook build -d "${OUT_DIR}/zh" "${ROOT_DIR}/manual/zh"

@@ -4,6 +4,10 @@
 
 dashboard(看板) 功能由三个仓库共同完成. `rust-supervisor` 只负责 target process(目标进程) 本机 IPC(进程间通信) 和 shared contract(共享契约). `~/rust-supervisor-relay` 负责 relay(中继) 和外部 `wss://` session(会话). `~/rust-supervisor-ui` 负责 browser dashboard client(浏览器看板客户端).
 
+下面的 screenshot(截图) 展示 dashboard client(看板客户端) 的 target list(目标列表), topology(拓扑), state(状态) 和 runtime stream(运行时流) 集中视图.
+
+![rust-supervisor dashboard(看板) screenshot(截图)](../docs/screenshot.png)
+
 ## 三端职责
 
 - `rust-supervisor`: target process(目标进程) 读取 `SupervisorConfig`(监督器配置), 在 `ipc.enabled=true` 时打开 Unix domain socket(Unix 域套接字), 并生成 snapshot(快照), event record(事件记录), log record(日志记录), command result(命令结果) 和 registration heartbeat(注册心跳).
