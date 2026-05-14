@@ -3,7 +3,7 @@
 **Feature Branch(功能分支)**: `004-runtime-semantics`
 **Created(创建日期)**: 2026-05-14
 **Status(状态)**: Draft(草稿)
-**Input(输入)**: 用户描述: "当前 ShutdownTree(关闭监督树) 只是推进阶段并标记完成. 它没有对正在运行的 child task(子任务) 发送取消信号, 没有等待 graceful drain(优雅排空), 没有超时后 abort stragglers(强制中止滞留任务), 也没有 join(等待结束) 每个任务. 应该重构成真实 shutdown pipeline(关闭流水线): 第一阶段发送 CancellationToken(取消令牌), 第二阶段按 shutdown_order(关闭顺序) 等待任务正常返回, 第三阶段对超时任务 abort(强制中止), 第四阶段清理注册表, socket(套接字), journal(日志), metrics(指标), 最后返回每个 child(子任务) 的退出结果."
+**Input(输入)**: 用户描述: "当前 ShutdownTree(关闭监督树) 只是推进阶段并标记完成. 它没有对正在运行的 child task(子任务) 发送取消信号, 没有等待 graceful drain(优雅排空), 没有超时后 abort stragglers(强制中止滞留任务), 也没有 join(等待结束) 每个任务. 应该重构成真实 shutdown pipeline(关闭流水线): 第一阶段发送 CancellationToken(取消令牌), 第二阶段按 shutdown_order(关闭顺序) 等待任务正常返回, 第三阶段对超时任务 abort(强制中止), 第四阶段清理运行时拥有的注册表, journal(日志) 和 metrics(指标) 输出, 对非运行时拥有的 socket(套接字) 记录对账状态, 最后返回每个 child(子任务) 的退出结果."
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
 
@@ -39,7 +39,7 @@
 
 ### User Story 3(用户故事三) - 强制中止滞留任务并完成对账 (Priority(优先级): P3)
 
-操作者需要系统在优雅排空超时后强制中止滞留任务, 再对注册表, socket(套接字), journal(日志) 和 metrics(指标) 做最终对账.
+操作者需要系统在优雅排空超时后强制中止滞留任务, 再对注册表, runtime handles(运行时句柄), journal(日志), metrics(指标) 和 socket(套接字) 做最终对账. 核心 runtime(运行时) 不直接拥有 dashboard IPC socket(仪表盘进程间通信套接字) 时, 系统必须把 socket(套接字) 记录为 NotOwned(非运行时拥有), 而不是伪造清理动作.
 
 **Why this priority(为什么是这个优先级)**: 工业系统不能让关闭无限等待, 也不能在关闭后留下未知状态.
 
@@ -48,11 +48,11 @@
 **Acceptance Scenarios(验收场景)**:
 
 1. **Given(假设)** 某个任务忽略取消信号并超过关闭预算, **When(当)** 系统进入 abort stragglers(强制中止滞留任务), **Then(则)** 系统必须强制中止该任务并记录原因.
-2. **Given(假设)** 所有任务已经结束或被强制中止, **When(当)** 系统进入 reconcile(状态对账), **Then(则)** 系统必须清理运行时注册和本地资源, 并返回每个 child(子任务) 的最终结果.
+2. **Given(假设)** 所有任务已经结束或被强制中止, **When(当)** 系统进入 reconcile(状态对账), **Then(则)** 系统必须清理运行时拥有的注册表和句柄资源, 记录 journal(日志), metrics(指标) 和 socket(套接字) 的对账状态, 并返回每个 child(子任务) 的最终结果.
 
 ### Edge Cases(边界情况)
 
-- 没有运行中任务时, 关闭流水线必须仍然产生完整阶段结果.
+- 没有运行中任务时, 关闭流水线必须仍然产生完整阶段结果, 并把每个声明 child(子任务) 记录为 AlreadyExited(已经退出).
 - 重复 ShutdownTree(关闭监督树) 请求必须返回同一关闭结果或当前关闭进度.
 - 关闭期间有任务迟到上报时, 系统必须把它归入对应 child(子任务) 的最终结果, 或标记为迟到报告.
 
@@ -62,7 +62,7 @@
 
 - **FR-001**: ShutdownTree(关闭监督树) 必须向所有运行中的 child task(子任务) 发送 CancellationToken(取消令牌), 并记录取消请求已经送达的任务集合.
 - **FR-002**: 系统必须按 shutdown_order(关闭顺序) 等待运行中任务完成 graceful drain(优雅排空), 并为每个 child(子任务) 记录退出结果.
-- **FR-003**: 系统必须在关闭预算超时后 abort stragglers(强制中止滞留任务), 清理运行时资源, 并返回覆盖每个 child(子任务) 的关闭摘要.
+- **FR-003**: 系统必须在关闭预算超时后 abort stragglers(强制中止滞留任务), 清理运行时拥有的资源, 记录非运行时拥有资源的对账状态, 并返回覆盖每个 child(子任务) 的关闭摘要.
 
 ### Key Entities(关键实体)
 

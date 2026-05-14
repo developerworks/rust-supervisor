@@ -18,7 +18,7 @@
 **Purpose(目的)**: 建立真实关闭流水线需要的测试入口和模块入口.
 
 - [ ] T001 在 `Cargo.toml` 中新增 `supervisor_real_shutdown_pipeline_test` 测试目标, 路径指向 `src/tests/supervisor_real_shutdown_pipeline_test.rs`.
-- [ ] T002 在 `src/runtime/mod.rs` 中声明 `shutdown_pipeline` 模块, 并确认不添加 `pub use` 兼容导出.
+- [ ] T002 在 `src/runtime/mod.rs` 中声明 `shutdown_pipeline` 模块, 在 `src/shutdown/mod.rs` 中声明 `report` 模块, 并确认不添加 `pub use` 兼容导出.
 - [ ] T003 在 `src/tests/supervisor_real_shutdown_pipeline_test.rs` 中创建测试文件和共享测试工厂骨架.
 
 ---
@@ -29,8 +29,8 @@
 
 **Critical(关键要求)**: 本阶段完成前, 不得开始任何用户故事实现.
 
-- [ ] T004 在 `src/runtime/shutdown_pipeline.rs` 中定义 `ShutdownPipelineReport`, `ChildShutdownOutcome`, `ChildShutdownStatus`, `ShutdownReconcileReport` 和 `ResourceReconcileStatus` 的初始类型.
-- [ ] T005 在 `src/shutdown/coordinator.rs` 中为 `ShutdownResult` 增加 `report: Option<ShutdownPipelineReport>`, 并保持原有 `phase`, `cause` 和 `idempotent` 语义.
+- [ ] T004 在 `src/shutdown/report.rs` 中定义 `ShutdownPipelineReport`, `ChildShutdownOutcome`, `ChildShutdownStatus`, `ShutdownReconcileReport` 和 `ResourceReconcileStatus` 的初始类型.
+- [ ] T005 在 `src/shutdown/coordinator.rs` 中为 `ShutdownResult` 增加 `report: Option<ShutdownPipelineReport>`, 并保持原有 `phase`, `cause` 和 `idempotent` 语义, 同时避免 `src/shutdown/` 依赖 `src/runtime/`.
 - [ ] T006 [P] 在 `src/task/context.rs` 中新增使用外部 `CancellationToken(取消令牌)` 创建 `TaskContext(任务上下文)` 的构造函数.
 - [ ] T007 在 `src/child_runner/runner.rs` 中新增可持有 `CancellationToken(取消令牌)` 和真实 child future(子任务 future) `AbortHandle(强制中止句柄)` 的 `ChildRunHandle(子任务运行句柄)` 或等价类型.
 - [ ] T008 在 `src/runtime/control_loop.rs` 中新增 active attempt(活动尝试) 集合, 用来保存 `child_id(子任务标识)`, `generation(代际)`, `attempt(尝试)`, token(令牌), abort handle(强制中止句柄) 和完成接收端.
@@ -49,12 +49,12 @@
 ### Tests for User Story 1(用户故事一的测试)
 
 - [ ] T010 [US1] 在 `src/tests/supervisor_real_shutdown_pipeline_test.rs` 中添加多个运行中 child task(子任务) 收到 `CancellationToken(取消令牌)` 的失败优先测试.
-- [ ] T011 [US1] 在 `src/tests/supervisor_real_shutdown_pipeline_test.rs` 中添加关闭前已经退出的 child task(子任务) 不被重复取消的失败优先测试.
+- [ ] T011 [US1] 在 `src/tests/supervisor_real_shutdown_pipeline_test.rs` 中添加关闭前已经退出或没有运行中 child task(子任务) 时输出 `AlreadyExited(已经退出)` 且不重复取消的失败优先测试.
 - [ ] T012 [P] [US1] 在 `src/tests/observability_smoke_test.rs` 中添加取消送达事件可观察的失败优先测试.
 
 ### Implementation for User Story 1(用户故事一的实现)
 
-- [ ] T013 [US1] 在 `src/runtime/shutdown_pipeline.rs` 中实现 `RequestStop(请求停止)` 阶段的取消送达逻辑, 并记录已送达 child(子任务) 集合.
+- [ ] T013 [US1] 在 `src/runtime/shutdown_pipeline.rs` 中实现 `RequestStop(请求停止)` 阶段的取消送达逻辑, 并记录已送达 child(子任务) 集合和无活动尝试 child(子任务) 的 `AlreadyExited(已经退出)` 结果.
 - [ ] T014 [US1] 在 `src/runtime/control_loop.rs` 中把 `ShutdownTree(关闭监督树)` 路由到真实 `ShutdownPipeline(关闭流水线)`, 并停止立即推进到 `Completed(已完成)` 的旧逻辑.
 - [ ] T015 [US1] 在 `src/child_runner/runner.rs` 中让运行器把 runtime(运行时) 保存的 token(令牌) 传入 `TaskContext(任务上下文)`.
 - [ ] T016 [P] [US1] 在 `src/event/payload.rs` 中新增或扩展 child cancellation delivered(子任务取消已送达) 事件载荷和事件名.
@@ -105,11 +105,11 @@
 ### Implementation for User Story 3(用户故事三的实现)
 
 - [ ] T031 [US3] 在 `src/runtime/shutdown_pipeline.rs` 中实现 `AbortStragglers(强制中止滞留任务)` 阶段, 并按 `ShutdownPolicy.abort_wait` 等待中止结果.
-- [ ] T032 [US3] 在 `src/runtime/shutdown_pipeline.rs` 中实现 `Reconcile(对账)` 阶段, 并生成 `ShutdownReconcileReport(关闭对账报告)`.
+- [ ] T032 [US3] 在 `src/runtime/shutdown_pipeline.rs` 中实现 `Reconcile(对账)` 阶段, 生成 `ShutdownReconcileReport(关闭对账报告)`, 并把核心 runtime(运行时) 不拥有的 socket(套接字) 记录为 `NotOwned(非运行时拥有)`.
 - [ ] T033 [US3] 在 `src/runtime/shutdown_pipeline.rs` 中实现重复关闭请求的缓存报告返回和迟到报告归并逻辑.
 - [ ] T034 [US3] 在 `src/runtime/control_loop.rs` 中清理 active attempt(活动尝试) 集合, 更新 registry(注册表), 并保证关闭完成后不再接收新的 child restart(子任务重启).
 - [ ] T035 [P] [US3] 在 `src/observe/metrics.rs` 中记录 `shutdown_child_outcomes_total(子任务关闭结果总数)`, `shutdown_abort_total(关闭强制中止总数)` 和 `shutdown_late_reports_total(关闭迟到报告总数)`.
-- [ ] T036 [P] [US3] 在 `src/observe/pipeline.rs` 中记录关闭请求, 取消送达, 等待顺序, 强制中止集合和对账状态的 audit(审计) 事实.
+- [ ] T036 [P] [US3] 在 `src/observe/pipeline.rs` 中记录关闭请求, 取消送达, 等待顺序, 强制中止集合, socket(套接字) `NotOwned(非运行时拥有)` 和对账状态的 audit(审计) 事实.
 - [ ] T037 [US3] 在 `src/event/payload.rs` 中补齐 `ChildShutdownGraceful(子任务优雅完成)`, `ChildShutdownAborted(子任务已强制中止)` 和 `ChildShutdownLateReport(子任务迟到报告)` 事件载荷.
 
 **Checkpoint(检查点)**: 所有用户故事都可以独立工作. 真实关闭流水线可以覆盖合作关闭, 非合作关闭, 重复请求和资源对账.

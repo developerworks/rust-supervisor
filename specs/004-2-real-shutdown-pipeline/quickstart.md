@@ -63,4 +63,4 @@ cargo test
 - `report.outcomes(报告结果集合)` 覆盖全部声明 child(子任务).
 - 每个运行中的 child(子任务) 都有 `cancel_delivered = true`.
 - 忽略取消的 child(子任务) 被记录为 `Aborted(已强制中止)` 或 `AbortFailed(强制中止失败)`.
-- `reconcile(对账)` 说明 registry(注册表), runtime handles(运行时句柄), journal(日志), metrics(指标) 和 socket(套接字) 的最终状态.
+- `reconcile(对账)` 说明 registry(注册表), runtime handles(运行时句柄), journal(日志), metrics(指标) 和 socket(套接字) 的最终状态. 核心 runtime(运行时) 不拥有 socket(套接字) 时, `socket_status(套接字状态)` 必须是 `NotOwned(非运行时拥有)`.

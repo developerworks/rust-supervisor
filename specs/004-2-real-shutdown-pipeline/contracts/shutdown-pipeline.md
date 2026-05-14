@@ -43,9 +43,9 @@ Contract rules(契约规则):
 - 当请求只是创建或复用进行中的关闭流水线时, `report` 可以是 `None(无值)`.
 - 重复请求返回已完成结果时, `idempotent` 必须为 `true`.
 
-## New Runtime Model(新增运行时模型)
+## Shutdown Report Model(关闭报告模型)
 
-这些类型属于 `src/runtime/shutdown_pipeline.rs`.
+这些公开报告类型属于 `src/shutdown/report.rs`. runtime(运行时) 负责填充这些类型, 但是 shutdown(关闭) 模块不能依赖 `src/runtime/`.
 
 ```rust
 pub struct ShutdownPipelineReport {
@@ -101,8 +101,13 @@ Contract rules(契约规则):
 - 同一个 child(子任务) 在 `outcomes(结果集合)` 中最多出现一次.
 - `status = Graceful(优雅完成)` 时, `cancel_delivered` 必须是 `true`.
 - `status = AlreadyExited(已经退出)` 时, 运行时不得再次发送取消.
+- 没有运行中任务时, 全部声明 child(子任务) 必须以 `AlreadyExited(已经退出)` 进入 `outcomes(结果集合)`.
 - `status = Aborted(已强制中止)` 时, 运行时必须已经请求 `abort(强制中止)`.
 - `socket_status(套接字状态)` 在核心 runtime(运行时) 中可以是 `NotOwned(非运行时拥有)`, 因为 dashboard IPC socket(仪表盘进程间通信套接字) 不由核心 runtime(运行时) 直接持有.
+
+## Runtime Execution Model(运行时执行模型)
+
+`ShutdownPipeline(关闭流水线)`, `RunningChildAttempt(运行中子任务尝试)` 和真实 task handle(任务句柄) 属于 `src/runtime/shutdown_pipeline.rs` 或 `src/runtime/control_loop.rs`. 这些运行时类型可以依赖 `src/shutdown/report.rs` 来生成报告, 但 `src/shutdown/report.rs` 不得依赖 runtime(运行时) 模块.
 
 ## Runtime Message Contract(运行时消息契约)
 

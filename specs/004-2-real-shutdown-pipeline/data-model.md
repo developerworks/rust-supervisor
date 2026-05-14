@@ -15,7 +15,7 @@
 | `completed_at_unix_nanos` | `Option<u128>` | 关闭流水线完成时间. |
 | `wait_order` | `Vec<ChildId>` | 按 `shutdown_order(关闭顺序)` 计算出的等待顺序. |
 | `outcomes` | `BTreeMap<ChildId, ChildShutdownOutcome>` | 每个 child(子任务) 的最终关闭结果. |
-| `cached_report` | `Option<ShutdownPipelineReport>` | 已完成关闭的缓存报告, 用于重复请求. |
+| `cached_report` | `Option<ShutdownPipelineReport>` | 已完成关闭的缓存报告, 类型属于 `src/shutdown/report.rs`, 用于重复请求. |
 
 ### Validation Rules(校验规则)
 
@@ -58,7 +58,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 
 ## Entity(实体): `ChildShutdownOutcome(子任务关闭结果)`
 
-`ChildShutdownOutcome(子任务关闭结果)` 是调用者和观测系统读取的 per-child(逐子任务) 关闭事实.
+`ChildShutdownOutcome(子任务关闭结果)` 是调用者和观测系统读取的 per-child(逐子任务) 关闭事实. 该公开报告类型属于 `src/shutdown/report.rs`, runtime(运行时) 只负责生成它.
 
 ### Fields(字段)
 
@@ -76,7 +76,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 
 ### `ChildShutdownStatus(子任务关闭状态)` Values(取值)
 
-- `AlreadyExited(已经退出)` 表示关闭请求前该 child(子任务) 已经不在 active attempt(活动尝试) 集合中.
+- `AlreadyExited(已经退出)` 表示关闭请求前该 child(子任务) 已经不在 active attempt(活动尝试) 集合中. 没有运行中任务时, 每个声明 child(子任务) 都必须使用该状态进入最终报告.
 - `Graceful(优雅完成)` 表示运行时发送取消后, 该 child(子任务) 在 `graceful_timeout(优雅超时)` 前返回.
 - `Aborted(已强制中止)` 表示该 child(子任务) 超时后被 `abort(强制中止)` 并完成.
 - `AbortFailed(强制中止失败)` 表示运行时请求强制中止后仍无法在 `abort_wait(强制中止等待)` 内完成.
@@ -91,7 +91,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 
 ## Entity(实体): `ShutdownPipelineReport(关闭流水线报告)`
 
-`ShutdownPipelineReport(关闭流水线报告)` 是 `ShutdownResult(关闭结果)` 携带的完整摘要.
+`ShutdownPipelineReport(关闭流水线报告)` 是 `ShutdownResult(关闭结果)` 携带的完整摘要. 该公开报告类型属于 `src/shutdown/report.rs`.
 
 ### Fields(字段)
 
@@ -113,7 +113,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 
 ## Entity(实体): `ShutdownReconcileReport(关闭对账报告)`
 
-`ShutdownReconcileReport(关闭对账报告)` 表示关闭流水线完成后的资源状态.
+`ShutdownReconcileReport(关闭对账报告)` 表示关闭流水线完成后的资源状态. 该公开报告类型属于 `src/shutdown/report.rs`.
 
 ### Fields(字段)
 
@@ -123,7 +123,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 | `runtime_handle_status` | `ResourceReconcileStatus` | active attempt(活动尝试) 句柄是否已经移除. |
 | `journal_status` | `ResourceReconcileStatus` | journal(日志) 是否已经收到关闭摘要事件. |
 | `metrics_status` | `ResourceReconcileStatus` | metrics(指标) 是否已经记录关闭摘要. |
-| `socket_status` | `ResourceReconcileStatus` | socket(套接字) 资源状态. 核心 runtime(运行时) 默认是 `NotOwned(非运行时拥有)`. |
+| `socket_status` | `ResourceReconcileStatus` | socket(套接字) 资源状态. 核心 runtime(运行时) 不直接拥有 dashboard IPC socket(仪表盘进程间通信套接字) 时必须是 `NotOwned(非运行时拥有)`. |
 | `warnings` | `Vec<String>` | 对账期间发现的非致命问题. |
 
 ### `ResourceReconcileStatus(资源对账状态)` Values(取值)
