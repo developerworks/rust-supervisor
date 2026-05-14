@@ -6,7 +6,11 @@
 use crate::event::payload::{SupervisorEvent, What, Where};
 use crate::event::time::{CorrelationId, EventSequence, EventSequenceSource, EventTime, When};
 use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport};
+use crate::runtime::watchdog::RuntimeWatchdog;
+use crate::{control::handle::SupervisorHandle, runtime::message::RuntimeLoopMessage};
 use serde::{Deserialize, Serialize};
+use tokio::sync::{broadcast, mpsc};
 use uuid::Uuid;
 
 /// Paused time source for deterministic tests.
@@ -225,6 +229,29 @@ impl EventFixture {
         )
     }
 
+    /// Builds a deterministic event for the root supervisor.
+    ///
+    /// # Arguments
+    ///
+    /// - `what`: Event payload.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorEvent`].
+    pub fn supervisor_event(&self, what: What) -> SupervisorEvent {
+        SupervisorEvent::new(
+            When::new(
+                self.paused_time
+                    .event_time(Generation::initial(), Attempt::first()),
+            ),
+            Where::new(SupervisorPath::root()),
+            what,
+            self.sequences.next(),
+            self.correlation_id,
+            self.config_version,
+        )
+    }
+
     /// Builds an event sequence value.
     ///
     /// # Arguments
@@ -237,4 +264,30 @@ impl EventFixture {
     pub fn sequence(value: u64) -> EventSequence {
         EventSequence::new(value)
     }
+}
+
+/// Creates a handle whose control loop has failed through a watchdog.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns a [`SupervisorHandle`] whose health report is failed.
+pub async fn runtime_control_plane_failed_handle() -> SupervisorHandle {
+    let (command_sender, command_receiver) = mpsc::channel::<RuntimeLoopMessage>(1);
+    drop(command_receiver);
+    let (event_sender, _) = broadcast::channel(16);
+    let control_plane = RuntimeControlPlane::new();
+    control_plane.mark_alive();
+    let join_handle = tokio::spawn(async move {
+        panic!("runtime control loop panic fixture");
+        #[allow(unreachable_code)]
+        RuntimeExitReport::completed("unreachable", "unreachable")
+    });
+    RuntimeWatchdog::spawn(control_plane.clone(), join_handle, event_sender.clone());
+    let handle = SupervisorHandle::new(command_sender, event_sender, control_plane);
+    let _report = handle.join().await.expect("failed runtime joins");
+    handle
 }

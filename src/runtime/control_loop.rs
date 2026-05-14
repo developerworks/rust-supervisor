@@ -14,6 +14,8 @@ use crate::policy::decision::{
 };
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
+use crate::runtime::lifecycle::RuntimeExitReport;
+use crate::runtime::message::{ChildAttemptMessage, ControlPlaneMessage, RuntimeLoopMessage};
 use crate::shutdown::coordinator::ShutdownCoordinator;
 use crate::shutdown::stage::{ShutdownCause, ShutdownPolicy};
 use crate::spec::child::RestartPolicy as ChildRestartPolicy;
@@ -22,31 +24,7 @@ use crate::tree::builder::SupervisorTree;
 use crate::tree::order::{restart_execution_plan, startup_order};
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::sync::{broadcast, mpsc, oneshot};
-
-/// Message consumed by the runtime control loop.
-#[derive(Debug)]
-pub enum RuntimeCommand {
-    /// Control command sent from [`crate::control::handle::SupervisorHandle`].
-    Control {
-        /// Command to execute.
-        command: ControlCommand,
-        /// Reply channel used to return the command result.
-        reply_sender: oneshot::Sender<Result<CommandResult, SupervisorError>>,
-    },
-    /// Child attempt finished and must be evaluated by runtime policy.
-    ChildExited {
-        /// Report returned by the child runner.
-        report: Box<ChildRunReport>,
-    },
-    /// Child attempt could not start.
-    ChildStartFailed {
-        /// Child identifier whose attempt failed before execution.
-        child_id: ChildId,
-        /// Diagnostic message for the failed attempt.
-        message: String,
-    },
-}
+use tokio::sync::{broadcast, mpsc};
 
 /// Mutable state owned by the control loop.
 #[derive(Debug)]
@@ -66,7 +44,7 @@ pub struct RuntimeControlState {
     /// Policy engine used to convert task exits into restart decisions.
     policy_engine: PolicyEngine,
     /// Sender used by spawned child attempts to report runtime messages.
-    command_sender: mpsc::Sender<RuntimeCommand>,
+    command_sender: mpsc::Sender<RuntimeLoopMessage>,
 }
 
 impl RuntimeControlState {
@@ -84,7 +62,7 @@ impl RuntimeControlState {
     pub fn new(
         spec: SupervisorSpec,
         shutdown_policy: ShutdownPolicy,
-        command_sender: mpsc::Sender<RuntimeCommand>,
+        command_sender: mpsc::Sender<RuntimeLoopMessage>,
     ) -> Result<Self, SupervisorError> {
         let tree = SupervisorTree::build(&spec)?;
         let mut registry = RegistryStore::new();
@@ -471,16 +449,16 @@ impl RuntimeControlState {
 ///
 /// # Returns
 ///
-/// This function returns when `receiver` is closed.
+/// Returns a [`RuntimeExitReport`] when the control loop ends.
 pub async fn run_control_loop(
     mut state: RuntimeControlState,
-    mut receiver: mpsc::Receiver<RuntimeCommand>,
+    mut receiver: mpsc::Receiver<RuntimeLoopMessage>,
     event_sender: broadcast::Sender<String>,
-) {
+) -> RuntimeExitReport {
     state.start_declared_children();
     while let Some(message) = receiver.recv().await {
         match message {
-            RuntimeCommand::Control {
+            RuntimeLoopMessage::Control {
                 command,
                 reply_sender,
             } => {
@@ -489,14 +467,41 @@ pub async fn run_control_loop(
                 let _ignored = event_sender.send(format!("control_command:{command_name}"));
                 let _ignored = reply_sender.send(result);
             }
-            RuntimeCommand::ChildExited { report } => {
+            RuntimeLoopMessage::ChildAttempt(ChildAttemptMessage::Exited { report }) => {
                 state.handle_child_exit(*report, &event_sender);
             }
-            RuntimeCommand::ChildStartFailed { child_id, message } => {
+            RuntimeLoopMessage::ChildAttempt(ChildAttemptMessage::StartFailed {
+                child_id,
+                message,
+            }) => {
                 state.handle_child_start_failed(child_id, message, &event_sender);
+            }
+            RuntimeLoopMessage::ControlPlane(ControlPlaneMessage::Shutdown {
+                meta,
+                reply_sender,
+            }) => {
+                let _ignored = event_sender.send(format!(
+                    "runtime_control_loop_shutdown_requested:{}:{}",
+                    meta.requested_by, meta.reason
+                ));
+                match meta.validate() {
+                    Ok(()) => {
+                        let report = RuntimeExitReport::completed(
+                            "shutdown",
+                            format!("runtime control plane shutdown requested: {}", meta.reason),
+                        );
+                        let _ignored = reply_sender.send(Ok(report.clone()));
+                        return report;
+                    }
+                    Err(error) => {
+                        let _ignored = reply_sender.send(Err(error));
+                        continue;
+                    }
+                }
             }
         }
     }
+    RuntimeExitReport::completed("message_loop", "runtime command channel closed")
 }
 
 /// Returns a stable command name for audit text.
@@ -533,18 +538,18 @@ fn command_name(command: &ControlCommand) -> &'static str {
 ///
 /// This function does not return a value.
 async fn send_child_result(
-    sender: mpsc::Sender<RuntimeCommand>,
+    sender: mpsc::Sender<RuntimeLoopMessage>,
     child_id: ChildId,
     result: Result<ChildRunReport, SupervisorError>,
 ) {
     let message = match result {
-        Ok(report) => RuntimeCommand::ChildExited {
+        Ok(report) => RuntimeLoopMessage::ChildAttempt(ChildAttemptMessage::Exited {
             report: Box::new(report),
-        },
-        Err(error) => RuntimeCommand::ChildStartFailed {
+        }),
+        Err(error) => RuntimeLoopMessage::ChildAttempt(ChildAttemptMessage::StartFailed {
             child_id,
             message: error.to_string(),
-        },
+        }),
     };
     let _ignored = sender.send(message).await;
 }

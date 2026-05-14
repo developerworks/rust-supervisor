@@ -35,6 +35,10 @@ fn docs_reference_current_config_and_examples() {
     assert!(docs.contains("policy_failure_matrix"));
     assert!(docs.contains("diagnostic_replay"));
     assert!(docs.contains("Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务)"));
+    assert!(docs.contains("is_alive"));
+    assert!(docs.contains("health"));
+    assert!(docs.contains("join"));
+    assert!(docs.contains("shutdown"));
 }
 
 /// Verifies that configuration schema documentation mentions every public field.

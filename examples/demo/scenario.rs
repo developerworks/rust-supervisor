@@ -889,7 +889,9 @@ fn log_record(target_id: &str, index: usize, child: &DemoChild) -> LogRecord {
             // Continue the demo expression.
             "{} transitioned from unknown to {}",
             // Continue the demo expression.
-            child.name, child.lifecycle,
+            child.name,
+            // Continue the demo expression.
+            child.lifecycle,
             // End transition message expression.
         ),
         // Include structured fields.
@@ -1230,11 +1232,29 @@ fn command_log_record(
     // Include child path field.
     fields.insert("child_path".to_owned(), target_path.clone());
     // Include command field.
-    fields.insert("command".to_owned(), command_name(command.command).to_owned());
+    fields.insert(
+        // Include command field key.
+        "command".to_owned(),
+        // Include command field value.
+        command_name(command.command).to_owned(),
+        // End command field insert.
+    );
     // Include previous lifecycle field.
-    fields.insert("previous_lifecycle_state".to_owned(), transition.previous_lifecycle_state.clone());
+    fields.insert(
+        // Include previous lifecycle key.
+        "previous_lifecycle_state".to_owned(),
+        // Include previous lifecycle value.
+        transition.previous_lifecycle_state.clone(),
+        // End previous lifecycle field insert.
+    );
     // Include lifecycle field.
-    fields.insert("lifecycle_state".to_owned(), transition.lifecycle_state.clone());
+    fields.insert(
+        // Include lifecycle key.
+        "lifecycle_state".to_owned(),
+        // Include lifecycle value.
+        transition.lifecycle_state.clone(),
+        // End lifecycle field insert.
+    );
     // Build log record.
     LogRecord {
         // Include target identifier.
@@ -1801,7 +1821,11 @@ mod tests {
             // End current lifecycle assertion.
         );
         // Read the log message.
-        let message = delta["recent_logs"][0]["message"].as_str().unwrap_or_default();
+        let message = delta["recent_logs"][0]["message"]
+            // Interpret the log message as a string.
+            .as_str()
+            // Fall back to an empty string.
+            .unwrap_or_default();
         // Assert the log message describes the transition.
         assert!(message.contains("running to paused"));
         // Assert structured log fields describe the previous lifecycle.
@@ -1930,7 +1954,13 @@ mod tests {
         // End helper signature.
     ) -> bool {
         // Access runtime state.
-        let Some(rows) = delta.get("runtime_state").and_then(|value| value.as_array()) else {
+        let Some(rows) = delta
+            // Select runtime state.
+            .get("runtime_state")
+            // Interpret runtime state as rows.
+            .and_then(|value| value.as_array())
+        // Handle missing runtime state.
+        else {
             // Return absence.
             return false;
             // End missing runtime state branch.

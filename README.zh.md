@@ -29,8 +29,9 @@
 - 通过 `TaskFactory`(任务工厂) 或 `service_fn`(服务函数) 启动全新的 future(异步任务).
 - 使用 `OneForOne`(一对一), `OneForAll`(一对全部) 和 `RestForOne`(后续一组) supervision strategy(监督策略).
 - 从 typed failure(类型化失败), backoff(退避), jitter(抖动), fuse rule(熔断规则) 和 policy engine(策略引擎) 生成 `RestartDecision`(重启决策).
-- 通过 `SupervisorHandle`(监督器句柄) 控制运行中的树, 包括 `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state` 和 `subscribe_events`.
+- 通过 `SupervisorHandle`(监督器句柄) 控制运行中的树, 包括 `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state`, `subscribe_events`, `is_alive`, `health`, `join` 和 `shutdown`.
 - 控制命令必须携带非空 `requested_by`(请求者) 和 `reason`(原因), 公共控制入口和 runtime control loop(运行时控制循环) 都会在执行前校验审计字段.
+- `is_alive`(是否存活) 和 `health`(健康报告) 暴露 runtime control plane(运行时控制面)状态. `join`(等待结束) 可以重复读取同一个最终 `RuntimeExitReport`(运行时退出报告). `shutdown`(关闭) 只关闭控制面, 不替代 `shutdown_tree`(监督树关闭).
 - 从 `examples/config/supervisor.yaml` 加载主 YAML(数据序列化格式) 配置.
 - 复用 `rust_supervisor::config::configurable::SupervisorConfig` 完成 YAML(数据序列化格式) 加载, template generation(模板生成) 和 JSON Schema(JSON 结构模式) 生成.
 - 发出 structured log(结构化日志), tracing span(追踪跨度), metrics(指标), audit event(审计事件), event journal entry(事件日志条目) 和 `RunSummary`(运行摘要) diagnostics(诊断信息).

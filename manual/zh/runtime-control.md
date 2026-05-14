@@ -17,10 +17,24 @@
 - `shutdown_tree`: 关闭整棵监督树.
 - `current_state`: 返回当前 `SupervisorState`(监督器状态).
 - `subscribe_events`: 订阅生命周期事件.
+- `is_alive`: 快速判断 runtime control loop(运行时控制循环) 是否仍可接收普通控制命令.
+- `health`: 返回 `RuntimeHealthReport`(运行时健康报告), 包含控制面状态, 启动时间, 最近观测时间和最终失败原因.
+- `join`: 等待 runtime control plane(运行时控制面)进入最终态, 并重复返回同一个 `RuntimeExitReport`(运行时退出报告).
+- `shutdown`: 只关闭 runtime control plane(运行时控制面), 不替代 `shutdown_tree`(监督树关闭).
 
 ## 幂等语义
 
 重复控制命令不应该制造不可恢复错误. 已暂停的 child(子任务)再次暂停时返回当前状态. 已隔离的 child(子任务)再次隔离时返回当前状态. 已完成 shutdown(关闭)后再次关闭时返回已有关闭结果.
+
+`join`(等待结束) 会缓存控制循环的最终 `RuntimeExitReport`(运行时退出报告). 同一个 handle(句柄) 重复调用 `join`(等待结束) 时, 每次都返回相同结果, 不会再次消费底层 `JoinHandle`(任务句柄).
+
+`shutdown`(关闭) 只请求 runtime control loop(运行时控制循环) 正常退出. 如果控制面已经 completed(已完成) 或 failed(失败), 再次调用 `shutdown`(关闭) 会直接返回已有最终报告. `shutdown_tree`(监督树关闭) 仍然负责 child task(子任务)和整棵监督树的关闭语义.
+
+## 运行时健康
+
+`is_alive`(是否存活) 是低成本状态判断. 当控制面处于 alive(存活) 时, 它返回 `true`. 当控制面处于 starting(启动中), shutting_down(正在关闭), completed(已完成) 或 failed(失败) 时, 它返回 `false`.
+
+`health`(健康报告) 返回结构化状态. 控制面异常退出后, `health`(健康报告) 仍然可以读取 failed(失败)状态, failure phase(失败阶段), reason(原因), panic(恐慌)标记和 recoverable(可恢复)标记. 普通控制命令在控制面结束后会返回包含同一退出原因的 `SupervisorError`(监督器错误).
 
 ## 动态添加
 

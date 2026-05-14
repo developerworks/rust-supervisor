@@ -22,7 +22,7 @@
 
 ## Decision(决策): 新增显式 control-plane shutdown(控制面关闭) 命令
 
-**Rationale(理由)**: 当前 `shutdown_tree` 是监督树业务命令, 它不等同于关闭 runtime control loop(运行时控制循环). 本规格需要 `SupervisorHandle::shutdown` 主动结束控制面并可等待最终结果. 因此控制循环需要接收一个内部 `RuntimeCommand::ShutdownControlPlane` 或等价消息, 该消息请求控制循环返回 completed(已完成) 状态. 真实 child task(子任务) 关闭由后续规格处理, 本阶段只保证控制面最终态可见.
+**Rationale(理由)**: 当前 `shutdown_tree` 是监督树业务命令, 它不等同于关闭 runtime control loop(运行时控制循环). 本规格需要 `SupervisorHandle::shutdown` 主动结束控制面并可等待最终结果. 因此控制循环需要接收一个内部 `RuntimeLoopMessage::ControlPlane(ControlPlaneMessage::Shutdown)` 或等价消息, 该消息请求控制循环返回 completed(已完成) 状态. 真实 child task(子任务) 关闭由后续规格处理, 本阶段只保证控制面最终态可见.
 
 **Alternatives considered(备选方案)**:
 

@@ -67,7 +67,7 @@
 
 ## Runtime Internal Message(运行时内部消息)
 
-### `RuntimeCommand::ShutdownControlPlane`
+### `RuntimeLoopMessage::ControlPlane(ControlPlaneMessage::Shutdown)`
 
 **Purpose(目的)**: 让控制循环收到显式控制面关闭请求.
 

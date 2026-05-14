@@ -34,6 +34,10 @@ pub struct AuditRecord {
     pub requested_by: String,
     /// Command result.
     pub result: String,
+    /// Audit reason.
+    pub reason: String,
+    /// Runtime or command phase.
+    pub phase: String,
 }
 
 /// Test recorder for observability assertions.
@@ -246,6 +250,42 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             command_id: audit.command_id.clone(),
             requested_by: audit.requested_by.clone(),
             result: audit.result.clone(),
+            reason: audit.reason.clone(),
+            phase: "control_command".to_owned(),
+        }),
+        What::RuntimeControlLoopShutdownRequested {
+            command_id,
+            requested_by,
+            reason,
+        } => Some(AuditRecord {
+            sequence: event.sequence.value,
+            command_id: command_id.clone(),
+            requested_by: requested_by.clone(),
+            result: "accepted".to_owned(),
+            reason: reason.clone(),
+            phase: "shutdown".to_owned(),
+        }),
+        What::RuntimeControlLoopJoinCompleted {
+            command_id,
+            requested_by,
+            state,
+            phase,
+            reason,
+        } => Some(AuditRecord {
+            sequence: event.sequence.value,
+            command_id: command_id.clone(),
+            requested_by: requested_by.clone(),
+            result: state.clone(),
+            reason: reason.clone(),
+            phase: phase.clone(),
+        }),
+        What::RuntimeControlLoopFailed { phase, reason, .. } => Some(AuditRecord {
+            sequence: event.sequence.value,
+            command_id: "runtime-control-loop".to_owned(),
+            requested_by: "runtime".to_owned(),
+            result: "failed".to_owned(),
+            reason: reason.clone(),
+            phase: phase.clone(),
         }),
         _ => None,
     }

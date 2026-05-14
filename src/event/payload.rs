@@ -260,6 +260,55 @@ pub enum What {
         /// Command audit payload.
         audit: CommandAudit,
     },
+    /// Runtime control loop started.
+    RuntimeControlLoopStarted {
+        /// Startup phase label.
+        phase: String,
+        /// Startup time in Unix epoch nanoseconds.
+        started_at_unix_nanos: u128,
+    },
+    /// Runtime control loop shutdown was requested.
+    RuntimeControlLoopShutdownRequested {
+        /// Stable command identifier.
+        command_id: String,
+        /// Actor that requested shutdown.
+        requested_by: String,
+        /// Operator-provided reason.
+        reason: String,
+    },
+    /// Runtime control loop completed normally.
+    RuntimeControlLoopCompleted {
+        /// Completion phase label.
+        phase: String,
+        /// Completion reason.
+        reason: String,
+        /// Completion time in Unix epoch nanoseconds.
+        completed_at_unix_nanos: u128,
+    },
+    /// Runtime control loop failed.
+    RuntimeControlLoopFailed {
+        /// Failure phase label.
+        phase: String,
+        /// Failure reason.
+        reason: String,
+        /// Whether failure came from panic.
+        panic: bool,
+        /// Whether a new supervisor can recover.
+        recoverable: bool,
+    },
+    /// Runtime control loop join completed.
+    RuntimeControlLoopJoinCompleted {
+        /// Stable command identifier.
+        command_id: String,
+        /// Actor that requested join.
+        requested_by: String,
+        /// Final state label.
+        state: String,
+        /// Final phase label.
+        phase: String,
+        /// Final reason.
+        reason: String,
+    },
     /// Event subscriber lagged.
     SubscriberLagged {
         /// Number of missed events.
@@ -306,6 +355,13 @@ impl What {
             Self::ShutdownCompleted { .. } => "ShutdownCompleted",
             Self::CommandAccepted { .. } => "CommandAccepted",
             Self::CommandCompleted { .. } => "CommandCompleted",
+            Self::RuntimeControlLoopStarted { .. } => "RuntimeControlLoopStarted",
+            Self::RuntimeControlLoopShutdownRequested { .. } => {
+                "RuntimeControlLoopShutdownRequested"
+            }
+            Self::RuntimeControlLoopCompleted { .. } => "RuntimeControlLoopCompleted",
+            Self::RuntimeControlLoopFailed { .. } => "RuntimeControlLoopFailed",
+            Self::RuntimeControlLoopJoinCompleted { .. } => "RuntimeControlLoopJoinCompleted",
             Self::SubscriberLagged { .. } => "SubscriberLagged",
         }
     }
