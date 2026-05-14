@@ -10,6 +10,8 @@ use crate::dashboard::error::DashboardError;
 use crate::dashboard::runtime::start_dashboard_ipc_runtime;
 use crate::error::types::SupervisorError;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
+use crate::runtime::lifecycle::RuntimeControlPlane;
+use crate::runtime::watchdog::RuntimeWatchdog;
 use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
 use std::path::Path;
@@ -95,13 +97,20 @@ impl Supervisor {
         spec.validate()?;
         let (command_sender, command_receiver) = mpsc::channel(spec.control_channel_capacity);
         let (event_sender, _) = broadcast::channel(spec.event_channel_capacity);
+        let control_plane = RuntimeControlPlane::new();
         let state = RuntimeControlState::new(spec, shutdown_policy, command_sender.clone())?;
-        tokio::spawn(run_control_loop(
+        let join_handle = tokio::spawn(run_control_loop(
             state,
             command_receiver,
             event_sender.clone(),
         ));
-        Ok(SupervisorHandle::new(command_sender, event_sender))
+        RuntimeWatchdog::publish_started(control_plane.clone(), event_sender.clone());
+        RuntimeWatchdog::spawn(control_plane.clone(), join_handle, event_sender.clone());
+        Ok(SupervisorHandle::new(
+            command_sender,
+            event_sender,
+            control_plane,
+        ))
     }
 }
 

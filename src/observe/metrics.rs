@@ -28,6 +28,10 @@ pub enum SupervisorMetricName {
     EventLagTotal,
     /// Current configuration version.
     ConfigVersion,
+    /// Runtime control loop exit counter.
+    RuntimeControlLoopExitTotal,
+    /// Runtime control plane alive gauge.
+    RuntimeControlPlaneAlive,
 }
 
 impl SupervisorMetricName {
@@ -58,6 +62,8 @@ impl SupervisorMetricName {
             Self::ShutdownDurationSeconds => "supervisor_shutdown_duration_seconds",
             Self::EventLagTotal => "supervisor_event_lag_total",
             Self::ConfigVersion => "supervisor_config_version",
+            Self::RuntimeControlLoopExitTotal => "supervisor_runtime_control_loop_exit_total",
+            Self::RuntimeControlPlaneAlive => "supervisor_runtime_control_plane_alive",
         }
     }
 }
@@ -196,6 +202,35 @@ impl MetricsFacade {
                 *missed as f64,
                 labels_for_event(event),
             )],
+            What::RuntimeControlLoopStarted { phase, .. } => vec![MetricSample::new(
+                SupervisorMetricName::RuntimeControlPlaneAlive,
+                1.0,
+                runtime_labels_for_event(event, "alive", phase),
+            )],
+            What::RuntimeControlLoopCompleted { phase, .. } => vec![
+                MetricSample::new(
+                    SupervisorMetricName::RuntimeControlLoopExitTotal,
+                    1.0,
+                    runtime_labels_for_event(event, "completed", phase),
+                ),
+                MetricSample::new(
+                    SupervisorMetricName::RuntimeControlPlaneAlive,
+                    0.0,
+                    runtime_labels_for_event(event, "completed", phase),
+                ),
+            ],
+            What::RuntimeControlLoopFailed { phase, .. } => vec![
+                MetricSample::new(
+                    SupervisorMetricName::RuntimeControlLoopExitTotal,
+                    1.0,
+                    runtime_labels_for_event(event, "failed", phase),
+                ),
+                MetricSample::new(
+                    SupervisorMetricName::RuntimeControlPlaneAlive,
+                    0.0,
+                    runtime_labels_for_event(event, "failed", phase),
+                ),
+            ],
             _ => Vec::new(),
         }
     }
@@ -220,7 +255,7 @@ impl Default for MetricsFacade {
 fn allowed_label_key(key: &str) -> bool {
     matches!(
         key,
-        "supervisor_path" | "child_id" | "state" | "decision" | "failure_category"
+        "supervisor_path" | "child_id" | "state" | "phase" | "decision" | "failure_category"
     )
 }
 
@@ -245,5 +280,17 @@ fn labels_for_event(event: &SupervisorEvent) -> BTreeMap<String, String> {
     if let Some(policy) = &event.policy {
         labels.insert("decision".to_owned(), policy.decision.clone());
     }
+    labels
+}
+
+/// Builds labels for runtime control plane metrics.
+fn runtime_labels_for_event(
+    event: &SupervisorEvent,
+    state: &str,
+    phase: &str,
+) -> BTreeMap<String, String> {
+    let mut labels = labels_for_event(event);
+    labels.insert("state".to_owned(), state.to_owned());
+    labels.insert("phase".to_owned(), phase.to_owned());
     labels
 }

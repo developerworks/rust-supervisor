@@ -7,7 +7,8 @@ use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
 use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
-use crate::runtime::control_loop::RuntimeCommand;
+use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport, RuntimeHealthReport};
+use crate::runtime::message::{ControlPlaneMessage, RuntimeLoopMessage};
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
@@ -15,9 +16,11 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 #[derive(Debug, Clone)]
 pub struct SupervisorHandle {
     /// Sender side used to submit runtime control commands.
-    command_sender: mpsc::Sender<RuntimeCommand>,
+    command_sender: mpsc::Sender<RuntimeLoopMessage>,
     /// Broadcast sender used to create lifecycle event subscriptions.
     event_sender: broadcast::Sender<String>,
+    /// Runtime control plane lifecycle state.
+    control_plane: RuntimeControlPlane,
     /// Optional dashboard IPC runtime guard.
     dashboard_runtime: Option<Arc<DashboardIpcRuntimeGuard>>,
 }
@@ -34,12 +37,14 @@ impl SupervisorHandle {
     ///
     /// Returns a [`SupervisorHandle`].
     pub fn new(
-        command_sender: mpsc::Sender<RuntimeCommand>,
+        command_sender: mpsc::Sender<RuntimeLoopMessage>,
         event_sender: broadcast::Sender<String>,
+        control_plane: RuntimeControlPlane,
     ) -> Self {
         Self {
             command_sender,
             event_sender,
+            control_plane,
             dashboard_runtime: None,
         }
     }
@@ -240,6 +245,101 @@ impl SupervisorHandle {
         .await
     }
 
+    /// Reports whether the runtime control loop is alive.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` when ordinary control commands may still be accepted.
+    pub fn is_alive(&self) -> bool {
+        self.control_plane.is_alive()
+    }
+
+    /// Returns a runtime control plane health report.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`RuntimeHealthReport`] value for the current observation.
+    pub fn health(&self) -> RuntimeHealthReport {
+        self.control_plane.health()
+    }
+
+    /// Waits until the runtime control plane reaches a final state.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the cached [`RuntimeExitReport`].
+    pub async fn join(&self) -> Result<RuntimeExitReport, SupervisorError> {
+        let report = self.control_plane.join().await;
+        let _ignored = self.event_sender.send(format!(
+            "runtime_control_loop_join_completed:{}:{}:{}",
+            report.state.as_str(),
+            report.phase,
+            report.reason
+        ));
+        Ok(report)
+    }
+
+    /// Requests shutdown for the runtime control plane itself.
+    ///
+    /// # Arguments
+    ///
+    /// - `requested_by`: Actor that requested shutdown.
+    /// - `reason`: Human-readable shutdown reason.
+    ///
+    /// # Returns
+    ///
+    /// Returns the final [`RuntimeExitReport`].
+    pub async fn shutdown(
+        &self,
+        requested_by: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Result<RuntimeExitReport, SupervisorError> {
+        let meta = CommandMeta::new(requested_by, reason);
+        if let Some(report) = self
+            .control_plane
+            .mark_shutdown_requested(meta.requested_by.clone(), meta.reason.clone())?
+        {
+            return Ok(report);
+        }
+
+        let (reply_sender, reply_receiver) = oneshot::channel();
+        if self
+            .command_sender
+            .send(RuntimeLoopMessage::ControlPlane(
+                ControlPlaneMessage::Shutdown { meta, reply_sender },
+            ))
+            .await
+            .is_err()
+        {
+            return Err(self
+                .closed_runtime_error_after_join("runtime control loop is closed")
+                .await);
+        }
+        match reply_receiver.await {
+            Ok(result) => {
+                result?;
+            }
+            Err(_) => {
+                return Err(self
+                    .closed_runtime_error_after_join("runtime control loop dropped shutdown reply")
+                    .await);
+            }
+        }
+        self.join().await
+    }
+
     /// Subscribes to runtime event text emitted by the control loop.
     ///
     /// # Arguments
@@ -250,7 +350,13 @@ impl SupervisorHandle {
     ///
     /// Returns a broadcast receiver for event text.
     pub fn subscribe_events(&self) -> broadcast::Receiver<String> {
-        self.event_sender.subscribe()
+        let receiver = self.event_sender.subscribe();
+        if self.control_plane.is_alive() {
+            let _ignored = self
+                .event_sender
+                .send("runtime_control_loop_started:startup".to_owned());
+        }
+        receiver
     }
 
     /// Sends one control command and waits for the result.
@@ -263,22 +369,38 @@ impl SupervisorHandle {
     ///
     /// Returns a command result or a supervisor error when the runtime is gone.
     async fn send(&self, command: ControlCommand) -> Result<CommandResult, SupervisorError> {
+        if let Some(report) = self.control_plane.final_report() {
+            return Err(runtime_exit_error(&report));
+        }
+        if !self.control_plane.is_alive() {
+            return Err(SupervisorError::InvalidTransition {
+                message: format!(
+                    "runtime control loop is not alive: state={}",
+                    self.control_plane.health().state.as_str()
+                ),
+            });
+        }
         command.validate_audit_metadata()?;
         let (reply_sender, reply_receiver) = oneshot::channel();
-        self.command_sender
-            .send(RuntimeCommand::Control {
+        if self
+            .command_sender
+            .send(RuntimeLoopMessage::Control {
                 command,
                 reply_sender,
             })
             .await
-            .map_err(|_| SupervisorError::InvalidTransition {
-                message: "runtime control loop is closed".to_owned(),
-            })?;
-        reply_receiver
-            .await
-            .map_err(|_| SupervisorError::InvalidTransition {
-                message: "runtime control loop dropped command reply".to_owned(),
-            })?
+            .is_err()
+        {
+            return Err(self
+                .closed_runtime_error_after_join("runtime control loop is closed")
+                .await);
+        }
+        match reply_receiver.await {
+            Ok(result) => result,
+            Err(_) => Err(self
+                .closed_runtime_error_after_join("runtime control loop dropped command reply")
+                .await),
+        }
     }
 
     /// Builds and sends a child-targeted command.
@@ -305,5 +427,31 @@ impl SupervisorHandle {
     {
         let meta = CommandMeta::new(requested_by, reason);
         self.send(builder(meta, child_id)).await
+    }
+
+    /// Builds an error after waiting for the runtime exit report when possible.
+    async fn closed_runtime_error_after_join(&self, fallback: &str) -> SupervisorError {
+        if let Some(report) = self.control_plane.final_report() {
+            return runtime_exit_error(&report);
+        }
+        if self.command_sender.is_closed() {
+            let report = self.control_plane.join().await;
+            return runtime_exit_error(&report);
+        }
+        SupervisorError::InvalidTransition {
+            message: fallback.to_owned(),
+        }
+    }
+}
+
+/// Builds a control command error from a runtime exit report.
+fn runtime_exit_error(report: &RuntimeExitReport) -> SupervisorError {
+    SupervisorError::InvalidTransition {
+        message: format!(
+            "runtime control loop already exited: state={}, phase={}, reason={}",
+            report.state.as_str(),
+            report.phase,
+            report.reason
+        ),
     }
 }
