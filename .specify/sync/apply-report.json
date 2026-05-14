@@ -1,61 +1,35 @@
 {
-  "applied": "2026-05-08T01:55:02+08:00",
+  "applied": "2026-05-15T01:30:16+08:00",
   "based_on": {
-    "proposals_generated": "2026-05-08T01:38:44+08:00",
-    "path": ".specify/sync/proposals.json"
+    "proposals_path": ".specify/sync/proposals.json",
+    "drift_report_path": ".specify/sync/drift-report.json"
   },
-  "approved_proposals": [
+  "specs_updated": [],
+  "new_specs_created": [],
+  "workflow_files_created": [
+    {
+      "path": ".specify/sync/drift-supersession.md",
+      "reason": "P007 Option C superseded-by-004 index"
+    }
+  ],
+  "implementation_tasks_file": ".specify/sync/align-tasks.md",
+  "align_tasks_generated": [
     "P001",
-    "P002"
+    "P002",
+    "P003",
+    "P004",
+    "P005",
+    "P006",
+    "M007"
   ],
-  "changes_made": {
-    "specs_updated": [],
-    "new_specs_created": [],
-    "implementation_tasks_generated": [
-      {
-        "file": ".specify/sync/align-tasks.md",
-        "task": "A001",
-        "target": "001-create-supervisor-core/FR-063",
-        "type": "ALIGN"
-      },
-      {
-        "file": ".specify/sync/align-tasks.md",
-        "task": "A002",
-        "target": "001-create-supervisor-core/SC-031",
-        "type": "ALIGN"
-      }
-    ]
-  },
-  "proposal_status_updated": [
-    {
-      "id": "P001",
-      "approved": true,
-      "action": "applied_align_tasks_generated",
-      "applied": true,
-      "applied_at": "2026-05-08T01:55:02+08:00"
-    },
-    {
-      "id": "P002",
-      "approved": true,
-      "action": "applied_align_tasks_generated",
-      "applied": true,
-      "applied_at": "2026-05-08T01:55:02+08:00"
-    }
+  "proposals_marked_applied": [
+    "P001",
+    "P002",
+    "P003",
+    "P004",
+    "P005",
+    "P006",
+    "P007"
   ],
-  "not_applied": [
-    {
-      "proposal": "P003",
-      "reason": "Rejected. Spec Kit sync extension is local workflow tooling, not a product feature spec."
-    }
-  ],
-  "validation": {
-    "status": "passed",
-    "evidence": [
-      "jq parsed .specify/sync/proposals.json before apply.",
-      "rg scanned current repo, relay repo and UI repo to collect align task file targets.",
-      "jq parsed .specify/sync/apply-report.json and .specify/sync/proposals.json after apply.",
-      "git diff --check passed for sync apply artifacts.",
-      "rg found no Chinese punctuation in sync apply artifacts."
-    ]
-  }
+  "not_applied": []
 }

@@ -17,6 +17,8 @@
 
 **Purpose(目的)**: 建立真实关闭流水线需要的测试入口和模块入口.
 
+**Gate(门禁)**: 进入 Phase 2 前须确认 `004-1-runtime-lifecycle-guard` 规格所定义的运行时控制循环存活, 健康, `join(等待结束)` 与幂等语义已在当前合并基线中可用; 否则应先完成零四杠一相关交付或变基, 再执行本清单中依赖控制循环句柄与生命周期的任务.
+
 - [X] T001 在 `Cargo.toml` 中新增 `supervisor_real_shutdown_pipeline_test` 测试目标, 路径指向 `src/tests/supervisor_real_shutdown_pipeline_test.rs`.
 - [X] T002 在 `src/runtime/mod.rs` 中声明 `shutdown_pipeline` 模块, 在 `src/shutdown/mod.rs` 中声明 `report` 模块, 并确认不添加 `pub use` 兼容导出.
 - [X] T003 在 `src/tests/supervisor_real_shutdown_pipeline_test.rs` 中创建测试文件和共享测试工厂骨架.

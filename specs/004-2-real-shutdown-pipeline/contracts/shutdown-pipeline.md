@@ -41,7 +41,9 @@ Contract rules(契约规则):
 
 - 当 `phase` 是 `Completed(已完成)` 时, `report` 必须是 `Some(有值)`.
 - 当请求只是创建或复用进行中的关闭流水线时, `report` 可以是 `None(无值)`.
-- 重复请求返回已完成结果时, `idempotent` 必须为 `true`.
+- **首次**发起 `ShutdownTree(关闭监督树)` 且开启新关闭流水线时, `idempotent` 必须为 `false`.
+- 同一次关闭仍在进行中, 再次请求 `ShutdownTree(关闭监督树)` 时, 必须返回**同一**关闭流水线的当前进度, `idempotent` 必须为 `true`, `report` 仍可为 `None(无值)` 直到 `phase` 进入 `Completed(已完成)`.
+- 关闭已完成后再次请求且返回缓存结果时, `idempotent` 必须为 `true`, `report` 必须为 `Some(有值)`.
 
 ## Shutdown Report Model(关闭报告模型)
 
@@ -107,7 +109,7 @@ Contract rules(契约规则):
 
 ## Runtime Execution Model(运行时执行模型)
 
-`ShutdownPipeline(关闭流水线)`, `RunningChildAttempt(运行中子任务尝试)` 和真实 task handle(任务句柄) 属于 `src/runtime/shutdown_pipeline.rs` 或 `src/runtime/control_loop.rs`. 这些运行时类型可以依赖 `src/shutdown/report.rs` 来生成报告, 但 `src/shutdown/report.rs` 不得依赖 runtime(运行时) 模块.
+`ShutdownPipeline(关闭流水线)`, `ActiveChildAttempt(活动子任务尝试)` 和真实 task handle(任务句柄) 属于 `src/runtime/shutdown_pipeline.rs` 或 `src/runtime/control_loop.rs`. 这些运行时类型可以依赖 `src/shutdown/report.rs` 来生成报告, 但 `src/shutdown/report.rs` 不得依赖 runtime(运行时) 模块.
 
 ## Runtime Message Contract(运行时消息契约)
 
@@ -117,7 +119,7 @@ Shutdown pipeline(关闭流水线) 需要保证:
 
 - 正常 child exit(子任务退出) 和关闭等待不能重复消费同一个 completion(完成结果).
 - 关闭期间到达的 child exit(子任务退出) 必须归并到对应 `ChildShutdownOutcome(子任务关闭结果)`.
-- 关闭完成后的迟到报告必须记录为 `LateReport(迟到报告)` 或被忽略前产生可观察诊断.
+- 关闭完成后的迟到子任务退出必须写入最终 `outcomes(结果集合)` 中对应 `ChildShutdownOutcome(子任务关闭结果)`, 且 `status` 为 `LateReport(迟到报告)`, 并必须发出 `ChildShutdownLateReport(子任务迟到报告)` 事件或等价可观测诊断, **不得**在既不更新 `outcomes` 又不留下可观测诊断的情况下静默丢弃.
 
 ## Event Contract(事件契约)
 
