@@ -1,3 +1,10 @@
 {
-  "feature_directory": "specs/003-supervisor-dashboard"
+  "feature_directory": "specs/004-1-runtime-lifecycle-guard",
+  "active_feature_directory": "specs/004-1-runtime-lifecycle-guard",
+  "feature_directories": [
+    "specs/004-1-runtime-lifecycle-guard",
+    "specs/004-2-real-shutdown-pipeline",
+    "specs/004-3-child-slot-control",
+    "specs/004-4-generation-fencing"
+  ]
 }
