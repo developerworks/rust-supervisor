@@ -1,6 +1,6 @@
 {
-  "feature_directory": "specs/004-1-runtime-lifecycle-guard",
-  "active_feature_directory": "specs/004-1-runtime-lifecycle-guard",
+  "feature_directory": "specs/004-2-real-shutdown-pipeline",
+  "active_feature_directory": "specs/004-2-real-shutdown-pipeline",
   "feature_directories": [
     "specs/004-1-runtime-lifecycle-guard",
     "specs/004-2-real-shutdown-pipeline",
