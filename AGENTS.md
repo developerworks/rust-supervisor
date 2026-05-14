@@ -87,8 +87,8 @@ AI(人工智能)的"知识诅咒"通常指:模型把自己知道的背景,术语
 <!-- SPECKIT START -->
 
 项目原则和治理规则读取 `.specify/memory/constitution.md`.
-当前功能计划读取 `specs/003-supervisor-dashboard/plan.md`.
+当前功能计划读取 `specs/004-1-runtime-lifecycle-guard/plan.md`.
 功能规格,研究结论,数据模型,接口契约和 quickstart(快速开始) 都在
-`specs/003-supervisor-dashboard/` 目录下.
+`specs/004-1-runtime-lifecycle-guard/` 目录下.
 
 <!-- SPECKIT END -->
