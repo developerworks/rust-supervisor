@@ -37,7 +37,7 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Emit structured logs, tracing spans, metrics, audit events, event journal entries, and `RunSummary` diagnostics.
 - Enable target-side dashboard IPC through the optional `ipc` configuration section. The target process owns only local Unix domain socket IPC, snapshot generation, event conversion, command mapping, and shared JSON contracts.
 
-## Dashboard Boundary
+## Dashboard
 
 The supervisor dashboard feature uses three directories.
 
@@ -48,10 +48,6 @@ The supervisor dashboard feature uses three directories.
 The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots, but event and log subscriptions must be triggered by an established remote dashboard session.
 
 ![rust-supervisor dashboard screenshot](docs/screenshot.png)
-
-## No Compatibility
-
-No Compatibility: this crate is a new project with no legacy API aliases. Consumers should import public types from their owning module paths, for example `rust_supervisor::runtime::supervisor::Supervisor`.
 
 ## Configuration Schema
 

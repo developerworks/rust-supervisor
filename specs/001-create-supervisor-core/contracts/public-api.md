@@ -41,19 +41,6 @@ src/<module>/
 
 所有内部导入必须使用 `crate::` absolute path(绝对路径).所有外部依赖导入必须使用 external crate name(外部软件包名) absolute path(绝对路径).源码不得使用 `super::` relative path(相对路径).
 
-## No Compatibility Method Contract(禁止兼容方法契约)
-
-本项目是全新开发项目,没有历史包袱.公开 API(接口),示例和文档不得包含下面内容:
-
-- old API alias(旧接口别名).
-- migration layer(迁移层).
-- historical behavior flag(历史行为保留开关).
-- deprecated facade(废弃门面).
-- compatibility wrapper(兼容包装函数).
-- third-party API shape clone(第三方接口形状复制).
-
-参考 crate(库) 只能提供概念输入.任何对外名称都必须来自本项目自己的模型.
-
 ## Naming Contract(命名契约)
 
 代码命名必须使用下面名称:

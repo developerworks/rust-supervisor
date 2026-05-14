@@ -35,7 +35,7 @@
 - 发出 structured log(结构化日志), tracing span(追踪跨度), metrics(指标), audit event(审计事件), event journal entry(事件日志条目) 和 `RunSummary`(运行摘要) diagnostics(诊断信息).
 - 通过可选 `ipc` 配置启用 target-side dashboard IPC(目标侧看板进程间通信). target process(目标进程) 只拥有本机 Unix domain socket IPC(Unix 域套接字进程间通信), snapshot(快照) 生成, event conversion(事件转换), command mapping(命令映射) 和 shared JSON contract(共享 JSON 契约).
 
-## Dashboard Boundary(看板边界)
+## 看板
 
 dashboard(看板) 功能固定拆成三个目录.
 
@@ -46,10 +46,6 @@ dashboard(看板) 功能固定拆成三个目录.
 target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `ipc.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
 
 ![rust-supervisor dashboard(看板) screenshot(截图)](docs/screenshot.png)
-
-## No Compatibility(不兼容承诺)
-
-No Compatibility(不兼容承诺): 本 crate(包) 是新项目, 不提供 legacy API alias(旧接口别名). 使用者应该从类型所属模块路径导入 public type(公开类型), 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
 
 ## Configuration Schema(配置结构模式)
 
