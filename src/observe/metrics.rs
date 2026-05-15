@@ -38,6 +38,14 @@ pub enum SupervisorMetricName {
     RuntimeControlLoopExitTotal,
     /// Runtime control plane alive gauge.
     RuntimeControlPlaneAlive,
+    /// Total child control commands.
+    ChildControlCommandTotal,
+    /// Remaining restart limit for child runtime state.
+    ChildRuntimeRestartLimitRemaining,
+    /// Total stale heartbeat observations.
+    ChildRuntimeHeartbeatStaleTotal,
+    /// Total child control operation transitions.
+    ChildRuntimeOperationTransitionsTotal,
 }
 
 impl SupervisorMetricName {
@@ -73,6 +81,16 @@ impl SupervisorMetricName {
             Self::ConfigVersion => "supervisor_config_version",
             Self::RuntimeControlLoopExitTotal => "supervisor_runtime_control_loop_exit_total",
             Self::RuntimeControlPlaneAlive => "supervisor_runtime_control_plane_alive",
+            Self::ChildControlCommandTotal => "supervisor_child_control_command_total",
+            Self::ChildRuntimeRestartLimitRemaining => {
+                "supervisor_child_runtime_restart_limit_remaining"
+            }
+            Self::ChildRuntimeHeartbeatStaleTotal => {
+                "supervisor_child_runtime_heartbeat_stale_total"
+            }
+            Self::ChildRuntimeOperationTransitionsTotal => {
+                "supervisor_child_runtime_operation_transitions_total"
+            }
         }
     }
 }
@@ -245,6 +263,31 @@ impl MetricsFacade {
             What::RuntimeControlLoopFailed { phase, .. } => {
                 runtime_terminal_samples(event, "failed", phase)
             }
+            What::ChildControlCommandCompleted {
+                command, result, ..
+            } => vec![MetricSample::new(
+                SupervisorMetricName::ChildControlCommandTotal,
+                1.0,
+                child_control_command_labels(command, result),
+            )],
+            What::ChildControlOperationChanged { from, to, .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeOperationTransitionsTotal,
+                1.0,
+                operation_transition_labels(format!("{from:?}"), format!("{to:?}")),
+            )],
+            What::ChildRuntimeRestartLimitUpdated {
+                child_id,
+                restart_limit,
+            } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeRestartLimitRemaining,
+                restart_limit.remaining as f64,
+                restart_limit_labels(child_id),
+            )],
+            What::ChildHeartbeatStale { .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeHeartbeatStaleTotal,
+                1.0,
+                BTreeMap::new(),
+            )],
             _ => Vec::new(),
         }
     }
@@ -278,7 +321,65 @@ fn allowed_label_key(key: &str) -> bool {
             | "reason"
             | "decision"
             | "failure_category"
+            | "command"
+            | "from"
+            | "to"
     )
+}
+
+/// Builds labels for child control command counters.
+///
+/// # Arguments
+///
+/// - `command`: Stable command name.
+/// - `result`: Stable result classification.
+///
+/// # Returns
+///
+/// Returns labels for a child control command counter.
+fn child_control_command_labels(
+    command: impl Into<String>,
+    result: impl Into<String>,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("command".to_owned(), command.into());
+    labels.insert("result".to_owned(), result.into());
+    labels
+}
+
+/// Builds labels for operation transition counters.
+///
+/// # Arguments
+///
+/// - `from`: Previous operation.
+/// - `to`: New operation.
+///
+/// # Returns
+///
+/// Returns labels for an operation transition counter.
+fn operation_transition_labels(
+    from: impl Into<String>,
+    to: impl Into<String>,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("from".to_owned(), from.into());
+    labels.insert("to".to_owned(), to.into());
+    labels
+}
+
+/// Builds labels for restart limit gauges.
+///
+/// # Arguments
+///
+/// - `child_id`: Child whose restart limit was refreshed.
+///
+/// # Returns
+///
+/// Returns labels for the restart limit gauge.
+fn restart_limit_labels(child_id: &crate::id::types::ChildId) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("child_id".to_owned(), child_id.to_string());
+    labels
 }
 
 /// Builds labels that are safe to attach to event-derived metrics.

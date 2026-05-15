@@ -101,6 +101,10 @@ name = "supervisor_control_test"
 path = "src/tests/supervisor_control_test.rs"
 
 [[test]]
+name = "supervisor_child_runtime_state_control_test"
+path = "src/tests/supervisor_child_runtime_state_control_test.rs"
+
+[[test]]
 name = "supervisor_runtime_lifecycle_test"
 path = "src/tests/supervisor_runtime_lifecycle_test.rs"
 

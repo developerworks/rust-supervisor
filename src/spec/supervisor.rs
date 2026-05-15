@@ -33,26 +33,26 @@ pub enum EscalationPolicy {
     QuarantineScope,
 }
 
-/// 绑定到监督器, 分组或子任务覆盖的重启次数限制.
+/// Restart limit attached to supervisor, group, or child override settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RestartLimit {
-    /// 统计窗口内允许的最大重启次数.
+    /// Maximum allowed restart count inside the accounting window.
     pub max_restarts: u32,
-    /// 用于统计重启次数的时间窗口.
+    /// Accounting window used for restart counts.
     pub window: Duration,
 }
 
 impl RestartLimit {
-    /// 创建重启次数限制.
+    /// Creates a restart limit.
     ///
     /// # Arguments
     ///
-    /// - `max_restarts`: 统计窗口内允许的最大重启次数.
-    /// - `window`: 用于统计重启次数的时间窗口.
+    /// - `max_restarts`: Maximum allowed restart count inside the accounting window.
+    /// - `window`: Accounting window used for restart counts.
     ///
     /// # Returns
     ///
-    /// 返回 [`RestartLimit`] 值.
+    /// Returns a [`RestartLimit`] value.
     pub fn new(max_restarts: u32, window: Duration) -> Self {
         Self {
             max_restarts,
@@ -68,7 +68,7 @@ pub struct GroupStrategy {
     pub group: String,
     /// Restart strategy applied inside the group.
     pub strategy: SupervisionStrategy,
-    /// 该分组可选的重启次数限制.
+    /// Optional restart limit for this group.
     pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this group.
     pub escalation_policy: Option<EscalationPolicy>,
@@ -84,7 +84,7 @@ impl GroupStrategy {
     ///
     /// # Returns
     ///
-    /// 返回没有重启次数限制和升级覆盖的 [`GroupStrategy`].
+    /// Returns a [`GroupStrategy`] without restart limit or escalation override.
     pub fn new(group: impl Into<String>, strategy: SupervisionStrategy) -> Self {
         Self {
             group: group.into(),
@@ -102,7 +102,7 @@ pub struct ChildStrategyOverride {
     pub child_id: ChildId,
     /// Restart strategy used when this child fails.
     pub strategy: SupervisionStrategy,
-    /// 该子任务可选的重启次数限制.
+    /// Optional restart limit for this child.
     pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this child.
     pub escalation_policy: Option<EscalationPolicy>,
@@ -199,7 +199,7 @@ pub struct StrategyExecutionPlan {
     pub scope: Vec<ChildId>,
     /// Optional group that constrained the scope.
     pub group: Option<String>,
-    /// 该执行计划选中的可选重启次数限制.
+    /// Optional restart limit selected by this execution plan.
     pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy selected for the plan.
     pub escalation_policy: Option<EscalationPolicy>,
@@ -228,7 +228,7 @@ pub struct SupervisorSpec {
     pub default_shutdown_policy: ShutdownPolicy,
     /// Maximum supervisor failures before parent escalation.
     pub supervisor_failure_limit: u32,
-    /// 监督器级可选重启次数限制.
+    /// Optional supervisor-level restart limit.
     pub restart_limit: Option<RestartLimit>,
     /// Optional supervisor-level escalation policy.
     pub escalation_policy: Option<EscalationPolicy>,
@@ -334,15 +334,15 @@ impl SupervisorSpec {
     }
 }
 
-/// 校验可选重启次数限制.
+/// Validates an optional restart limit.
 ///
 /// # Arguments
 ///
-/// - `limit`: 需要校验的可选重启次数限制.
+/// - `limit`: Optional restart limit to validate.
 ///
 /// # Returns
 ///
-/// 当限制不存在或有效时返回 `Ok(())`.
+/// Returns `Ok(())` when the limit is absent or valid.
 fn validate_restart_limit(limit: Option<RestartLimit>) -> Result<(), SupervisorError> {
     let Some(limit) = limit else {
         return Ok(());

@@ -5,18 +5,28 @@
 
 use crate::child_runner::run_exit::TaskExit;
 use crate::child_runner::runner::{ChildRunReport, ChildRunner, wait_for_report};
-use crate::control::command::{CommandResult, ControlCommand, CurrentState, ManagedChildState};
+use crate::control::command::{
+    CommandMeta, CommandResult, ControlCommand, CurrentState, ManagedChildState,
+};
+use crate::control::outcome::{
+    ChildAttemptStatus, ChildControlFailure, ChildControlFailurePhase, ChildControlOperation,
+    ChildControlResult, ChildLivenessState, ChildStopState,
+};
 use crate::error::types::SupervisorError;
-use crate::id::types::ChildId;
+use crate::event::payload::{SupervisorEvent, What, Where};
+use crate::event::time::{CorrelationId, EventSequenceSource, EventTime, When};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
+use crate::observe::pipeline::ObservabilityPipeline;
 use crate::policy::backoff::BackoffPolicy;
 use crate::policy::decision::{
     PolicyEngine, RestartDecision, RestartPolicy, TaskExit as PolicyTaskExit,
 };
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
+use crate::runtime::child_runtime_state::{ChildRuntimeState, RuntimeTimeBase};
 use crate::runtime::lifecycle::RuntimeExitReport;
 use crate::runtime::message::{ChildStartMessage, ControlPlaneMessage, RuntimeLoopMessage};
-use crate::runtime::shutdown_pipeline::{ActiveChildStart, ShutdownPipeline};
+use crate::runtime::shutdown_pipeline::ShutdownPipeline;
 use crate::shutdown::coordinator::{ShutdownCoordinator, ShutdownResult};
 use crate::shutdown::report::{
     ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ShutdownPipelineReport,
@@ -24,13 +34,31 @@ use crate::shutdown::report::{
 };
 use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use crate::spec::child::RestartPolicy as ChildRestartPolicy;
-use crate::spec::supervisor::SupervisorSpec;
+use crate::spec::supervisor::{RestartLimit, SupervisorSpec};
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::{restart_execution_plan, shutdown_order, startup_order};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::{Instant, timeout};
+
+/// Typed event waiting for emission after mutable state borrows end.
+#[derive(Debug)]
+struct PendingRuntimeEvent {
+    /// Child identifier related to the event.
+    child_id: ChildId,
+    /// Child path attached to the event location.
+    path: SupervisorPath,
+    /// Generation attached to event timing.
+    generation: Option<Generation>,
+    /// Attempt attached to event timing.
+    attempt: Option<ChildStartCount>,
+    /// Correlation identifier attached to the event.
+    correlation_id: CorrelationId,
+    /// Typed event payload.
+    what: What,
+}
 
 /// Mutable state owned by the control loop.
 #[derive(Debug)]
@@ -39,10 +67,14 @@ pub struct RuntimeControlState {
     shutdown: ShutdownCoordinator,
     /// Runtime-owned shutdown pipeline state and cached report.
     shutdown_pipeline: ShutdownPipeline,
-    /// Runtime child states set by explicit control commands.
-    children: HashMap<ChildId, ManagedChildState>,
-    /// Active child start_counts that can be cancelled or aborted.
-    active_starts: HashMap<ChildId, ActiveChildStart>,
+    /// Runtime state records for declared children.
+    child_runtime_states: HashMap<ChildId, ChildRuntimeState>,
+    /// Runtime time base used for public timestamps.
+    time_base: RuntimeTimeBase,
+    /// Event sequence source for typed observability facts.
+    event_sequences: EventSequenceSource,
+    /// Shared typed observability pipeline.
+    observability: Arc<Mutex<ObservabilityPipeline>>,
     /// Dynamic child manifests accepted after startup.
     manifests: Vec<String>,
     /// Registry that owns declared child runtime records.
@@ -73,15 +105,39 @@ impl RuntimeControlState {
         spec: SupervisorSpec,
         shutdown_policy: ShutdownPolicy,
         command_sender: mpsc::Sender<RuntimeLoopMessage>,
+        observability: Arc<Mutex<ObservabilityPipeline>>,
     ) -> Result<Self, SupervisorError> {
         let tree = SupervisorTree::build(&spec)?;
         let mut registry = RegistryStore::new();
         registry.register_tree(&tree)?;
+        let time_base = RuntimeTimeBase::new();
+        let child_runtime_states = registry
+            .declaration_order()
+            .iter()
+            .filter_map(|child_id| {
+                registry.child(child_id).map(|runtime| {
+                    let restart_limit = restart_limit_for_child_in_spec(&tree, &spec, child_id);
+                    let mut state = ChildRuntimeState::new_placeholder(
+                        runtime.id.clone(),
+                        runtime.path.clone(),
+                    );
+                    state.update_restart_limit(
+                        restart_limit.window,
+                        restart_limit.max_restarts,
+                        0,
+                        &time_base,
+                    );
+                    (child_id.clone(), state)
+                })
+            })
+            .collect::<HashMap<_, _>>();
         Ok(Self {
             shutdown: ShutdownCoordinator::new(shutdown_policy),
             shutdown_pipeline: ShutdownPipeline::new(),
-            children: HashMap::new(),
-            active_starts: HashMap::new(),
+            child_runtime_states,
+            time_base,
+            event_sequences: EventSequenceSource::new(),
+            observability,
             manifests: Vec::new(),
             registry,
             tree,
@@ -126,41 +182,54 @@ impl RuntimeControlState {
         event_sender: &broadcast::Sender<String>,
     ) -> Result<CommandResult, SupervisorError> {
         command.validate_audit_metadata()?;
+        self.reconcile_stop_deadlines();
         match command {
             ControlCommand::AddChild { child_manifest, .. } => {
                 self.ensure_dynamic_child_allowed()?;
                 self.manifests.push(child_manifest.clone());
                 Ok(CommandResult::ChildAdded { child_manifest })
             }
-            ControlCommand::RemoveChild { child_id, .. } => {
-                Ok(self.set_child_state(child_id, ManagedChildState::Removed))
-            }
+            ControlCommand::RemoveChild { meta, child_id } => Ok(self.execute_stop_child_control(
+                child_id,
+                ChildControlOperation::Removed,
+                "remove_child",
+                &meta,
+                event_sender,
+            )),
             ControlCommand::RestartChild { child_id, .. } => {
                 self.spawn_child_start(child_id.clone(), true, Duration::ZERO);
                 Ok(self.set_child_state(child_id, ManagedChildState::Running))
             }
-            ControlCommand::PauseChild { child_id, .. } => {
-                Ok(self.set_child_state(child_id, ManagedChildState::Paused))
-            }
+            ControlCommand::PauseChild { meta, child_id } => Ok(self.execute_stop_child_control(
+                child_id,
+                ChildControlOperation::Paused,
+                "pause_child",
+                &meta,
+                event_sender,
+            )),
             ControlCommand::ResumeChild { child_id, .. } => {
                 Ok(self.set_child_state(child_id, ManagedChildState::Running))
             }
-            ControlCommand::QuarantineChild { child_id, .. } => {
-                Ok(self.set_child_state(child_id, ManagedChildState::Quarantined))
-            }
+            ControlCommand::QuarantineChild { meta, child_id } => Ok(self
+                .execute_stop_child_control(
+                    child_id,
+                    ChildControlOperation::Quarantined,
+                    "quarantine_child",
+                    &meta,
+                    event_sender,
+                )),
             ControlCommand::ShutdownTree { meta } => {
                 let result = self
                     .execute_shutdown(meta.requested_by, meta.reason, event_sender)
                     .await?;
                 Ok(CommandResult::Shutdown { result })
             }
-            ControlCommand::CurrentState { .. } => Ok(CommandResult::CurrentState {
-                state: CurrentState {
-                    child_count: self.dynamic_child_count(),
-                    shutdown_completed: self.shutdown.phase()
-                        == crate::shutdown::stage::ShutdownPhase::Completed,
-                },
-            }),
+            ControlCommand::CurrentState { .. } => {
+                self.reconcile_stop_deadlines();
+                Ok(CommandResult::CurrentState {
+                    state: self.build_current_state(),
+                })
+            }
         }
     }
 
@@ -180,20 +249,115 @@ impl RuntimeControlState {
         event_sender: &broadcast::Sender<String>,
     ) {
         let child_id = report.runtime.id.clone();
-        let was_active = self.active_starts.remove(&child_id).is_some();
+        let generation = report.runtime.generation;
+        let attempt = report.runtime.child_start_count;
+        let exit_kind = report.exit.clone();
+        let mut pending_events = Vec::new();
+        let was_active = self
+            .child_runtime_states
+            .get(&child_id)
+            .is_some_and(ChildRuntimeState::has_active_attempt);
+        let count_restart_failure = self
+            .child_runtime_states
+            .get(&child_id)
+            .is_some_and(|state| {
+                state.operation == ChildControlOperation::Active
+                    && restart_limit_counts_exit(&exit_kind)
+            });
         let late_report = !was_active && self.shutdown.phase() == ShutdownPhase::Completed;
+        if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
+            if runtime_state.stop_state == ChildStopState::CancelDelivered {
+                runtime_state.stop_state = ChildStopState::Completed;
+                pending_events.push(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: runtime_state.path.clone(),
+                    generation: Some(generation),
+                    attempt: Some(attempt),
+                    correlation_id: CorrelationId::new(),
+                    what: What::ChildControlStopCompleted {
+                        child_id: child_id.clone(),
+                        generation,
+                        attempt,
+                        exit_kind: exit_kind.clone(),
+                    },
+                });
+            }
+            runtime_state.status = Some(ChildAttemptStatus::Stopped);
+            runtime_state.clear_instance();
+        }
         self.record_child_exit(report);
+        let restart_limit_refreshed =
+            self.refresh_restart_limit_for_child(&child_id, count_restart_failure);
+        if let Some((path, restart_limit)) = restart_limit_refreshed.clone() {
+            pending_events.push(PendingRuntimeEvent {
+                child_id: child_id.clone(),
+                path,
+                generation: Some(generation),
+                attempt: Some(attempt),
+                correlation_id: CorrelationId::new(),
+                what: What::ChildRuntimeRestartLimitUpdated {
+                    child_id: child_id.clone(),
+                    restart_limit,
+                },
+            });
+        }
         let _ignored = event_sender.send(format!("child_exit:{child_id}"));
         if late_report {
             let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
         }
         if !self.should_apply_automatic_policy(&child_id) {
+            if self
+                .child_runtime_states
+                .get(&child_id)
+                .is_some_and(|state| state.operation == ChildControlOperation::Removed)
+            {
+                if let Some(removed) = self.child_runtime_states.remove(&child_id) {
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path: removed.path.clone(),
+                        generation: Some(generation),
+                        attempt: Some(attempt),
+                        correlation_id: CorrelationId::new(),
+                        what: What::ChildRuntimeStateRemoved {
+                            child_id: child_id.clone(),
+                            path: removed.path,
+                            final_status: Some(ChildAttemptStatus::Stopped),
+                        },
+                    });
+                }
+            }
+            for event in pending_events {
+                self.emit_pending_event(event);
+            }
+            self.reconcile_stop_deadlines();
             return;
         }
         let Some(decision) = self.restart_decision(&child_id) else {
+            for event in pending_events {
+                self.emit_pending_event(event);
+            }
+            self.reconcile_stop_deadlines();
             return;
         };
+        if restart_limit_refreshed
+            .as_ref()
+            .is_some_and(|(_path, restart_limit)| {
+                restart_limit.used > restart_limit.limit
+                    && matches!(decision, RestartDecision::RestartAfter { .. })
+            })
+        {
+            let _ignored = event_sender.send(format!("child_restart_limit_exhausted:{child_id}"));
+            for event in pending_events {
+                self.emit_pending_event(event);
+            }
+            self.reconcile_stop_deadlines();
+            return;
+        }
         self.execute_restart_decision(child_id, decision, event_sender);
+        for event in pending_events {
+            self.emit_pending_event(event);
+        }
+        self.reconcile_stop_deadlines();
     }
 
     /// Records a failed child start.
@@ -339,15 +503,23 @@ impl RuntimeControlState {
         event_sender: &broadcast::Sender<String>,
     ) {
         for child_id in wait_order {
-            let Some(child_start_count) = self.active_starts.get_mut(child_id) else {
+            let Some(runtime_state) = self.child_runtime_states.get_mut(child_id) else {
                 continue;
             };
-            child_start_count.cancel();
+            if runtime_state.operation == ChildControlOperation::Removed {
+                continue;
+            }
+            if !runtime_state.has_active_attempt() {
+                continue;
+            };
+            runtime_state.cancel();
             let _ignored = event_sender.send(format!(
                 "child_shutdown_cancel_delivered:{}:{}:{}",
-                child_start_count.child_id,
-                child_start_count.generation.value,
-                child_start_count.child_start_count.value
+                runtime_state.child_id,
+                runtime_state
+                    .generation
+                    .map_or(0, |generation| generation.value),
+                runtime_state.attempt.map_or(0, |attempt| attempt.value)
             ));
         }
     }
@@ -374,11 +546,28 @@ impl RuntimeControlState {
             if outcomes.contains_key(child_id) {
                 continue;
             }
-            let Some(mut child_start_count) = self.active_starts.remove(child_id) else {
+            let Some(mut runtime_state) = self.child_runtime_states.remove(child_id) else {
+                continue;
+            };
+            if runtime_state.operation == ChildControlOperation::Removed {
+                outcomes.insert(
+                    child_id.clone(),
+                    removed_runtime_state_shutdown_outcome(
+                        &runtime_state,
+                        ShutdownPhase::GracefulDrain,
+                    ),
+                );
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
+                continue;
+            }
+            if !runtime_state.has_active_attempt() {
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
                 continue;
             };
             let completed = match remaining_duration(deadline) {
-                Some(remaining) => timeout(remaining, child_start_count.wait_for_report())
+                Some(remaining) => timeout(remaining, runtime_state.wait_for_report())
                     .await
                     .ok(),
                 None => None,
@@ -386,13 +575,16 @@ impl RuntimeControlState {
             match completed {
                 Some(Ok(report)) => {
                     let outcome = outcome_from_report(
-                        &child_start_count,
+                        &runtime_state,
                         &report,
                         ChildShutdownStatus::Graceful,
                         ShutdownPhase::GracefulDrain,
                         "child completed during graceful drain",
                     );
                     self.record_child_exit(report);
+                    runtime_state.clear_instance();
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                     let _ignored = event_sender.send(format!("child_shutdown_graceful:{child_id}"));
                     outcomes.insert(child_id.clone(), outcome);
                 }
@@ -400,16 +592,18 @@ impl RuntimeControlState {
                     outcomes.insert(
                         child_id.clone(),
                         outcome_from_error(
-                            &child_start_count,
+                            &runtime_state,
                             ChildShutdownStatus::Graceful,
                             ShutdownPhase::GracefulDrain,
                             error,
                         ),
                     );
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                 }
                 None => {
-                    self.active_starts
-                        .insert(child_id.clone(), child_start_count);
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                 }
             }
         }
@@ -437,13 +631,30 @@ impl RuntimeControlState {
             if outcomes.contains_key(child_id) {
                 continue;
             }
-            let Some(mut child_start_count) = self.active_starts.remove(child_id) else {
+            let Some(mut runtime_state) = self.child_runtime_states.remove(child_id) else {
+                continue;
+            };
+            if runtime_state.operation == ChildControlOperation::Removed {
+                outcomes.insert(
+                    child_id.clone(),
+                    removed_runtime_state_shutdown_outcome(
+                        &runtime_state,
+                        ShutdownPhase::AbortStragglers,
+                    ),
+                );
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
+                continue;
+            }
+            if !runtime_state.has_active_attempt() {
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
                 continue;
             };
             if !policy.abort_after_timeout {
                 self.wait_for_late_report(
                     child_id,
-                    child_start_count,
+                    runtime_state,
                     policy.abort_wait,
                     outcomes,
                     event_sender,
@@ -451,21 +662,24 @@ impl RuntimeControlState {
                 .await;
                 continue;
             }
-            child_start_count.abort();
+            runtime_state.abort();
             let _ignored = event_sender.send(format!(
                 "child_shutdown_abort_requested:{}",
-                child_start_count.child_id
+                runtime_state.child_id
             ));
-            match timeout(policy.abort_wait, child_start_count.wait_for_report()).await {
+            match timeout(policy.abort_wait, runtime_state.wait_for_report()).await {
                 Ok(Ok(report)) => {
                     let outcome = outcome_from_report(
-                        &child_start_count,
+                        &runtime_state,
                         &report,
                         ChildShutdownStatus::Aborted,
                         ShutdownPhase::AbortStragglers,
                         "child completed after abort request",
                     );
                     self.record_child_exit(report);
+                    runtime_state.clear_instance();
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                     let _ignored = event_sender.send(format!("child_shutdown_aborted:{child_id}"));
                     outcomes.insert(child_id.clone(), outcome);
                 }
@@ -473,28 +687,36 @@ impl RuntimeControlState {
                     outcomes.insert(
                         child_id.clone(),
                         outcome_from_error(
-                            &child_start_count,
+                            &runtime_state,
                             ChildShutdownStatus::AbortFailed,
                             ShutdownPhase::AbortStragglers,
                             error,
                         ),
                     );
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                 }
                 Err(_elapsed) => {
                     outcomes.insert(
                         child_id.clone(),
                         ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
-                            child_id: child_start_count.child_id,
-                            path: child_start_count.path,
-                            generation: child_start_count.generation,
-                            child_start_count: child_start_count.child_start_count,
+                            child_id: runtime_state.child_id.clone(),
+                            path: runtime_state.path.clone(),
+                            generation: runtime_state
+                                .generation
+                                .unwrap_or_else(Generation::initial),
+                            child_start_count: runtime_state
+                                .attempt
+                                .unwrap_or_else(ChildStartCount::first),
                             status: ChildShutdownStatus::AbortFailed,
-                            cancel_delivered: child_start_count.cancel_delivered,
+                            cancel_delivered: runtime_state.attempt_cancel_delivered,
                             exit: None,
                             phase: ShutdownPhase::AbortStragglers,
                             reason: "child did not complete after abort request".to_owned(),
                         }),
                     );
+                    self.child_runtime_states
+                        .insert(child_id.clone(), runtime_state);
                 }
             }
         }
@@ -505,7 +727,7 @@ impl RuntimeControlState {
     /// # Arguments
     ///
     /// - `child_id`: Child whose child_start_count is being reconciled.
-    /// - `child_start_count`: Active child_start_count removed from runtime tracking.
+    /// - `runtime_state`: Runtime state removed from runtime tracking.
     /// - `wait`: Late report wait budget.
     /// - `outcomes`: Output map for completed child outcomes.
     /// - `event_sender`: Event channel used for lifecycle text.
@@ -516,21 +738,24 @@ impl RuntimeControlState {
     async fn wait_for_late_report(
         &mut self,
         child_id: &ChildId,
-        mut child_start_count: ActiveChildStart,
+        mut runtime_state: ChildRuntimeState,
         wait: Duration,
         outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
         event_sender: &broadcast::Sender<String>,
     ) {
-        match timeout(wait, child_start_count.wait_for_report()).await {
+        match timeout(wait, runtime_state.wait_for_report()).await {
             Ok(Ok(report)) => {
                 let outcome = outcome_from_report(
-                    &child_start_count,
+                    &runtime_state,
                     &report,
                     ChildShutdownStatus::LateReport,
                     ShutdownPhase::AbortStragglers,
                     "child reported after graceful timeout",
                 );
                 self.record_child_exit(report);
+                runtime_state.clear_instance();
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
                 let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
                 outcomes.insert(child_id.clone(), outcome);
             }
@@ -538,29 +763,35 @@ impl RuntimeControlState {
                 outcomes.insert(
                     child_id.clone(),
                     outcome_from_error(
-                        &child_start_count,
+                        &runtime_state,
                         ChildShutdownStatus::LateReport,
                         ShutdownPhase::AbortStragglers,
                         error,
                     ),
                 );
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
             }
             Err(_elapsed) => {
                 outcomes.insert(
                     child_id.clone(),
                     ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
-                        child_id: child_start_count.child_id,
-                        path: child_start_count.path,
-                        generation: child_start_count.generation,
-                        child_start_count: child_start_count.child_start_count,
+                        child_id: runtime_state.child_id.clone(),
+                        path: runtime_state.path.clone(),
+                        generation: runtime_state.generation.unwrap_or_else(Generation::initial),
+                        child_start_count: runtime_state
+                            .attempt
+                            .unwrap_or_else(ChildStartCount::first),
                         status: ChildShutdownStatus::AbortFailed,
-                        cancel_delivered: child_start_count.cancel_delivered,
+                        cancel_delivered: runtime_state.attempt_cancel_delivered,
                         exit: None,
                         phase: ShutdownPhase::AbortStragglers,
                         reason: "abort disabled and child did not report before reconcile"
                             .to_owned(),
                     }),
                 );
+                self.child_runtime_states
+                    .insert(child_id.clone(), runtime_state);
             }
         }
     }
@@ -613,14 +844,171 @@ impl RuntimeControlState {
     ///
     /// # Returns
     ///
-    /// Returns a [`CommandResult::ChildState`] value.
+    /// Returns a [`CommandResult::ChildControl`] value.
     fn set_child_state(&mut self, child_id: ChildId, next: ManagedChildState) -> CommandResult {
-        let previous = self.children.insert(child_id.clone(), next);
-        CommandResult::ChildState {
-            child_id,
-            state: next,
-            idempotent: previous == Some(next),
+        let operation = operation_from_managed_state(next);
+        if !self.child_runtime_states.contains_key(&child_id) {
+            let placeholder = self
+                .registry
+                .child(&child_id)
+                .map(|runtime| {
+                    ChildRuntimeState::new_placeholder(runtime.id.clone(), runtime.path.clone())
+                })
+                .unwrap_or_else(|| {
+                    ChildRuntimeState::new_placeholder(
+                        child_id.clone(),
+                        crate::id::types::SupervisorPath::root().join(child_id.value.clone()),
+                    )
+                });
+            self.child_runtime_states
+                .insert(child_id.clone(), placeholder);
         }
+        let runtime_state = self
+            .child_runtime_states
+            .get_mut(&child_id)
+            .expect("child runtime state should exist after insertion");
+        let operation_before = runtime_state.operation;
+        runtime_state.operation = operation;
+        let outcome = ChildControlResult::new(
+            child_id,
+            runtime_state.attempt,
+            runtime_state.generation,
+            operation_before,
+            runtime_state.operation,
+            runtime_state.status,
+            false,
+            if runtime_state.has_active_attempt() {
+                runtime_state.stop_state
+            } else {
+                ChildStopState::NoActiveAttempt
+            },
+            runtime_state.restart_limit.clone(),
+            runtime_state.observe_liveness(&self.time_base),
+            operation_before == operation,
+            runtime_state.last_control_failure.clone(),
+        );
+        CommandResult::ChildControl { outcome }
+    }
+
+    /// Executes a stop-style child control command.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Target child identifier.
+    /// - `target_operation`: Operation requested by the command.
+    /// - `command_name`: Stable command name used in lifecycle text.
+    /// - `meta`: Audit metadata attached to the command.
+    /// - `event_sender`: Event channel used for lifecycle text.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`CommandResult::ChildControl`] value.
+    fn execute_stop_child_control(
+        &mut self,
+        child_id: ChildId,
+        target_operation: ChildControlOperation,
+        command_name: &'static str,
+        meta: &CommandMeta,
+        event_sender: &broadcast::Sender<String>,
+    ) -> CommandResult {
+        if !self.child_runtime_states.contains_key(&child_id) {
+            let placeholder = self
+                .registry
+                .child(&child_id)
+                .map(|runtime| {
+                    ChildRuntimeState::new_placeholder(runtime.id.clone(), runtime.path.clone())
+                })
+                .unwrap_or_else(|| {
+                    ChildRuntimeState::new_placeholder(
+                        child_id.clone(),
+                        crate::id::types::SupervisorPath::root().join(child_id.value.clone()),
+                    )
+                });
+            self.child_runtime_states
+                .insert(child_id.clone(), placeholder);
+        }
+
+        let remove_after_outcome;
+        let correlation_id = CorrelationId::from_uuid(meta.command_id.value);
+        let mut pending_events = Vec::new();
+        let outcome = {
+            let runtime_state = self
+                .child_runtime_states
+                .get_mut(&child_id)
+                .expect("child runtime state should exist after insertion");
+            let stop = apply_stop_control_to_runtime_state(
+                runtime_state,
+                target_operation,
+                command_name,
+                &meta.command_id.value.to_string(),
+                correlation_id,
+                self.time_base
+                    .now_unix_nanos()
+                    .saturating_add(self.shutdown.policy.graceful_timeout.as_nanos()),
+                event_sender,
+                &mut pending_events,
+            );
+            remove_after_outcome = stop.remove_after_outcome;
+            build_child_control_outcome(
+                stop.operation_before,
+                stop.cancel_delivered,
+                stop.idempotent,
+                runtime_state.last_control_failure.clone(),
+                runtime_state,
+                &self.time_base,
+            )
+        };
+
+        for event in pending_events {
+            self.emit_pending_event(event);
+        }
+
+        let outcome_path = self
+            .child_runtime_states
+            .get(&child_id)
+            .map(|state| state.path.clone())
+            .or_else(|| {
+                self.registry
+                    .child(&child_id)
+                    .map(|runtime| runtime.path.clone())
+            })
+            .unwrap_or_else(|| SupervisorPath::root().join(child_id.value.clone()));
+        self.emit_pending_event(PendingRuntimeEvent {
+            child_id: child_id.clone(),
+            path: outcome_path,
+            generation: outcome.generation,
+            attempt: outcome.attempt,
+            correlation_id,
+            what: What::ChildControlCommandCompleted {
+                child_id: child_id.clone(),
+                command: command_name.to_owned(),
+                command_id: meta.command_id.value.to_string(),
+                requested_by: meta.requested_by.clone(),
+                reason: meta.reason.clone(),
+                result: child_control_result_label(&outcome).to_owned(),
+                outcome: Box::new(outcome.clone()),
+            },
+        });
+
+        if remove_after_outcome {
+            if let Some(removed) = self.child_runtime_states.remove(&child_id) {
+                self.emit_pending_event(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: removed.path.clone(),
+                    generation: removed.generation,
+                    attempt: removed.attempt,
+                    correlation_id,
+                    what: What::ChildRuntimeStateRemoved {
+                        child_id: child_id.clone(),
+                        path: removed.path,
+                        final_status: None,
+                    },
+                });
+            }
+            let _ignored = event_sender.send(format!("child_runtime_state_removed:{child_id}"));
+        }
+
+        CommandResult::ChildControl { outcome }
     }
 
     /// Records the completed child_start_count in the registry.
@@ -657,10 +1045,14 @@ impl RuntimeControlState {
             return false;
         }
         !matches!(
-            self.children.get(child_id),
-            Some(ManagedChildState::Paused)
-                | Some(ManagedChildState::Quarantined)
-                | Some(ManagedChildState::Removed)
+            self.child_runtime_states
+                .get(child_id)
+                .map(|state| state.operation),
+            Some(
+                ChildControlOperation::Paused
+                    | ChildControlOperation::Quarantined
+                    | ChildControlOperation::Removed
+            )
         )
     }
 
@@ -685,6 +1077,32 @@ impl RuntimeControlState {
             runtime.child_start_count.value,
             &backoff,
         ))
+    }
+
+    /// Refreshes restart limit state for one child after an exit.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child whose accounting should be refreshed.
+    /// - `count_failure`: Whether this exit consumes the restart limit.
+    ///
+    /// # Returns
+    ///
+    /// Returns the child path and updated restart limit state when the child is tracked.
+    fn refresh_restart_limit_for_child(
+        &mut self,
+        child_id: &ChildId,
+        count_failure: bool,
+    ) -> Option<(SupervisorPath, crate::control::outcome::RestartLimitState)> {
+        let restart_limit = restart_limit_for_child_in_spec(&self.tree, &self.spec, child_id);
+        let runtime_state = self.child_runtime_states.get_mut(child_id)?;
+        let updated = runtime_state.refresh_restart_limit(
+            restart_limit.window,
+            restart_limit.max_restarts,
+            count_failure,
+            &self.time_base,
+        );
+        Some((runtime_state.path.clone(), updated))
     }
 
     /// Executes a restart decision after a child exit.
@@ -787,6 +1205,150 @@ impl RuntimeControlState {
             .saturating_add(self.manifests.len())
     }
 
+    /// Builds the current runtime state report.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`CurrentState`] value.
+    fn build_current_state(&mut self) -> CurrentState {
+        let mut child_runtime_records = Vec::new();
+        let mut pending_events = Vec::new();
+        let declaration_order = self.registry.declaration_order().to_vec();
+        for child_id in declaration_order {
+            if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
+                let liveness = runtime_state.observe_liveness(&self.time_base);
+                if let Some(event) = heartbeat_stale_event(runtime_state, &liveness) {
+                    pending_events.push(event);
+                }
+                child_runtime_records.push(runtime_state.to_record(liveness));
+            }
+        }
+        for (child_id, runtime_state) in &mut self.child_runtime_states {
+            if self.registry.child(child_id).is_some() {
+                continue;
+            }
+            let liveness = runtime_state.observe_liveness(&self.time_base);
+            if let Some(event) = heartbeat_stale_event(runtime_state, &liveness) {
+                pending_events.push(event);
+            }
+            child_runtime_records.push(runtime_state.to_record(liveness));
+        }
+        for event in pending_events {
+            self.emit_pending_event(event);
+        }
+        CurrentState {
+            child_count: self.dynamic_child_count(),
+            shutdown_completed: self.shutdown.phase()
+                == crate::shutdown::stage::ShutdownPhase::Completed,
+            child_runtime_records,
+        }
+    }
+
+    /// Reconciles expired stop deadlines without blocking the control loop.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn reconcile_stop_deadlines(&mut self) {
+        let now = self.time_base.now_unix_nanos();
+        let mut pending_events = Vec::new();
+        for runtime_state in self.child_runtime_states.values_mut() {
+            if runtime_state.stop_state != ChildStopState::CancelDelivered {
+                continue;
+            }
+            let Some(deadline) = runtime_state.stop_deadline_at_unix_nanos else {
+                continue;
+            };
+            if deadline > now || !runtime_state.has_active_attempt() {
+                continue;
+            }
+            let Some(generation) = runtime_state.generation else {
+                continue;
+            };
+            let Some(attempt) = runtime_state.attempt else {
+                continue;
+            };
+            let status = runtime_state
+                .status
+                .unwrap_or(ChildAttemptStatus::Cancelling);
+            let failure = ChildControlFailure::new(
+                ChildControlFailurePhase::WaitCompletion,
+                "child did not complete before stop deadline",
+                true,
+            );
+            runtime_state.status = Some(status);
+            runtime_state.stop_state = ChildStopState::Failed;
+            runtime_state.last_control_failure = Some(failure.clone());
+            pending_events.push(PendingRuntimeEvent {
+                child_id: runtime_state.child_id.clone(),
+                path: runtime_state.path.clone(),
+                generation: Some(generation),
+                attempt: Some(attempt),
+                correlation_id: CorrelationId::new(),
+                what: What::ChildControlStopFailed {
+                    child_id: runtime_state.child_id.clone(),
+                    generation,
+                    attempt,
+                    status,
+                    stop_state: ChildStopState::Failed,
+                    phase: failure.phase,
+                    reason: failure.reason,
+                    recoverable: failure.recoverable,
+                },
+            });
+        }
+        for event in pending_events {
+            self.emit_pending_event(event);
+        }
+    }
+
+    /// Emits one pending typed runtime event.
+    ///
+    /// # Arguments
+    ///
+    /// - `pending`: Event data collected while runtime state was borrowed.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn emit_pending_event(&mut self, pending: PendingRuntimeEvent) {
+        let now = Instant::now();
+        let uptime = now
+            .duration_since(self.time_base.base_instant)
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        let monotonic_nanos = now.duration_since(self.time_base.base_instant).as_nanos();
+        let child_name = self
+            .registry
+            .child(&pending.child_id)
+            .map(|runtime| runtime.spec.name.clone())
+            .unwrap_or_else(|| pending.child_id.to_string());
+        let event = SupervisorEvent::new(
+            When::new(EventTime::from_parts(
+                monotonic_nanos,
+                uptime,
+                pending.generation.unwrap_or_else(Generation::initial),
+                pending.attempt.unwrap_or_else(ChildStartCount::first),
+            )),
+            Where::new(pending.path).with_child(pending.child_id, child_name),
+            pending.what,
+            self.event_sequences.next(),
+            pending.correlation_id,
+            1,
+        );
+        if let Ok(mut observability) = self.observability.lock() {
+            let _lagged = observability.emit(event);
+        }
+    }
+
     /// Spawns one child child_start_count and reports the exit back to this control loop.
     ///
     /// # Arguments
@@ -817,22 +1379,21 @@ impl RuntimeControlState {
         let path = runtime.path.clone();
         let generation = runtime.generation;
         let child_start_count = runtime.child_start_count;
-        if let Some(mut existing) = self.active_starts.remove(&child_id) {
+        if let Some(existing) = self.child_runtime_states.get_mut(&child_id) {
             existing.abort();
         }
         match ChildRunner::new().spawn_once(runtime) {
             Ok(handle) => {
                 let mut completion_receiver = handle.completion_receiver.clone();
-                self.active_starts.insert(
-                    child_id.clone(),
-                    ActiveChildStart::new(
-                        child_id.clone(),
-                        path,
+                self.child_runtime_states
+                    .entry(child_id.clone())
+                    .or_insert_with(|| ChildRuntimeState::new_placeholder(child_id.clone(), path))
+                    .activate_instance(
                         generation,
                         child_start_count,
+                        ChildAttemptStatus::Running,
                         handle,
-                    ),
-                );
+                    );
                 tokio::spawn(async move {
                     let result = wait_for_report(&mut completion_receiver).await;
                     send_child_result(sender, child_id, result).await;
@@ -868,10 +1429,209 @@ impl RuntimeControlState {
             runtime.restart_count = runtime.restart_count.saturating_add(1);
         }
         runtime.status = ChildRuntimeStatus::Starting;
-        self.children
-            .insert(child_id.clone(), ManagedChildState::Running);
+        if let Some(runtime_state) = self.child_runtime_states.get_mut(child_id) {
+            runtime_state.operation = ChildControlOperation::Active;
+        }
         Some(runtime.clone())
     }
+}
+
+/// Builds a child control command outcome from the latest runtime state.
+///
+/// # Arguments
+///
+/// - `operation_before`: Operation observed before command handling.
+/// - `cancel_delivered`: Whether this command delivered cancellation.
+/// - `idempotent`: Whether this command reused existing state.
+/// - `failure`: Failure observed during command handling.
+/// - `runtime_state`: Runtime state used as the source of truth.
+/// - `time_base`: Runtime time base used for liveness timestamps.
+///
+/// # Returns
+///
+/// Returns a [`ChildControlResult`] value.
+fn build_child_control_outcome(
+    operation_before: ChildControlOperation,
+    cancel_delivered: bool,
+    idempotent: bool,
+    failure: Option<ChildControlFailure>,
+    runtime_state: &mut ChildRuntimeState,
+    time_base: &RuntimeTimeBase,
+) -> ChildControlResult {
+    let liveness = runtime_state.observe_liveness(time_base);
+    ChildControlResult::new(
+        runtime_state.child_id.clone(),
+        runtime_state.attempt,
+        runtime_state.generation,
+        operation_before,
+        runtime_state.operation,
+        runtime_state.status,
+        cancel_delivered,
+        runtime_state.stop_state,
+        runtime_state.restart_limit.clone(),
+        liveness,
+        idempotent,
+        failure,
+    )
+}
+
+/// Result of applying a stop-style control command to a runtime state record.
+#[derive(Debug, Clone, Copy)]
+struct StopControlApplication {
+    /// Operation observed before command handling.
+    operation_before: ChildControlOperation,
+    /// Whether this command delivered cancellation.
+    cancel_delivered: bool,
+    /// Whether this command reused existing state.
+    idempotent: bool,
+    /// Whether the caller should remove the record after building the outcome.
+    remove_after_outcome: bool,
+}
+
+/// Applies a stop-style child control command to one runtime state record.
+///
+/// # Arguments
+///
+/// - `runtime_state`: Runtime state that owns the target child.
+/// - `target_operation`: Operation requested by the command.
+/// - `command_name`: Stable command name.
+/// - `command_id`: Stable command identifier.
+/// - `correlation_id`: Correlation identifier for emitted events.
+/// - `stop_deadline_at_unix_nanos`: Deadline written when cancellation is delivered.
+/// - `event_sender`: Event channel used for lifecycle text.
+/// - `pending_events`: Typed events collected until mutable borrows end.
+///
+/// # Returns
+///
+/// Returns the applied stop control facts.
+#[allow(clippy::too_many_arguments)]
+fn apply_stop_control_to_runtime_state(
+    runtime_state: &mut ChildRuntimeState,
+    target_operation: ChildControlOperation,
+    command_name: &'static str,
+    command_id: &str,
+    correlation_id: CorrelationId,
+    stop_deadline_at_unix_nanos: u128,
+    event_sender: &broadcast::Sender<String>,
+    pending_events: &mut Vec<PendingRuntimeEvent>,
+) -> StopControlApplication {
+    let child_id = runtime_state.child_id.clone();
+    let operation_before = runtime_state.operation;
+    let had_active_attempt = runtime_state.has_active_attempt();
+    let already_cancelled_for_target = had_active_attempt
+        && operation_before == target_operation
+        && runtime_state.attempt_cancel_delivered;
+    let idempotent = if had_active_attempt {
+        already_cancelled_for_target
+    } else {
+        operation_before == target_operation && target_operation != ChildControlOperation::Removed
+    };
+
+    if operation_before != target_operation {
+        runtime_state.operation = target_operation;
+        pending_events.push(PendingRuntimeEvent {
+            child_id: child_id.clone(),
+            path: runtime_state.path.clone(),
+            generation: runtime_state.generation,
+            attempt: runtime_state.attempt,
+            correlation_id,
+            what: What::ChildControlOperationChanged {
+                child_id: child_id.clone(),
+                from: operation_before,
+                to: target_operation,
+                command: command_name.to_owned(),
+                command_id: command_id.to_owned(),
+            },
+        });
+        let _ignored = event_sender.send(format!(
+            "child_control_operation_changed:{child_id}:{operation_before:?}:{target_operation:?}"
+        ));
+    }
+
+    let cancel_delivered = if had_active_attempt && !already_cancelled_for_target {
+        let delivered = runtime_state.cancel();
+        if delivered {
+            runtime_state.stop_deadline_at_unix_nanos = Some(stop_deadline_at_unix_nanos);
+            if let (Some(generation), Some(attempt)) =
+                (runtime_state.generation, runtime_state.attempt)
+            {
+                pending_events.push(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: runtime_state.path.clone(),
+                    generation: Some(generation),
+                    attempt: Some(attempt),
+                    correlation_id,
+                    what: What::ChildControlCancelDelivered {
+                        child_id: child_id.clone(),
+                        generation,
+                        attempt,
+                        command: command_name.to_owned(),
+                        command_id: command_id.to_owned(),
+                    },
+                });
+            }
+            let _ignored = event_sender.send(format!(
+                "child_control_cancel_delivered:{child_id}:{command_name}"
+            ));
+        }
+        delivered
+    } else {
+        if !had_active_attempt {
+            runtime_state.stop_state = ChildStopState::NoActiveAttempt;
+        }
+        false
+    };
+
+    StopControlApplication {
+        operation_before,
+        cancel_delivered,
+        idempotent,
+        remove_after_outcome: target_operation == ChildControlOperation::Removed
+            && !had_active_attempt,
+    }
+}
+
+/// Builds a stale heartbeat event when suppression allows emission.
+///
+/// # Arguments
+///
+/// - `runtime_state`: Runtime state whose heartbeat was observed.
+/// - `liveness`: Latest liveness state.
+///
+/// # Returns
+///
+/// Returns a pending event when the stale heartbeat should be emitted.
+fn heartbeat_stale_event(
+    runtime_state: &mut ChildRuntimeState,
+    liveness: &ChildLivenessState,
+) -> Option<PendingRuntimeEvent> {
+    let Some(attempt) = runtime_state.attempt else {
+        runtime_state.stale_event_attempt = None;
+        return None;
+    };
+    if !liveness.heartbeat_stale {
+        runtime_state.stale_event_attempt = None;
+        return None;
+    }
+    if runtime_state.stale_event_attempt == Some(attempt) {
+        return None;
+    }
+    let Some(since_unix_nanos) = liveness.last_heartbeat_at_unix_nanos else {
+        return None;
+    };
+    runtime_state.stale_event_attempt = Some(attempt);
+    Some(PendingRuntimeEvent {
+        child_id: runtime_state.child_id.clone(),
+        path: runtime_state.path.clone(),
+        generation: runtime_state.generation,
+        attempt: Some(attempt),
+        correlation_id: CorrelationId::new(),
+        what: What::ChildHeartbeatStale {
+            child_id: runtime_state.child_id.clone(),
+            attempt,
+            since_unix_nanos,
+        },
+    })
 }
 
 /// Runs the control loop until all command senders are dropped.
@@ -1041,6 +1801,75 @@ fn policy_task_exit(exit: &TaskExit) -> PolicyTaskExit {
     }
 }
 
+/// Reports whether an exit should consume restart limit accounting.
+///
+/// # Arguments
+///
+/// - `exit`: Exit reported by the child runner.
+///
+/// # Returns
+///
+/// Returns `true` when the exit is an unplanned failure.
+fn restart_limit_counts_exit(exit: &TaskExit) -> bool {
+    matches!(
+        exit,
+        TaskExit::Failed(_) | TaskExit::Panicked(_) | TaskExit::TimedOut
+    )
+}
+
+/// Resolves the restart limit for a child from the supervisor strategy layers.
+///
+/// # Arguments
+///
+/// - `tree`: Supervisor tree used for child group lookup.
+/// - `spec`: Supervisor specification that owns restart limit layers.
+/// - `child_id`: Child whose restart limit should be resolved.
+///
+/// # Returns
+///
+/// Returns the selected restart limit or the runtime default.
+fn restart_limit_for_child_in_spec(
+    tree: &SupervisorTree,
+    spec: &SupervisorSpec,
+    child_id: &ChildId,
+) -> RestartLimit {
+    restart_execution_plan(tree, spec, child_id)
+        .restart_limit
+        .unwrap_or_else(default_restart_limit)
+}
+
+/// Returns the runtime default restart limit.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns a conservative effectively-unbounded restart limit.
+fn default_restart_limit() -> RestartLimit {
+    RestartLimit::new(u32::MAX, Duration::from_secs(60))
+}
+
+/// Classifies a child control command outcome for metrics.
+///
+/// # Arguments
+///
+/// - `outcome`: Child control command outcome.
+///
+/// # Returns
+///
+/// Returns `accepted`, `idempotent`, or `failed`.
+fn child_control_result_label(outcome: &ChildControlResult) -> &'static str {
+    if outcome.failure.is_some() || outcome.stop_state == ChildStopState::Failed {
+        "failed"
+    } else if outcome.idempotent {
+        "idempotent"
+    } else {
+        "accepted"
+    }
+}
+
 /// Formats a restart scope for lifecycle events.
 ///
 /// # Arguments
@@ -1058,11 +1887,29 @@ fn child_scope_label(scope: &[ChildId]) -> String {
         .join(",")
 }
 
+/// Maps managed child state into a control operation.
+///
+/// # Arguments
+///
+/// - `state`: Managed child state used by the current control loop.
+///
+/// # Returns
+///
+/// Returns the equivalent child control operation.
+fn operation_from_managed_state(state: ManagedChildState) -> ChildControlOperation {
+    match state {
+        ManagedChildState::Running => ChildControlOperation::Active,
+        ManagedChildState::Paused => ChildControlOperation::Paused,
+        ManagedChildState::Quarantined => ChildControlOperation::Quarantined,
+        ManagedChildState::Removed => ChildControlOperation::Removed,
+    }
+}
+
 /// Builds a child shutdown outcome from a completed run report.
 ///
 /// # Arguments
 ///
-/// - `child_start_count`: Active child_start_count that produced the report.
+/// - `runtime_state`: Runtime state that produced the report.
 /// - `report`: Completed child run report.
 /// - `status`: Shutdown status assigned to the report.
 /// - `phase`: Shutdown phase where the report was consumed.
@@ -1072,22 +1919,49 @@ fn child_scope_label(scope: &[ChildId]) -> String {
 ///
 /// Returns a [`ChildShutdownOutcome`].
 fn outcome_from_report(
-    child_start_count: &ActiveChildStart,
+    runtime_state: &ChildRuntimeState,
     report: &ChildRunReport,
     status: ChildShutdownStatus,
     phase: ShutdownPhase,
     reason: impl Into<String>,
 ) -> ChildShutdownOutcome {
     ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
-        child_id: child_start_count.child_id.clone(),
-        path: child_start_count.path.clone(),
-        generation: child_start_count.generation,
-        child_start_count: child_start_count.child_start_count,
+        child_id: runtime_state.child_id.clone(),
+        path: runtime_state.path.clone(),
+        generation: runtime_state.generation.unwrap_or_else(Generation::initial),
+        child_start_count: runtime_state.attempt.unwrap_or_else(ChildStartCount::first),
         status,
-        cancel_delivered: child_start_count.cancel_delivered,
+        cancel_delivered: runtime_state.attempt_cancel_delivered,
         exit: Some(report.exit.clone()),
         phase,
         reason: reason.into(),
+    })
+}
+
+/// Builds a shutdown outcome for a removed runtime state record.
+///
+/// # Arguments
+///
+/// - `runtime_state`: Removed runtime state skipped by shutdown.
+/// - `phase`: Shutdown phase that observed the removed state.
+///
+/// # Returns
+///
+/// Returns a [`ChildShutdownOutcome`] marked as already exited.
+fn removed_runtime_state_shutdown_outcome(
+    runtime_state: &ChildRuntimeState,
+    phase: ShutdownPhase,
+) -> ChildShutdownOutcome {
+    ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+        child_id: runtime_state.child_id.clone(),
+        path: runtime_state.path.clone(),
+        generation: runtime_state.generation.unwrap_or_else(Generation::initial),
+        child_start_count: runtime_state.attempt.unwrap_or_else(ChildStartCount::first),
+        status: ChildShutdownStatus::AlreadyExited,
+        cancel_delivered: false,
+        exit: None,
+        phase,
+        reason: "child runtime state was already removed before shutdown".to_owned(),
     })
 }
 
@@ -1095,7 +1969,7 @@ fn outcome_from_report(
 ///
 /// # Arguments
 ///
-/// - `child_start_count`: Active child_start_count that produced the error.
+/// - `runtime_state`: Runtime state that produced the error.
 /// - `status`: Shutdown status assigned to the error.
 /// - `phase`: Shutdown phase where the error was consumed.
 /// - `error`: Error returned by the child run observer.
@@ -1104,18 +1978,18 @@ fn outcome_from_report(
 ///
 /// Returns a [`ChildShutdownOutcome`].
 fn outcome_from_error(
-    child_start_count: &ActiveChildStart,
+    runtime_state: &ChildRuntimeState,
     status: ChildShutdownStatus,
     phase: ShutdownPhase,
     error: SupervisorError,
 ) -> ChildShutdownOutcome {
     ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
-        child_id: child_start_count.child_id.clone(),
-        path: child_start_count.path.clone(),
-        generation: child_start_count.generation,
-        child_start_count: child_start_count.child_start_count,
+        child_id: runtime_state.child_id.clone(),
+        path: runtime_state.path.clone(),
+        generation: runtime_state.generation.unwrap_or_else(Generation::initial),
+        child_start_count: runtime_state.attempt.unwrap_or_else(ChildStartCount::first),
         status,
-        cancel_delivered: child_start_count.cancel_delivered,
+        cancel_delivered: runtime_state.attempt_cancel_delivered,
         exit: None,
         phase,
         reason: error.to_string(),

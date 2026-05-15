@@ -7,9 +7,11 @@ use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
 use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
+use crate::observe::pipeline::{ObservabilityPipeline, TestRecorder};
 use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport, RuntimeHealthReport};
 use crate::runtime::message::{ControlPlaneMessage, RuntimeLoopMessage};
 use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 /// Cloneable handle used to control a running supervisor.
@@ -21,6 +23,8 @@ pub struct SupervisorHandle {
     event_sender: broadcast::Sender<String>,
     /// Runtime control plane lifecycle state.
     control_plane: RuntimeControlPlane,
+    /// Shared typed observability pipeline.
+    observability: Arc<Mutex<ObservabilityPipeline>>,
     /// Optional dashboard IPC runtime guard.
     dashboard_runtime: Option<Arc<DashboardIpcRuntimeGuard>>,
 }
@@ -41,10 +45,37 @@ impl SupervisorHandle {
         event_sender: broadcast::Sender<String>,
         control_plane: RuntimeControlPlane,
     ) -> Self {
+        Self::new_with_observability(
+            command_sender,
+            event_sender,
+            control_plane,
+            Arc::new(Mutex::new(ObservabilityPipeline::new(16, 16))),
+        )
+    }
+
+    /// Creates a runtime handle with a shared observability pipeline.
+    ///
+    /// # Arguments
+    ///
+    /// - `command_sender`: Sender used to submit runtime commands.
+    /// - `event_sender`: Sender used to subscribe to lifecycle event text.
+    /// - `control_plane`: Runtime control plane lifecycle state.
+    /// - `observability`: Shared typed observability pipeline.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`].
+    pub(crate) fn new_with_observability(
+        command_sender: mpsc::Sender<RuntimeLoopMessage>,
+        event_sender: broadcast::Sender<String>,
+        control_plane: RuntimeControlPlane,
+        observability: Arc<Mutex<ObservabilityPipeline>>,
+    ) -> Self {
         Self {
             command_sender,
             event_sender,
             control_plane,
+            observability,
             dashboard_runtime: None,
         }
     }
@@ -357,6 +388,22 @@ impl SupervisorHandle {
                 .send("runtime_control_loop_started:startup".to_owned());
         }
         receiver
+    }
+
+    /// Returns a copy of the typed observability test recorder.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the currently retained [`TestRecorder`] contents.
+    pub fn observability_recorder(&self) -> TestRecorder {
+        self.observability
+            .lock()
+            .map(|pipeline| pipeline.test_recorder.clone())
+            .unwrap_or_default()
     }
 
     /// Sends one control command and waits for the result.

@@ -4,7 +4,7 @@
 //! cancellation, emit heartbeats, and report readiness.
 
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
-use crate::readiness::signal::ReadySignal;
+use crate::readiness::signal::{ReadinessState, ReadySignal};
 use tokio::sync::watch;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
@@ -155,6 +155,19 @@ impl TaskContext {
         self.ready_signal.mark_ready();
     }
 
+    /// Reports the current readiness state.
+    ///
+    /// # Arguments
+    ///
+    /// - `state`: Readiness state observed by runtime readers.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn set_readiness(&self, state: ReadinessState) {
+        self.ready_signal.set_readiness(state);
+    }
+
     /// Emits a heartbeat with the current monotonic time.
     ///
     /// # Arguments
@@ -216,7 +229,7 @@ impl TaskContext {
     /// # Returns
     ///
     /// Returns a receiver that observes readiness changes.
-    pub fn readiness_receiver(&self) -> watch::Receiver<bool> {
+    pub fn readiness_receiver(&self) -> watch::Receiver<ReadinessState> {
         self.ready_signal.subscribe()
     }
 }

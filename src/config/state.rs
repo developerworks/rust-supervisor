@@ -107,6 +107,10 @@ impl ConfigState {
             Duration::from_millis(self.shutdown.graceful_timeout_ms),
             Duration::from_millis(self.shutdown.abort_wait_ms),
         );
+        spec.restart_limit = Some(crate::spec::supervisor::RestartLimit::new(
+            self.policy.child_restart_limit,
+            Duration::from_millis(self.policy.child_restart_window_ms),
+        ));
         spec.validate()?;
         Ok(spec)
     }

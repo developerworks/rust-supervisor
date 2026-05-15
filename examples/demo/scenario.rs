@@ -166,6 +166,8 @@ impl DemoScenario {
             topology: topology(&visible),
             // Include runtime rows.
             runtime_state: runtime_rows(&visible),
+            // The demo keeps runtime rows separate and does not simulate control-loop records.
+            child_runtime_records: Vec::new(),
             // Include recent event rows.
             recent_events: event_records(&self.target_id, &visible),
             // Include recent log rows.

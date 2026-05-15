@@ -391,8 +391,262 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
                 context,
             })
         }
+        What::ChildControlCommandCompleted {
+            child_id,
+            command,
+            command_id,
+            requested_by,
+            reason,
+            result,
+            outcome,
+        } => Some(audit_child_control(
+            event.sequence.value,
+            command_id,
+            requested_by,
+            reason,
+            result,
+            child_id,
+            command,
+            outcome,
+        )),
+        What::ChildControlCancelDelivered {
+            child_id,
+            generation,
+            attempt,
+            command,
+            command_id,
+        } => {
+            let mut context = child_child_start_count_context(generation.value, attempt.value);
+            context.insert("command".to_owned(), command.clone());
+            context.insert("cancel_delivered".to_owned(), true.to_string());
+            context.insert("stop_state".to_owned(), "CancelDelivered".to_owned());
+            context.insert("idempotent".to_owned(), false.to_string());
+            context.insert("failure".to_owned(), "none".to_owned());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: command_id.clone(),
+                requested_by: "runtime".to_owned(),
+                result: "cancel_delivered".to_owned(),
+                reason: "child control cancellation delivered".to_owned(),
+                phase: "child_control".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildControlStopCompleted {
+            child_id,
+            generation,
+            attempt,
+            exit_kind,
+        } => {
+            let mut context = child_child_start_count_context(generation.value, attempt.value);
+            context.insert("exit_kind".to_owned(), format!("{exit_kind:?}"));
+            context.insert("stop_state".to_owned(), "Completed".to_owned());
+            context.insert("failure".to_owned(), "none".to_owned());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "child-control".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "completed".to_owned(),
+                reason: "child control stop completed".to_owned(),
+                phase: "child_control".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildControlStopFailed {
+            child_id,
+            generation,
+            attempt,
+            status,
+            stop_state,
+            phase,
+            reason,
+            recoverable,
+        } => {
+            let mut context = child_child_start_count_context(generation.value, attempt.value);
+            context.insert("status".to_owned(), format!("{status:?}"));
+            context.insert("stop_state".to_owned(), format!("{stop_state:?}"));
+            context.insert("recoverable".to_owned(), recoverable.to_string());
+            context.insert("failure_phase".to_owned(), format!("{phase:?}"));
+            context.insert("failure".to_owned(), reason.clone());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "child-control".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "failed".to_owned(),
+                reason: reason.clone(),
+                phase: format!("{phase:?}"),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildControlOperationChanged {
+            child_id,
+            from,
+            to,
+            command,
+            command_id,
+        } => {
+            let mut context = BTreeMap::new();
+            context.insert("operation_before".to_owned(), format!("{from:?}"));
+            context.insert("operation_after".to_owned(), format!("{to:?}"));
+            context.insert("command".to_owned(), command.clone());
+            context.insert("idempotent".to_owned(), false.to_string());
+            context.insert("failure".to_owned(), "none".to_owned());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: command_id.clone(),
+                requested_by: "runtime".to_owned(),
+                result: "operation_changed".to_owned(),
+                reason: "child control operation changed".to_owned(),
+                phase: "child_control".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildRuntimeStateRemoved {
+            child_id,
+            path,
+            final_status,
+        } => {
+            let mut context = BTreeMap::new();
+            context.insert("path".to_owned(), path.to_string());
+            if let Some(status) = final_status {
+                context.insert("final_status".to_owned(), format!("{status:?}"));
+                context.insert("status".to_owned(), format!("{status:?}"));
+            } else {
+                context.insert("final_status".to_owned(), "none".to_owned());
+            }
+            context.insert("operation_after".to_owned(), "Removed".to_owned());
+            context.insert("failure".to_owned(), "none".to_owned());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "child-control".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "removed".to_owned(),
+                reason: "child runtime state removed".to_owned(),
+                phase: "child_control".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        What::ChildHeartbeatStale {
+            child_id,
+            attempt,
+            since_unix_nanos,
+        } => {
+            let mut context = BTreeMap::new();
+            context.insert("attempt".to_owned(), attempt.value.to_string());
+            context.insert("since_unix_nanos".to_owned(), since_unix_nanos.to_string());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "child-liveness".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "heartbeat_stale".to_owned(),
+                reason: "child heartbeat became stale".to_owned(),
+                phase: "liveness".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
         _ => None,
     }
+}
+
+/// Builds a child control audit record with full command outcome context.
+///
+/// # Arguments
+///
+/// - `sequence`: Event sequence.
+/// - `command_id`: Stable command identifier.
+/// - `requested_by`: Actor that requested the command.
+/// - `reason`: Operator-provided reason.
+/// - `result`: Low-cardinality command result.
+/// - `child_id`: Target child identifier.
+/// - `command`: Stable command name.
+/// - `outcome`: Full child control outcome.
+///
+/// # Returns
+///
+/// Returns an [`AuditRecord`] for the child control command.
+fn audit_child_control(
+    sequence: u64,
+    command_id: &str,
+    requested_by: &str,
+    reason: &str,
+    result: &str,
+    child_id: &crate::id::types::ChildId,
+    command: &str,
+    outcome: &crate::control::outcome::ChildControlResult,
+) -> AuditRecord {
+    let mut context = BTreeMap::new();
+    context.insert("command".to_owned(), command.to_owned());
+    context.insert(
+        "generation".to_owned(),
+        optional_u64(outcome.generation.map(|generation| generation.value)),
+    );
+    context.insert(
+        "attempt".to_owned(),
+        optional_u64(outcome.attempt.map(|attempt| attempt.value)),
+    );
+    context.insert("status".to_owned(), optional_debug(outcome.status));
+    context.insert(
+        "operation_before".to_owned(),
+        format!("{:?}", outcome.operation_before),
+    );
+    context.insert(
+        "operation_after".to_owned(),
+        format!("{:?}", outcome.operation_after),
+    );
+    context.insert(
+        "cancel_delivered".to_owned(),
+        outcome.cancel_delivered.to_string(),
+    );
+    context.insert("stop_state".to_owned(), format!("{:?}", outcome.stop_state));
+    context.insert(
+        "restart_limit_remaining".to_owned(),
+        outcome.restart_limit.remaining.to_string(),
+    );
+    context.insert("idempotent".to_owned(), outcome.idempotent.to_string());
+    context.insert("failure".to_owned(), failure_context(&outcome.failure));
+    AuditRecord {
+        sequence,
+        command_id: command_id.to_owned(),
+        requested_by: requested_by.to_owned(),
+        result: result.to_owned(),
+        reason: reason.to_owned(),
+        phase: "child_control".to_owned(),
+        child_id: Some(child_id.to_string()),
+        context,
+    }
+}
+
+/// Formats an optional numeric identifier for audit context.
+fn optional_u64(value: Option<u64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned())
+}
+
+/// Formats an optional debug value for audit context.
+fn optional_debug<T: std::fmt::Debug>(value: Option<T>) -> String {
+    value
+        .map(|value| format!("{value:?}"))
+        .unwrap_or_else(|| "none".to_owned())
+}
+
+/// Formats an optional child control failure for audit context.
+fn failure_context(failure: &Option<crate::control::outcome::ChildControlFailure>) -> String {
+    failure
+        .as_ref()
+        .map(|failure| {
+            format!(
+                "{:?}:{}:recoverable={}",
+                failure.phase, failure.reason, failure.recoverable
+            )
+        })
+        .unwrap_or_else(|| "none".to_owned())
 }
 
 /// Builds compact child child_start_count context for audit records.
@@ -402,6 +656,7 @@ fn child_child_start_count_context(
 ) -> BTreeMap<String, String> {
     let mut context = BTreeMap::new();
     context.insert("generation".to_owned(), generation.to_string());
+    context.insert("attempt".to_owned(), child_start_count.to_string());
     context.insert(
         "child_start_count".to_owned(),
         child_start_count.to_string(),

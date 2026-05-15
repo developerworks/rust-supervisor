@@ -5,11 +5,12 @@
 
 use crate::child_runner::run_exit::TaskExit;
 use crate::error::types::SupervisorError;
-use crate::readiness::signal::{ReadinessPolicy, ReadySignal};
+use crate::readiness::signal::{ReadinessPolicy, ReadinessState, ReadySignal};
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::task::context::TaskContext;
 use tokio::sync::{watch, watch::Receiver};
 use tokio::task::{AbortHandle, JoinHandle};
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 /// Result of running one child child_start_count.
@@ -32,6 +33,10 @@ pub struct ChildRunHandle {
     pub abort_handle: AbortHandle,
     /// Receiver that observes the completed child run report.
     pub completion_receiver: Receiver<Option<Result<ChildRunReport, SupervisorError>>>,
+    /// Receiver that observes the latest child heartbeat.
+    pub heartbeat_receiver: watch::Receiver<Option<Instant>>,
+    /// Receiver that observes the latest child readiness state.
+    pub readiness_receiver: watch::Receiver<ReadinessState>,
 }
 
 /// Runner that executes one child child_start_count.
@@ -89,7 +94,7 @@ impl ChildRunner {
         runtime.status = ChildRuntimeStatus::Starting;
         let (ready_signal, ready_receiver) = ReadySignal::new();
         let cancellation_token = CancellationToken::new();
-        let (ctx, _heartbeat_receiver) = TaskContext::with_ready_signal_and_cancellation_token(
+        let (ctx, heartbeat_receiver) = TaskContext::with_ready_signal_and_cancellation_token(
             runtime.id.clone(),
             runtime.path.clone(),
             runtime.generation,
@@ -102,14 +107,17 @@ impl ChildRunner {
         let (completion_sender, completion_receiver) = watch::channel(None);
         let child_task = tokio::spawn(factory.build(ctx));
         let abort_handle = child_task.abort_handle();
+        let run_ready_receiver = ready_receiver.clone();
         tokio::spawn(async move {
-            let report = run_factory(runtime, ready_receiver, child_task).await;
+            let report = run_factory(runtime, run_ready_receiver, child_task).await;
             let _ignored = completion_sender.send(Some(report));
         });
         Ok(ChildRunHandle {
             cancellation_token,
             abort_handle,
             completion_receiver,
+            heartbeat_receiver,
+            readiness_receiver: ready_receiver.clone(),
         })
     }
 }
@@ -144,7 +152,7 @@ fn mark_immediate_ready(policy: ReadinessPolicy, ctx: &TaskContext, runtime: &mu
 /// Returns the classified task exit.
 async fn run_factory(
     mut runtime: ChildRuntime,
-    ready_receiver: watch::Receiver<bool>,
+    ready_receiver: watch::Receiver<ReadinessState>,
     task: JoinHandle<crate::task::factory::TaskResult>,
 ) -> Result<ChildRunReport, SupervisorError> {
     match task.await {
@@ -191,8 +199,8 @@ async fn run_factory(
 /// # Returns
 ///
 /// Returns `true` when the receiver observed readiness.
-fn observe_ready(ready_receiver: watch::Receiver<bool>) -> bool {
-    *ready_receiver.borrow()
+fn observe_ready(ready_receiver: watch::Receiver<ReadinessState>) -> bool {
+    matches!(*ready_receiver.borrow(), ReadinessState::Ready)
 }
 
 /// Waits for the report sender to publish a child run report.

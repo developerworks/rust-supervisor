@@ -4,6 +4,11 @@
 //! payloads typed so state, journal, metrics, and tests do not infer behavior
 //! from strings.
 
+use crate::child_runner::run_exit::TaskExit;
+use crate::control::outcome::{
+    ChildAttemptStatus, ChildControlFailurePhase, ChildControlOperation, ChildControlResult,
+    ChildStopState, RestartLimitState,
+};
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
@@ -306,6 +311,104 @@ pub enum What {
         /// Exit classification reported by the child.
         exit: String,
     },
+    /// Child control command delivered cancellation.
+    ChildControlCancelDelivered {
+        /// Child that received cancellation.
+        child_id: ChildId,
+        /// Generation that received cancellation.
+        generation: Generation,
+        /// Attempt that received cancellation.
+        attempt: ChildStartCount,
+        /// Control command name.
+        command: String,
+        /// Control command identifier.
+        command_id: String,
+    },
+    /// Child control stop completed.
+    ChildControlStopCompleted {
+        /// Child that completed stopping.
+        child_id: ChildId,
+        /// Generation that completed stopping.
+        generation: Generation,
+        /// Attempt that completed stopping.
+        attempt: ChildStartCount,
+        /// Child exit classification.
+        exit_kind: TaskExit,
+    },
+    /// Child control stop failed.
+    ChildControlStopFailed {
+        /// Child that failed to stop.
+        child_id: ChildId,
+        /// Generation that failed to stop.
+        generation: Generation,
+        /// Attempt that failed to stop.
+        attempt: ChildStartCount,
+        /// Current attempt status.
+        status: ChildAttemptStatus,
+        /// Current stop progress.
+        stop_state: ChildStopState,
+        /// Control failure phase.
+        phase: ChildControlFailurePhase,
+        /// Human-readable failure reason.
+        reason: String,
+        /// Whether callers can retry to recover.
+        recoverable: bool,
+    },
+    /// Child control operation changed.
+    ChildControlOperationChanged {
+        /// Child whose operation changed.
+        child_id: ChildId,
+        /// Previous operation.
+        from: ChildControlOperation,
+        /// New operation.
+        to: ChildControlOperation,
+        /// Control command name.
+        command: String,
+        /// Control command identifier.
+        command_id: String,
+    },
+    /// Child control command completed with a full outcome.
+    ChildControlCommandCompleted {
+        /// Child that the command targeted.
+        child_id: ChildId,
+        /// Stable control command name.
+        command: String,
+        /// Control command identifier.
+        command_id: String,
+        /// Actor that requested the command.
+        requested_by: String,
+        /// Operator-provided reason.
+        reason: String,
+        /// Low-cardinality command result.
+        result: String,
+        /// Full control outcome.
+        outcome: Box<ChildControlResult>,
+    },
+    /// Child restart limit accounting was refreshed.
+    ChildRuntimeRestartLimitUpdated {
+        /// Child whose restart limit accounting changed.
+        child_id: ChildId,
+        /// Updated restart limit state.
+        restart_limit: RestartLimitState,
+    },
+    /// Child runtime state record was removed.
+    ChildRuntimeStateRemoved {
+        /// Removed child.
+        child_id: ChildId,
+        /// Child path in the supervisor tree.
+        path: SupervisorPath,
+        /// Final attempt status.
+        final_status: Option<ChildAttemptStatus>,
+    },
+    /// Child heartbeat became stale.
+    ChildHeartbeatStale {
+        /// Child with a stale heartbeat.
+        child_id: ChildId,
+        /// Attempt with a stale heartbeat.
+        attempt: ChildStartCount,
+        /// Last heartbeat timestamp in Unix epoch nanoseconds.
+        since_unix_nanos: u128,
+    },
     /// Control command was accepted.
     CommandAccepted {
         /// Command audit payload.
@@ -413,6 +516,14 @@ impl What {
             Self::ChildShutdownGraceful { .. } => "ChildShutdownGraceful",
             Self::ChildShutdownAborted { .. } => "ChildShutdownAborted",
             Self::ChildShutdownLateReport { .. } => "ChildShutdownLateReport",
+            Self::ChildControlCancelDelivered { .. } => "ChildControlCancelDelivered",
+            Self::ChildControlStopCompleted { .. } => "ChildControlStopCompleted",
+            Self::ChildControlStopFailed { .. } => "ChildControlStopFailed",
+            Self::ChildControlOperationChanged { .. } => "ChildControlOperationChanged",
+            Self::ChildControlCommandCompleted { .. } => "ChildControlCommandCompleted",
+            Self::ChildRuntimeRestartLimitUpdated { .. } => "ChildRuntimeRestartLimitUpdated",
+            Self::ChildRuntimeStateRemoved { .. } => "ChildRuntimeStateRemoved",
+            Self::ChildHeartbeatStale { .. } => "ChildHeartbeatStale",
             Self::CommandAccepted { .. } => "CommandAccepted",
             Self::CommandCompleted { .. } => "CommandCompleted",
             Self::RuntimeControlLoopStarted { .. } => "RuntimeControlLoopStarted",

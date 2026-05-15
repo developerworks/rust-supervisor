@@ -2,7 +2,8 @@
 //!
 //! These tests verify idempotent command behavior through the public runtime.
 
-use rust_supervisor::control::command::{CommandResult, ManagedChildState};
+use rust_supervisor::control::command::CommandResult;
+use rust_supervisor::control::outcome::ChildControlOperation;
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::supervisor::{DynamicSupervisorPolicy, SupervisorSpec};
@@ -24,22 +25,20 @@ async fn supervisor_handle_operations_are_idempotent() {
         .await
         .unwrap();
 
-    assert_eq!(
+    assert!(matches!(
         first,
-        CommandResult::ChildState {
-            child_id: child_id.clone(),
-            state: ManagedChildState::Paused,
-            idempotent: false
-        }
-    );
-    assert_eq!(
+        CommandResult::ChildControl { outcome }
+            if outcome.child_id == child_id.clone()
+                && outcome.operation_after == ChildControlOperation::Paused
+                && !outcome.idempotent
+    ));
+    assert!(matches!(
         second,
-        CommandResult::ChildState {
-            child_id,
-            state: ManagedChildState::Paused,
-            idempotent: true
-        }
-    );
+        CommandResult::ChildControl { outcome }
+            if outcome.child_id == child_id
+                && outcome.operation_after == ChildControlOperation::Paused
+                && outcome.idempotent
+    ));
 }
 
 /// Verifies that add and shutdown commands return typed results.

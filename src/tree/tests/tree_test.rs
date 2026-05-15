@@ -65,7 +65,7 @@ fn group_strategy_limits_restart_plan_to_group_members() {
     assert_eq!(plan.scope, vec![second.id, third.id]);
 }
 
-/// 验证子任务覆盖优先于分组策略.
+/// Verifies that a child override takes precedence over group strategy.
 #[test]
 fn child_override_wins_over_group_strategy_and_selects_limit() {
     let mut first = child("first");

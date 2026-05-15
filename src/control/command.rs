@@ -3,6 +3,7 @@
 //! This module owns auditable command inputs and command results. Runtime code
 //! executes these commands and records state changes.
 
+use crate::control::outcome::{ChildControlResult, ChildRuntimeRecord};
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::shutdown::coordinator::ShutdownResult;
@@ -227,6 +228,8 @@ pub struct CurrentState {
     pub child_count: usize,
     /// Whether tree shutdown has completed.
     pub shutdown_completed: bool,
+    /// Runtime state records for declared children.
+    pub child_runtime_records: Vec<ChildRuntimeRecord>,
 }
 
 /// Result returned after a control command is executed.
@@ -237,14 +240,10 @@ pub enum CommandResult {
         /// Child manifest stored by the runtime.
         child_manifest: String,
     },
-    /// Child state after a command.
-    ChildState {
-        /// Target child identifier.
-        child_id: ChildId,
-        /// Current managed child state.
-        state: ManagedChildState,
-        /// Whether the command reused an existing state.
-        idempotent: bool,
+    /// Child control result after a command.
+    ChildControl {
+        /// Outcome produced by the control command.
+        outcome: ChildControlResult,
     },
     /// Current state query result.
     CurrentState {

@@ -9,18 +9,64 @@
 ## 控制命令
 
 - `add_child`: 当 `DynamicSupervisorPolicy`(动态监督器策略) 允许新增 child(子任务) 时, 接受 dynamic child manifest(动态子任务清单文本).
-- `remove_child`: 先关闭目标 child(子任务), 再移除注册表记录.
+- `remove_child`: 把目标 child(子任务) 的运行状态记录标记为 `Removed(已移除)`, 向活动 attempt(尝试) 发送 cancel(取消), 并在 attempt(尝试) 退出后移除运行状态记录.
 - `restart_child`: 请求目标 child(子任务)重启.
-- `pause_child`: 暂停目标 child(子任务)治理.
+- `pause_child`: 把目标 child(子任务) 的运行状态记录标记为 `Paused(已暂停)`, 向活动 attempt(尝试) 发送 cancel(取消), 并暂停自动重启.
 - `resume_child`: 恢复目标 child(子任务)治理.
-- `quarantine_child`: 把目标 child(子任务)放入隔离状态.
+- `quarantine_child`: 把目标 child(子任务) 的运行状态记录标记为 `Quarantined(已隔离)`, 向活动 attempt(尝试) 发送 cancel(取消), 并阻止自动重启.
 - `shutdown_tree`: 关闭整棵监督树.
-- `current_state`: 返回当前 `SupervisorState`(监督器状态).
+- `current_state`: 返回当前 `SupervisorState`(监督器状态), 并在 `CurrentState.child_runtime_records(当前状态子任务运行状态记录集合)` 中暴露每个 child(子任务) 的运行状态事实.
 - `subscribe_events`: 订阅生命周期事件.
 - `is_alive`: 快速判断 runtime control loop(运行时控制循环) 是否仍可接收普通控制命令.
 - `health`: 返回 `RuntimeHealthReport`(运行时健康报告), 包含控制面状态, 启动时间, 最近观测时间和最终失败原因.
 - `join`: 等待 runtime control plane(运行时控制面)进入最终态, 并重复返回同一个 `RuntimeExitReport`(运行时退出报告).
 - `shutdown`: 只关闭 runtime control plane(运行时控制面), 不替代 `shutdown_tree`(监督树关闭).
+
+## 子任务运行状态控制
+
+`PauseChild(暂停子任务)`, `RemoveChild(移除子任务)` 和 `QuarantineChild(隔离子任务)` 是本功能定义的停止类控制命令. 这 3 条命令都会返回 `CommandResult::ChildControl(子任务控制命令结果)`, 结果中包含 `ChildControlResult(子任务控制结果)`. 旧的 `CommandResult::ChildState(子任务状态命令结果)` 不再属于公开结果形状.
+
+`PauseChild(暂停子任务)` 会把 `ChildRuntimeState.operation(子任务运行状态记录操作)` 写为 `Paused(已暂停)`. 如果当前存在活动 attempt(尝试), runtime control loop(运行时控制循环) 会向该 attempt(尝试) 发送 cancel(取消), 并把停止进度推进到 `CancelDelivered(已送达取消)`. 暂停期间, supervision strategy(监督策略) 不会针对该 child(子任务) 自动重启.
+
+`RemoveChild(移除子任务)` 会把 `ChildRuntimeState.operation(子任务运行状态记录操作)` 写为 `Removed(已移除)`. 如果当前存在活动 attempt(尝试), runtime control loop(运行时控制循环) 会先发送 cancel(取消), 等 attempt(尝试) 退出后再从 `child_runtime_states(子任务运行状态记录集合)` 中物理删除记录. 如果当前没有活动 attempt(尝试), runtime control loop(运行时控制循环) 会返回 `NoActiveAttempt(无活动尝试)` 结果, 然后删除运行状态记录.
+
+`QuarantineChild(隔离子任务)` 会把 `ChildRuntimeState.operation(子任务运行状态记录操作)` 写为 `Quarantined(已隔离)`. 如果当前存在活动 attempt(尝试), runtime control loop(运行时控制循环) 会发送 cancel(取消). 隔离后的运行状态记录仍然保留, 但是 supervision strategy(监督策略) 不会继续自动重启该 child(子任务). 操作者仍然可以后续执行 `RemoveChild(移除子任务)`.
+
+这 3 条停止类控制命令不会同步等待 child future(子任务 future) 结束. 如果 child(子任务) 长时间忽略 cancel(取消), 后续 `CurrentState(当前状态)` 或重复停止类控制命令会触发 `reconcile_stop_deadlines(调和停止截止时间)`, 并通过 `ChildControlFailure(子任务控制失败原因)` 暴露停止失败.
+
+`CurrentState(当前状态)` 会返回 `child_runtime_records(子任务运行状态记录集合)`. 每条 `ChildRuntimeRecord(子任务运行状态记录)` 都按声明顺序排列. 构造过程只做非阻塞读取, 不等待 child future(子任务 future), 不执行额外 I/O(输入输出). 该集合是查看运行状态事实的主入口.
+
+`RestartChild(重启子任务)` 和 `ResumeChild(恢复子任务)` 仍然是既有命令. 本功能只要求它们不破坏运行状态事实, 不把它们定义为新增生命周期语义.
+
+完整契约见 [`child-runtime-state-control.md`](../../specs/004-3-child-runtime-state-control/contracts/child-runtime-state-control.md).
+
+## `ChildControlResult(子任务控制结果)` 字段
+
+- `child_id(子任务标识)`: 被控制的 child(子任务) 稳定标识.
+- `attempt(尝试)`: 命令实际作用的活动 attempt(尝试). 没有活动 attempt(尝试) 时为 `None(无值)`.
+- `generation(代次)`: 命令实际作用的 generation(代次). 没有活动 attempt(尝试) 时为 `None(无值)`.
+- `operation_before(命令前操作)`: 命令到达时的 `ChildControlOperation(子任务控制操作)`.
+- `operation_after(命令后操作)`: 命令处理后的 `ChildControlOperation(子任务控制操作)`.
+- `status(状态)`: 当前 attempt(尝试) 的 `ChildAttemptStatus(子任务尝试状态)`. 没有活动 attempt(尝试) 时为 `None(无值)`.
+- `cancel_delivered(取消已送达)`: 本次命令是否真正发送了 cancel(取消).
+- `stop_state(停止状态)`: 本次命令处理后的 `ChildStopState(子任务停止状态)`.
+- `restart_limit(重启次数限制)`: 当前 `RestartLimitState(重启次数限制状态)`, 包含窗口, 上限, 已使用次数, 剩余次数和耗尽标志.
+- `liveness(存活状态)`: 当前 `ChildLivenessState(子任务存活状态)`, 包含最后心跳时间, 心跳是否陈旧和 readiness(就绪状态).
+- `idempotent(幂等)`: 本次命令是否复用了已经存在的目标状态.
+- `failure(失败原因)`: 当前控制失败原因. 没有失败时为 `None(无值)`.
+
+## `ChildRuntimeRecord(子任务运行状态记录)` 字段
+
+- `child_id(子任务标识)`: 运行状态记录对应的 child(子任务) 稳定标识.
+- `path(路径)`: child(子任务) 在 supervisor tree(监督树) 中的路径.
+- `generation(代次)`: 当前活动 generation(代次). 没有活动 attempt(尝试) 时为 `None(无值)`.
+- `attempt(尝试)`: 当前活动 attempt(尝试). 没有活动 attempt(尝试) 时为 `None(无值)`.
+- `status(状态)`: 当前 attempt(尝试) 的 `ChildAttemptStatus(子任务尝试状态)`.
+- `operation(操作)`: 当前 `ChildControlOperation(子任务控制操作)`, 可能是 `Active(活跃)`, `Paused(已暂停)`, `Quarantined(已隔离)` 或 `Removed(已移除)`.
+- `liveness(存活状态)`: 当前 `ChildLivenessState(子任务存活状态)`.
+- `restart_limit(重启次数限制)`: 当前 `RestartLimitState(重启次数限制状态)`.
+- `stop_state(停止状态)`: 当前 `ChildStopState(子任务停止状态)`.
+- `failure(失败原因)`: 最近一次 `ChildControlFailure(子任务控制失败原因)`. 当 `stop_state(停止状态)` 为 `Failed(停止失败)` 时必须为 `Some(有值)`.
 
 ## 幂等语义
 

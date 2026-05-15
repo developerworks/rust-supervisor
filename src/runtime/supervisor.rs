@@ -9,12 +9,14 @@ use crate::dashboard::config::validate_dashboard_ipc_config;
 use crate::dashboard::error::DashboardError;
 use crate::dashboard::runtime::start_dashboard_ipc_runtime;
 use crate::error::types::SupervisorError;
+use crate::observe::pipeline::ObservabilityPipeline;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
 use crate::runtime::lifecycle::RuntimeControlPlane;
 use crate::runtime::watchdog::RuntimeWatchdog;
 use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use tokio::sync::{broadcast, mpsc};
 
 /// Supervisor runtime entry point.
@@ -98,7 +100,16 @@ impl Supervisor {
         let (command_sender, command_receiver) = mpsc::channel(spec.control_channel_capacity);
         let (event_sender, _) = broadcast::channel(spec.event_channel_capacity);
         let control_plane = RuntimeControlPlane::new();
-        let state = RuntimeControlState::new(spec, shutdown_policy, command_sender.clone())?;
+        let observability = Arc::new(Mutex::new(ObservabilityPipeline::new(
+            spec.event_channel_capacity,
+            spec.event_channel_capacity,
+        )));
+        let state = RuntimeControlState::new(
+            spec,
+            shutdown_policy,
+            command_sender.clone(),
+            observability.clone(),
+        )?;
         let join_handle = tokio::spawn(run_control_loop(
             state,
             command_receiver,
@@ -106,10 +117,11 @@ impl Supervisor {
         ));
         RuntimeWatchdog::publish_started(control_plane.clone(), event_sender.clone());
         RuntimeWatchdog::spawn(control_plane.clone(), join_handle, event_sender.clone());
-        Ok(SupervisorHandle::new(
+        Ok(SupervisorHandle::new_with_observability(
             command_sender,
             event_sender,
             control_plane,
+            observability,
         ))
     }
 }

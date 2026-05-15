@@ -9,8 +9,9 @@ use crate::control::handle::SupervisorHandle;
 use crate::dashboard::config::ValidatedDashboardIpcConfig;
 use crate::dashboard::error::DashboardError;
 use crate::dashboard::model::{
-    ControlCommandKind, ControlCommandRequest, ControlCommandResult, DashboardState,
-    TargetProcessRegistration,
+    ControlCommandKind, ControlCommandRequest, ControlCommandResult, DashboardCurrentState,
+    DashboardState, TargetProcessRegistration, dashboard_command_result_value,
+    runtime_state_from_child_runtime_record,
 };
 use crate::dashboard::protocol::{
     DASHBOARD_IPC_PROTOCOL_VERSION, IpcMethod, IpcRequest, IpcResponse, IpcResult,
@@ -22,7 +23,6 @@ use crate::id::types::{ChildId, SupervisorPath};
 use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::state::supervisor::SupervisorState;
-use serde_json::json;
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::net::UnixStream as StdUnixStream;
 use tokio::net::UnixListener;
@@ -133,7 +133,7 @@ impl DashboardIpcService {
                 registration: self.registration_payload()?,
             }),
             IpcMethod::CurrentState => {
-                let state = self.current_dashboard_state();
+                let state = self.current_dashboard_state().await?;
                 Ok(IpcResult::State {
                     target_id: state.target.target_id.clone(),
                     state: Box::new(state),
@@ -172,9 +172,9 @@ impl DashboardIpcService {
     /// # Returns
     ///
     /// Returns the current [`DashboardState`].
-    pub fn current_dashboard_state(&self) -> DashboardState {
+    pub async fn current_dashboard_state(&self) -> Result<DashboardState, DashboardError> {
         let registration = self.registration_payload().ok();
-        build_dashboard_state(
+        let mut state = build_dashboard_state(
             DashboardStateInput {
                 target_id: self.config.target_id.clone(),
                 display_name: registration
@@ -187,7 +187,36 @@ impl DashboardIpcService {
             &self.spec,
             &self.state,
             &self.journal,
-        )
+        );
+        if let Some(handle) = self.handle.as_ref() {
+            let result = handle.current_state().await.map_err(|error| {
+                DashboardError::new(
+                    "current_state_failed",
+                    "state",
+                    Some(self.config.target_id.clone()),
+                    error.to_string(),
+                    true,
+                )
+            })?;
+            if let CommandResult::CurrentState {
+                state: runtime_state,
+            } = result
+            {
+                let dashboard_state = DashboardCurrentState::from_current_state(&runtime_state);
+                state.runtime_state = runtime_state
+                    .child_runtime_records
+                    .iter()
+                    .map(|record| {
+                        runtime_state_from_child_runtime_record(
+                            record,
+                            runtime_state.shutdown_completed,
+                        )
+                    })
+                    .collect();
+                state.child_runtime_records = dashboard_state.child_runtime_records;
+            }
+        }
+        Ok(state)
     }
 
     /// Executes a control command request.
@@ -219,15 +248,26 @@ impl DashboardIpcService {
             ))
         };
         let result = match result {
-            Ok(result) => ControlCommandResult {
-                command_id: command.command_id.clone(),
-                target_id: command.target_id.clone(),
-                accepted: true,
-                status: "completed".to_owned(),
-                error: None,
-                state_delta: Some(json!(result)),
-                completed_at_unix_nanos: Some(unix_nanos_now()),
-            },
+            Ok(result) => {
+                let state_delta = dashboard_command_result_value(&result).map_err(|error| {
+                    DashboardError::new(
+                        "command_result_model_failed",
+                        "command_dispatch",
+                        Some(command.target_id.clone()),
+                        format!("failed to map command result: {error}"),
+                        false,
+                    )
+                })?;
+                ControlCommandResult {
+                    command_id: command.command_id.clone(),
+                    target_id: command.target_id.clone(),
+                    accepted: true,
+                    status: "completed".to_owned(),
+                    error: None,
+                    state_delta: Some(state_delta),
+                    completed_at_unix_nanos: Some(unix_nanos_now()),
+                }
+            }
             Err(error) => ControlCommandResult {
                 command_id: command.command_id.clone(),
                 target_id: command.target_id.clone(),
