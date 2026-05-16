@@ -99,6 +99,34 @@ impl BackoffPolicy {
         self
     }
 
+    /// Returns this policy with full jitter enabled.
+    ///
+    /// # Arguments
+    ///
+    /// - `seed`: Stable seed used for full jitter calculation.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new [`BackoffPolicy`] with full jitter mode.
+    pub fn with_full_jitter(mut self, seed: u64) -> Self {
+        self.jitter_mode = JitterMode::FullJitter { seed };
+        self
+    }
+
+    /// Returns this policy with decorrelated jitter enabled.
+    ///
+    /// # Arguments
+    ///
+    /// - `seed`: Stable seed used for decorrelated jitter calculation.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new [`BackoffPolicy`] with decorrelated jitter mode.
+    pub fn with_decorrelated_jitter(mut self, seed: u64) -> Self {
+        self.jitter_mode = JitterMode::DecorrelatedJitter { seed };
+        self
+    }
+
     /// Calculates a restart delay for a one-based child_start_count number.
     ///
     /// # Arguments

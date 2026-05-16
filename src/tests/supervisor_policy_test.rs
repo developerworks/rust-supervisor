@@ -2,6 +2,7 @@
 //!
 //! These tests cover restart policy decisions and meltdown fuses.
 
+use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::backoff::BackoffPolicy;
 use rust_supervisor::policy::decision::{
     PolicyEngine, PolicyFailureKind, RestartDecision, RestartPolicy, TaskExit,
@@ -35,7 +36,7 @@ fn transient_failure_restarts_after_backoff() {
 #[test]
 fn child_meltdown_trips_child_fuse() {
     let policy = MeltdownPolicy::new(
-        1,
+        2, // Allow up to 2 restarts before fusing
         Duration::from_secs(10),
         5,
         Duration::from_secs(30),
@@ -45,10 +46,24 @@ fn child_meltdown_trips_child_fuse() {
     );
     let mut tracker = MeltdownTracker::new(policy);
     let now = Instant::now();
+    let child_id = ChildId::new("test-child".to_string());
 
-    assert_eq!(tracker.record_child_restart(now), MeltdownOutcome::Continue);
+    // First restart: count=1, below threshold of 2 → Continue
     assert_eq!(
-        tracker.record_child_restart(now + Duration::from_secs(1)),
+        tracker.record_child_restart_with_group(
+            child_id.clone(),
+            Some("test-group".to_string()),
+            now
+        ),
+        MeltdownOutcome::Continue
+    );
+    // Second restart: count=2, reaches threshold of 2 → ChildFuse
+    assert_eq!(
+        tracker.record_child_restart_with_group(
+            child_id,
+            Some("test-group".to_string()),
+            now + Duration::from_secs(1)
+        ),
         MeltdownOutcome::ChildFuse
     );
 }
