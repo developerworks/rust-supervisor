@@ -45,7 +45,7 @@ fn expect_current_state(result: CommandResult) -> CurrentState {
 /// Smoke test: only checks that this test target is registered and runs.
 #[test]
 fn supervisor_generation_fencing_smoke() {
-    assert!(true);
+    assert_eq!(Generation::initial().value, 0);
 }
 
 /// Dashboard `child_control` projection must include a nullable `generation_fence` key.

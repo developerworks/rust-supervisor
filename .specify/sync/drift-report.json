@@ -1,23 +1,216 @@
 {
-  "generated": "2026-05-17T00:00:00Z",
-  "project": "rust-tokio-supervisor (005-1-failure-policy-reliability)",
+  "generated": "2026-05-17T04:07:27+08:00",
+  "project": "rust-tokio-supervisor",
+  "scope": "005-1-failure-policy-reliability",
+  "skill": "speckit-sync-analyze",
   "summary": {
     "specs_analyzed": 1,
-    "requirements_checked": 3,
-    "aligned": 3,
-    "drifted": 0,
+    "requirements_checked": 7,
+    "aligned": 0,
+    "drifted": 7,
     "not_implemented": 0,
-    "unspecced_features": 0
+    "unspecced_features": 0,
+    "critical": 3,
+    "high": 4,
+    "medium": 0,
+    "low": 0
   },
   "specs": [
     {
       "id": "005-1-failure-policy-reliability",
       "title": "失败策略流水线与生产级退避",
-      "aligned": ["FR-001", "FR-002", "FR-003"],
-      "drifted": [],
+      "aligned": [],
+      "drifted": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "SC-001",
+        "SC-002",
+        "SC-003",
+        "SC-004"
+      ],
       "not_implemented": []
     }
   ],
+  "drifts": [
+    {
+      "id": "DRIFT-FR-001",
+      "requirement_id": "FR-001",
+      "severity": "critical",
+      "status": "drifted",
+      "expected": "Every supervised unit completion enters the fixed six-stage policy pipeline, every minimum exit kind is classified, each stage leaves an auditable record point, and automatic restart cannot bypass the pipeline.",
+      "actual": "SupervisionPipeline exists, but RuntimeControlState handles exits by refreshing restart limits, calculating restart decisions, and executing restarts directly. The pipeline execute action remains a placeholder.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:95",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:5",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:16",
+        "src/runtime/control_loop.rs:433",
+        "src/runtime/control_loop.rs:510",
+        "src/runtime/control_loop.rs:1343",
+        "src/runtime/pipeline.rs:204",
+        "src/runtime/pipeline.rs:234",
+        "src/runtime/pipeline.rs:447",
+        "src/runtime/pipeline.rs:465"
+      ],
+      "recommended_resolution": "Route the real child-exit automatic policy path through SupervisionPipeline::execute_pipeline, implement execute action, classify all required exit kinds, and emit one ordered diagnostic per pipeline stage."
+    },
+    {
+      "id": "DRIFT-FR-002",
+      "requirement_id": "FR-002",
+      "severity": "critical",
+      "status": "drifted",
+      "expected": "MeltdownTracker state is separated by child, group, and supervisor scope. Local verdicts map onto the protection ladder, and events include scopes_triggered and lead_scope.",
+      "actual": "MeltdownTracker stores one aggregate queue per conceptual layer and records each child failure into all three queues. Event emission does not populate scopes_triggered or lead_scope.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:96",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:40",
+        "src/policy/meltdown.rs:98",
+        "src/policy/meltdown.rs:108",
+        "src/policy/meltdown.rs:140",
+        "src/policy/meltdown.rs:145",
+        "src/policy/meltdown.rs:353",
+        "src/policy/meltdown.rs:371",
+        "src/runtime/pipeline.rs:426",
+        "src/runtime/pipeline.rs:430"
+      ],
+      "recommended_resolution": "Key meltdown state by ChildId, group_id, and supervisor instance. Map each local verdict to ProtectionAction, choose lead_scope only among equally strict effective verdicts, and populate event fields on the real pipeline event."
+    },
+    {
+      "id": "DRIFT-FR-003",
+      "requirement_id": "FR-003",
+      "severity": "critical",
+      "status": "drifted",
+      "expected": "Production restart throttling supports full jitter, decorrelated jitter, max concurrent restarts, cold start budget, hot loop detection, and reproducible test mode.",
+      "actual": "The algorithms and gate types exist, but the real control loop only maps child backoff config into BackoffPolicy::new with jitter disabled by default. ColdStartBudget, HotLoopDetector, and CombinedThrottleGate are not used by the real restart path.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:97",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:54",
+        "src/policy/backoff.rs:11",
+        "src/policy/backoff.rs:29",
+        "src/policy/backoff.rs:79",
+        "src/policy/backoff.rs:85",
+        "src/runtime/control_loop.rs:1254",
+        "src/runtime/control_loop.rs:1265",
+        "src/runtime/control_loop.rs:2652",
+        "src/runtime/control_loop.rs:2659",
+        "src/runtime/pipeline.rs:460",
+        "src/runtime/pipeline.rs:464"
+      ],
+      "recommended_resolution": "Connect jitter modes, concurrent gates, cold start budget, and hot loop detection into evaluate budget, decide action, and execute action. Fix throttle_gate_owner serialization to match the contract."
+    },
+    {
+      "id": "DRIFT-SC-001",
+      "requirement_id": "SC-001",
+      "severity": "high",
+      "status": "drifted",
+      "expected": "100 percent of fixed failure samples can be reconciled with the six-stage pipeline order from events or diagnostics.",
+      "actual": "The pipeline-order test sends a single event through ObservabilityPipeline and leaves TODO comments for real six-stage diagnostics.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:148",
+        "tests/supervisor_pipeline_order.rs:80",
+        "tests/supervisor_pipeline_order.rs:118"
+      ],
+      "recommended_resolution": "Drive the production runtime or SupervisionPipeline in acceptance tests and assert the ordered six-stage diagnostic stream."
+    },
+    {
+      "id": "DRIFT-SC-002",
+      "requirement_id": "SC-002",
+      "severity": "high",
+      "status": "drifted",
+      "expected": "Group isolation tests prove other groups can still complete controlled restart attempts after one group trips protection.",
+      "actual": "The tests simulate group isolation with separate MeltdownTracker instances and do not validate a single supervisor instance with keyed group state.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:149",
+        "tests/supervisor_meltdown_group_isolation.rs:24",
+        "tests/supervisor_meltdown_group_isolation.rs:28",
+        "tests/supervisor_meltdown_group_isolation.rs:68",
+        "tests/supervisor_meltdown_group_isolation.rs:70"
+      ],
+      "recommended_resolution": "Use one supervisor tree with multiple groups and validate restart attempts and meltdown fields through production events."
+    },
+    {
+      "id": "DRIFT-SC-003",
+      "requirement_id": "SC-003",
+      "severity": "high",
+      "status": "drifted",
+      "expected": "Concurrent restart pressure samples prove the peak never exceeds the declared limit and excess attempts appear as queue or delay diagnostics.",
+      "actual": "The concurrent throttle test uses a local simulated gate and checks a serialization value that conflicts with the contract.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:150",
+        "tests/supervisor_concurrent_restart_throttle.rs:10",
+        "tests/supervisor_concurrent_restart_throttle.rs:47",
+        "tests/supervisor_concurrent_restart_throttle.rs:120",
+        "tests/supervisor_concurrent_restart_throttle.rs:129",
+        "src/event/payload.rs:133",
+        "src/event/payload.rs:139",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:85",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:92"
+      ],
+      "recommended_resolution": "Replace the local gate simulation with CombinedThrottleGate or a full runtime test and assert contract-compliant queue diagnostics and throttle owner strings."
+    },
+    {
+      "id": "DRIFT-SC-004",
+      "requirement_id": "SC-004",
+      "severity": "high",
+      "status": "drifted",
+      "expected": "The acceptance fixture computes CV_jitter_strategy / CV_fixed_baseline >= 1.3 using generated next_wait samples for full jitter or decorrelated jitter.",
+      "actual": "The jitter test uses hand-written samples and local pseudo-random values, treats a zero-CV fixed baseline as trivial, and does not call production BackoffPolicy jitter paths.",
+      "evidence": [
+        "specs/005-1-failure-policy-reliability/spec.md:151",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:60",
+        "specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md:71",
+        "tests/supervisor_backoff_jitter_distribution.rs:40",
+        "tests/supervisor_backoff_jitter_distribution.rs:47",
+        "tests/supervisor_backoff_jitter_distribution.rs:50",
+        "tests/supervisor_backoff_jitter_distribution.rs:69",
+        "tests/supervisor_backoff_jitter_distribution.rs:89",
+        "tests/supervisor_backoff_jitter_distribution.rs:102"
+      ],
+      "recommended_resolution": "Generate next_wait sequences through production BackoffPolicy, define a non-trivial fixed baseline or amend the contract baseline, and assert the required 1.3 CV ratio."
+    }
+  ],
+  "task_state_mismatches": [
+    {
+      "task_refs": [
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014"
+      ],
+      "evidence": "specs/005-1-failure-policy-reliability/tasks.md:63-67",
+      "issue": "US1 implementation tasks are marked complete, but the real control loop does not enter the supervision pipeline and execute action remains placeholder logic."
+    },
+    {
+      "task_refs": [
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021"
+      ],
+      "evidence": "specs/005-1-failure-policy-reliability/tasks.md:86-90",
+      "issue": "US2 implementation tasks are marked complete, but meltdown state is not keyed by child or group and event emission does not fill scopes_triggered or lead_scope."
+    },
+    {
+      "task_refs": [
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "evidence": "specs/005-1-failure-policy-reliability/tasks.md:110-117",
+      "issue": "US3 implementation tasks are marked complete, but cold start budget, hot loop detection, concurrent gates, and production jitter modes are not wired into the runtime restart path."
+    }
+  ],
   "unspecced": [],
-  "conflicts": []
+  "conflicts": [],
+  "notes": [
+    "This report is scoped to 005-1-failure-policy-reliability only.",
+    "Other feature code was not counted as unspecced code in this scoped run."
+  ]
 }

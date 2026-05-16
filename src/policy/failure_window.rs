@@ -266,8 +266,10 @@ impl FailureWindow {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::policy::failure_window::{FailureWindow, FailureWindowConfig, WindowMode};
+    use std::time::{Duration, Instant};
 
+    /// Tests that time-sliding window correctly expires old failures.
     #[test]
     fn test_time_sliding_window_expiration() {
         let config = FailureWindowConfig::time_sliding(10, 3);
@@ -287,6 +289,7 @@ mod tests {
         assert_eq!(state.current_count, 1);
     }
 
+    /// Tests that count-sliding window retains only the most recent N failures.
     #[test]
     fn test_count_sliding_window_limit() {
         let config = FailureWindowConfig::count_sliding(3, 5);
@@ -302,6 +305,7 @@ mod tests {
         assert_eq!(window.failure_count(), 3);
     }
 
+    /// Tests that threshold detection triggers when failure count reaches limit.
     #[test]
     fn test_threshold_detection() {
         let config = FailureWindowConfig::time_sliding(60, 3);
@@ -319,6 +323,7 @@ mod tests {
         assert!(state.threshold_reached);
     }
 
+    /// Tests that default window mode configuration uses time-sliding with 60-second window.
     #[test]
     fn test_default_config() {
         let config = WindowMode::default();

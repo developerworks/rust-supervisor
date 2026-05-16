@@ -6,7 +6,7 @@
 use crate::error::types::TaskFailureKind;
 use crate::policy::backoff::BackoffPolicy;
 // Re-export ProtectionAction from event payload for policy decision usage.
-// This is the protection restrictiveness ladder with six档位:
+// This is the protection restrictiveness ladder with six tiers:
 // restart_allowed → restart_queued → restart_denied → supervision_paused → escalated → supervised_stop
 pub use crate::event::payload::ProtectionAction;
 use serde::{Deserialize, Serialize};

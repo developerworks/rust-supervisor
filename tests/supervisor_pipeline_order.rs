@@ -45,7 +45,7 @@ fn test_event(sequence: u64, what: What, child_id: Option<ChildId>) -> Superviso
 #[test]
 fn test_pipeline_stages_exist() {
     // Verify all six pipeline stages are defined
-    let stages = vec![
+    let stages = [
         PipelineStage::ClassifyExit,
         PipelineStage::RecordFailureWindow,
         PipelineStage::EvaluateBudget,

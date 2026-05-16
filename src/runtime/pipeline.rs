@@ -14,9 +14,9 @@ use crate::event::payload::{
     Where,
 };
 use crate::id::types::{ChildId, SupervisorPath};
-use crate::observe::pipeline::{ObservabilityPipeline, PipelineStage, PipelineStageDiagnostic};
+use crate::observe::pipeline::ObservabilityPipeline;
 use crate::policy::decision::{PolicyFailureKind, TaskExit};
-use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
+use crate::policy::failure_window::FailureWindow;
 use crate::policy::meltdown::MeltdownTracker;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::tree::builder::SupervisorTree;
@@ -275,14 +275,14 @@ impl SupervisionPipeline {
         now: Instant,
     ) -> PipelineContext {
         // Only record failures, not successes
-        if let Some(ref classification) = ctx.exit_classification {
-            if classification.should_restart() {
-                let state = self.failure_window.record_failure(now);
-                ctx.failure_window_state = Some(format!(
-                    "count={}, threshold_reached={}",
-                    state.current_count, state.threshold_reached
-                ));
-            }
+        if let Some(ref classification) = ctx.exit_classification
+            && classification.should_restart()
+        {
+            let state = self.failure_window.record_failure(now);
+            ctx.failure_window_state = Some(format!(
+                "count={}, threshold_reached={}",
+                state.current_count, state.threshold_reached
+            ));
         }
         ctx
     }
@@ -309,11 +309,7 @@ impl SupervisionPipeline {
 
         let remaining = plan.restart_limit.map(|limit| {
             let current_count = self.failure_window.failure_count() as u32;
-            if current_count >= limit.max_restarts {
-                0u32
-            } else {
-                limit.max_restarts - current_count
-            }
+            limit.max_restarts.saturating_sub(current_count)
         });
 
         let limit_exhausted = remaining == Some(0);
@@ -428,7 +424,7 @@ impl SupervisionPipeline {
         );
 
         // Populate new fields from pipeline processing
-        event.effective_protective_action = ctx.action_decision.as_ref().map(|d| d.action.clone());
+        event.effective_protective_action = ctx.action_decision.as_ref().map(|d| d.action);
         event.cold_start_reason = ctx.cold_start_reason.clone();
         event.hot_loop_reason = ctx.hot_loop_reason.clone();
         event.throttle_gate_owner = ctx.throttle_gate_owner.clone();
@@ -472,11 +468,17 @@ impl SupervisionPipeline {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::event::payload::ProtectionAction;
+    use crate::id::types::{ChildId, SupervisorPath};
+    use crate::policy::decision::{PolicyFailureKind, TaskExit};
     use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
     use crate::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
+    use crate::runtime::pipeline::{
+        BudgetEvaluation, ExitClassification, PipelineContext, SupervisionPipeline,
+    };
     use std::time::Duration;
 
+    /// Creates a test supervision pipeline with default meltdown policy configuration.
     fn test_pipeline() -> SupervisionPipeline {
         let meltdown_policy = MeltdownPolicy::new(
             3,
@@ -495,6 +497,7 @@ mod tests {
         SupervisionPipeline::new(100, 10, meltdown_tracker, failure_window)
     }
 
+    /// Tests that successful task exits are classified correctly by the pipeline.
     #[test]
     fn test_exit_classification_success() {
         let pipeline = test_pipeline();
@@ -509,6 +512,7 @@ mod tests {
         assert!(!ctx.exit_classification.unwrap().should_restart());
     }
 
+    /// Tests that failed task exits are classified correctly with restart decision.
     #[test]
     fn test_exit_classification_failure() {
         let pipeline = test_pipeline();
@@ -528,6 +532,7 @@ mod tests {
         assert!(ctx.exit_classification.unwrap().should_restart());
     }
 
+    /// Tests that cancel exits have priority over budget evaluation in action decision.
     #[test]
     fn test_cancel_has_priority() {
         let pipeline = test_pipeline();

@@ -85,14 +85,14 @@ fn test_atomicity_ten_concurrent_samples() {
     }
 
     // First 5 should be allowed
-    for i in 0..5 {
-        assert_eq!(results[i].0, ProtectionAction::RestartAllowed);
+    for result in results.iter().take(5) {
+        assert_eq!(result.0, ProtectionAction::RestartAllowed);
     }
 
     // Last 5 should be queued (protection triggered)
-    for i in 5..10 {
-        assert_eq!(results[i].0, ProtectionAction::RestartQueued);
-        assert_eq!(results[i].1, ThrottleGateOwner::SupervisorInstance);
+    for result in results.iter().take(10).skip(5) {
+        assert_eq!(result.0, ProtectionAction::RestartQueued);
+        assert_eq!(result.1, ThrottleGateOwner::SupervisorInstance);
     }
 }
 

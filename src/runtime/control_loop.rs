@@ -347,13 +347,9 @@ impl RuntimeControlState {
                     });
                 }
                 fence_pending_release = runtime_state.generation_fence.pending_restart.take();
-                if fence_pending_release.is_some() {
-                    let drained_correlation_id = CorrelationId::from_uuid(
-                        fence_pending_release
-                            .as_ref()
-                            .expect("matches pending implies restart bookkeeping exists")
-                            .command_id,
-                    );
+                if let Some(pending_release) = fence_pending_release.as_ref() {
+                    let drained_correlation_id =
+                        CorrelationId::from_uuid(pending_release.command_id);
                     pending_events.push(PendingRuntimeEvent {
                         child_id: child_id.clone(),
                         path: runtime_state.path.clone(),
@@ -469,21 +465,20 @@ impl RuntimeControlState {
                 .child_runtime_states
                 .get(&child_id)
                 .is_some_and(|state| state.operation == ChildControlOperation::Removed)
+                && let Some(removed) = self.child_runtime_states.remove(&child_id)
             {
-                if let Some(removed) = self.child_runtime_states.remove(&child_id) {
-                    pending_events.push(PendingRuntimeEvent {
+                pending_events.push(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: removed.path.clone(),
+                    generation: Some(generation),
+                    attempt: Some(attempt),
+                    correlation_id: CorrelationId::new(),
+                    what: What::ChildRuntimeStateRemoved {
                         child_id: child_id.clone(),
-                        path: removed.path.clone(),
-                        generation: Some(generation),
-                        attempt: Some(attempt),
-                        correlation_id: CorrelationId::new(),
-                        what: What::ChildRuntimeStateRemoved {
-                            child_id: child_id.clone(),
-                            path: removed.path,
-                            final_status: Some(ChildAttemptStatus::Stopped),
-                        },
-                    });
-                }
+                        path: removed.path,
+                        final_status: Some(ChildAttemptStatus::Stopped),
+                    },
+                });
             }
             for event in pending_events {
                 self.emit_pending_event(event);
@@ -541,28 +536,28 @@ impl RuntimeControlState {
         let mut fenced_spawn_recovery = Option::<(Generation, ChildStartCount, u64)>::None;
         let mut repaired_fenced_spawn = false;
 
-        if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
-            if runtime_state.generation_fence.phase == GenerationFencePhase::ReadyToStart {
-                fenced_spawn_recovery = runtime_state
-                    .registry_identity_anchor_for_spawn_attempt
-                    .take();
-                repaired_fenced_spawn = true;
-                runtime_state.generation_fence.phase = GenerationFencePhase::Open;
-                runtime_state.last_control_failure = Some(ChildControlFailure::new(
-                    ChildControlFailurePhase::WaitCompletion,
-                    message,
-                    true,
-                ));
-            }
+        if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id)
+            && runtime_state.generation_fence.phase == GenerationFencePhase::ReadyToStart
+        {
+            fenced_spawn_recovery = runtime_state
+                .registry_identity_anchor_for_spawn_attempt
+                .take();
+            repaired_fenced_spawn = true;
+            runtime_state.generation_fence.phase = GenerationFencePhase::Open;
+            runtime_state.last_control_failure = Some(ChildControlFailure::new(
+                ChildControlFailurePhase::WaitCompletion,
+                message,
+                true,
+            ));
         }
 
         if repaired_fenced_spawn {
-            if let Some((generation, attempt, restart_count)) = fenced_spawn_recovery {
-                if let Some(registry_runtime) = self.registry.child_mut(&child_id) {
-                    registry_runtime.generation = generation;
-                    registry_runtime.child_start_count = attempt;
-                    registry_runtime.restart_count = restart_count;
-                }
+            if let Some((generation, attempt, restart_count)) = fenced_spawn_recovery
+                && let Some(registry_runtime) = self.registry.child_mut(&child_id)
+            {
+                registry_runtime.generation = generation;
+                registry_runtime.child_start_count = attempt;
+                registry_runtime.restart_count = restart_count;
             }
             return;
         }
@@ -1458,7 +1453,7 @@ impl RuntimeControlState {
         // Records which restart branch matched before optional immediate spawn bookkeeping.
         enum RestartPrep {
             // Outcome resolved without visiting `spawn_child_start`.
-            Completed(ChildControlResult),
+            Completed(Box<ChildControlResult>),
             // Child had no activity and should restart immediately via the shared spawn helper.
             DeferredImmediate {
                 // Operation captured before spawning.
@@ -1505,7 +1500,7 @@ impl RuntimeControlState {
                     None,
                 );
                 let operation_before = runtime_state.operation;
-                RestartPrep::Completed(build_child_control_outcome(
+                RestartPrep::Completed(Box::new(build_child_control_outcome(
                     operation_before,
                     false,
                     false,
@@ -1513,7 +1508,7 @@ impl RuntimeControlState {
                     runtime_state,
                     &self.time_base,
                     Some(fence),
-                ))
+                )))
             } else if !runtime_state.has_active_attempt() {
                 RestartPrep::DeferredImmediate {
                     operation_before: runtime_state.operation,
@@ -1596,7 +1591,7 @@ impl RuntimeControlState {
                     false,
                     None,
                 );
-                RestartPrep::Completed(build_child_control_outcome(
+                RestartPrep::Completed(Box::new(build_child_control_outcome(
                     operation_before,
                     cancel_delivered,
                     false,
@@ -1604,12 +1599,12 @@ impl RuntimeControlState {
                     runtime_state,
                     &self.time_base,
                     Some(fence),
-                ))
+                )))
             }
         };
 
         let outcome = match restart_prep {
-            RestartPrep::Completed(outcome) => outcome,
+            RestartPrep::Completed(outcome) => *outcome,
             RestartPrep::DeferredImmediate { operation_before } => {
                 self.spawn_child_start(child_id.clone(), true, Duration::ZERO);
                 let runtime_state = self
@@ -2483,9 +2478,7 @@ fn heartbeat_stale_event(
     if runtime_state.stale_event_attempt == Some(attempt) {
         return None;
     }
-    let Some(since_unix_nanos) = liveness.last_heartbeat_at_unix_nanos else {
-        return None;
-    };
+    let since_unix_nanos = liveness.last_heartbeat_at_unix_nanos?;
     runtime_state.stale_event_attempt = Some(attempt);
     Some(PendingRuntimeEvent {
         child_id: runtime_state.child_id.clone(),

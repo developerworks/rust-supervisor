@@ -392,9 +392,10 @@ fn outcome_severity(outcome: MeltdownOutcome) -> u8 {
 
 #[cfg(test)]
 mod merge_tests {
-    use super::*;
     use crate::event::payload::MeltdownScope;
+    use crate::policy::meltdown::{LocalVerdict, MeltdownOutcome, merge_meltdown_verdicts};
 
+    /// Tests merging verdicts when only child-level meltdown is triggered.
     #[test]
     fn test_merge_child_only() {
         let child = LocalVerdict {
@@ -416,6 +417,7 @@ mod merge_tests {
         assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
     }
 
+    /// Tests merging verdicts when all three scopes trigger with tie-breaking to most restrictive.
     #[test]
     fn test_merge_all_three_tie_break() {
         let child = LocalVerdict {
@@ -440,6 +442,7 @@ mod merge_tests {
         assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
     }
 
+    /// Tests merging verdicts when group and supervisor trigger but child does not.
     #[test]
     fn test_merge_group_and_supervisor() {
         let child = LocalVerdict {
@@ -462,6 +465,7 @@ mod merge_tests {
         assert_eq!(merged.lead_scope, Some(MeltdownScope::Group));
     }
 
+    /// Tests merging verdicts when no scopes are triggered.
     #[test]
     fn test_merge_none_triggered() {
         let child = LocalVerdict {
