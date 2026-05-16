@@ -38,7 +38,7 @@ impl std::fmt::Display for MeltdownScope {
 
 /// Protection restrictiveness ladder defining escalation severity levels.
 ///
-/// This enum defines six protection档位 from least to most restrictive.
+/// This enum defines six protection tiers from least to most restrictive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ProtectionAction {
     /// Restart is allowed without restrictions.

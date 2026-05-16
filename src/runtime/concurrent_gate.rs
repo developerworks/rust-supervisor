@@ -331,12 +331,12 @@ impl CombinedThrottleGate {
         }
 
         // If group gate exists and group_id provided, check group limit
-        if let (Some(group_gate), Some(gid)) = (&self.group_gate, group_id) {
-            if !group_gate.try_acquire_for_group(gid) {
-                // Release instance slot since group gate failed
-                self.instance_gate.release();
-                return false;
-            }
+        if let (Some(group_gate), Some(gid)) = (&self.group_gate, group_id)
+            && !group_gate.try_acquire_for_group(gid)
+        {
+            // Release instance slot since group gate failed
+            self.instance_gate.release();
+            return false;
         }
 
         true
@@ -375,8 +375,11 @@ impl CombinedThrottleGate {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::runtime::concurrent_gate::{
+        CombinedThrottleGate, GroupLevelGate, SupervisorInstanceGate,
+    };
 
+    /// Tests basic acquire and release operations on supervisor instance gate.
     #[test]
     fn test_instance_gate_basic_acquire_release() {
         let gate = SupervisorInstanceGate::new(3);
@@ -395,6 +398,7 @@ mod tests {
         assert_eq!(gate.get_active_count(), 0);
     }
 
+    /// Tests that instance gate correctly reports saturation when limit is reached.
     #[test]
     fn test_instance_gate_saturation() {
         let gate = SupervisorInstanceGate::new(2);
@@ -406,6 +410,7 @@ mod tests {
         assert!(gate.is_saturated());
     }
 
+    /// Tests that group-level gates isolate concurrency limits per group independently.
     #[test]
     fn test_group_gate_isolation() {
         let gate = GroupLevelGate::new(2);
@@ -421,6 +426,7 @@ mod tests {
         assert_eq!(gate.get_active_count_for_group("group-a"), 2);
     }
 
+    /// Tests that combined gate takes the stricter verdict between instance and group gates.
     #[test]
     fn test_combined_gate_takes_stricter_verdict() {
         let instance = SupervisorInstanceGate::new(5);
@@ -433,6 +439,7 @@ mod tests {
         assert!(!combined.try_acquire(Some("test-group"))); // Group saturated
     }
 
+    /// Tests that combined gate works correctly without a group gate configured.
     #[test]
     fn test_combined_gate_without_group() {
         let instance = SupervisorInstanceGate::new(2);

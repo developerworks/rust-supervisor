@@ -84,10 +84,14 @@ fn main() {
         2,
         // Set the child restart window.
         Duration::from_secs(60),
-        // Set the supervisor failure limit.
+        // Set the group failure limit.
         5,
-        // Set the supervisor failure window.
+        // Set the group failure window.
         Duration::from_secs(60),
+        // Set the supervisor failure limit.
+        10,
+        // Set the supervisor failure window.
+        Duration::from_secs(120),
         // Set the stable reset window.
         Duration::from_secs(300),
         // Finish the meltdown policy construction.

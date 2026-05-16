@@ -13,6 +13,8 @@ fn child_fuse_fires_after_restart_limit() {
         Duration::from_secs(10),
         10,
         Duration::from_secs(10),
+        20,
+        Duration::from_secs(30),
         Duration::from_secs(60),
     );
     let mut tracker = MeltdownTracker::new(policy);
@@ -33,6 +35,8 @@ fn stable_window_clears_counters() {
         Duration::from_secs(10),
         10,
         Duration::from_secs(10),
+        20,
+        Duration::from_secs(30),
         Duration::from_secs(60),
     );
     let mut tracker = MeltdownTracker::new(policy);

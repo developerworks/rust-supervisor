@@ -67,7 +67,7 @@ fn test_multiple_groups_independent_counting() {
 
     let mut group_alpha = MeltdownTracker::new(policy);
     let mut group_beta = MeltdownTracker::new(policy);
-    let mut group_gamma = MeltdownTracker::new(policy);
+    let group_gamma = MeltdownTracker::new(policy);
 
     let now = std::time::Instant::now();
 

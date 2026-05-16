@@ -552,8 +552,12 @@ impl HotLoopDetector {
 
 #[cfg(test)]
 mod backoff_extended_tests {
-    use super::*;
+    use crate::policy::backoff::{
+        ColdStartBudget, HotLoopDetector, calculate_decorrelated_jitter, calculate_full_jitter,
+    };
+    use std::time::Duration;
 
+    /// Tests that cold start budget correctly tracks restarts within window and enforces limit.
     #[test]
     fn test_cold_start_budget_basic_tracking() {
         let mut budget = ColdStartBudget::new(300, 3, 1000);
@@ -567,6 +571,7 @@ mod backoff_extended_tests {
         assert!(budget.record_restart(1040));
     }
 
+    /// Tests that cold start budget resets after window expiry.
     #[test]
     fn test_cold_start_window_expiry() {
         let mut budget = ColdStartBudget::new(300, 2, 1000);
@@ -580,6 +585,7 @@ mod backoff_extended_tests {
         assert_eq!(budget.get_restart_count(), 1);
     }
 
+    /// Tests that hot loop detector triggers when crash count reaches threshold in window.
     #[test]
     fn test_hot_loop_detection_basic() {
         let mut detector = HotLoopDetector::new(60, 3);
@@ -592,6 +598,7 @@ mod backoff_extended_tests {
         assert!(detector.is_hot_loop_detected(1020)); // 3 crashes in window
     }
 
+    /// Tests that hot loop sliding window correctly expires old crashes.
     #[test]
     fn test_hot_loop_sliding_window() {
         let mut detector = HotLoopDetector::new(60, 3);
@@ -605,6 +612,7 @@ mod backoff_extended_tests {
         assert!(!detector.is_hot_loop_detected(1070)); // Only 1 crash in last 60s
     }
 
+    /// Tests that full jitter calculation respects base delay upper bound.
     #[test]
     fn test_full_jitter_bounds() {
         let delay =
@@ -612,6 +620,7 @@ mod backoff_extended_tests {
         assert!(delay <= Duration::from_millis(100)); // Capped by base
     }
 
+    /// Tests that decorrelated jitter calculation stays within initial and max bounds.
     #[test]
     fn test_decorrelated_jitter_bounds() {
         let delay = calculate_decorrelated_jitter(

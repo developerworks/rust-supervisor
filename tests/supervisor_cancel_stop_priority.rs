@@ -104,7 +104,7 @@ fn test_manual_stop_has_priority_over_restart() {
 fn test_protection_action_supervised_stop_is_most_restrictive() {
     // Verify SupervisedStop is the most restrictive action on the ladder
 
-    let actions = vec![
+    let actions = [
         ProtectionAction::RestartAllowed,
         ProtectionAction::RestartQueued,
         ProtectionAction::RestartDenied,

@@ -453,8 +453,8 @@ fn audit_record_child_control_early(event: &SupervisorEvent) -> Option<AuditReco
             reason,
             result,
             outcome,
-        } => Some(audit_child_control(
-            event.sequence.value,
+        } => Some(audit_child_control(ChildControlAuditInput {
+            sequence: event.sequence.value,
             command_id,
             requested_by,
             reason,
@@ -462,7 +462,7 @@ fn audit_record_child_control_early(event: &SupervisorEvent) -> Option<AuditReco
             child_id,
             command,
             outcome,
-        )),
+        })),
         What::ChildControlCancelDelivered {
             child_id,
             generation,
@@ -931,72 +931,85 @@ fn merge_generation_fence_child_control_audit_fields(
     }
 }
 
+/// Input used to build a child control audit record.
+struct ChildControlAuditInput<'a> {
+    /// Event sequence.
+    sequence: u64,
+    /// Stable command identifier.
+    command_id: &'a str,
+    /// Actor that requested the command.
+    requested_by: &'a str,
+    /// Operator-provided reason.
+    reason: &'a str,
+    /// Low-cardinality command result.
+    result: &'a str,
+    /// Target child identifier.
+    child_id: &'a crate::id::types::ChildId,
+    /// Stable command name.
+    command: &'a str,
+    /// Full child control outcome.
+    outcome: &'a crate::control::outcome::ChildControlResult,
+}
+
 /// Builds a child control audit record with full command outcome context.
 ///
 /// # Arguments
 ///
-/// - `sequence`: Event sequence.
-/// - `command_id`: Stable command identifier.
-/// - `requested_by`: Actor that requested the command.
-/// - `reason`: Operator-provided reason.
-/// - `result`: Low-cardinality command result.
-/// - `child_id`: Target child identifier.
-/// - `command`: Stable command name.
-/// - `outcome`: Full child control outcome.
+/// - `input`: Child control audit values.
 ///
 /// # Returns
 ///
 /// Returns an [`AuditRecord`] for the child control command.
-fn audit_child_control(
-    sequence: u64,
-    command_id: &str,
-    requested_by: &str,
-    reason: &str,
-    result: &str,
-    child_id: &crate::id::types::ChildId,
-    command: &str,
-    outcome: &crate::control::outcome::ChildControlResult,
-) -> AuditRecord {
+fn audit_child_control(input: ChildControlAuditInput<'_>) -> AuditRecord {
     let mut context = BTreeMap::new();
-    context.insert("command".to_owned(), command.to_owned());
+    context.insert("command".to_owned(), input.command.to_owned());
     context.insert(
         "generation".to_owned(),
-        optional_u64(outcome.generation.map(|generation| generation.value)),
+        optional_u64(input.outcome.generation.map(|generation| generation.value)),
     );
     context.insert(
         "attempt".to_owned(),
-        optional_u64(outcome.attempt.map(|attempt| attempt.value)),
+        optional_u64(input.outcome.attempt.map(|attempt| attempt.value)),
     );
-    context.insert("status".to_owned(), optional_debug(outcome.status));
+    context.insert("status".to_owned(), optional_debug(input.outcome.status));
     context.insert(
         "operation_before".to_owned(),
-        format!("{:?}", outcome.operation_before),
+        format!("{:?}", input.outcome.operation_before),
     );
     context.insert(
         "operation_after".to_owned(),
-        format!("{:?}", outcome.operation_after),
+        format!("{:?}", input.outcome.operation_after),
     );
     context.insert(
         "cancel_delivered".to_owned(),
-        outcome.cancel_delivered.to_string(),
+        input.outcome.cancel_delivered.to_string(),
     );
-    context.insert("stop_state".to_owned(), format!("{:?}", outcome.stop_state));
+    context.insert(
+        "stop_state".to_owned(),
+        format!("{:?}", input.outcome.stop_state),
+    );
     context.insert(
         "restart_limit_remaining".to_owned(),
-        outcome.restart_limit.remaining.to_string(),
+        input.outcome.restart_limit.remaining.to_string(),
     );
-    context.insert("idempotent".to_owned(), outcome.idempotent.to_string());
-    context.insert("failure".to_owned(), failure_context(&outcome.failure));
-    merge_generation_fence_child_control_audit_fields(&mut context, outcome);
+    context.insert(
+        "idempotent".to_owned(),
+        input.outcome.idempotent.to_string(),
+    );
+    context.insert(
+        "failure".to_owned(),
+        failure_context(&input.outcome.failure),
+    );
+    merge_generation_fence_child_control_audit_fields(&mut context, input.outcome);
     context.insert("stale_report".to_owned(), "none".to_owned());
     AuditRecord {
-        sequence,
-        command_id: command_id.to_owned(),
-        requested_by: requested_by.to_owned(),
-        result: result.to_owned(),
-        reason: reason.to_owned(),
+        sequence: input.sequence,
+        command_id: input.command_id.to_owned(),
+        requested_by: input.requested_by.to_owned(),
+        result: input.result.to_owned(),
+        reason: input.reason.to_owned(),
         phase: "child_control".to_owned(),
-        child_id: Some(child_id.to_string()),
+        child_id: Some(input.child_id.to_string()),
         context,
     }
 }
