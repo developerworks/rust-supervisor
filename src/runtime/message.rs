@@ -4,10 +4,10 @@
 //! child-child_start_count and control-plane messages that share the same runtime loop
 //! mailbox.
 
-use crate::child_runner::runner::ChildRunReport;
+use crate::child_runner::runner::{ChildRunHandle, ChildRunReport};
 use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
 use crate::error::types::SupervisorError;
-use crate::id::types::ChildId;
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::runtime::lifecycle::RuntimeExitReport;
 use tokio::sync::oneshot;
 
@@ -35,6 +35,19 @@ pub enum ChildStartMessage {
         /// Report returned by the child runner.
         report: Box<ChildRunReport>,
     },
+    /// Delayed backoff spawn succeeded; control loop must activate runtime bookkeeping before awaiting completion.
+    DelayedSpawnAttached {
+        /// Stable child identifier for the spawned attempt.
+        child_id: ChildId,
+        /// Supervisor path segment ordering for observability correlation.
+        path: SupervisorPath,
+        /// Generation identity pinned by [`crate::registry::entry::ChildRuntime`] before `spawn_once`.
+        generation: Generation,
+        /// Attempt counter pinned by [`crate::registry::entry::ChildRuntime`] before `spawn_once`.
+        attempt: ChildStartCount,
+        /// Runner handle carrying cancellation and completion endpoints for the active attempt.
+        handle: ChildRunHandle,
+    },
     /// Child child_start_count could not start.
     StartFailed {
         /// Child identifier whose child_start_count failed before execution.
@@ -53,5 +66,10 @@ pub enum ControlPlaneMessage {
         meta: CommandMeta,
         /// Reply channel used to confirm shutdown acceptance.
         reply_sender: oneshot::Sender<Result<RuntimeExitReport, SupervisorError>>,
+    },
+    /// Replays a synthetic exit report for integration tests exercising stale completions.
+    ReplayChildExitForTest {
+        /// Exit payload synthesized by tests.
+        report: Box<ChildRunReport>,
     },
 }

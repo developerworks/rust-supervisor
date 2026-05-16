@@ -87,6 +87,12 @@ impl ChildRunner {
     ///
     /// Returns a [`ChildRunHandle`] when the child owns a task factory.
     pub fn spawn_once(&self, mut runtime: ChildRuntime) -> Result<ChildRunHandle, SupervisorError> {
+        #[cfg(debug_assertions)]
+        if crate::test_support::child_spawn::take_child_spawn_failure_attempt(&runtime.id) {
+            return Err(SupervisorError::InvalidTransition {
+                message: "test hook: child spawn_once failure".to_owned(),
+            });
+        }
         let factory =
             runtime.spec.factory.clone().ok_or_else(|| {
                 SupervisorError::fatal_config("worker child requires a task factory")

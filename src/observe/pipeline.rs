@@ -248,6 +248,30 @@ fn structured_log(event: &SupervisorEvent) -> StructuredLogRecord {
 ///
 /// Returns an audit record for command events.
 fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
+    audit_record_control_commands_and_runtime_shutdown(event)
+        .or_else(|| audit_record_child_shutdown_pipeline(event))
+        .or_else(|| audit_record_child_control_early(event))
+        .or_else(|| audit_record_child_control_late(event))
+        .or_else(|| audit_record_child_heartbeat_stale(event))
+        .or_else(|| audit_record_generation_fence_entered(event))
+        .or_else(|| audit_record_generation_fence_abort_requested(event))
+        .or_else(|| audit_record_generation_fence_released(event))
+        .or_else(|| audit_record_generation_fence_conflict(event))
+        .or_else(|| audit_record_generation_fence_stale_attempt(event))
+}
+
+/// Attempts to build an audit record for operator commands and runtime shutdown loop facts.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches command acceptance, control loop lifecycle, or pipeline shutdown completion.
+fn audit_record_control_commands_and_runtime_shutdown(
+    event: &SupervisorEvent,
+) -> Option<AuditRecord> {
     match &event.what {
         What::CommandAccepted { audit } | What::CommandCompleted { audit } => Some(AuditRecord {
             sequence: event.sequence.value,
@@ -317,6 +341,21 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
                 context,
             })
         }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record for per-child shutdown pipeline facts.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches a child shutdown audit fact.
+fn audit_record_child_shutdown_pipeline(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
         What::ChildShutdownCancelDelivered {
             child_id,
             generation,
@@ -391,6 +430,21 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
                 context,
             })
         }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record for early child control command outcomes.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches command completion, cancel delivery, or successful stop completion.
+fn audit_record_child_control_early(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
         What::ChildControlCommandCompleted {
             child_id,
             command,
@@ -454,6 +508,21 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
                 context,
             })
         }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record for late child control facts and removals.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches stop failure, operation change, or runtime state removal.
+fn audit_record_child_control_late(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
         What::ChildControlStopFailed {
             child_id,
             generation,
@@ -531,6 +600,21 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
                 context,
             })
         }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record for child heartbeat staleness.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches heartbeat stale reporting.
+fn audit_record_child_heartbeat_stale(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
         What::ChildHeartbeatStale {
             child_id,
             attempt,
@@ -551,6 +635,299 @@ fn audit_record(event: &SupervisorEvent) -> Option<AuditRecord> {
             })
         }
         _ => None,
+    }
+}
+
+/// Attempts to build an audit record when a generation fence is entered.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches fence entry.
+fn audit_record_generation_fence_entered(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
+        What::ChildRestartFenceEntered {
+            child_id,
+            old_generation,
+            old_attempt,
+            target_generation,
+            command_id,
+            requested_by,
+            reason,
+            stop_deadline_at_unix_nanos,
+        } => {
+            let mut context =
+                child_child_start_count_context(old_generation.value, old_attempt.value);
+            context.insert(
+                "target_generation".to_owned(),
+                target_generation.value.to_string(),
+            );
+            context.insert(
+                "stop_deadline_at_unix_nanos".to_owned(),
+                stop_deadline_at_unix_nanos.to_string(),
+            );
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: command_id.clone(),
+                requested_by: requested_by.clone(),
+                result: "fence_entered".to_owned(),
+                reason: reason.clone(),
+                phase: "generation_fence".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record when a generation fence abort is requested.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches fence abort escalation.
+fn audit_record_generation_fence_abort_requested(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
+        What::ChildRestartFenceAbortRequested {
+            child_id,
+            old_generation,
+            old_attempt,
+            target_generation,
+            command_id,
+            deadline_unix_nanos,
+        } => {
+            let mut context =
+                child_child_start_count_context(old_generation.value, old_attempt.value);
+            context.insert(
+                "target_generation".to_owned(),
+                target_generation.value.to_string(),
+            );
+            context.insert(
+                "deadline_unix_nanos".to_owned(),
+                deadline_unix_nanos.to_string(),
+            );
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: command_id.clone(),
+                requested_by: "runtime".to_owned(),
+                result: "abort_requested".to_owned(),
+                reason: "generation fence escalation after cooperative deadline".to_owned(),
+                phase: "generation_fence".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record when a generation fence releases the old attempt.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches fence release after drain.
+fn audit_record_generation_fence_released(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
+        What::ChildRestartFenceReleased {
+            child_id,
+            old_generation,
+            old_attempt,
+            target_generation,
+            exit_kind,
+        } => {
+            let mut context =
+                child_child_start_count_context(old_generation.value, old_attempt.value);
+            context.insert(
+                "target_generation".to_owned(),
+                target_generation.value.to_string(),
+            );
+            context.insert("exit_kind".to_owned(), format!("{exit_kind:?}"));
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "generation-fence".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "released".to_owned(),
+                reason: "old attempt drained; queued generation may spawn".to_owned(),
+                phase: "generation_fence".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record for generation fence conflicts.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches restart merge or rejection under fencing.
+fn audit_record_generation_fence_conflict(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
+        What::ChildRestartConflict {
+            child_id,
+            current_generation,
+            current_attempt,
+            target_generation,
+            command_id,
+            decision,
+            reason,
+        } => {
+            let mut context = BTreeMap::new();
+            context.insert(
+                "old_generation".to_owned(),
+                optional_u64(current_generation.map(|generation| generation.value)),
+            );
+            context.insert(
+                "old_attempt".to_owned(),
+                optional_u64(current_attempt.map(|attempt| attempt.value)),
+            );
+            context.insert(
+                "target_generation".to_owned(),
+                optional_u64(target_generation.map(|generation| generation.value)),
+            );
+            context.insert("generation_fence_decision".to_owned(), decision.clone());
+            context.insert("failure".to_owned(), reason.clone());
+            context.insert("stale_report".to_owned(), "none".to_owned());
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: command_id.clone(),
+                requested_by: "runtime".to_owned(),
+                result: decision.clone(),
+                reason: reason.clone(),
+                phase: "generation_fence".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Attempts to build an audit record when a stale completion triple is handled.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event carrying payload.
+///
+/// # Returns
+///
+/// Returns [`Some`] when `event.what` matches stale attempt reporting under fencing.
+fn audit_record_generation_fence_stale_attempt(event: &SupervisorEvent) -> Option<AuditRecord> {
+    match &event.what {
+        What::ChildAttemptStaleReport {
+            child_id,
+            reported_generation,
+            reported_attempt,
+            current_generation,
+            current_attempt,
+            exit_kind,
+            handled_as,
+        } => {
+            let mut context =
+                child_child_start_count_context(reported_generation.value, reported_attempt.value);
+            context.insert(
+                "current_generation".to_owned(),
+                optional_u64(current_generation.map(|generation| generation.value)),
+            );
+            context.insert(
+                "current_attempt".to_owned(),
+                optional_u64(current_attempt.map(|attempt| attempt.value)),
+            );
+            context.insert("exit_kind".to_owned(), format!("{exit_kind:?}"));
+            context.insert("handled_as".to_owned(), format!("{handled_as:?}"));
+            context.insert(
+                "stale_report".to_owned(),
+                format!(
+                    "reported_generation={} reported_attempt={}",
+                    reported_generation.value, reported_attempt.value
+                ),
+            );
+            Some(AuditRecord {
+                sequence: event.sequence.value,
+                command_id: "generation-fence".to_owned(),
+                requested_by: "runtime".to_owned(),
+                result: "stale_report".to_owned(),
+                reason: "completion triple did not match active or pending restart identities"
+                    .to_owned(),
+                phase: "generation_fence".to_owned(),
+                child_id: Some(child_id.to_string()),
+                context,
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Merges generation fence projection fields into a child control audit context map.
+///
+/// # Arguments
+///
+/// - `context`: Audit context map being assembled.
+/// - `outcome`: Child control outcome carrying optional generation fence projection.
+///
+/// # Returns
+///
+/// This function does not return a value.
+fn merge_generation_fence_child_control_audit_fields(
+    context: &mut BTreeMap<String, String>,
+    outcome: &crate::control::outcome::ChildControlResult,
+) {
+    if let Some(fence) = &outcome.generation_fence {
+        context.insert(
+            "generation_fence_decision".to_owned(),
+            format!("{:?}", fence.decision),
+        );
+        context.insert(
+            "generation_fence_abort_requested".to_owned(),
+            fence.abort_requested.to_string(),
+        );
+        context.insert(
+            "generation_fence_cancel_delivered".to_owned(),
+            fence.cancel_delivered.to_string(),
+        );
+        context.insert(
+            "generation_fence_old_generation".to_owned(),
+            optional_u64(fence.old_generation.map(|generation| generation.value)),
+        );
+        context.insert(
+            "generation_fence_old_attempt".to_owned(),
+            optional_u64(fence.old_attempt.map(|attempt| attempt.value)),
+        );
+        context.insert(
+            "generation_fence_target_generation".to_owned(),
+            optional_u64(fence.target_generation.map(|generation| generation.value)),
+        );
+        context.insert(
+            "generation_fence_conflict".to_owned(),
+            failure_context(&fence.conflict),
+        );
+    } else {
+        context.insert("generation_fence_decision".to_owned(), "none".to_owned());
+        context.insert(
+            "generation_fence_abort_requested".to_owned(),
+            "false".to_owned(),
+        );
+        context.insert(
+            "generation_fence_cancel_delivered".to_owned(),
+            "false".to_owned(),
+        );
+        context.insert("generation_fence_conflict".to_owned(), "none".to_owned());
     }
 }
 
@@ -610,6 +987,8 @@ fn audit_child_control(
     );
     context.insert("idempotent".to_owned(), outcome.idempotent.to_string());
     context.insert("failure".to_owned(), failure_context(&outcome.failure));
+    merge_generation_fence_child_control_audit_fields(&mut context, outcome);
+    context.insert("stale_report".to_owned(), "none".to_owned());
     AuditRecord {
         sequence,
         command_id: command_id.to_owned(),

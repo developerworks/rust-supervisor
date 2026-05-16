@@ -22,7 +22,7 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Configuration must be loaded through rust-config-tree v0.1.9, and runtime-tunable constants must not be scattered across internal modules.
 - `SupervisorConfig` is the public root configuration struct. It supports `confique::Config`, `schemars::JsonSchema`, `serde::Serialize`, and `serde::Deserialize`.
 - Dashboard IPC belongs only to the target process local entry point. This repository implements Unix domain socket IPC, snapshot generation, event records, log records, command mapping, and shared contracts.
-- Shutdown must run request stop, graceful drain, abort stragglers, and reconcile.
+- Shutdown must run request stop, graceful drain, abort stragglers, and reconcile. `ShutdownTree` delivers `CancellationToken` to running child tasks, waits for tasks to return in shutdown order, uses `AbortHandle` for stragglers after timeouts, and returns per-child outcomes plus a reconcile report inside `ShutdownResult`.
 - Shutdown terminology uses Shutdown Without Orphaned Tasks.
 
 ## Capability Boundary
@@ -31,7 +31,10 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Start fresh futures through `TaskFactory` or `service_fn`.
 - Use `OneForOne`, `OneForAll`, and `RestForOne` supervision strategies.
 - Produce `RestartDecision` values from typed failures, backoff, jitter, fuse rules, and the policy engine.
-- Control a running tree through `SupervisorHandle` operations such as `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state`, and `subscribe_events`.
+- Control a running tree through `SupervisorHandle` operations such as `add_child`, `remove_child`, `restart_child`, `pause_child`, `resume_child`, `quarantine_child`, `shutdown_tree`, `current_state`, `subscribe_events`, `is_alive`, `health`, `join`, and `shutdown`.
+- Control commands must carry non-empty `requested_by` and `reason`. Public entry points and the runtime control loop validate these audit fields before execution.
+- `shutdown_tree` returns `ShutdownResult` on success. When shutdown completes, `ShutdownResult.report` carries `ShutdownPipelineReport`, including `ChildShutdownStatus`, `ShutdownReconcileReport`, and socket status. When the core runtime does not own the dashboard IPC socket, socket status records `NotOwned`.
+- `is_alive` and `health` expose runtime control plane state. Repeated `join` calls return the same final `RuntimeExitReport`. `shutdown` stops only the control plane and does not replace `shutdown_tree`.
 - Load the primary YAML configuration from `examples/config/supervisor.yaml`.
 - Reuse `rust_supervisor::config::configurable::SupervisorConfig` for YAML loading, template generation, and JSON Schema generation.
 - Emit structured logs, tracing spans, metrics, audit events, event journal entries, and `RunSummary` diagnostics.

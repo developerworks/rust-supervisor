@@ -27,8 +27,8 @@ manual(手册), docs(工程文档), README(说明文档), examples(示例程序)
 
 ## 可维护性
 
-`scripts/check-maintainability.sh` 检查 manual(手册)和 docs(工程文档)同构入口, 示例数量, 验证产物, Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务)术语和 rust-config-tree(集中配置树)术语.
+`scripts/check-maintainability.sh` 检查 manual(手册)的 `zh` 与 `en` 同构入口, docs(工程文档)中 quality gate(质量门禁)与 parallel governance(并行治理)页面的 `zh` 与 `en` 同构入口, 示例数量是否满足契约, validation artifact(验证产物), Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务)术语和 rust-config-tree(集中配置树)术语.
 
 ## SBOM 和发布
 
-`scripts/generate-sbom.sh` 生成 CycloneDX JSON(CycloneDX JSON 格式)和 SPDX JSON(SPDX JSON 格式). `scripts/validate-sbom.sh` 校验文件存在, JSON(数据交换格式)形状, package(包)名称, `Cargo.lock` 摘要和敏感路径泄漏.
+`scripts/generate-sbom.sh` 生成 `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json`. `scripts/validate-sbom.sh` 校验文件存在, JSON(数据交换格式)形状, package(包)名称, `Cargo.lock` 摘要, 以及 secret(密钥), token(令牌), 本地绝对路径和构建临时目录泄漏.

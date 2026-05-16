@@ -3,7 +3,7 @@
 **Feature Branch(功能分支)**: `001-create-supervisor-core`
 **Created(创建日期)**: 2026-05-04
 **Status(状态)**: Draft(草稿)
-**Last Modified(最后修改日期)**: 2026-05-08
+**Last Modified(最后修改日期)**: 2026-05-16
 **Input(输入)**: 用户描述:"吸收 `task-supervisor`,`taskvisor`,`tokio-graceful-shutdown`,`ractor-supervisor`,`task_scope`,Tokio(异步运行时) `JoinSet`,`supertrees`,Tokio(异步运行时) `watch`,`tokio-util` `CancellationToken` 和 `tracing`(结构化追踪) 的成熟概念,创建一个基于 Tokio(异步运行时) 的轻量 supervisor(监督器) 运行时治理层.它负责启动,停止,重启,隔离,降级,熔断,状态查询,事件记录,健康检查和关闭顺序;不引入 actor(参与者) 框架,不照搬第三方 crate(库) API(接口)."
 
 ## Clarifications(澄清)
@@ -25,7 +25,7 @@
 - Q: rust-config-tree(集中配置树) 使用什么版本和配置格式? → A: rust-config-tree(集中配置树) 必须使用 v0.1.9,并且必须使用 YAML(数据序列化格式) 配置文件,示例配置路径使用 `examples/config/supervisor.yaml`.
 - Q: 专业词汇怎样治理? → A: 规格文档涉及的专业词汇必须放入独立 `glossary.md`(词汇表) 文件,反引号内的 Rust(编程语言) 类型名,枚举值,方法名,字段名,指标名,路径名和命令名也算词汇,也必须纳入词汇表.
 - Q: 常量值怎样治理? → A: 禁止在代码中硬编码 runtime tunable constant(运行时可调常量).重启阈值,窗口,超时,退避,抖动,容量,开关,预算和默认策略值都必须通过 rust-config-tree(集中配置树) v0.1.9 的 YAML(数据序列化格式) 配置进入系统,并且必须可配置.
-- Q: 状态相关代码怎样命名? → A: 代码命名不得使用 `*View` 后缀.监督器状态统一命名为 `SupervisorState`(监督器状态),子任务状态统一命名为 `ChildState`(子任务状态),源码模块使用 `state`(状态),不得使用 `state_view`(状态视图) 模块名.
+- Q: 状态相关代码怎样命名? → A: 代码命名不得使用 `*View` 后缀.监督器状态统一命名为 `SupervisorState`(监督器状态);子任务运行时事实与可序列化投影以 `ChildRuntimeRecord`(子任务运行状态记录) 为核心,受管展示以 `ManagedChildState`(受管子任务状态) 按 **`004-3-child-runtime-state-control`** 契约派生;历史口径中的 `ChildState`(子任务状态) 仅表示受管展示语义,不得与 `ChildRuntimeRecord` 并行成为第二权威命名.运行时查询命令名为 `current_state`(当前状态),源码状态模块命名为 `state`(状态),不得使用 `state_view`(状态视图) 模块名.
 - Q: 模块之间的依赖关系怎样说明? → A: 规格必须要求 module dependency map(模块依赖图),明确每个 module boundary(模块边界),owner module(所有者模块),dependent module(依赖模块),dependency direction(依赖方向),allowed dependency(允许依赖) 和 forbidden dependency(禁止依赖).模块依赖必须单向,不得出现 cycle dependency(循环依赖),跨模块访问只能通过公开契约类型发生.
 - Q: 怎样拆分影响开发并行度的任务? → A: 规格必须要求把影响 development parallelism(开发并行度) 的工作拆分为 parallel workstream(并行工作流).每个 workstream(工作流) 必须有独立 owner(负责人),独立 module boundary(模块边界),独立主文件,独立 `_test.rs` 测试文件,清晰前置依赖和可单独验收结果.任何造成同文件并行写入,共享大文件修改或跨职责串行等待的任务都必须继续拆分.
 - Q: 实现阶段怎样执行? → A: implementation phase(实现阶段) 必须采用 unattended implementation(无人值守实现) 模式,按 parallel workstream(并行工作流) 并行推进,不得在单个任务完成后等待人工继续.执行必须持续到 task completion ledger(任务完成台账) 证明所有任务完成,所有验收检查通过,并且没有遗留 pending task(待处理任务) 或 in-progress task(进行中任务).
@@ -209,7 +209,7 @@
 - 代码缺少 module doc(模块文档),struct doc(结构体文档),field doc(字段文档),public function doc(公共函数文档) 或 private function doc(私有函数文档) 时,代码文档检查必须失败.
 - crates.io(软件包发布平台) 发布元数据缺失,package contents(打包内容) 包含不该发布的大文件,或 `cargo publish --dry-run` 失败时,发布就绪检查必须失败.
 - SBOM(软件物料清单) 缺失,格式无效,缺少 crate(包) 本身,缺少直接依赖,或和 `Cargo.lock` 依赖版本不一致时,SBOM check(SBOM 检查) 必须失败.
-- 源码,示例,契约或文档中出现任何以 `Snapshot` 或 `View` 结尾的代码命名,出现 `snapshot()` 运行时查询方法,或出现 `state_view` 模块名时,naming check(命名检查) 必须失败.正式命名必须使用 `ConfigState`(配置状态),`SupervisorState`(监督器状态),`ChildState`(子任务状态),`current_state`(当前状态) 和 `state`(状态).
+- 源码,示例,契约或文档中出现任何以 `Snapshot` 或 `View` 结尾的代码命名,出现 `snapshot()` 运行时查询方法,或出现 `state_view` 模块名时,naming check(命名检查) 必须失败.正式命名必须使用 `ConfigState`(配置状态),`SupervisorState`(监督器状态),`ChildRuntimeRecord`(子任务运行状态记录),`ManagedChildState`(受管子任务状态),`current_state`(当前状态) 和 `state`(状态);历史用语 `ChildState`(子任务状态) 仅可作受管展示语义说明,不得与 `ChildRuntimeRecord` 并行成为第二权威命名.
 - 源码,示例,契约或文档中出现旧接口别名,迁移层,历史行为保留开关,废弃 facade(门面),兼容包装函数或第三方 API(接口) 形状复制时,compatibility method check(兼容方法检查) 必须失败.
 - 任何测试文件路径不以 `_test.rs` 结尾时,test naming check(测试命名检查) 必须失败.
 - rust-config-tree(集中配置树) 配置示例,quickstart(快速开始),契约或任务使用 TOML(配置格式),JSON(数据交换格式) 或其它格式作为主配置格式时,configuration format check(配置格式检查) 必须失败.正式格式必须是 YAML(数据序列化格式).
@@ -292,7 +292,7 @@
 - **FR-060**: 系统必须控制 cognitive complexity(认知复杂度).普通函数的认知复杂度不得超过 15,生命周期调度函数不得超过 20,控制流嵌套不得超过 3 层.超过阈值的逻辑必须拆分为 state machine(状态机),policy function(策略函数),small helper function(小辅助函数) 或独立模块.
 - **FR-061**: 系统必须保证 high maintainability(高可维护性).每个模块必须有单一清晰职责,公开 API(公开接口) 必须通过契约类型表达,共享状态必须集中在运行时边界,行为变化必须有测试,文档和示例同步,并且不得通过全局可变状态,隐式副作用或跨模块内部访问降低可维护性.
 - **FR-062**: 系统必须在发布准备阶段生成 SBOM(软件物料清单).SBOM(软件物料清单) 至少必须包含 crate(包) 本身,所有直接依赖,所有传递依赖,版本,license(许可证),package URL(软件包地址),checksum(校验和),source repository(源码仓库) 和生成工具信息,并输出 CycloneDX JSON(CycloneDX JSON 格式) 与 SPDX JSON(SPDX JSON 格式) 两种文件.
-- **FR-063**: 系统全仓代码命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得提供 `snapshot()` 查询方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态), 子任务当前状态必须命名为 `ChildState`(子任务状态), 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). dashboard(看板), IPC(进程间通信) 和 UI(用户界面) 协议也不得使用 `*Snapshot` 或 `*View` 代码命名.
+- **FR-063**: 系统全仓代码命名不得使用任何 `*Snapshot` 或 `*View` 后缀, 也不得提供 `snapshot()` 查询方法. 配置加载结果必须命名为 `ConfigState`(配置状态), 监督器当前状态必须命名为 `SupervisorState`(监督器状态). 子任务运行时对外可序列化事实必须主要命名为 `ChildRuntimeRecord`(子任务运行状态记录), 并由 `ChildControlResult`(子任务控制结果) 等类型承载命令结构化结果; `ManagedChildState`(受管子任务状态) 仅允许由运行状态记录按 **`004-3-child-runtime-state-control`** 契约派生展示. 历史文档中出现的 `ChildState`(子任务状态) 术语仅保留为受管展示语义指称, 不得引入与 `ChildRuntimeRecord` 并行的第二套权威状态模型名. 运行时查询命令必须命名为 `current_state`(当前状态), 源码模块必须命名为 `state`(状态), 不得命名为 `state_view`(状态视图). dashboard(看板), IPC(进程间通信) 和 UI(用户界面) 协议也不得使用 `*Snapshot` 或 `*View` 代码命名.
 - **FR-064**: 系统必须规定所有测试文件以 `_test.rs` 结尾.integration test(集成测试) 文件必须位于 `src/tests/*_test.rs`,unit test(单元测试) 文件必须位于对应模块自己的 `tests/*_test.rs` 目录,不得使用其它测试文件后缀.
 - **FR-065**: 系统必须规定 rust-config-tree(集中配置树) 的主配置格式为 YAML(数据序列化格式).配置示例,quickstart(快速开始),文档,契约和任务必须使用 `*.yaml` 文件,不得把 TOML(配置格式),JSON(数据交换格式) 或其它格式作为主配置格式.
 - **FR-066**: 系统必须维护独立 `glossary.md`(词汇表),覆盖规格文档中出现的专业词汇和所有反引号词汇.反引号内的 Rust(编程语言) 类型名,枚举值,方法名,字段名,指标名,路径名,命令名,配置键和测试目标都必须被视为词汇表条目.
@@ -301,9 +301,9 @@
 - **FR-069**: 系统必须规定 module dependency rule(模块依赖规则).基础类型,错误类型,配置状态,公开契约和事件模型可以被上层模块依赖;策略,健康,状态,可观测性和关闭模块只能通过公开契约协作;运行时编排可以组合下层模块;下层模块不得反向依赖运行时编排,控制命令或示例.
 - **FR-070**: 系统必须提高 development parallelism(开发并行度).任何影响并行度的实现工作都必须拆分为 parallel workstream(并行工作流),并且每个 workstream(工作流) 必须有独立 owner(负责人),独立主文件,独立 `_test.rs` 测试文件,明确前置依赖,明确交付边界和可单独验收结果.
 - **FR-071**: 系统必须规定 implementation phase(实现阶段) 采用 unattended implementation(无人值守实现) 模式.实现执行必须自动选择可以继续推进的 parallel workstream(并行工作流),持续完成 pending task(待处理任务),不得在单个任务完成后停止等待人工继续.
-- **FR-072**: 系统必须提供 task completion ledger(任务完成台账),记录每个任务的 workstream(工作流),状态,主文件,测试文件,验收检查,完成证据和剩余阻塞.只有全部任务为 completed task(已完成任务),全部检查通过且没有 pending task(待处理任务) 或 in-progress task(进行中任务) 时,implementation phase(实现阶段) 才能被判定完成.
-- **FR-073**: 系统必须提供 blocker elimination check(卡点消除检查),识别并消除影响 parallel execution(并行执行) 的 shared file bottleneck(共享文件瓶颈),unstable contract(不稳定契约),blocking dependency(阻塞依赖),manual gate(人工门禁),long serial validation(长串行验证),unclear owner(负责人不清晰) 和 hidden coupling(隐藏耦合).
-- **FR-074**: 系统必须为每个 parallel execution blocker(并行执行卡点) 生成 blocker elimination record(卡点消除记录).记录必须包含 blocker type(卡点类型),affected workstream(受影响工作流),affected file boundary(受影响文件边界),elimination action(消除动作),owner(负责人),acceptance evidence(验收证据) 和 residual risk(剩余风险).
+- **FR-072**: 系统必须提供 task completion ledger(任务完成台账),记录每个任务的 workstream(工作流),状态,主文件,测试文件,验收检查,完成证据和剩余阻塞.只有全部任务为 completed task(已完成任务),全部检查通过且没有 pending task(待处理任务) 或 in-progress task(进行中任务) 时,implementation phase(实现阶段) 才能被判定完成.**Governance scope(治理范围)**: 本条为 **process-level(过程级)** 要求,不强制由 **`rust-tokio-supervisor`** crate 内单一 **`cargo test`** 用例逐字段证明台账内容.**Task completion ledger(任务完成台账)** 的权威载体为 **`specs/*/tasks.md`**, **`.specify/`** 工作区中与 speckit 任务台账一致的产物,以及 Pull Request(合并请求) 模板或描述中可追溯的任务与完成证据链;评审按上述产物判定 implementation phase(实现阶段) 是否满足本条完成条件.
+- **FR-073**: 系统必须提供 blocker elimination check(卡点消除检查),识别并消除影响 parallel execution(并行执行) 的 shared file bottleneck(共享文件瓶颈),unstable contract(不稳定契约),blocking dependency(阻塞依赖),manual gate(人工门禁),long serial validation(长串行验证),unclear owner(负责人不清晰) 和 hidden coupling(隐藏耦合).**Governance scope(治理范围)**: 本条为 **process-level(过程级)** 要求;**blocker elimination check(卡点消除检查)** 通过 **speckit** 流程,合并评审与 **`.specify/sync/`** 漂移/卡点相关报告的执行约定完成,不要求在监督器运行时进程内实现独立「卡点扫描」服务.
+- **FR-074**: 系统必须为每个 parallel execution blocker(并行执行卡点) 生成 blocker elimination record(卡点消除记录).记录必须包含 blocker type(卡点类型),affected workstream(受影响工作流),affected file boundary(受影响文件边界),elimination action(消除动作),owner(负责人),acceptance evidence(验收证据) 和 residual risk(剩余风险).**Governance scope(治理范围)**: 本条为 **process-level(过程级)** 要求;**blocker elimination record(卡点消除记录)** 存放于任务与评审可追溯载体 (例如 **`tasks.md`** 勾选与注释, Pull Request(合并请求) 讨论,或 **`proposals.md`** / 同步工作流中与卡点挂钩的段落),不要求写入 **`rust-tokio-supervisor`** crate 源码或单靠 **`cargo test`** 落盘.
 - **FR-075**: 系统必须规定 lead agent(主代理) 在 parallel development(并行开发) 中监督所有 subagent(子代理) workstream(工作流).lead agent(主代理) 必须分派任务边界,审查 subagent output(子代理输出),对照规格,模块依赖图,文件边界,测试规则,文档同步规则和禁止兼容规则识别 development drift(开发偏差).
 - **FR-076**: 系统必须提供 correction loop(纠偏循环) 和 correction record(纠偏记录).当 subagent(子代理) 输出出现偏差时,lead agent(主代理) 必须记录 drift type(偏差类型),affected workstream(受影响工作流),affected files(受影响文件),expected requirement(期望要求),actual output(实际输出),correction action(纠偏动作),review result(复核结果) 和 final evidence(最终证据).
 - **FR-077**: 系统必须采用 top-level directory module(顶层目录模块) 源码结构.核心模块必须直接位于 `src/<module>/`,不得使用 `src/supervision/` 中间层,不得使用 `src/<module>.rs` 平铺模块文件,每个模块必须在自己的目录内维护 `mod.rs` 和 `tests/*_test.rs`.
@@ -393,7 +393,7 @@
 - **Cognitive complexity(认知复杂度)**: 普通函数认知复杂度不得超过 15,生命周期调度函数不得超过 20,控制流嵌套不得超过 3 层.超限逻辑必须拆分为更小函数,状态机或策略对象.
 - **Maintainability(可维护性)**: 模块必须高内聚,低耦合,变更局部,测试可定位,文档可追踪.共享可变状态只能出现在明确运行时边界,不得把业务 hot path(业务热路径) 或 data plane(数据面) 逻辑混入 supervisor core(监督器核心).
 - **Crates.io readiness(发布就绪)**: 发布前必须满足 crates.io(软件包发布平台) manifest(清单),README(说明文档),LICENSE(许可证),CHANGELOG(变更日志),SBOM(软件物料清单),package list(打包清单) 和 dry-run(试运行) 约定.
-- **Naming rule(命名规则)**: 代码命名必须使用 `ConfigState`(配置状态),`SupervisorState`(监督器状态),`ChildState`(子任务状态),`current_state`(当前状态) 和 `state`(状态),不得使用任何 `*Snapshot`,`*View`,`snapshot()` 查询方法或 `state_view` 模块名.
+- **Naming rule(命名规则)**: 代码命名必须使用 `ConfigState`(配置状态),`SupervisorState`(监督器状态),`ChildRuntimeRecord`(子任务运行状态记录),`ManagedChildState`(受管子任务状态),`current_state`(当前状态) 和 `state`(状态),不得使用任何 `*Snapshot`,`*View`,`snapshot()` 查询方法或 `state_view` 模块名.历史文档中的 `ChildState`(子任务状态) 仅可作受管展示语义指称,不得与 `ChildRuntimeRecord` 并行成为第二套权威命名.
 - **Diagnostics(诊断)**: 每次生命周期迁移都必须能通过 current state(当前状态),事件流,event journal(事件日志缓冲区),`RunSummary`(运行摘要),structured log(结构化日志),tracing span(追踪范围),tracing event(追踪事件),指标更新和命令审计记录解释.
 - **Dependency impact(依赖影响)**: 计划确认 Tokio(异步运行时) 运行时原语,取消,tracing(结构化追踪),metrics(指标) 和事件 fan-out(扇出) 支持生命周期契约后,可以使用它们.actor framework(参与者框架) 和复制第三方 supervisor(监督器) API(接口) 不在范围内.
 - **Glossary coverage(词汇表覆盖)**: 所有专业词汇和反引号词汇都必须登记在 `glossary.md`(词汇表) 中,并保持同一中文说明.
@@ -418,7 +418,7 @@
 - **SC-007**: 在 `RestForOne`(从失败处开始) 下,失败 child(子任务) 之前定义的 child(子任务) 不得重启,失败 child(子任务) 和之后的 child(子任务) 必须重启.
 - **SC-008**: 每次状态迁移都必须产生一条包含 `When`(何时),`Where`(何处) 和 `What`(发生内容) 字段的事件.
 - **SC-009**: current state(当前状态) 必须返回每个 child(子任务) 的当前状态,健康状态,generation(代次),attempt(尝试次数),restart count(重启次数),last failure(最近失败) 和 path(路径).
-- **SC-010**: 所有 backoff(退避),timeout(超时),heartbeat(心跳) 和 meltdown(熔断) 测试都必须使用确定的 test time(测试时间),不得依赖真实 sleep(睡眠).
+- **SC-010**: 所有 backoff(退避),timeout(超时),heartbeat(心跳) 和 meltdown(熔断) 测试都必须使用确定的 test time(测试时间),不得依赖墙钟驱动的 sleep(睡眠). 本项目集成测试以实现 SC-010 的方式为: `#[tokio::test(start_paused = true)]` 冻结 Tokio mock 时钟(模拟时钟),用 `tokio::time::advance` (或 crate 封装 `rust_supervisor::test_support::test_time`) 推进虚拟时间; 关停树等仍需定时器的场景在测试里用 `with_auto_clock_drive` 与 `timeout` 组合驱动. 子任务体内部仍可写 `tokio::time::sleep`,在暂停运行时下它只绑定虚拟定时器,不视为墙钟等待.
 - **SC-011**: 100% 控制命令审计日志必须说明请求者,原因,目标路径,接受时间,command id(命令标识) 和结果.
 - **SC-012**: 公开模型必须包含 supervisor tree(监督树),child spec(子任务规格),task factory(任务工厂),policy(策略),health(健康),shutdown(关闭),event(事件),state(状态),metrics(指标),audit(审计) 和 handle(句柄) 概念,并且不得出现 actor-model(参与者模型) 术语.
 - **SC-013**: root shutdown(根关闭) 必须按声明顺序的逆序关闭 child(子任务),并在完成后证明 registry(注册表),current state(当前状态),metrics(指标) 和 event journal(事件日志缓冲区) 的最终状态一致.
@@ -439,7 +439,7 @@
 - **SC-028**: cognitive complexity check(认知复杂度检查) 必须证明普通函数认知复杂度不超过 15,生命周期调度函数不超过 20,控制流嵌套不超过 3 层,并且每个超限候选都有已完成拆分记录.
 - **SC-029**: maintainability check(可维护性检查) 必须证明每个模块只有清晰职责,跨模块依赖只通过公开契约类型发生,行为变化有对应测试和文档,共享可变状态集中在运行时边界,并且新增代码没有把业务 data plane(数据面) 混入 supervisor core(监督器核心).
 - **SC-030**: SBOM check(SBOM 检查) 必须证明 `artifacts/sbom/rust-supervisor.cdx.json` 和 `artifacts/sbom/rust-supervisor.spdx.json` 存在,格式有效,包含 crate(包) 本身,直接依赖,传递依赖,license(许可证),checksum(校验和) 和生成工具信息,并且依赖版本与 `Cargo.lock` 一致.
-- **SC-031**: naming check(命名检查) 必须证明全仓源码, 示例, 公开契约和文档中不存在任何 `*Snapshot`, `*View`, `snapshot()` 查询方法或 `state_view` 模块名, 并且统一使用 `ConfigState`(配置状态), `SupervisorState`(监督器状态), `ChildState`(子任务状态), `current_state`(当前状态) 和 `state`(状态). 检查不得跳过 dashboard(看板), IPC(进程间通信) 或 UI(用户界面) 协议边界.
+- **SC-031**: naming check(命名检查) 必须证明全仓源码, 示例, 公开契约和文档中不存在任何 `*Snapshot`, `*View`, `snapshot()` 查询方法或 `state_view` 模块名, 并且统一使用 `ConfigState`(配置状态), `SupervisorState`(监督器状态), `ChildRuntimeRecord`(子任务运行状态记录), `ManagedChildState`(受管子任务状态), `current_state`(当前状态) 和 `state`(状态); 术语 `ChildState`(子任务状态) 若出现仅允许作为历史受管展示语义说明, 不得与 `ChildRuntimeRecord` 并行成为第二权威命名. 检查不得跳过 dashboard(看板), IPC(进程间通信) 或 UI(用户界面) 协议边界.
 - **SC-032**: test naming check(测试命名检查) 必须证明所有测试文件都以 `_test.rs` 结尾,并且 integration test(集成测试) 只出现在 `src/tests/*_test.rs`,unit test(单元测试) 只出现在模块自己的 `tests/*_test.rs`.
 - **SC-033**: YAML configuration check(YAML 配置检查) 必须证明 rust-config-tree(集中配置树) v0.1.9 只通过 `*.yaml` 主配置文件加载 supervisor(监督器) 配置,并且 quickstart(快速开始),示例,契约和文档都不把 TOML(配置格式) 或 JSON(数据交换格式) 作为主配置格式.
 - **SC-034**: glossary coverage check(词汇表覆盖检查) 必须证明 `specs/001-create-supervisor-core/glossary.md` 存在,并覆盖规格,计划,数据模型,公开契约,quickstart(快速开始) 和任务清单中的专业词汇以及所有反引号词汇.

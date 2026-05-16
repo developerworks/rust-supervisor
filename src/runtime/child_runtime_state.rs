@@ -3,7 +3,8 @@
 use crate::child_runner::runner::{ChildRunHandle, ChildRunReport, wait_for_report};
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailure, ChildControlOperation, ChildLivenessState,
-    ChildRuntimeRecord, ChildStopState, RestartLimitState,
+    ChildRuntimeRecord, ChildStopState, GenerationFencePhase, GenerationFenceState,
+    PendingRestartSummary, RestartLimitState,
 };
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
@@ -195,6 +196,10 @@ pub struct ChildRuntimeState {
     pub last_control_failure: Option<ChildControlFailure>,
     /// Attempt for the most recent stale heartbeat event.
     pub stale_event_attempt: Option<ChildStartCount>,
+    /// Generation fencing state for restart coordination.
+    pub generation_fence: GenerationFenceState,
+    /// Captured [`ChildRuntime`] identifiers registered immediately before a fenced restart advances the registry so spawn failures restore the superseded bookkeeping.
+    pub registry_identity_anchor_for_spawn_attempt: Option<(Generation, ChildStartCount, u64)>,
 }
 
 impl ChildRuntimeState {
@@ -241,6 +246,8 @@ impl ChildRuntimeState {
             stop_deadline_at_unix_nanos: None,
             last_control_failure: None,
             stale_event_attempt: None,
+            generation_fence: GenerationFenceState::placeholder(),
+            registry_identity_anchor_for_spawn_attempt: None,
         }
     }
 
@@ -266,6 +273,8 @@ impl ChildRuntimeState {
         self.generation = Some(generation);
         self.attempt = Some(attempt);
         self.status = Some(status);
+        self.generation_fence.active_generation = Some(generation);
+        self.generation_fence.active_attempt = Some(attempt);
         self.cancellation_token = Some(handle.cancellation_token);
         self.abort_handle = Some(handle.abort_handle);
         self.completion_receiver = Some(handle.completion_receiver);
@@ -279,9 +288,9 @@ impl ChildRuntimeState {
         self.stop_deadline_at_unix_nanos = None;
         self.last_control_failure = None;
         self.stale_event_attempt = None;
+        self.registry_identity_anchor_for_spawn_attempt = None;
+        self.generation_fence.phase = GenerationFencePhase::Open;
     }
-
-    /// Clears the current active attempt handles.
     ///
     /// # Arguments
     ///
@@ -294,6 +303,8 @@ impl ChildRuntimeState {
         self.generation = None;
         self.attempt = None;
         self.status = None;
+        self.generation_fence.active_generation = None;
+        self.generation_fence.active_attempt = None;
         self.cancellation_token = None;
         self.abort_handle = None;
         self.completion_receiver = None;
@@ -303,6 +314,7 @@ impl ChildRuntimeState {
         self.abort_requested = false;
         self.stop_deadline_at_unix_nanos = None;
         self.stale_event_attempt = None;
+        self.registry_identity_anchor_for_spawn_attempt = None;
         self.stop_state = ChildStopState::NoActiveAttempt;
     }
 
@@ -487,6 +499,11 @@ impl ChildRuntimeState {
             self.restart_limit.clone(),
             self.stop_state,
             self.last_control_failure.clone(),
+            self.generation_fence.phase,
+            self.generation_fence
+                .pending_restart
+                .as_ref()
+                .map(PendingRestartSummary::from),
         )
     }
 }

@@ -8,7 +8,8 @@ use crate::control::command::{CommandResult, CurrentState, ManagedChildState};
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailure, ChildControlFailurePhase, ChildControlOperation,
     ChildControlResult as RuntimeChildControlResult, ChildLivenessState, ChildRuntimeRecord,
-    ChildStopState, RestartLimitState,
+    ChildStopState, GenerationFenceDecision, GenerationFenceOutcome, GenerationFencePhase,
+    PendingRestartSummary, RestartLimitState,
 };
 use crate::readiness::signal::ReadinessState;
 use schemars::JsonSchema;
@@ -508,6 +509,123 @@ impl DashboardChildControlFailure {
     }
 }
 
+/// Dashboard projection for generation fencing phases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardGenerationFencePhase {
+    /// No fencing wait state.
+    Open,
+    /// Restart accepted; waiting for the old attempt to stop.
+    WaitingForOldStop,
+    /// Abort escalated against the outdated attempt.
+    AbortingOld,
+    /// Fence cleared; eligible to spawn the queued generation when other gates permit.
+    ReadyToStart,
+    /// Record removed or fencing closed due to supervisor shutdown semantics.
+    Closed,
+}
+
+impl From<GenerationFencePhase> for DashboardGenerationFencePhase {
+    /// Mirrors the runtime enumeration into dashboard JSON payloads.
+    fn from(value: GenerationFencePhase) -> Self {
+        match value {
+            GenerationFencePhase::Open => Self::Open,
+            GenerationFencePhase::WaitingForOldStop => Self::WaitingForOldStop,
+            GenerationFencePhase::AbortingOld => Self::AbortingOld,
+            GenerationFencePhase::ReadyToStart => Self::ReadyToStart,
+            GenerationFencePhase::Closed => Self::Closed,
+        }
+    }
+}
+
+/// Dashboard projection for generation fencing decisions tied to restart commands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DashboardGenerationFenceDecision {
+    /// Immediately spawned due to lacking an active attempt.
+    StartedImmediately,
+    /// Queued until an active attempt observes stop semantics.
+    QueuedAfterStop,
+    /// Duplicate restart merged onto the existing pending fence request.
+    AlreadyPending,
+    /// Supervisor shutdown prevents further restart progress.
+    BlockedByShutdown,
+    /// Structured rejection surfaced through dashboard conflicts.
+    Rejected,
+}
+
+impl From<GenerationFenceDecision> for DashboardGenerationFenceDecision {
+    /// Maps runtime restart fence decisions onto dashboard labels.
+    fn from(value: GenerationFenceDecision) -> Self {
+        match value {
+            GenerationFenceDecision::StartedImmediately => Self::StartedImmediately,
+            GenerationFenceDecision::QueuedAfterStop => Self::QueuedAfterStop,
+            GenerationFenceDecision::AlreadyPending => Self::AlreadyPending,
+            GenerationFenceDecision::BlockedByShutdown => Self::BlockedByShutdown,
+            GenerationFenceDecision::Rejected => Self::Rejected,
+        }
+    }
+}
+
+/// Dashboard projection covering optional pending restart fingerprints.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DashboardPendingRestartSummary {
+    /// Old generation locked during the queued restart handshake.
+    pub old_generation: u64,
+    /// Old attempt locked during the queued restart handshake.
+    pub old_attempt: u64,
+    /// Target generation that should start after cleanup completes.
+    pub target_generation: u64,
+}
+
+impl From<&PendingRestartSummary> for DashboardPendingRestartSummary {
+    /// Converts numeric runtime identifiers into wire-friendly dashboard fields.
+    fn from(value: &PendingRestartSummary) -> Self {
+        Self {
+            old_generation: value.old_generation.value,
+            old_attempt: value.old_attempt.value,
+            target_generation: value.target_generation.value,
+        }
+    }
+}
+
+/// Dashboard projection of structured generation fencing command outcomes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DashboardGenerationFenceOutcome {
+    /// High-level fencing decision surfaced to operators.
+    pub decision: DashboardGenerationFenceDecision,
+    /// Serialized old generation counterpart when meaningful.
+    pub old_generation: Option<u64>,
+    /// Serialized old attempt counterpart when meaningful.
+    pub old_attempt: Option<u64>,
+    /// Serialized queued target generation counterpart when meaningful.
+    pub target_generation: Option<u64>,
+    /// Mirrors runtime cancel delivery semantics during restart flows.
+    pub cancel_delivered: bool,
+    /// Mirrors runtime abort delivery semantics during restart flows.
+    pub abort_requested: bool,
+    /// Optional structured failure propagated when decisions reject restart work.
+    pub conflict: Option<DashboardChildControlFailure>,
+}
+
+impl From<&GenerationFenceOutcome> for DashboardGenerationFenceOutcome {
+    /// Converts nested runtime payloads into serialized dashboard equivalents.
+    fn from(outcome: &GenerationFenceOutcome) -> Self {
+        Self {
+            decision: outcome.decision.into(),
+            old_generation: outcome.old_generation.map(|generation| generation.value),
+            old_attempt: outcome.old_attempt.map(|attempt| attempt.value),
+            target_generation: outcome.target_generation.map(|generation| generation.value),
+            cancel_delivered: outcome.cancel_delivered,
+            abort_requested: outcome.abort_requested,
+            conflict: outcome
+                .conflict
+                .as_ref()
+                .map(DashboardChildControlFailure::from_failure),
+        }
+    }
+}
+
 /// Dashboard projection of one child runtime record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardChildRuntimeRecord {
@@ -533,6 +651,10 @@ pub struct DashboardChildRuntimeRecord {
     pub stop_state: DashboardChildStopState,
     /// Most recent control failure.
     pub failure: Option<DashboardChildControlFailure>,
+    /// Generation fencing phase mirroring runtime projection.
+    pub generation_fence_phase: DashboardGenerationFencePhase,
+    /// Pending restart summary when the runtime still waits on the old attempt.
+    pub pending_restart: Option<DashboardPendingRestartSummary>,
 }
 
 impl DashboardChildRuntimeRecord {
@@ -563,6 +685,11 @@ impl DashboardChildRuntimeRecord {
                 .failure
                 .as_ref()
                 .map(DashboardChildControlFailure::from_failure),
+            generation_fence_phase: record.generation_fence_phase.into(),
+            pending_restart: record
+                .pending_restart
+                .as_ref()
+                .map(DashboardPendingRestartSummary::from),
         }
     }
 }
@@ -632,6 +759,8 @@ pub struct DashboardChildControlResult {
     pub idempotent: bool,
     /// Current failure reason.
     pub failure: Option<DashboardChildControlFailure>,
+    /// Optional serialized generation fence outcome for restart-style commands.
+    pub generation_fence: Option<DashboardGenerationFenceOutcome>,
 }
 
 impl DashboardChildControlResult {
@@ -667,6 +796,10 @@ impl DashboardChildControlResult {
                 .failure
                 .as_ref()
                 .map(DashboardChildControlFailure::from_failure),
+            generation_fence: outcome
+                .generation_fence
+                .as_ref()
+                .map(DashboardGenerationFenceOutcome::from),
         }
     }
 }

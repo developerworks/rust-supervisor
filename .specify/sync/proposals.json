@@ -1,0 +1,143 @@
+{
+  "generated": "2026-05-15T21:16:00Z",
+  "based_on_drift_report": "2026-05-15T21:10:00Z",
+  "summary": {
+    "backfill_open": 0,
+    "align_applied": 1,
+    "human_decision_open": 0,
+    "backfill_applied": 8,
+    "new_spec": 0,
+    "remove": 0,
+    "applied_closed": 9
+  },
+  "interactive_session": {
+    "next_proposal_id": null,
+    "instruction": "Proposal P9 APPLIED 2026-05-15; proposal queue empty. Run speckit.sync.analyze after material spec or code changes."
+  },
+  "proposals": [
+    {
+      "id": "P1",
+      "spec_id": "001-create-supervisor-core",
+      "requirement": "FR-063",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/001-create-supervisor-core/spec.md",
+      "spec_says": "ChildRuntimeRecord-centered naming; ChildState as legacy display-only",
+      "code_does": "ChildRuntimeRecord, ChildControlResult, current_state API",
+      "resolution": "FR-063 amended; aligned with 004-3 naming",
+      "notes": "Merged in earlier iteration; drift report no longer lists FR-063 as drifted"
+    },
+    {
+      "id": "P2",
+      "spec_id": "001-create-supervisor-core",
+      "requirement": "SC-010",
+      "direction": "ALIGN",
+      "chosen_option": "2b",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_note": "src/tests/* use #[tokio::test(start_paused = true)] and test_support::test_time; spec SC-010 documents paused Tokio + advance pattern",
+      "residual": "Minor follow-up: direct sleep in some test bodies under paused runtime; tests/dashboard_* outside src/tests/ still worth audit",
+      "options": [
+        {
+          "key": "2a",
+          "direction": "BACKFILL",
+          "summary": "Allow bounded patterns outside paused harness where documented"
+        },
+        {
+          "key": "2b",
+          "direction": "ALIGN",
+          "summary": "Paused runtime plus test_time helpers (implemented)"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "spec_id": "001-create-supervisor-core",
+      "requirement": "FR-072 FR-073 FR-074",
+      "direction": "BACKFILL",
+      "chosen_option": "3a",
+      "confidence": "MEDIUM",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/001-create-supervisor-core/spec.md",
+      "applied_note": "FR-072–074 extended with Governance scope paragraphs: process-level acceptance via tasks.md, .specify/, speckit, PR workflow; no single cargo test guard required",
+      "options": [
+        {
+          "key": "3a",
+          "direction": "BACKFILL",
+          "summary": "Mark as process-level requirements bound to speckit and PR workflow"
+        },
+        {
+          "key": "3b",
+          "summary": "Add lightweight cargo test gate for tasks.md or sync freshness"
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "spec_id": "002-config-schema-support",
+      "requirement": "metadata",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/002-config-schema-support/spec.md",
+      "applied_note": "Status promoted Draft to Accepted per interactive approve (2026-05-17)",
+      "resolution": "Update Status from Draft when review completes"
+    },
+    {
+      "id": "P5",
+      "spec_id": "003-supervisor-dashboard",
+      "requirement": "scope-clarification",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/003-supervisor-dashboard/spec.md",
+      "applied_note": "Append Repository scope table to specs/003-supervisor-dashboard/spec.md (user 下一步 advancing P5, 2026-05-17)",
+      "resolution": "Add repository scope table for target vs relay vs UI"
+    },
+    {
+      "id": "P6",
+      "spec_id": "004-1 / 004-3",
+      "requirement": "metadata",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/004-1-runtime-lifecycle-guard/spec.md, specs/004-3-child-runtime-state-control/spec.md",
+      "applied_note": "Status Draft to Accepted; tasks.md Polish entries T037 and T051 record Proposal P6; user approve 批准 (2026-05-15)",
+      "resolution": "Promote Draft to Accepted after batch review"
+    },
+    {
+      "id": "P7",
+      "spec_id": "004-4-generation-fencing",
+      "requirement": "FR-002 backoff",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/004-4-generation-fencing/spec.md, specs/004-4-generation-fencing/contracts/generation-fencing.md, specs/004-4-generation-fencing/plan.md",
+      "applied_note": "FR-004, SC-005, contract Runtime Semantics DelayedSpawnAttached subsection, plan Delayed spawn mailbox; user 继续 (2026-05-15)",
+      "resolution": "Document FR or sub-bullet for DelayedSpawnAttached and activate_instance on control loop"
+    },
+    {
+      "id": "P8",
+      "spec_id": "004-4-generation-fencing",
+      "requirement": "test-only replay API",
+      "direction": "BACKFILL",
+      "confidence": "HIGH",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/004-4-generation-fencing/plan.md",
+      "applied_note": "plan Testing Stale report test replay + Complexity Tracking cross-ref; tasks T034; interactive approve A (2026-05-15)",
+      "resolution": "Document hidden test hook in plan.md for SC-003 stale scenarios"
+    },
+    {
+      "id": "P9",
+      "spec_id": "001 vs 004-3",
+      "requirement": "glossary",
+      "direction": "BACKFILL",
+      "confidence": "MEDIUM",
+      "resolution_status": "APPLIED",
+      "applied_path": "specs/001-create-supervisor-core/glossary.md, specs/001-create-supervisor-core/tasks.md (T144)",
+      "applied_note": "Policy And State plus Rust Types rows for ChildState axis, ChildRuntimeRecord, ChildRuntimeState, ManagedChildState, ChildControlResult; drift conflicts cleared; interactive 下一步 approve 2026-05-15",
+      "resolution": "ChildState historical mapping to ChildRuntimeRecord in glossary"
+    }
+  ]
+}

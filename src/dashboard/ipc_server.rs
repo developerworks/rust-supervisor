@@ -203,6 +203,7 @@ impl DashboardIpcService {
             } = result
             {
                 let dashboard_state = DashboardCurrentState::from_current_state(&runtime_state);
+                // Dashboard model attaches generation fence phase and pending restart via `DashboardCurrentState`.
                 state.runtime_state = runtime_state
                     .child_runtime_records
                     .iter()

@@ -14,6 +14,7 @@ use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
+use rust_supervisor::test_support::test_time::{advance_test_clock, with_auto_clock_drive};
 use rust_supervisor::{runtime::supervisor::Supervisor, task::factory::TaskFactory};
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,7 +22,7 @@ use tokio::sync::{Notify, mpsc};
 use tokio::time::timeout;
 
 /// Verifies that shutdown cancels every running child child_start_count.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_cancels_all_running_children() {
     let (cancel_sender, mut cancel_receiver) = mpsc::channel(4);
     let spec = SupervisorSpec::root(vec![
@@ -56,7 +57,7 @@ async fn shutdown_tree_cancels_all_running_children() {
 }
 
 /// Verifies that shutdown uses runtime state handles for cancellation.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_pipeline_uses_child_runtime_state_handles_test() {
     let (cancel_sender, mut cancel_receiver) = mpsc::channel(1);
     let child_id = ChildId::new("worker");
@@ -93,11 +94,11 @@ async fn shutdown_pipeline_uses_child_runtime_state_handles_test() {
 }
 
 /// Verifies that completed children are not cancelled again.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_marks_inactive_children_already_exited() {
     let spec = SupervisorSpec::root(vec![finished_child("short")]);
     let handle = start_with_short_policy(spec, true).await;
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    advance_test_clock(Duration::from_millis(50)).await;
 
     let result = shutdown_with_timeout(&handle).await;
 
@@ -114,7 +115,7 @@ async fn shutdown_tree_marks_inactive_children_already_exited() {
 }
 
 /// Verifies that graceful drain follows shutdown order.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_waits_in_shutdown_order() {
     let (cancel_sender, _cancel_receiver) = mpsc::channel(4);
     let spec = SupervisorSpec::root(vec![
@@ -138,7 +139,7 @@ async fn shutdown_tree_waits_in_shutdown_order() {
 }
 
 /// Verifies that cooperative children become graceful shutdown outcomes.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_records_graceful_child_outcomes() {
     let (cancel_sender, _cancel_receiver) = mpsc::channel(2);
     let spec = SupervisorSpec::root(vec![cancellable_child("worker", cancel_sender)]);
@@ -154,7 +155,7 @@ async fn shutdown_tree_records_graceful_child_outcomes() {
 }
 
 /// Verifies that non-cooperative children are aborted after graceful timeout.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_aborts_straggler_after_timeout() {
     let spec = SupervisorSpec::root(vec![stubborn_child("stubborn")]);
     let handle = start_with_short_policy(spec, true).await;
@@ -169,7 +170,7 @@ async fn shutdown_tree_aborts_straggler_after_timeout() {
 }
 
 /// Verifies that repeated shutdown returns the cached report as idempotent.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn repeated_shutdown_tree_returns_cached_idempotent_report() {
     let (cancel_sender, _cancel_receiver) = mpsc::channel(2);
     let spec = SupervisorSpec::root(vec![cancellable_child("worker", cancel_sender)]);
@@ -188,7 +189,7 @@ async fn repeated_shutdown_tree_returns_cached_idempotent_report() {
 }
 
 /// Verifies that abort-disabled policy records a late report.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_records_late_child_report_when_abort_is_disabled() {
     let spec = SupervisorSpec::root(vec![late_reporting_child("late")]);
     let handle = start_with_short_policy(spec, false).await;
@@ -203,7 +204,7 @@ async fn shutdown_tree_records_late_child_report_when_abort_is_disabled() {
 }
 
 /// Verifies that paused runtime state still waits for the active report.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_pipeline_waits_for_paused_runtime_state_report() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -236,12 +237,10 @@ async fn shutdown_pipeline_waits_for_paused_runtime_state_report() {
     );
 
     let shutdown_handle = handle.clone();
-    let mut shutdown_task =
-        tokio::spawn(async move { shutdown_with_timeout(&shutdown_handle).await });
+    let shutdown_task = tokio::spawn(async move { shutdown_with_timeout(&shutdown_handle).await });
+    advance_test_clock(Duration::from_millis(20)).await;
     assert!(
-        timeout(Duration::from_millis(20), &mut shutdown_task)
-            .await
-            .is_err(),
+        !shutdown_task.is_finished(),
         "shutdown should wait for the paused child report"
     );
 
@@ -255,7 +254,7 @@ async fn shutdown_pipeline_waits_for_paused_runtime_state_report() {
 }
 
 /// Verifies that quarantined runtime state still waits for the active report.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_pipeline_waits_for_quarantined_runtime_state_report() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -292,12 +291,10 @@ async fn shutdown_pipeline_waits_for_quarantined_runtime_state_report() {
     );
 
     let shutdown_handle = handle.clone();
-    let mut shutdown_task =
-        tokio::spawn(async move { shutdown_with_timeout(&shutdown_handle).await });
+    let shutdown_task = tokio::spawn(async move { shutdown_with_timeout(&shutdown_handle).await });
+    advance_test_clock(Duration::from_millis(20)).await;
     assert!(
-        timeout(Duration::from_millis(20), &mut shutdown_task)
-            .await
-            .is_err(),
+        !shutdown_task.is_finished(),
         "shutdown should wait for the quarantined child report"
     );
 
@@ -311,7 +308,7 @@ async fn shutdown_pipeline_waits_for_quarantined_runtime_state_report() {
 }
 
 /// Verifies that removed runtime state skips the shutdown path.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_pipeline_skips_removed_runtime_state() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -385,10 +382,12 @@ async fn start_with_t046_policy(spec: SupervisorSpec) -> SupervisorHandle {
 
 /// Requests shutdown and unwraps the structured shutdown result.
 async fn shutdown_with_timeout(handle: &SupervisorHandle) -> ShutdownResult {
-    let command_result = timeout(
-        Duration::from_secs(2),
-        handle.shutdown_tree("operator", "real shutdown pipeline test"),
-    )
+    let handle = handle.clone();
+    let command_result = with_auto_clock_drive(timeout(Duration::from_secs(2), async move {
+        handle
+            .shutdown_tree("operator", "real shutdown pipeline test")
+            .await
+    }))
     .await
     .expect("shutdown command should complete")
     .expect("shutdown command should succeed");

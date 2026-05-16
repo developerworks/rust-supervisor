@@ -3,6 +3,7 @@
 //! The handle owns the command sender side and exposes asynchronous control
 //! methods. It keeps command construction separate from runtime execution.
 
+use crate::child_runner::runner::ChildRunReport;
 use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
 use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
@@ -404,6 +405,37 @@ impl SupervisorHandle {
             .lock()
             .map(|pipeline| pipeline.test_recorder.clone())
             .unwrap_or_default()
+    }
+
+    /// Hidden integration-test hook that feeds a synthetic [`ChildRunReport`] through the mailbox.
+    ///
+    /// Production callers must not rely on this hook.
+    #[doc(hidden)]
+    pub async fn generation_fencing_replay_child_exit_for_test(
+        &self,
+        report: ChildRunReport,
+    ) -> Result<(), SupervisorError> {
+        if let Some(report_final) = self.control_plane.final_report() {
+            return Err(runtime_exit_error(&report_final));
+        }
+        if !self.control_plane.is_alive() {
+            return Err(SupervisorError::InvalidTransition {
+                message: format!(
+                    "runtime control loop is not alive: state={}",
+                    self.control_plane.health().state.as_str()
+                ),
+            });
+        }
+        self.command_sender
+            .send(RuntimeLoopMessage::ControlPlane(
+                ControlPlaneMessage::ReplayChildExitForTest {
+                    report: Box::new(report),
+                },
+            ))
+            .await
+            .map_err(|_| SupervisorError::InvalidTransition {
+                message: "runtime control loop is closed".to_owned(),
+            })
     }
 
     /// Sends one control command and waits for the result.

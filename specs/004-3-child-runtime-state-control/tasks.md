@@ -161,6 +161,7 @@ Rust single crate(Rust 单包): 仓库根目录下的 `src/`, `tests/` 和 `Carg
 - [X] T048 在仓库根目录运行 `cargo fmt`, 提交格式修正(如有). 本任务会格式化多个 Rust(编程语言) 文件, 不得标记为 `[P]`.
 - [X] T049 在仓库根目录运行 `cargo test --test supervisor_child_runtime_state_control_test --test supervisor_control_test --test supervisor_real_shutdown_pipeline_test --test supervisor_runtime_lifecycle_test --test supervisor_shutdown_test --test observability_smoke_test --test dashboard_protocol_shape_test --test supervisor_examples_test --test control_test`, 确认控制命令请求字段没有漂移, `CommandResult::ChildState(子任务状态命令结果)` 到 `ChildControl(子任务控制)` 的调用结果替换与 `CurrentState.child_runtime_records(当前状态子任务运行状态记录集合)` 调用结果扩展在全部受影响测试中通过. 然后运行 `cargo test --test naming_contract_test source_code_uses_approved_state_names`, 确认命名契约覆盖本功能新增公开类型. `supervisor_child_runtime_state_control_test(子任务运行状态控制测试)` 和 `control_test(控制测试)` 必须来自 `Cargo.toml` 注册目标, `dashboard_protocol_shape_test(仪表盘协议形状测试)` 必须来自既有 `tests/dashboard_protocol_shape_test.rs` 自动发现目标.
 - [X] T050 在仓库根目录运行 `cargo test -- --skip checked_artifacts_avoid_forbidden_state_terms` 完成近似全量验收, 然后运行 `cargo test` 完成完整验收. 如果完整验收失败点来自 sibling UI(同级用户界面) 命名契约, 则必须记录阻塞测试名称和失败断言, 并与 sibling UI(同级用户界面) 命名契约修复一同协调.
+- [X] T051 按同步决议 **speckit.sync.proposals** 中 **Proposal P6** **APPLIED**, 把 **`specs/004-3-child-runtime-state-control/spec.md`** 头部 **`Status(状态)`** 设为 **`Accepted(已接受)`**, 并写入 **`Updated(更新日期)`** **2026-05-15** 与漂移同步批次落账一致.
 
 ---
 

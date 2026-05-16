@@ -4,13 +4,15 @@
 //! and applies supervisor restart strategy decisions.
 
 use crate::child_runner::run_exit::TaskExit;
-use crate::child_runner::runner::{ChildRunReport, ChildRunner, wait_for_report};
+use crate::child_runner::runner::{ChildRunHandle, ChildRunReport, ChildRunner, wait_for_report};
 use crate::control::command::{
     CommandMeta, CommandResult, ControlCommand, CurrentState, ManagedChildState,
 };
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailure, ChildControlFailurePhase, ChildControlOperation,
-    ChildControlResult, ChildLivenessState, ChildStopState,
+    ChildControlResult, ChildLivenessState, ChildStopState, GenerationFenceDecision,
+    GenerationFenceOutcome, GenerationFencePhase, PendingRestart, RestartLimitState,
+    StaleAttemptReport, StaleReportHandling,
 };
 use crate::error::types::SupervisorError;
 use crate::event::payload::{SupervisorEvent, What, Where};
@@ -166,6 +168,42 @@ impl RuntimeControlState {
         }
     }
 
+    /// Records an active attempt after `spawn_once` so exit routing matches registry identities.
+    ///
+    /// Immediate spawns run this inline; delayed backoff spawns deliver the same handle through
+    /// [`ChildStartMessage::DelayedSpawnAttached`] so `activate_instance` stays on the control loop.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child owning the spawned attempt.
+    /// - `path`: Supervisor path used when inserting placeholder runtime records.
+    /// - `generation`: Generation pinned from the registry [`ChildRuntime`] passed to `spawn_once`.
+    /// - `attempt`: Attempt counter pinned from the same registry record.
+    /// - `handle`: Runner handle carrying cancellation and completion endpoints.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn attach_spawned_child_handle(
+        &mut self,
+        child_id: ChildId,
+        path: SupervisorPath,
+        generation: Generation,
+        attempt: ChildStartCount,
+        handle: ChildRunHandle,
+    ) {
+        let mut completion_receiver = handle.completion_receiver.clone();
+        let sender = self.command_sender.clone();
+        self.child_runtime_states
+            .entry(child_id.clone())
+            .or_insert_with(|| ChildRuntimeState::new_placeholder(child_id.clone(), path))
+            .activate_instance(generation, attempt, ChildAttemptStatus::Running, handle);
+        tokio::spawn(async move {
+            let result = wait_for_report(&mut completion_receiver).await;
+            send_child_result(sender, child_id, result).await;
+        });
+    }
+
     /// Executes one control command.
     ///
     /// # Arguments
@@ -196,9 +234,8 @@ impl RuntimeControlState {
                 &meta,
                 event_sender,
             )),
-            ControlCommand::RestartChild { child_id, .. } => {
-                self.spawn_child_start(child_id.clone(), true, Duration::ZERO);
-                Ok(self.set_child_state(child_id, ManagedChildState::Running))
+            ControlCommand::RestartChild { meta, child_id } => {
+                Ok(self.execute_restart_child_control(child_id, &meta, event_sender))
             }
             ControlCommand::PauseChild { meta, child_id } => Ok(self.execute_stop_child_control(
                 child_id,
@@ -257,6 +294,23 @@ impl RuntimeControlState {
             .child_runtime_states
             .get(&child_id)
             .is_some_and(ChildRuntimeState::has_active_attempt);
+        let matches_pending_fence = self
+            .child_runtime_states
+            .get(&child_id)
+            .and_then(|state| state.generation_fence.pending_restart.as_ref())
+            .is_some_and(|pending_restart| {
+                pending_restart.old_generation == generation
+                    && pending_restart.old_attempt == attempt
+            });
+        let matches_active_attempt =
+            self.child_runtime_states
+                .get(&child_id)
+                .is_some_and(|state| {
+                    state.has_active_attempt()
+                        && state.generation == Some(generation)
+                        && state.attempt == Some(attempt)
+                });
+        let mut stale_idle_report = false;
         let count_restart_failure = self
             .child_runtime_states
             .get(&child_id)
@@ -265,26 +319,121 @@ impl RuntimeControlState {
                     && restart_limit_counts_exit(&exit_kind)
             });
         let late_report = !was_active && self.shutdown.phase() == ShutdownPhase::Completed;
+        let mut fence_pending_release = None::<PendingRestart>;
+
         if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
-            if runtime_state.stop_state == ChildStopState::CancelDelivered {
-                runtime_state.stop_state = ChildStopState::Completed;
+            if matches_pending_fence {
+                if runtime_state.stop_state == ChildStopState::CancelDelivered {
+                    runtime_state.stop_state = ChildStopState::Completed;
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path: runtime_state.path.clone(),
+                        generation: Some(generation),
+                        attempt: Some(attempt),
+                        correlation_id: CorrelationId::from_uuid(
+                            runtime_state
+                                .generation_fence
+                                .pending_restart
+                                .as_ref()
+                                .expect("matches pending implies Some")
+                                .command_id,
+                        ),
+                        what: What::ChildControlStopCompleted {
+                            child_id: child_id.clone(),
+                            generation,
+                            attempt,
+                            exit_kind: exit_kind.clone(),
+                        },
+                    });
+                }
+                fence_pending_release = runtime_state.generation_fence.pending_restart.take();
+                if fence_pending_release.is_some() {
+                    let drained_correlation_id = CorrelationId::from_uuid(
+                        fence_pending_release
+                            .as_ref()
+                            .expect("matches pending implies restart bookkeeping exists")
+                            .command_id,
+                    );
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path: runtime_state.path.clone(),
+                        generation: Some(generation),
+                        attempt: Some(attempt),
+                        correlation_id: drained_correlation_id,
+                        what: What::ChildRestartFencePendingDrained {
+                            child_id: child_id.clone(),
+                        },
+                    });
+                }
+                runtime_state.generation_fence.phase = GenerationFencePhase::ReadyToStart;
+                runtime_state.status = Some(ChildAttemptStatus::Stopped);
+                runtime_state.clear_instance();
+            } else if matches_active_attempt
+                || late_report
+                || self.shutdown.phase() != ShutdownPhase::Idle
+            {
+                if runtime_state.stop_state == ChildStopState::CancelDelivered {
+                    runtime_state.stop_state = ChildStopState::Completed;
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path: runtime_state.path.clone(),
+                        generation: Some(generation),
+                        attempt: Some(attempt),
+                        correlation_id: CorrelationId::new(),
+                        what: What::ChildControlStopCompleted {
+                            child_id: child_id.clone(),
+                            generation,
+                            attempt,
+                            exit_kind: exit_kind.clone(),
+                        },
+                    });
+                }
+                runtime_state.status = Some(ChildAttemptStatus::Stopped);
+                runtime_state.clear_instance();
+            } else {
+                stale_idle_report = true;
+                let observed_at_unix_nanos = self.time_base.now_unix_nanos();
+                let current_generation = runtime_state.generation;
+                let current_attempt = runtime_state.attempt;
+                let stale_fact = StaleAttemptReport::new(
+                    child_id.clone(),
+                    generation,
+                    attempt,
+                    current_generation,
+                    current_attempt,
+                    exit_kind.clone(),
+                    StaleReportHandling::RecordedForAudit,
+                    observed_at_unix_nanos,
+                );
+                runtime_state.generation_fence.last_stale_report = Some(stale_fact);
                 pending_events.push(PendingRuntimeEvent {
                     child_id: child_id.clone(),
                     path: runtime_state.path.clone(),
                     generation: Some(generation),
                     attempt: Some(attempt),
                     correlation_id: CorrelationId::new(),
-                    what: What::ChildControlStopCompleted {
+                    what: What::ChildAttemptStaleReport {
                         child_id: child_id.clone(),
-                        generation,
-                        attempt,
+                        reported_generation: generation,
+                        reported_attempt: attempt,
+                        current_generation,
+                        current_attempt,
                         exit_kind: exit_kind.clone(),
+                        handled_as: StaleReportHandling::RecordedForAudit,
                     },
                 });
             }
-            runtime_state.status = Some(ChildAttemptStatus::Stopped);
-            runtime_state.clear_instance();
         }
+
+        if stale_idle_report {
+            let _ignored = event_sender.send(format!("child_exit:{child_id}"));
+            for event in pending_events {
+                self.emit_pending_event(event);
+            }
+            self.reconcile_stop_deadlines();
+            return;
+        }
+
         self.record_child_exit(report);
         let restart_limit_refreshed =
             self.refresh_restart_limit_for_child(&child_id, count_restart_failure);
@@ -305,6 +454,16 @@ impl RuntimeControlState {
         if late_report {
             let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
         }
+
+        if let Some(pending) = fence_pending_release {
+            for event in pending_events {
+                self.emit_pending_event(event);
+            }
+            self.spawn_pending_restart_target(child_id.clone(), pending, exit_kind.clone());
+            self.reconcile_stop_deadlines();
+            return;
+        }
+
         if !self.should_apply_automatic_policy(&child_id) {
             if self
                 .child_runtime_states
@@ -378,6 +537,36 @@ impl RuntimeControlState {
         event_sender: &broadcast::Sender<String>,
     ) {
         let _ignored = event_sender.send(format!("child_start_failed:{child_id}:{message}"));
+
+        let mut fenced_spawn_recovery = Option::<(Generation, ChildStartCount, u64)>::None;
+        let mut repaired_fenced_spawn = false;
+
+        if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
+            if runtime_state.generation_fence.phase == GenerationFencePhase::ReadyToStart {
+                fenced_spawn_recovery = runtime_state
+                    .registry_identity_anchor_for_spawn_attempt
+                    .take();
+                repaired_fenced_spawn = true;
+                runtime_state.generation_fence.phase = GenerationFencePhase::Open;
+                runtime_state.last_control_failure = Some(ChildControlFailure::new(
+                    ChildControlFailurePhase::WaitCompletion,
+                    message,
+                    true,
+                ));
+            }
+        }
+
+        if repaired_fenced_spawn {
+            if let Some((generation, attempt, restart_count)) = fenced_spawn_recovery {
+                if let Some(registry_runtime) = self.registry.child_mut(&child_id) {
+                    registry_runtime.generation = generation;
+                    registry_runtime.child_start_count = attempt;
+                    registry_runtime.restart_count = restart_count;
+                }
+            }
+            return;
+        }
+
         let _result = self.set_child_state(child_id, ManagedChildState::Quarantined);
     }
 
@@ -886,6 +1075,7 @@ impl RuntimeControlState {
             runtime_state.observe_liveness(&self.time_base),
             operation_before == operation,
             runtime_state.last_control_failure.clone(),
+            None,
         );
         CommandResult::ChildControl { outcome }
     }
@@ -956,6 +1146,7 @@ impl RuntimeControlState {
                 runtime_state.last_control_failure.clone(),
                 runtime_state,
                 &self.time_base,
+                None,
             )
         };
 
@@ -1205,6 +1396,431 @@ impl RuntimeControlState {
             .saturating_add(self.manifests.len())
     }
 
+    /// Handles `RestartChild` with generation fencing semantics.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child targeted by restart.
+    /// - `meta`: Audit metadata forwarded from the caller.
+    /// - `event_sender`: Lifecycle text broadcaster.
+    ///
+    /// # Returns
+    ///
+    /// Returns a structured [`CommandResult`] that always uses [`CommandResult::ChildControl`].
+    fn execute_restart_child_control(
+        &mut self,
+        child_id: ChildId,
+        meta: &CommandMeta,
+        event_sender: &broadcast::Sender<String>,
+    ) -> CommandResult {
+        let correlation_id = CorrelationId::from_uuid(meta.command_id.value);
+
+        if self.registry.child(&child_id).is_none() {
+            let outcome = restart_child_unknown_outcome(child_id.clone());
+            self.emit_restart_child_completed(
+                outcome.clone(),
+                meta,
+                correlation_id,
+                event_sender,
+                Vec::new(),
+            );
+            return CommandResult::ChildControl { outcome };
+        }
+
+        if self.shutdown.phase() != ShutdownPhase::Idle {
+            return self.restart_child_blocked_by_shutdown(
+                &child_id,
+                meta,
+                correlation_id,
+                event_sender,
+            );
+        }
+
+        if !self.child_runtime_states.contains_key(&child_id) {
+            let placeholder = self
+                .registry
+                .child(&child_id)
+                .map(|runtime| {
+                    ChildRuntimeState::new_placeholder(runtime.id.clone(), runtime.path.clone())
+                })
+                .unwrap_or_else(|| {
+                    ChildRuntimeState::new_placeholder(
+                        child_id.clone(),
+                        SupervisorPath::root().join(child_id.value.clone()),
+                    )
+                });
+            self.child_runtime_states
+                .insert(child_id.clone(), placeholder);
+        }
+
+        let mut pending_events = Vec::new();
+
+        // Records which restart branch matched before optional immediate spawn bookkeeping.
+        enum RestartPrep {
+            // Outcome resolved without visiting `spawn_child_start`.
+            Completed(ChildControlResult),
+            // Child had no activity and should restart immediately via the shared spawn helper.
+            DeferredImmediate {
+                // Operation captured before spawning.
+                operation_before: ChildControlOperation,
+            },
+        }
+
+        let restart_prep = {
+            let runtime_state = self
+                .child_runtime_states
+                .get_mut(&child_id)
+                .expect("runtime state exists after insertion");
+            if runtime_state.generation_fence.pending_restart.is_some() {
+                let pending = runtime_state
+                    .generation_fence
+                    .pending_restart
+                    .as_mut()
+                    .expect("checked pending restart");
+                pending.duplicate_request_count = pending.duplicate_request_count.saturating_add(1);
+                let pending_for_conflict = pending.clone();
+                pending_events.push(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: runtime_state.path.clone(),
+                    generation: Some(pending_for_conflict.old_generation),
+                    attempt: Some(pending_for_conflict.old_attempt),
+                    correlation_id: CorrelationId::from_uuid(meta.command_id.value),
+                    what: What::ChildRestartConflict {
+                        child_id: child_id.clone(),
+                        current_generation: Some(pending_for_conflict.old_generation),
+                        current_attempt: Some(pending_for_conflict.old_attempt),
+                        target_generation: Some(pending_for_conflict.target_generation),
+                        command_id: meta.command_id.value.to_string(),
+                        decision: "already_pending".to_owned(),
+                        reason: "duplicate restart merged into pending restart".to_owned(),
+                    },
+                });
+                let fence = GenerationFenceOutcome::new(
+                    GenerationFenceDecision::AlreadyPending,
+                    Some(pending_for_conflict.old_generation),
+                    Some(pending_for_conflict.old_attempt),
+                    Some(pending_for_conflict.target_generation),
+                    false,
+                    pending_for_conflict.abort_requested,
+                    None,
+                );
+                let operation_before = runtime_state.operation;
+                RestartPrep::Completed(build_child_control_outcome(
+                    operation_before,
+                    false,
+                    false,
+                    runtime_state.last_control_failure.clone(),
+                    runtime_state,
+                    &self.time_base,
+                    Some(fence),
+                ))
+            } else if !runtime_state.has_active_attempt() {
+                RestartPrep::DeferredImmediate {
+                    operation_before: runtime_state.operation,
+                }
+            } else {
+                let old_generation = runtime_state
+                    .generation
+                    .expect("active attempt owns a generation");
+                let old_attempt = runtime_state
+                    .attempt
+                    .expect("active attempt owns an attempt counter");
+                let cancel_delivered = runtime_state.cancel();
+                let deadline = self
+                    .time_base
+                    .now_unix_nanos()
+                    .saturating_add(self.shutdown.policy.graceful_timeout.as_nanos());
+                runtime_state.stop_deadline_at_unix_nanos = Some(deadline);
+                let target_generation = old_generation.next();
+                let requested_at = self.time_base.now_unix_nanos();
+                let pending = PendingRestart::new(
+                    meta.command_id.value,
+                    meta.requested_by.clone(),
+                    meta.reason.clone(),
+                    old_generation,
+                    old_attempt,
+                    target_generation,
+                    requested_at,
+                    deadline,
+                    false,
+                    0,
+                );
+                runtime_state.generation_fence.pending_restart = Some(pending.clone());
+                runtime_state.generation_fence.phase = GenerationFencePhase::WaitingForOldStop;
+
+                if cancel_delivered {
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path: runtime_state.path.clone(),
+                        generation: Some(old_generation),
+                        attempt: Some(old_attempt),
+                        correlation_id,
+                        what: What::ChildControlCancelDelivered {
+                            child_id: child_id.clone(),
+                            generation: old_generation,
+                            attempt: old_attempt,
+                            command: "restart_child".to_owned(),
+                            command_id: meta.command_id.value.to_string(),
+                        },
+                    });
+                    let _ignored = event_sender.send(format!(
+                        "child_control_cancel_delivered:{child_id}:restart_child"
+                    ));
+                }
+
+                pending_events.push(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path: runtime_state.path.clone(),
+                    generation: Some(old_generation),
+                    attempt: Some(old_attempt),
+                    correlation_id,
+                    what: What::ChildRestartFenceEntered {
+                        child_id: child_id.clone(),
+                        old_generation,
+                        old_attempt,
+                        target_generation,
+                        command_id: meta.command_id.value.to_string(),
+                        requested_by: meta.requested_by.clone(),
+                        reason: meta.reason.clone(),
+                        stop_deadline_at_unix_nanos: deadline,
+                    },
+                });
+
+                let operation_before = runtime_state.operation;
+                let fence = GenerationFenceOutcome::new(
+                    GenerationFenceDecision::QueuedAfterStop,
+                    Some(old_generation),
+                    Some(old_attempt),
+                    Some(target_generation),
+                    cancel_delivered,
+                    false,
+                    None,
+                );
+                RestartPrep::Completed(build_child_control_outcome(
+                    operation_before,
+                    cancel_delivered,
+                    false,
+                    None,
+                    runtime_state,
+                    &self.time_base,
+                    Some(fence),
+                ))
+            }
+        };
+
+        let outcome = match restart_prep {
+            RestartPrep::Completed(outcome) => outcome,
+            RestartPrep::DeferredImmediate { operation_before } => {
+                self.spawn_child_start(child_id.clone(), true, Duration::ZERO);
+                let runtime_state = self
+                    .child_runtime_states
+                    .get_mut(&child_id)
+                    .expect("runtime state exists");
+                let target_generation = self
+                    .registry
+                    .child(&child_id)
+                    .map(|runtime| runtime.generation);
+                let fence = GenerationFenceOutcome::new(
+                    GenerationFenceDecision::StartedImmediately,
+                    None,
+                    None,
+                    target_generation,
+                    false,
+                    false,
+                    None,
+                );
+                build_child_control_outcome(
+                    operation_before,
+                    false,
+                    false,
+                    runtime_state.last_control_failure.clone(),
+                    runtime_state,
+                    &self.time_base,
+                    Some(fence),
+                )
+            }
+        };
+
+        self.emit_restart_child_completed(
+            outcome.clone(),
+            meta,
+            correlation_id,
+            event_sender,
+            pending_events,
+        );
+
+        CommandResult::ChildControl { outcome }
+    }
+
+    /// Emits [`What::ChildControlCommandCompleted`] for an explicit restart command.
+    ///
+    /// # Arguments
+    ///
+    /// - `outcome`: Command outcome returned to the caller.
+    /// - `meta`: Audit metadata carried from the command.
+    /// - `correlation_id`: Correlation shared with related fence events.
+    /// - `event_sender`: Legacy text broadcaster.
+    /// - `pending_events`: Fence or cancellation events that must publish first.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn emit_restart_child_completed(
+        &mut self,
+        outcome: ChildControlResult,
+        meta: &CommandMeta,
+        correlation_id: CorrelationId,
+        event_sender: &broadcast::Sender<String>,
+        mut pending_events: Vec<PendingRuntimeEvent>,
+    ) {
+        for event in pending_events.drain(..) {
+            self.emit_pending_event(event);
+        }
+        let outcome_identifier = outcome.child_id.clone();
+        let outcome_path = self
+            .child_runtime_states
+            .get(&outcome.child_id)
+            .map(|state| state.path.clone())
+            .or_else(|| {
+                self.registry
+                    .child(&outcome.child_id)
+                    .map(|runtime| runtime.path.clone())
+            })
+            .unwrap_or_else(|| SupervisorPath::root().join(outcome.child_id.value.clone()));
+        self.emit_pending_event(PendingRuntimeEvent {
+            child_id: outcome.child_id.clone(),
+            path: outcome_path,
+            generation: outcome.generation,
+            attempt: outcome.attempt,
+            correlation_id,
+            what: What::ChildControlCommandCompleted {
+                child_id: outcome.child_id.clone(),
+                command: "restart_child".to_owned(),
+                command_id: meta.command_id.value.to_string(),
+                requested_by: meta.requested_by.clone(),
+                reason: meta.reason.clone(),
+                result: child_control_result_label(&outcome).to_owned(),
+                outcome: Box::new(outcome),
+            },
+        });
+        let _ignored = event_sender.send(format!(
+            "child_control_command_completed:{}:restart_child",
+            outcome_identifier
+        ));
+    }
+
+    /// Blocks restart while the supervisor tree is not idle.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Target child identifier.
+    /// - `meta`: Audit metadata from the command.
+    /// - `correlation_id`: Correlation binding typed events.
+    /// - `event_sender`: Legacy text broadcaster.
+    ///
+    /// # Returns
+    ///
+    /// Returns [`CommandResult::ChildControl`] with [`GenerationFenceDecision::BlockedByShutdown`].
+    fn restart_child_blocked_by_shutdown(
+        &mut self,
+        child_id: &ChildId,
+        meta: &CommandMeta,
+        correlation_id: CorrelationId,
+        event_sender: &broadcast::Sender<String>,
+    ) -> CommandResult {
+        if !self.child_runtime_states.contains_key(child_id) {
+            let placeholder = self
+                .registry
+                .child(child_id)
+                .map(|runtime| {
+                    ChildRuntimeState::new_placeholder(runtime.id.clone(), runtime.path.clone())
+                })
+                .unwrap_or_else(|| {
+                    ChildRuntimeState::new_placeholder(
+                        child_id.clone(),
+                        SupervisorPath::root().join(child_id.value.clone()),
+                    )
+                });
+            self.child_runtime_states
+                .insert(child_id.clone(), placeholder);
+        }
+
+        let outcome = {
+            let runtime_state = self
+                .child_runtime_states
+                .get_mut(child_id)
+                .expect("runtime state exists");
+            runtime_state.generation_fence.phase = GenerationFencePhase::Closed;
+            let failure = ChildControlFailure::new(
+                ChildControlFailurePhase::WaitCompletion,
+                "supervisor tree is shutting down",
+                false,
+            );
+            let fence = GenerationFenceOutcome::new(
+                GenerationFenceDecision::BlockedByShutdown,
+                runtime_state.generation,
+                runtime_state.attempt,
+                None,
+                false,
+                false,
+                Some(failure.clone()),
+            );
+            let operation_before = runtime_state.operation;
+            runtime_state.last_control_failure = Some(failure);
+            build_child_control_outcome(
+                operation_before,
+                false,
+                false,
+                runtime_state.last_control_failure.clone(),
+                runtime_state,
+                &self.time_base,
+                Some(fence),
+            )
+        };
+
+        let blocked_events = match self
+            .child_runtime_states
+            .get(child_id)
+            .map(|runtime_state| {
+                (
+                    runtime_state.path.clone(),
+                    runtime_state.generation,
+                    runtime_state.attempt,
+                )
+            }) {
+            Some((path, current_generation, current_attempt)) => {
+                vec![PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path,
+                    generation: current_generation,
+                    attempt: current_attempt,
+                    correlation_id,
+                    what: What::ChildRestartConflict {
+                        child_id: child_id.clone(),
+                        current_generation,
+                        current_attempt,
+                        target_generation: None,
+                        command_id: meta.command_id.value.to_string(),
+                        decision: "rejected".to_owned(),
+                        reason: "restart rejected while supervisor tree is shutting down"
+                            .to_owned(),
+                    },
+                }]
+            }
+            None => Vec::new(),
+        };
+
+        self.emit_restart_child_completed(
+            outcome.clone(),
+            meta,
+            correlation_id,
+            event_sender,
+            blocked_events,
+        );
+
+        CommandResult::ChildControl { outcome }
+    }
+
     /// Builds the current runtime state report.
     ///
     /// # Arguments
@@ -1248,6 +1864,125 @@ impl RuntimeControlState {
         }
     }
 
+    /// Spawns the target generation queued by a pending manual restart once the old attempt exits.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child undergoing a fenced restart.
+    /// - `pending`: Accepted restart bookkeeping that pins the identity triple transition.
+    /// - `old_exit`: Exit classification observed for the old attempt.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn spawn_pending_restart_target(
+        &mut self,
+        child_id: ChildId,
+        pending: PendingRestart,
+        old_exit: TaskExit,
+    ) {
+        let Some(registry_identity_anchor) = self.registry.child(&child_id).map(|runtime| {
+            (
+                runtime.generation,
+                runtime.child_start_count,
+                runtime.restart_count,
+            )
+        }) else {
+            return;
+        };
+        let path = self
+            .child_runtime_states
+            .get(&child_id)
+            .map(|state| state.path.clone())
+            .unwrap_or_else(|| SupervisorPath::root().join(child_id.value.clone()));
+        let correlation_id = CorrelationId::from_uuid(pending.command_id);
+
+        if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
+            runtime_state.registry_identity_anchor_for_spawn_attempt =
+                Some(registry_identity_anchor);
+        }
+
+        {
+            let Some(registry_runtime) = self.registry.child_mut(&child_id) else {
+                return;
+            };
+            registry_runtime.generation = pending.target_generation;
+            registry_runtime.child_start_count = registry_runtime.child_start_count.next();
+            registry_runtime.restart_count = registry_runtime.restart_count.saturating_add(1);
+            registry_runtime.status = ChildRuntimeStatus::Starting;
+        }
+
+        let Some(runtime) = self.registry.child(&child_id).cloned() else {
+            return;
+        };
+        let new_generation = runtime.generation;
+        let new_attempt = runtime.child_start_count;
+
+        let path_for_handles = path.clone();
+
+        match ChildRunner::new().spawn_once(runtime) {
+            Ok(handle) => {
+                let sender = self.command_sender.clone();
+                self.emit_pending_event(PendingRuntimeEvent {
+                    child_id: child_id.clone(),
+                    path,
+                    generation: Some(new_generation),
+                    attempt: Some(new_attempt),
+                    correlation_id,
+                    what: What::ChildRestartFenceReleased {
+                        child_id: child_id.clone(),
+                        old_generation: pending.old_generation,
+                        old_attempt: pending.old_attempt,
+                        target_generation: pending.target_generation,
+                        exit_kind: old_exit.clone(),
+                    },
+                });
+                let mut completion_receiver = handle.completion_receiver.clone();
+                self.child_runtime_states
+                    .entry(child_id.clone())
+                    .or_insert_with(|| {
+                        ChildRuntimeState::new_placeholder(child_id.clone(), path_for_handles)
+                    })
+                    .activate_instance(
+                        new_generation,
+                        new_attempt,
+                        ChildAttemptStatus::Running,
+                        handle,
+                    );
+                tokio::spawn(async move {
+                    let result = wait_for_report(&mut completion_receiver).await;
+                    send_child_result(sender, child_id, result).await;
+                });
+            }
+            Err(error) => {
+                let message = error.to_string();
+                if let Some(runtime_state) = self.child_runtime_states.get_mut(&child_id) {
+                    let identity_anchor_triple_opt = runtime_state
+                        .registry_identity_anchor_for_spawn_attempt
+                        .take();
+                    if let Some((generation, attempt, restart_count)) = identity_anchor_triple_opt {
+                        if let Some(registry_runtime) = self.registry.child_mut(&child_id) {
+                            registry_runtime.generation = generation;
+                            registry_runtime.child_start_count = attempt;
+                            registry_runtime.restart_count = restart_count;
+                        }
+                        // Keep the superseded `(generation, attempt)` identity visible alongside the queued target spawn failure diagnostics.
+                        runtime_state.generation = Some(generation);
+                        runtime_state.attempt = Some(attempt);
+                        runtime_state.status = Some(ChildAttemptStatus::Stopped);
+                    }
+                    runtime_state.generation_fence.phase = GenerationFencePhase::Open;
+                    runtime_state.last_control_failure = Some(ChildControlFailure::new(
+                        ChildControlFailurePhase::WaitCompletion,
+                        message,
+                        true,
+                    ));
+                }
+                // Avoid enqueueing a second asynchronous start-failure loop message because `last_control_failure` already records the deterministic spawn diagnostics.
+            }
+        }
+    }
+
     /// Reconciles expired stop deadlines without blocking the control loop.
     ///
     /// # Arguments
@@ -1261,6 +1996,81 @@ impl RuntimeControlState {
         let now = self.time_base.now_unix_nanos();
         let mut pending_events = Vec::new();
         for runtime_state in self.child_runtime_states.values_mut() {
+            let fence_escalation = if let Some(pending_restart) =
+                runtime_state.generation_fence.pending_restart.as_ref()
+            {
+                if pending_restart.abort_requested {
+                    None
+                } else if runtime_state.generation_fence.phase
+                    == GenerationFencePhase::WaitingForOldStop
+                    && runtime_state.stop_state == ChildStopState::CancelDelivered
+                    && runtime_state.has_active_attempt()
+                    && now >= pending_restart.stop_deadline_at_unix_nanos
+                {
+                    match (runtime_state.generation, runtime_state.attempt) {
+                        (Some(old_generation), Some(old_attempt)) => Some((
+                            pending_restart.command_id,
+                            pending_restart.target_generation,
+                            pending_restart.stop_deadline_at_unix_nanos,
+                            runtime_state.child_id.clone(),
+                            runtime_state.path.clone(),
+                            old_generation,
+                            old_attempt,
+                        )),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            if let Some((
+                command_id,
+                target_generation,
+                deadline_ns,
+                fence_child_id,
+                fence_path,
+                old_generation,
+                old_attempt,
+            )) = fence_escalation
+            {
+                let delivered = runtime_state.abort();
+                if delivered {
+                    if let Some(pending_mut) = &mut runtime_state.generation_fence.pending_restart {
+                        pending_mut.abort_requested = true;
+                    }
+                    runtime_state.generation_fence.phase = GenerationFencePhase::AbortingOld;
+                    pending_events.push(PendingRuntimeEvent {
+                        child_id: fence_child_id.clone(),
+                        path: fence_path,
+                        generation: Some(old_generation),
+                        attempt: Some(old_attempt),
+                        correlation_id: CorrelationId::from_uuid(command_id),
+                        what: What::ChildRestartFenceAbortRequested {
+                            child_id: fence_child_id,
+                            old_generation,
+                            old_attempt,
+                            target_generation,
+                            command_id: command_id.to_string(),
+                            deadline_unix_nanos: deadline_ns,
+                        },
+                    });
+                }
+            }
+
+            if runtime_state.generation_fence.pending_restart.is_some() {
+                continue;
+            }
+
+            if matches!(
+                runtime_state.generation_fence.phase,
+                GenerationFencePhase::WaitingForOldStop | GenerationFencePhase::AbortingOld
+            ) {
+                continue;
+            }
+
             if runtime_state.stop_state != ChildStopState::CancelDelivered {
                 continue;
             }
@@ -1361,6 +2171,49 @@ impl RuntimeControlState {
     ///
     /// This function does not return a value.
     fn spawn_child_start(&mut self, child_id: ChildId, is_restart: bool, delay: Duration) {
+        if self.shutdown.phase() != ShutdownPhase::Idle {
+            return;
+        }
+        if let Some(runtime_state) = self.child_runtime_states.get(&child_id) {
+            if runtime_state.generation_fence.pending_restart.is_some() {
+                if is_restart {
+                    let path = runtime_state.path.clone();
+                    let generation = runtime_state.generation;
+                    let attempt = runtime_state.attempt;
+                    let pending_target = runtime_state
+                        .generation_fence
+                        .pending_restart
+                        .as_ref()
+                        .map(|pending| pending.target_generation);
+                    self.emit_pending_event(PendingRuntimeEvent {
+                        child_id: child_id.clone(),
+                        path,
+                        generation,
+                        attempt,
+                        correlation_id: CorrelationId::new(),
+                        what: What::ChildRestartConflict {
+                            child_id: child_id.clone(),
+                            current_generation: generation,
+                            current_attempt: attempt,
+                            target_generation: pending_target,
+                            command_id: "runtime-policy".to_owned(),
+                            decision: "rejected".to_owned(),
+                            reason: "automatic restart suppressed while pending manual restart holds the fence".to_owned(),
+                        },
+                    });
+                }
+                return;
+            }
+            if matches!(
+                runtime_state.generation_fence.phase,
+                GenerationFencePhase::WaitingForOldStop
+                    | GenerationFencePhase::AbortingOld
+                    | GenerationFencePhase::Closed
+                    | GenerationFencePhase::ReadyToStart
+            ) {
+                return;
+            }
+        }
         let Some(runtime) = self.prepare_child_start(&child_id, is_restart) else {
             return;
         };
@@ -1368,40 +2221,51 @@ impl RuntimeControlState {
         if !delay.is_zero() {
             tokio::spawn(async move {
                 tokio::time::sleep(delay).await;
-                let child_id = runtime.id.clone();
-                let result = ChildRunner::new().run_once(runtime).await;
-                send_child_result(sender, child_id, result).await;
+                let child_id_for_msg = runtime.id.clone();
+                let path = runtime.path.clone();
+                let generation = runtime.generation;
+                let attempt = runtime.child_start_count;
+                match ChildRunner::new().spawn_once(runtime) {
+                    Ok(handle) => {
+                        let _ignored = sender
+                            .send(RuntimeLoopMessage::ChildStart(
+                                ChildStartMessage::DelayedSpawnAttached {
+                                    child_id: child_id_for_msg,
+                                    path,
+                                    generation,
+                                    attempt,
+                                    handle,
+                                },
+                            ))
+                            .await;
+                    }
+                    Err(error) => {
+                        tokio::spawn(async move {
+                            send_child_result(sender, child_id_for_msg, Err(error)).await;
+                        });
+                    }
+                }
             });
             return;
         }
 
-        let child_id = runtime.id.clone();
+        let child_id_cloned = runtime.id.clone();
         let path = runtime.path.clone();
         let generation = runtime.generation;
         let child_start_count = runtime.child_start_count;
-        if let Some(existing) = self.child_runtime_states.get_mut(&child_id) {
-            existing.abort();
-        }
         match ChildRunner::new().spawn_once(runtime) {
             Ok(handle) => {
-                let mut completion_receiver = handle.completion_receiver.clone();
-                self.child_runtime_states
-                    .entry(child_id.clone())
-                    .or_insert_with(|| ChildRuntimeState::new_placeholder(child_id.clone(), path))
-                    .activate_instance(
-                        generation,
-                        child_start_count,
-                        ChildAttemptStatus::Running,
-                        handle,
-                    );
-                tokio::spawn(async move {
-                    let result = wait_for_report(&mut completion_receiver).await;
-                    send_child_result(sender, child_id, result).await;
-                });
+                self.attach_spawned_child_handle(
+                    child_id_cloned,
+                    path,
+                    generation,
+                    child_start_count,
+                    handle,
+                );
             }
             Err(error) => {
                 tokio::spawn(async move {
-                    send_child_result(sender, child_id, Err(error)).await;
+                    send_child_result(sender, child_id_cloned, Err(error)).await;
                 });
             }
         }
@@ -1412,7 +2276,7 @@ impl RuntimeControlState {
     /// # Arguments
     ///
     /// - `child_id`: Child that should run.
-    /// - `is_restart`: Whether this child_start_count is a restart child_start_count.
+    /// - `bump_restart_counters`: Whether this spawn should bump generation accounting like a restart.
     ///
     /// # Returns
     ///
@@ -1420,10 +2284,10 @@ impl RuntimeControlState {
     fn prepare_child_start(
         &mut self,
         child_id: &ChildId,
-        is_restart: bool,
+        bump_restart_counters: bool,
     ) -> Option<ChildRuntime> {
         let runtime = self.registry.child_mut(child_id)?;
-        if is_restart {
+        if bump_restart_counters {
             runtime.child_start_count = runtime.child_start_count.next();
             runtime.generation = runtime.generation.next();
             runtime.restart_count = runtime.restart_count.saturating_add(1);
@@ -1446,6 +2310,7 @@ impl RuntimeControlState {
 /// - `failure`: Failure observed during command handling.
 /// - `runtime_state`: Runtime state used as the source of truth.
 /// - `time_base`: Runtime time base used for liveness timestamps.
+/// - `generation_fence`: Optional fencing metadata for restart commands only.
 ///
 /// # Returns
 ///
@@ -1457,6 +2322,7 @@ fn build_child_control_outcome(
     failure: Option<ChildControlFailure>,
     runtime_state: &mut ChildRuntimeState,
     time_base: &RuntimeTimeBase,
+    generation_fence: Option<GenerationFenceOutcome>,
 ) -> ChildControlResult {
     let liveness = runtime_state.observe_liveness(time_base);
     ChildControlResult::new(
@@ -1472,6 +2338,7 @@ fn build_child_control_outcome(
         liveness,
         idempotent,
         failure,
+        generation_fence,
     )
 }
 
@@ -1671,6 +2538,20 @@ pub async fn run_control_loop(
             }) => {
                 state.handle_child_start_failed(child_id, message, &event_sender);
             }
+            RuntimeLoopMessage::ChildStart(ChildStartMessage::DelayedSpawnAttached {
+                child_id,
+                path,
+                generation,
+                attempt,
+                handle,
+            }) => {
+                state.attach_spawned_child_handle(child_id, path, generation, attempt, handle);
+            }
+            RuntimeLoopMessage::ControlPlane(ControlPlaneMessage::ReplayChildExitForTest {
+                report,
+            }) => {
+                state.handle_child_exit(*report, &event_sender);
+            }
             RuntimeLoopMessage::ControlPlane(ControlPlaneMessage::Shutdown {
                 meta,
                 reply_sender,
@@ -1849,6 +2730,51 @@ fn restart_limit_for_child_in_spec(
 /// Returns a conservative effectively-unbounded restart limit.
 fn default_restart_limit() -> RestartLimit {
     RestartLimit::new(u32::MAX, Duration::from_secs(60))
+}
+
+/// Builds a deterministic restart outcome for unknown identifiers.
+///
+/// # Arguments
+///
+/// - `child_id`: Stable child referenced by the command.
+///
+/// # Returns
+///
+/// Returns a rejection [`ChildControlResult`] with structured fencing metadata.
+fn restart_child_unknown_outcome(child_id: ChildId) -> ChildControlResult {
+    let conflict = ChildControlFailure::new(
+        ChildControlFailurePhase::WaitCompletion,
+        "unknown child",
+        false,
+    );
+    let fence = GenerationFenceOutcome::new(
+        GenerationFenceDecision::Rejected,
+        None,
+        None,
+        None,
+        false,
+        false,
+        Some(conflict.clone()),
+    );
+    ChildControlResult::new(
+        child_id,
+        None,
+        None,
+        ChildControlOperation::Active,
+        ChildControlOperation::Active,
+        None,
+        false,
+        ChildStopState::NoActiveAttempt,
+        RestartLimitState::default(),
+        ChildLivenessState::new(
+            None,
+            false,
+            crate::readiness::signal::ReadinessState::Unreported,
+        ),
+        false,
+        Some(conflict),
+        Some(fence),
+    )
 }
 
 /// Classifies a child control command outcome for metrics.

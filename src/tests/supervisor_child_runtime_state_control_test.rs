@@ -21,13 +21,15 @@ use rust_supervisor::spec::child::{
 use rust_supervisor::spec::supervisor::{RestartLimit, SupervisorSpec};
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
+use rust_supervisor::test_support::test_time::{advance_test_clock, with_auto_clock_drive};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::{Notify, mpsc};
+use tokio::time::Instant;
 
 /// Verifies that current state exposes active child runtime records.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn current_state_exposes_full_runtime_state_fields_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let spec = SupervisorSpec::root(vec![
@@ -56,7 +58,7 @@ async fn current_state_exposes_full_runtime_state_fields_test() {
 }
 
 /// Verifies that readiness distinguishes unreported and not-ready values.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn current_state_distinguishes_unreported_from_degraded_readiness_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let degrade = Arc::new(Notify::new());
@@ -75,7 +77,7 @@ async fn current_state_distinguishes_unreported_from_degraded_readiness_test() {
     );
 
     degrade.notify_waiters();
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    advance_test_clock(Duration::from_millis(20)).await;
     let degraded = current_state(&handle).await;
     assert_eq!(
         degraded.child_runtime_records[0].liveness.readiness,
@@ -86,7 +88,7 @@ async fn current_state_distinguishes_unreported_from_degraded_readiness_test() {
 }
 
 /// Verifies that missing heartbeat and stale heartbeat are distinct.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let heartbeat = Arc::new(Notify::new());
@@ -110,7 +112,7 @@ async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
     assert!(!initial_record.liveness.heartbeat_stale);
 
     heartbeat.notify_waiters();
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    advance_test_clock(Duration::from_millis(20)).await;
     let observed = current_state(&handle).await;
     assert!(
         observed.child_runtime_records[0]
@@ -119,7 +121,7 @@ async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
             .is_some()
     );
 
-    tokio::time::sleep(Duration::from_secs(
+    advance_test_clock(Duration::from_secs(
         DEFAULT_HEARTBEAT_TIMEOUT_SECS.saturating_add(1),
     ))
     .await;
@@ -151,7 +153,7 @@ async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
 }
 
 /// Verifies that pausing a child delivers real cancellation to the task.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn pause_child_delivers_real_cancellation_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -235,7 +237,7 @@ async fn pause_child_delivers_real_cancellation_test() {
 }
 
 /// Verifies that removing a running child cancels and removes its runtime record.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn remove_child_cancels_and_eventually_removes_runtime_state_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -288,7 +290,7 @@ async fn remove_child_cancels_and_eventually_removes_runtime_state_test() {
 }
 
 /// Verifies that quarantine prevents automatic restart after failure.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn quarantine_child_blocks_auto_restart_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
@@ -319,7 +321,7 @@ async fn quarantine_child_blocks_auto_restart_test() {
 }
 
 /// Verifies that pause prevents automatic restart after the active attempt exits.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn pause_child_blocks_auto_restart_after_exit_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
@@ -357,7 +359,7 @@ async fn pause_child_blocks_auto_restart_after_exit_test() {
 }
 
 /// Verifies that a control command targets the currently active attempt.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn control_command_targets_current_instance_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(3);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
@@ -393,7 +395,7 @@ async fn control_command_targets_current_instance_test() {
 }
 
 /// Verifies idempotent repeated stop commands after cancellation delivery.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(3);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(3);
@@ -458,7 +460,7 @@ async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test() {
 }
 
 /// Verifies removing a registered child without an active attempt.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn remove_without_active_instance_returns_no_active_instance_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let spec = SupervisorSpec::root(vec![temporary_success_child("worker", started_sender)]);
@@ -500,7 +502,7 @@ async fn remove_without_active_instance_returns_no_active_instance_test() {
 }
 
 /// Verifies stop deadline failures surface in outcomes and events.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn stop_failure_outcome_carries_phase_and_reason_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -522,7 +524,7 @@ async fn stop_failure_outcome_carries_phase_and_reason_test() {
     );
     assert!(initial.cancel_delivered);
 
-    tokio::time::sleep(Duration::from_millis(40)).await;
+    advance_test_clock(Duration::from_millis(40)).await;
     let state = current_state(&handle).await;
     let record = find_record(&state, "worker");
     let failure = record.failure.as_ref().expect("stop failure should exist");
@@ -572,14 +574,14 @@ async fn stop_failure_outcome_carries_phase_and_reason_test() {
 }
 
 /// Verifies restart limit exhaustion is visible in control outcomes.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn restart_limit_exhaustion_visible_in_outcome_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(4);
     let mut spec = SupervisorSpec::root(vec![always_fail_child("worker", started_sender)]);
     spec.restart_limit = Some(RestartLimit::new(2, Duration::from_secs(60)));
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 3).await;
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    advance_test_clock(Duration::from_millis(30)).await;
 
     let state = current_state(&handle).await;
     let record = find_record(&state, "worker");
@@ -606,7 +608,7 @@ async fn restart_limit_exhaustion_visible_in_outcome_test() {
 }
 
 /// Verifies an operator operation wins over an automatic restart race.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn operation_wins_over_auto_restart_race_test() {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
@@ -851,7 +853,7 @@ async fn wait_for_record_absent(handle: &SupervisorHandle, name: &str) {
             return;
         }
         assert!(Instant::now() < deadline, "record {name} should disappear");
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        advance_test_clock(Duration::from_millis(10)).await;
     }
 }
 
@@ -868,7 +870,7 @@ async fn wait_for_record_without_attempt(handle: &SupervisorHandle, name: &str) 
             Instant::now() < deadline,
             "record {name} should have no active attempt"
         );
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        advance_test_clock(Duration::from_millis(10)).await;
     }
 }
 
@@ -888,23 +890,36 @@ async fn wait_for_record_attempt(handle: &SupervisorHandle, name: &str, expected
             Instant::now() < deadline,
             "record {name} should reach attempt {expected}"
         );
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        advance_test_clock(Duration::from_millis(10)).await;
     }
 }
 
-/// Asserts that no extra child attempt starts in a short observation window.
+/// Asserts that no extra child attempt starts before virtual time elapses.
 async fn assert_no_extra_start(receiver: &mut mpsc::Receiver<String>) {
-    let result = tokio::time::timeout(Duration::from_millis(80), receiver.recv()).await;
-    assert!(result.is_err(), "child should not start again");
+    for _millisecond in 0..80 {
+        match receiver.try_recv() {
+            Ok(_) => panic!("child should not start again"),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+            Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                panic!("start channel disconnected unexpectedly");
+            }
+        }
+        advance_test_clock(Duration::from_millis(1)).await;
+    }
 }
 
-/// Asserts that repeated commands do not deliver extra cancellations.
+/// Asserts that repeated commands do not deliver extra cancellations before virtual time elapses.
 async fn assert_no_extra_cancel(receiver: &mut mpsc::Receiver<String>) {
-    let result = tokio::time::timeout(Duration::from_millis(50), receiver.recv()).await;
-    assert!(
-        result.is_err(),
-        "extra cancellation should not be delivered"
-    );
+    for _millisecond in 0..50 {
+        match receiver.try_recv() {
+            Ok(_) => panic!("extra cancellation should not be delivered"),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+            Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                panic!("cancel channel disconnected unexpectedly");
+            }
+        }
+        advance_test_clock(Duration::from_millis(1)).await;
+    }
 }
 
 /// Counts stale heartbeat events for one child.
@@ -944,7 +959,7 @@ fn heartbeat_stale_metrics_without_child_id(
 async fn assert_current_state_fast_20_reads(handle: &SupervisorHandle) {
     let mut slowest = Duration::ZERO;
     for _index in 0..20 {
-        let started_at = Instant::now();
+        let started_at = std::time::Instant::now();
         let state = current_state(handle).await;
         let elapsed = started_at.elapsed();
         slowest = slowest.max(elapsed);
@@ -986,10 +1001,13 @@ async fn wait_for_started(receiver: &mut mpsc::Receiver<String>, expected: usize
 
 /// Shuts down the supervisor after a test.
 async fn shutdown(handle: SupervisorHandle) {
-    let _result = handle
-        .shutdown_tree("test", "finish child runtime state test")
-        .await
-        .expect("shutdown supervisor");
+    let _result = with_auto_clock_drive(async move {
+        handle
+            .shutdown_tree("test", "finish child runtime state test")
+            .await
+    })
+    .await
+    .expect("shutdown supervisor");
 }
 
 /// Creates a child that reports heartbeat and readiness.

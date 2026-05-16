@@ -5,6 +5,18 @@
 **Status(状态)**: Draft(草稿)
 **Input(输入)**: 用户描述:"依据 `tmp/supervisor-dashboard-plan.md` 创建 feature 003(功能 003). 目标进程必须打开 IPC(进程间通信), 中继必须通过 IPC(进程间通信) 和目标进程通信, 并读取监督树, 状态, 事件和日志. 中继必须对外提供服务器接口, 例如 WebSocket(网络套接字协议). mTLS(双向传输层安全协议认证) 和 WebSocket(网络套接字协议) 必须通过 `wss://` 协同工作. 规格修订要求: 中继可以和多个 IPC(进程间通信) 进行通信. `rust-tokio-supervisor` 必须提供外部化 IPC path(进程间通信路径) 配置, 目标进程使用该配置打开 IPC(进程间通信). 中继必须采用 dynamic registration(动态注册) 方案接收目标进程注册, 而不是在中继配置中写死目标列表. 事件和日志由目标进程在 IPC(进程间通信) 订阅建立后主动推送, 但必须由客户端建立会话后触发该订阅. 远程客户端必须先完成和中继的控制会话建立, 然后才能触发中继与目标进程 IPC(进程间通信) 建立或绑定通信. 最新修订要求: 中继必须在 `~/rust-supervisor-relay` 单独目录实现, 前端必须在 `~/rust-supervisor-ui` 单独目录实现, 并且前端必须使用 shadcn-vue(组件库) 和 Tailwind(样式框架)."
 
+### Repository scope(仓库责任范围)
+
+本表勾选 **Capability(能力层级)** 在三个代码仓之间的 **ownership(主责)**. **✔** 表示该仓实现并交付该行能力的主要代码. **—** 表示该行能力不在该仓实现; 端到端语义仍可通过契约与二进制组合达成. **只检出(current repository only)** 本项目仓时不会出现 relay(中继) 与 UI(用户界面) 的源码树, **not implemented in this crate(仅本 crate 视角下的未落地)** 不自动等同于整条 **User Story** 失败.
+
+| Capability(能力层级) | `rust-tokio-supervisor`(本仓 crate repository) | `rust-supervisor-relay`(旁系 sibling relay 仓) | `rust-supervisor-ui`(旁系 sibling UI 仓) |
+|---|---|---|---|
+| Externalized IPC path(外部化进程间通信路径) configuration, target-local IPC endpoint(目标侧监听端点) binding and in-crate protocol shapes | ✔ | — | — |
+| Target-side payloads for topology/state/events/logs/commands as consumed by relay (target supervisor implementation surface) | ✔ | — | — |
+| Multi-target IPC client pool, Dynamic registration ingest(动态注册受理), leases, reconnect bookkeeping and outbound policy to remote clients | — | ✔ | — |
+| Remote `wss://` termination, Mutual TLS handshake(双向传输层安全协议握手), authenticated control sessions, command forwarding and Audit event propagation(审计事件传播) pipeline | — | ✔ | — |
+| Dashboard operator UX(操作者人机界面流程), Supervisor tree visualization(监督树可视化), filters and local confirmation gates | — | — | ✔ |
+
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
 
 ### User Story 1(用户故事一) - 远程查看监督树和状态 (Priority(优先级): P1)

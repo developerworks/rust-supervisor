@@ -18,9 +18,9 @@
 | `SupervisorPath` | 监督器路径 | 用于定位树中节点的稳定路径. | 日志,指标,事件,current state(当前状态) 和控制命令必须共用它. |
 | `ChildId` | 子任务标识 | child(子任务) 在父级内的稳定标识. | 同一父级范围内必须唯一. |
 | `SupervisorHandle` | 监督器句柄 | 运行时控制入口. | 提供幂等控制命令和状态查询. |
-| `TaskFactory` | 任务工厂 | 为每次启动或重启构造新任务尝试的工厂. | 不得克隆旧任务实例来表达重启. |
-| `TaskContext` | 任务上下文 | 传入任务尝试的运行上下文. | 包含身份,路径,取消,心跳,就绪和事件接收点. |
-| `TaskResult` | 任务结果 | 任务尝试的退出结果. | 必须区分成功,取消和类型化失败. |
+| `TaskFactory` | 任务工厂 | 为每次启动或重启构造新一轮运行实例的工厂. | 不得克隆旧任务实例来表达重启. |
+| `TaskContext` | 任务上下文 | 传入单次运行的任务上下文. | 包含身份,路径,取消,心跳,就绪和事件接收点. |
+| `TaskResult` | 任务结果 | 单次运行的退出结果. | 必须区分成功,取消和类型化失败. |
 | `TaskKind` | 任务类型 | 区分异步工作任务,阻塞工作任务和监督器节点. | 关闭和升级规则依赖它. |
 | `AsyncWorker` | 异步工作任务 | 可通过取消令牌和 abort(强制终止) 管理的异步任务. | 可以使用普通 async task(异步任务) 关闭语义. |
 | `BlockingWorker` | 阻塞工作任务 | `spawn_blocking`(阻塞任务启动) 或其它不可立即 abort(强制终止) 的任务. | 必须有独立关闭策略和升级策略. |
@@ -39,8 +39,12 @@
 | state plane | 状态平面 | 暴露当前状态的读取平面. | 回答当前真实状态,不表示事件历史. |
 | `SupervisorState` | 监督器状态 | 当前监督树状态的只读模型. | 正式命名,不得使用 `*Snapshot` 或 `*View` 命名. |
 | `current_state` | 当前状态 | `SupervisorHandle` 上的当前状态查询命令. | 不得提供 `snapshot()` 查询方法. |
-| `ChildState` | 子任务状态 | child(子任务) 生命周期中的当前状态和只读状态模型. | 正式命名,不得使用 `*Snapshot` 或 `*View` 命名. |
-| `TaskExit` | 任务退出 | 单次任务尝试的退出分类. | 不得只用字符串表达. |
+| `ChildState` | 子任务状态(历史叙述轴) | `001` 早期叙述常用的 child 生命周期状态名族, 仍可在事件载荷, 指标文案或迁移说明中出现. | 现行主轴是 `ChildRuntimeRecord` 与 `ManagedChildState`, 权威路径见 **`specs/004-3-child-runtime-state-control`**. 读者把 **`ChildState`** **理解为历史标签或托管展示用词**, **勿**再把 **`ChildState`** **当成与运行时事实并行的第二条权威写入面**. **新规格不得再发明第三套公开子任务状态命名族**. |
+| `ChildRuntimeRecord` | 子任务运行状态记录 | 由 **`ChildRuntimeState`** **通过 **`to_record`** **导出的结构化公开读出模型**, 携带 **`generation`(代次)** **`attempt`(尝试)** 等字段, 供 **`ChildControlResult`**, **`current_state`** 与 **`dashboard` / IPC(进程间通信)** 对齐. | 权威真源仍是 **`runtime`** 侧的 **`ChildRuntimeState`**. **`ChildRuntimeRecord`** **只承载可越过模块边界的快照语义**, **规程以 **`004-3`** **`spec.md`** **与 **`contracts`** **为准**. |
+| `ChildRuntimeState` | 子任务运行状态记录(运行时) | **`runtime`** **模块持有的可变账本**, **`activate_instance`** **等钩子把活动尝试装订到寄存状态**. | **`pub`** **公开面不得另起平行类型顶替本语义**. **字段与 **`stop_state`** **推进见 **`004-3`**. |
+| `ManagedChildState` | 受管子任务状态 | **操作者与 **`dashboard`** **看到的投影态**, 由 **`contracts`** **Operation Mapping(操作映射)** **表依据 **`operation`** **从 **`ChildControlResult`** 或 **`ChildRuntimeRecord`** 推导. | **审计与 **`IPC`** **展示必须能保持与 **`ChildRuntimeRecord`** **字段一一可追溯**, **`004-3`** **`contracts/child-runtime-state-control.md`** **为裁决来源**. |
+| `ChildControlResult` | 子任务控制结果 | **诸如 **`PauseChild`**, **`RemoveChild`**, **`QuarantineChild`** **等命令的结构化结果载体**, **替代历史 **`CommandResult::ChildState`** 枚举支路**. | **`pub`** **层不得为了所谓兼容而把 **`ChildState`** **命名体系重新塞进 **`CommandResult`**. **全部字段语义由 **`004-3`** **冻结**. |
+| `TaskExit` | 任务退出 | 单次运行的退出分类. | 不得只用字符串表达. |
 | `TaskFailureKind` | 任务失败类别 | 策略引擎使用的类型化失败类别. | 包含 recoverable(可恢复),fatal config(致命配置),panic(恐慌) 等类别. |
 | `SupervisionStrategy` | 监督策略 | 失败后的重启范围策略. | 核心策略包含 `OneForOne`,`OneForAll` 和 `RestForOne`. |
 | `OneForOne` | 一对一 | 只重启失败 child(子任务) 的策略. | 不影响 sibling(同级任务). |
@@ -87,7 +91,7 @@
 | shutdown without orphaned tasks | 关闭后不留下孤儿任务 | root shutdown(根关闭) 完成后 supervisor(监督器) 不再拥有悬挂任务. | 正式术语,不得写成含糊的 `No-Orphan Shutdown`. |
 | lifecycle event | 生命周期事件 | 描述一次状态迁移或治理事实的事件. | 必须包含 `When`,`Where` 和 `What`. |
 | `SupervisorEvent` | 监督器事件 | 生命周期事件的项目自有结构. | 必须可序列化并携带关联标识. |
-| `When` | 何时 | 事件时间维度. | 包含墙钟时间,单调时间,序号,代次和尝试次数. |
+| `When` | 何时 | 事件时间维度. | 包含墙钟时间,单调时间,监督器运行时长,以及运行实例身份在实现中的编码字段. |
 | `Where` | 何处 | 事件位置维度. | 包含路径,父子标识,任务名和源位置. |
 | `What` | 发生内容 | 事件内容维度. | 包含状态迁移,退出原因,失败类别和策略决定. |
 | event stream | 事件流 | 订阅者读取生命周期事件的流. | 回答历史顺序. |
@@ -96,7 +100,7 @@
 | `RunSummary` | 运行摘要 | 故障升级或关闭后的运行诊断摘要. | 必须包含最近事件,失败原因,重启次数,关闭原因和最终状态. |
 | observability pipeline | 可观测性管线 | 把生命周期事实同步到日志,追踪,指标,审计和测试记录器的边界. | 不绑定具体 exporter(导出器). |
 | structured log | 结构化日志 | 带字段的日志事件. | 必须能和生命周期事件关联. |
-| tracing | 结构化追踪 | Rust(编程语言) 生态中的 span/event(追踪范围和事件) 机制. | 每个 child attempt(子任务尝试) 必须有 span(追踪范围). |
+| tracing | 结构化追踪 | Rust(编程语言) 生态中的 span/event(追踪范围和事件) 机制. | 每个子任务运行实例必须有 span(追踪范围). |
 | metrics | 指标 | 可采集的计数器,仪表和直方图. | label(标签) 必须低基数. |
 | audit event | 审计事件 | 记录控制命令请求和结果的事件. | 每个已接受控制命令都必须生成. |
 | test recorder | 测试记录器 | 测试可读取的可观测性信号记录器. | 用于断言信号缺失,滞后和关联关系. |
@@ -159,15 +163,18 @@
 | `SupervisorState` | 监督器状态 | 当前监督树状态的只读模型. | 正式状态类型,不得使用 `*View` 后缀. |
 | `SupervisorRuntime` | 监督器运行时 | 一个监督器范围内的运行时所有权集合. | 拥有注册表,控制循环,state store(状态存储) 和关闭协调器. |
 | `ChildRuntime` | 子任务运行态 | child(子任务) 启动后的运行记录. | 保存状态,句柄,取消令牌和最近失败. |
+| `ChildRuntimeState` | 子任务运行状态记录(运行时) | **`runtime`** **内部可变尝试账本**, **`to_record`** **产出 **`ChildRuntimeRecord`**. | **与 Policy 表同名条目一致**. **生命周期细节见 **`specs/004-3-child-runtime-state-control`**. |
+| `ChildRuntimeRecord` | 子任务运行状态记录(公开) | **`control`**, **`runtime`**, **`dashboard`** **之间交换的快照**, **与 **`generation fencing`(代次隔离)** **叙述相容**. | **与 Policy 表同名条目一致**. |
+| `ChildControlResult` | 子任务控制结果 | **携带 **`ChildAttemptStatus`** **等族的命令结果汇总结构**. | **与 Policy 表同名条目一致**; **取代历史 **`ChildState`** **命令分支**. |
+| `ManagedChildState` | 受管子任务状态 | **面向 **`dashboard`** / **审计的派生态**. | **与 Policy 表同名条目一致**, **映射规则见 **`004-3`** **`contracts`**. |
 | `SupervisorId` | 监督器标识 | supervisor(监督器) 的稳定标识. | 不替代 `SupervisorPath`. |
-| `Generation` | 代次 | child(子任务) 跨重启的代次. | 重启前必须递增或明确记录. |
-| `Attempt` | 尝试次数 | 单个 generation(代次) 内的尝试序号. | 每次 fresh future(新异步任务) 创建时更新. |
+| `RunningInstanceId` | 运行实例标识 | 监督器为同一 `child`(子任务) 的每一次被承认的 `fresh future`(新异步任务) 分配的逻辑编号, 单调变化, 用于把退出报告和观测信号钉到正确的一轮运行上. | 读者向文档与规格统一用本词表达该概念; 不得用 **代次** 或 **尝试** 作为该概念的中文名; 不得用 **epoch**(纪元) 或 Unix 时间戳语义替代. |
 | `SupervisorError` | 监督器错误 | supervisor core(监督器核心) 的类型化错误. | 不得用字符串替代. |
 | `TaskFailure` | 任务失败 | 任务失败的结构化错误. | 必须带失败类别. |
 | `TaskFailureKind` | 任务失败类别 | 策略决策使用的失败分类. | 必须可测试. |
 | `PolicyDecision` | 策略决定 | 策略引擎输出或事件携带的决定. | 必须可以追踪到输入原因. |
 | `PolicyEngine` | 策略引擎 | 读取退出原因和策略并输出决定的组件. | 不得从字符串推断策略. |
-| `EventTime` | 事件时间 | `When`(何时) 的结构化时间数据. | 包含墙钟时间和单调时间. |
+| `EventTime` | 事件时间 | `When`(何时) 的结构化时间数据. | 包含墙钟时间,单调时间,监督器运行时长,以及运行实例身份在实现中的编码字段. |
 | `EventLocation` | 事件位置 | `Where`(何处) 的结构化位置数据. | 包含路径,父子标识和源位置. |
 | `EventPayload` | 事件内容 | `What`(发生内容) 的结构化数据. | 表达状态迁移或治理事实. |
 | `ControlCommand` | 控制命令 | 可审计运行时命令. | 每个已接受命令必须生成审计事件. |
@@ -230,8 +237,8 @@
 | `ChildFailed` | 子任务失败事件 | child(子任务) 失败的事件. | 必须携带失败类别. |
 | `ChildPanicked` | 子任务恐慌事件 | child(子任务) panic(恐慌) 的事件. | 必须触发策略评估. |
 | `BackoffScheduled` | 已安排退避事件 | 系统安排延迟重启的事件. | 必须携带退避时长. |
-| `ChildRestarting` | 子任务正在重启事件 | child(子任务) 即将重启的事件. | attempt(尝试次数) 必须更新. |
-| `ChildRestarted` | 子任务已重启事件 | child(子任务) 完成重启的事件. | 必须能关联旧 attempt(尝试次数). |
+| `ChildRestarting` | 子任务正在重启事件 | child(子任务) 即将重启的事件. | `RunningInstanceId`(运行实例标识) 在进入新一轮运行前必须前进或等价地更新. |
+| `ChildRestarted` | 子任务已重启事件 | child(子任务) 完成重启的事件. | 必须能关联被替换的 `RunningInstanceId`(运行实例标识). |
 | `ChildQuarantined` | 子任务已隔离事件 | child(子任务) 进入隔离的事件. | 必须说明触发原因. |
 | `ChildStopped` | 子任务已停止事件 | child(子任务) 停止的事件. | 关闭或自然结束都可以产生. |
 | `ChildUnhealthy` | 子任务不健康事件 | child(子任务) 健康检查失败的事件. | 必须按策略处理. |
@@ -249,7 +256,7 @@
 |---|---|---|---|
 | `add_child` | 添加子任务 | 运行时添加 child(子任务) 的控制命令. | 必须校验并审计. |
 | `remove_child` | 移除子任务 | 运行时移除 child(子任务) 的控制命令. | 必须先关闭再删除注册表记录. |
-| `restart_child` | 重启子任务 | 对 child(子任务) 发起受策略约束的重启命令. | 必须记录 attempt(尝试次数) 和决定. |
+| `restart_child` | 重启子任务 | 对 child(子任务) 发起受策略约束的重启命令. | 必须记录 `RunningInstanceId`(运行实例标识) 与策略决定. |
 | `pause_child` | 暂停子任务 | 暂停 child(子任务) 治理的控制命令. | 必须幂等. |
 | `resume_child` | 恢复子任务 | 恢复 child(子任务) 治理的控制命令. | 必须幂等. |
 | `quarantine_child` | 隔离子任务 | 手动隔离 child(子任务) 的控制命令. | 必须阻止自动重启. |

@@ -2,7 +2,7 @@
 //!
 //! These tests keep YAML configuration and rust-config-tree ownership visible.
 
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::spec::supervisor::SupervisionStrategy;
 use std::fs;
@@ -24,7 +24,7 @@ fn yaml_config_loads_into_config_state() {
     let config_path = root.join("examples/config/supervisor.yaml");
     let yaml = fs::read_to_string(&config_path).expect("read YAML config");
     let state = parse_config_state(&yaml).expect("parse YAML config");
-    let loaded = load_config_state(&config_path).expect("load YAML config");
+    let loaded = load_config_from_yaml_file(&config_path).expect("load YAML config");
     let spec = loaded.to_supervisor_spec().expect("derive supervisor spec");
 
     assert_eq!(state, loaded);

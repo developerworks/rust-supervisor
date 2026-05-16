@@ -2,8 +2,8 @@
 
 **Feature Branch(功能分支)**: `004-runtime-semantics`
 **Created(创建日期)**: 2026-05-14
-**Updated(更新日期)**: 2026-05-17
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-15
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述整理后为: "当前 TaskContext(任务上下文) 有 CancellationToken(取消令牌), 但是 ChildRunner(子任务运行器) 创建的取消令牌没有被 runtime registry(运行时注册表) 保存, 因此控制命令无法真正取消任务. PauseChild(暂停子任务), RemoveChild(移除子任务), QuarantineChild(隔离子任务) 基本只是改 ManagedChildState(受管子任务状态). 工业级版本需要把每个 child runtime state(子任务运行状态记录) 设计为: spec(声明) + generation(代次) + attempt(尝试) + status(状态) + cancellation_token(取消令牌) + runtime_handle(运行时句柄) + last_heartbeat(最后心跳) + readiness(就绪状态) + restart_limit(重启次数限制). 所有控制命令必须作用在这个真实状态上."
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*

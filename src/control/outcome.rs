@@ -1,9 +1,15 @@
-//! Child control outcome types.
+//! Serializable child control result types used for generation fencing.
+//!
+//! These placeholder names align with the naming contract and future event payloads:
+//! ChildRestartFenceEntered, ChildRestartFenceAbortRequested, ChildRestartFenceReleased,
+//! ChildRestartConflict, ChildAttemptStaleReport.
 
+use crate::child_runner::run_exit::TaskExit;
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::readiness::signal::ReadinessState;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use uuid::Uuid;
 
 /// Runtime phase for a child attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +97,318 @@ impl ChildControlFailure {
             phase,
             reason: reason.into(),
             recoverable,
+        }
+    }
+}
+
+/// Generation fencing phase: whether a new attempt may start at a restart boundary for one child.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum GenerationFencePhase {
+    /// No fence wait, or the active attempt runs on the normal path.
+    #[default]
+    Open,
+    /// Restart accepted: cancellation was delivered to the old attempt; waiting for it to exit.
+    WaitingForOldStop,
+    /// Old attempt exceeded the graceful stop window; runtime requested abort.
+    AbortingOld,
+    /// Old attempt confirmed finished; allowed to start the new instance for the target generation.
+    ReadyToStart,
+    /// Record removed or supervisor tree in a shutdown window; must not proceed with restart start.
+    Closed,
+}
+
+/// Discrete outcome for one restart command at the generation fence from the control plane view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GenerationFenceDecision {
+    /// No active attempt; target generation started immediately.
+    StartedImmediately,
+    /// Active attempt still present; restart queued to wait for the old stop.
+    QueuedAfterStop,
+    /// A pending restart already exists; this duplicate command was merged.
+    AlreadyPending,
+    /// Supervisor tree is shutting down; restart is not allowed.
+    BlockedByShutdown,
+    /// Request rejected; set [`GenerationFenceOutcome::conflict`] with the structured reason.
+    Rejected,
+}
+
+/// Label for how the runtime treats a late exit report from an old generation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StaleReportHandling {
+    /// Do not change authoritative state; ignore the stale fact.
+    IgnoredForState,
+    /// Recorded for audit so operators can review it later.
+    RecordedForAudit,
+    /// Counted in a low-cardinality metrics bucket.
+    CountedForMetrics,
+}
+
+/// Minimal stale report payload carried with a control command for diagnostics and dashboard projection.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StaleAttemptReport {
+    /// Stable identifier of the child this report belongs to.
+    pub child_id: ChildId,
+    /// Generation attached to the report that is now stale.
+    pub reported_generation: Generation,
+    /// Attempt index attached to the report that is now stale.
+    pub reported_attempt: ChildStartCount,
+    /// Active generation in the record when the report was classified as stale.
+    pub current_generation: Option<Generation>,
+    /// Active attempt in the record when the report was classified as stale.
+    pub current_attempt: Option<ChildStartCount>,
+    /// Exit shape for the old attempt; matches contract `ExitKind`.
+    pub exit_kind: TaskExit,
+    /// Branch the runtime chose when handling this stale report.
+    pub handled_as: StaleReportHandling,
+    /// Unix epoch nanoseconds when the report was classified as stale.
+    pub observed_at_unix_nanos: u128,
+}
+
+impl StaleAttemptReport {
+    /// Builds a stale attempt report record.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child identifier for this report.
+    /// - `reported_generation`: Stale generation carried from the report.
+    /// - `reported_attempt`: Stale attempt index carried from the report.
+    /// - `current_generation`: Active generation when classified as stale, or `None`.
+    /// - `current_attempt`: Active attempt when classified as stale, or `None`.
+    /// - `exit_kind`: Exit shape for the old attempt; matches contract `ExitKind`.
+    /// - `handled_as`: How the runtime handled this stale report.
+    /// - `observed_at_unix_nanos`: Unix epoch nanoseconds when the report was classified as stale.
+    ///
+    /// # Returns
+    ///
+    /// Returns an owned [`StaleAttemptReport`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_supervisor::control::outcome::{StaleAttemptReport, StaleReportHandling};
+    /// use rust_supervisor::child_runner::run_exit::TaskExit;
+    /// let report = StaleAttemptReport::new(
+    ///     rust_supervisor::id::types::ChildId::new("worker"),
+    ///     rust_supervisor::id::types::Generation::initial(),
+    ///     rust_supervisor::id::types::ChildStartCount::first(),
+    ///     None,
+    ///     None,
+    ///     TaskExit::Succeeded,
+    ///     StaleReportHandling::IgnoredForState,
+    ///     0,
+    /// );
+    /// assert_eq!(report.handled_as, StaleReportHandling::IgnoredForState);
+    /// ```
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        child_id: ChildId,
+        reported_generation: Generation,
+        reported_attempt: ChildStartCount,
+        current_generation: Option<Generation>,
+        current_attempt: Option<ChildStartCount>,
+        exit_kind: TaskExit,
+        handled_as: StaleReportHandling,
+        observed_at_unix_nanos: u128,
+    ) -> Self {
+        Self {
+            child_id,
+            reported_generation,
+            reported_attempt,
+            current_generation,
+            current_attempt,
+            exit_kind,
+            handled_as,
+            observed_at_unix_nanos,
+        }
+    }
+}
+
+/// Accepted but incomplete restart request; pins the old triple until the old attempt leaves.
+///
+/// `command_id` stores the same UUID bytes as [`crate::control::command::CommandMeta`] to avoid a
+/// module cycle between `command` and `outcome`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PendingRestart {
+    /// Restart command UUID bound to this request; matches audit `command_id`.
+    pub command_id: Uuid,
+    /// Human-readable restart initiator string.
+    pub requested_by: String,
+    /// Human-readable restart reason string.
+    pub reason: String,
+    /// Old generation that must be pinned when the restart is accepted.
+    pub old_generation: Generation,
+    /// Old attempt index that must be pinned when the restart is accepted.
+    pub old_attempt: ChildStartCount,
+    /// Target generation to start after the old attempt exits.
+    pub target_generation: Generation,
+    /// When the runtime accepted the request, in Unix epoch nanoseconds.
+    pub requested_at_unix_nanos: u128,
+    /// Graceful stop deadline for the old attempt after cancellation, in Unix epoch nanoseconds.
+    pub stop_deadline_at_unix_nanos: u128,
+    /// Whether the runtime has requested abort for the old attempt.
+    pub abort_requested: bool,
+    /// Count of duplicate restart requests merged into this pending request; must not bump generation allocation on merge.
+    pub duplicate_request_count: u32,
+}
+
+impl PendingRestart {
+    /// Creates a pending restart record.
+    ///
+    /// # Arguments
+    ///
+    /// Same meaning as the struct fields documented above.
+    ///
+    /// # Returns
+    ///
+    /// Returns an owned [`PendingRestart`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        command_id: Uuid,
+        requested_by: impl Into<String>,
+        reason: impl Into<String>,
+        old_generation: Generation,
+        old_attempt: ChildStartCount,
+        target_generation: Generation,
+        requested_at_unix_nanos: u128,
+        stop_deadline_at_unix_nanos: u128,
+        abort_requested: bool,
+        duplicate_request_count: u32,
+    ) -> Self {
+        Self {
+            command_id,
+            requested_by: requested_by.into(),
+            reason: reason.into(),
+            old_generation,
+            old_attempt,
+            target_generation,
+            requested_at_unix_nanos,
+            stop_deadline_at_unix_nanos,
+            abort_requested,
+            duplicate_request_count,
+        }
+    }
+}
+
+/// Minimal generation fence outcome bundled with one restart command.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GenerationFenceOutcome {
+    /// Discrete fencing decision for this command.
+    pub decision: GenerationFenceDecision,
+    /// Old generation pinned or observed by this command, or `None`.
+    pub old_generation: Option<Generation>,
+    /// Old attempt pinned or observed by this command, or `None`.
+    pub old_attempt: Option<ChildStartCount>,
+    /// Generation planned to start after the old attempt exits.
+    pub target_generation: Option<Generation>,
+    /// Whether this command newly delivered cancellation to an active attempt.
+    pub cancel_delivered: bool,
+    /// Whether this command triggered or escalated abort semantics for the old attempt.
+    pub abort_requested: bool,
+    /// Structured failure when rejected or in conflict; required when `decision` is [`GenerationFenceDecision::Rejected`].
+    pub conflict: Option<ChildControlFailure>,
+}
+
+impl GenerationFenceOutcome {
+    /// Builds a minimal generation fence outcome.
+    ///
+    /// # Arguments
+    ///
+    /// - `decision`: Fencing decision for this command.
+    /// - `old_generation`: Recorded old generation at decision time, or `None`.
+    /// - `old_attempt`: Recorded old attempt at decision time, or `None`.
+    /// - `target_generation`: Planned next generation after the old attempt exits, or `None`.
+    /// - `cancel_delivered`: Whether cancellation was newly delivered.
+    /// - `abort_requested`: Whether abort was requested.
+    /// - `conflict`: Optional structured rejection or conflict payload.
+    ///
+    /// # Returns
+    ///
+    /// Returns a populated [`GenerationFenceOutcome`].
+    pub fn new(
+        decision: GenerationFenceDecision,
+        old_generation: Option<Generation>,
+        old_attempt: Option<ChildStartCount>,
+        target_generation: Option<Generation>,
+        cancel_delivered: bool,
+        abort_requested: bool,
+        conflict: Option<ChildControlFailure>,
+    ) -> Self {
+        Self {
+            decision,
+            old_generation,
+            old_attempt,
+            target_generation,
+            cancel_delivered,
+            abort_requested,
+            conflict,
+        }
+    }
+}
+
+/// Generation fence bookkeeping on the runtime side; no timeline, only whether start is allowed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GenerationFenceState {
+    /// Current discrete fencing phase.
+    pub phase: GenerationFencePhase,
+    /// Active attempt generation from this record perspective, if any.
+    pub active_generation: Option<Generation>,
+    /// Active attempt index from this record perspective, if any.
+    pub active_attempt: Option<ChildStartCount>,
+    /// When `Some`, a pending restart is waiting for the old attempt to exit.
+    pub pending_restart: Option<PendingRestart>,
+    /// Latest recorded stale exit report for diagnostics replay.
+    pub last_stale_report: Option<StaleAttemptReport>,
+}
+
+impl Default for GenerationFenceState {
+    /// Default placeholder: open phase with no pending restart.
+    fn default() -> Self {
+        Self {
+            phase: GenerationFencePhase::Open,
+            active_generation: None,
+            active_attempt: None,
+            pending_restart: None,
+            last_stale_report: None,
+        }
+    }
+}
+
+impl GenerationFenceState {
+    /// Creates a placeholder fence state record.
+    ///
+    /// # Arguments
+    ///
+    /// None.
+    ///
+    /// # Returns
+    ///
+    /// Returns the default record with phase [`GenerationFencePhase::Open`].
+    pub fn placeholder() -> Self {
+        Self::default()
+    }
+}
+
+/// Pending-restart triple summary shared with [`ChildRuntimeRecord`] and dashboards.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PendingRestartSummary {
+    /// Pinned or observed old generation.
+    pub old_generation: Generation,
+    /// Pinned or observed old attempt index.
+    pub old_attempt: ChildStartCount,
+    /// Target generation expected after the old attempt exits.
+    pub target_generation: Generation,
+}
+
+impl From<&PendingRestart> for PendingRestartSummary {
+    /// Compresses a full [`PendingRestart`] into a dashboard-friendly summary.
+    fn from(source: &PendingRestart) -> Self {
+        Self {
+            old_generation: source.old_generation,
+            old_attempt: source.old_attempt,
+            target_generation: source.target_generation,
         }
     }
 }
@@ -204,6 +522,12 @@ pub struct ChildRuntimeRecord {
     pub stop_state: ChildStopState,
     /// Most recent control failure.
     pub failure: Option<ChildControlFailure>,
+    /// Generation fence phase returned with the `CurrentState` projection.
+    #[serde(default)]
+    pub generation_fence_phase: GenerationFencePhase,
+    /// Pending restart triple; present only while the fence queue still waits for the old attempt to exit.
+    #[serde(default)]
+    pub pending_restart: Option<PendingRestartSummary>,
 }
 
 impl ChildRuntimeRecord {
@@ -221,6 +545,8 @@ impl ChildRuntimeRecord {
     /// - `restart_limit`: Current restart limit state.
     /// - `stop_state`: Current stop progress.
     /// - `failure`: Most recent control failure.
+    /// - `generation_fence_phase`: Projection of generation fencing phase enum.
+    /// - `pending_restart`: Optional queued restart fingerprint for dashboards.
     ///
     /// # Returns
     ///
@@ -237,6 +563,8 @@ impl ChildRuntimeRecord {
         restart_limit: RestartLimitState,
         stop_state: ChildStopState,
         failure: Option<ChildControlFailure>,
+        generation_fence_phase: GenerationFencePhase,
+        pending_restart: Option<PendingRestartSummary>,
     ) -> Self {
         Self {
             child_id,
@@ -249,6 +577,8 @@ impl ChildRuntimeRecord {
             restart_limit,
             stop_state,
             failure,
+            generation_fence_phase,
+            pending_restart,
         }
     }
 }
@@ -280,6 +610,9 @@ pub struct ChildControlResult {
     pub idempotent: bool,
     /// Current failure reason.
     pub failure: Option<ChildControlFailure>,
+    /// Optional generation fencing outcome exclusively used by restart control commands.
+    #[serde(default)]
+    pub generation_fence: Option<GenerationFenceOutcome>,
 }
 
 impl ChildControlResult {
@@ -299,6 +632,7 @@ impl ChildControlResult {
     /// - `liveness`: Current liveness state.
     /// - `idempotent`: Whether this command reused existing state idempotently.
     /// - `failure`: Current failure reason.
+    /// - `generation_fence`: Optional restart-only fencing outcome payload.
     ///
     /// # Returns
     ///
@@ -317,6 +651,7 @@ impl ChildControlResult {
         liveness: ChildLivenessState,
         idempotent: bool,
         failure: Option<ChildControlFailure>,
+        generation_fence: Option<GenerationFenceOutcome>,
     ) -> Self {
         Self {
             child_id,
@@ -331,6 +666,7 @@ impl ChildControlResult {
             liveness,
             idempotent,
             failure,
+            generation_fence,
         }
     }
 }

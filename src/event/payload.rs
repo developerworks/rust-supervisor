@@ -7,7 +7,7 @@
 use crate::child_runner::run_exit::TaskExit;
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailurePhase, ChildControlOperation, ChildControlResult,
-    ChildStopState, RestartLimitState,
+    ChildStopState, RestartLimitState, StaleReportHandling,
 };
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
@@ -259,7 +259,7 @@ pub enum What {
         /// Full pipeline duration in milliseconds.
         duration_ms: u64,
     },
-    /// Shutdown cancellation reached one child child_start_count.
+    /// Child shutdown cancel delivered for one supervised child_start_count during shutdown draining.
     ChildShutdownCancelDelivered {
         /// Child that received cancellation.
         child_id: ChildId,
@@ -310,6 +310,92 @@ pub enum What {
         phase: String,
         /// Exit classification reported by the child.
         exit: String,
+    },
+    /// Generation fence engaged for an accepted manual restart waiting for an old attempt to stop.
+    ChildRestartFenceEntered {
+        /// Child awaiting restart isolation.
+        child_id: ChildId,
+        /// Old generation pinned until the fence releases.
+        old_generation: Generation,
+        /// Old attempt pinned until the fence releases.
+        old_attempt: ChildStartCount,
+        /// Target generation queued after the old attempt completes.
+        target_generation: Generation,
+        /// Command identifier tying this fence to auditing metadata.
+        command_id: String,
+        /// Restart requester captured from command metadata.
+        requested_by: String,
+        /// Restart reason captured from command metadata.
+        reason: String,
+        /// Deadline for cooperative stop before escalation to abort paths.
+        stop_deadline_at_unix_nanos: u128,
+    },
+    /// Runtime escalated restart isolation to abort the old attempt after the cooperative deadline elapsed.
+    ChildRestartFenceAbortRequested {
+        /// Child awaiting restart isolation.
+        child_id: ChildId,
+        /// Old generation that failed to exit before the graceful deadline expired.
+        old_generation: Generation,
+        /// Old attempt that failed to exit before the graceful deadline expired.
+        old_attempt: ChildStartCount,
+        /// Target generation queued for start after isolation completes.
+        target_generation: Generation,
+        /// Command identifier tied to the pending restart bookkeeping.
+        command_id: String,
+        /// Deadline that triggered the abort escalation.
+        deadline_unix_nanos: u128,
+    },
+    /// Old attempt completed and a new generation may start under the pending restart request.
+    ChildRestartFenceReleased {
+        /// Child whose fence released.
+        child_id: ChildId,
+        /// Old generation that fully stopped.
+        old_generation: Generation,
+        /// Old attempt that fully stopped.
+        old_attempt: ChildStartCount,
+        /// Target generation allowed to start after this release.
+        target_generation: Generation,
+        /// Exit classification reported for the old attempt.
+        exit_kind: TaskExit,
+    },
+    /// Conflicting restart intent that was merged, rejected, or superseded by policy.
+    ChildRestartConflict {
+        /// Child identifier for the fencing scope.
+        child_id: ChildId,
+        /// Generation that was active or pinned when the conflict was classified.
+        current_generation: Option<Generation>,
+        /// Attempt counter that was active or pinned when the conflict was classified.
+        current_attempt: Option<ChildStartCount>,
+        /// Generation the caller wanted to reach, if applicable.
+        target_generation: Option<Generation>,
+        /// Command identifier supplied by the caller when present.
+        command_id: String,
+        /// Low-cardinality conflict classifier (`already_pending`, `rejected`, ...).
+        decision: String,
+        /// Human-readable reason for observability dumps.
+        reason: String,
+    },
+    /// Stale completion triple observed after authoritative state moved forward.
+    ChildAttemptStaleReport {
+        /// Child identifier tied to the completion triple.
+        child_id: ChildId,
+        /// Generation carried by the stale completion report.
+        reported_generation: Generation,
+        /// Attempt counter carried by the stale completion report.
+        reported_attempt: ChildStartCount,
+        /// Generation considered authoritative when the stale report arrived.
+        current_generation: Option<Generation>,
+        /// Attempt counter considered authoritative when the stale report arrived.
+        current_attempt: Option<ChildStartCount>,
+        /// Exit classification supplied by the stale report.
+        exit_kind: TaskExit,
+        /// Runtime-selected handling bucket for metrics and audits.
+        handled_as: StaleReportHandling,
+    },
+    /// Pending restart bookkeeping drained because the pinned old attempt exited.
+    ChildRestartFencePendingDrained {
+        /// Child whose pending restart advanced past the cooperative stop barrier.
+        child_id: ChildId,
     },
     /// Child control command delivered cancellation.
     ChildControlCancelDelivered {
@@ -516,6 +602,12 @@ impl What {
             Self::ChildShutdownGraceful { .. } => "ChildShutdownGraceful",
             Self::ChildShutdownAborted { .. } => "ChildShutdownAborted",
             Self::ChildShutdownLateReport { .. } => "ChildShutdownLateReport",
+            Self::ChildRestartFenceEntered { .. } => "ChildRestartFenceEntered",
+            Self::ChildRestartFenceAbortRequested { .. } => "ChildRestartFenceAbortRequested",
+            Self::ChildRestartFenceReleased { .. } => "ChildRestartFenceReleased",
+            Self::ChildRestartConflict { .. } => "ChildRestartConflict",
+            Self::ChildAttemptStaleReport { .. } => "ChildAttemptStaleReport",
+            Self::ChildRestartFencePendingDrained { .. } => "ChildRestartFencePendingDrained",
             Self::ChildControlCancelDelivered { .. } => "ChildControlCancelDelivered",
             Self::ChildControlStopCompleted { .. } => "ChildControlStopCompleted",
             Self::ChildControlStopFailed { .. } => "ChildControlStopFailed",

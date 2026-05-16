@@ -54,4 +54,4 @@
 
 **Rationale(理由)**: 使用者需要一个清晰的配置启动路径来验证 startup rejection(启动拒绝)。只暴露 `Supervisor::start(SupervisorSpec)` 会迫使使用者自己组合加载,校验和启动顺序,容易产生遗漏。
 
-**Alternatives considered(已考虑替代方案)**: 只在文档中要求使用者先调用 `load_config_state` 再调用 `Supervisor::start`。该方案能工作,但不能用一个 API(接口) 明确保证非法配置不进入 channel creation(通道创建) 阶段。
+**Alternatives considered(已考虑替代方案)**: 只在文档中要求使用者先调用 `load_config_from_yaml_file` 再调用 `Supervisor::start`。该方案能工作,但不能用一个 API(接口) 明确保证非法配置不进入 channel creation(通道创建) 阶段。

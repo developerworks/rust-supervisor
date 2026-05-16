@@ -1,7 +1,7 @@
 use rust_supervisor::control::command::{CommandResult, CurrentState, ManagedChildState};
 use rust_supervisor::control::outcome::{
     ChildAttemptStatus, ChildControlOperation, ChildControlResult, ChildLivenessState,
-    ChildRuntimeRecord, ChildStopState, RestartLimitState,
+    ChildRuntimeRecord, ChildStopState, GenerationFencePhase, RestartLimitState,
 };
 use rust_supervisor::dashboard::config::ValidatedDashboardIpcConfig;
 use rust_supervisor::dashboard::ipc_server::DashboardIpcService;
@@ -206,6 +206,11 @@ fn dashboard_command_result_model_serializes_child_control_shape() {
     assert_eq!(value["outcome"]["stop_state"], "cancel_delivered");
     assert_eq!(value["outcome"]["restart_limit"]["remaining"], 2);
     assert_eq!(value["outcome"]["liveness"]["readiness"], "ready");
+    assert!(value["outcome"].get("generation_fence").is_some());
+    assert_eq!(
+        value["outcome"]["generation_fence"],
+        serde_json::Value::Null
+    );
     assert!(value.get("ChildState").is_none());
 }
 
@@ -233,6 +238,8 @@ fn dashboard_command_result_model_serializes_current_state_runtime_records() {
     assert_eq!(record["attempt"], 1);
     assert_eq!(record["restart_limit"]["remaining"], 2);
     assert_eq!(record["liveness"]["readiness"], "ready");
+    assert_eq!(record["generation_fence_phase"], "open");
+    assert_eq!(record["pending_restart"], serde_json::Value::Null);
 }
 
 #[tokio::test]
@@ -286,6 +293,7 @@ fn child_control_result() -> ChildControlResult {
         liveness(),
         false,
         None,
+        None,
     )
 }
 
@@ -300,6 +308,8 @@ fn child_runtime_record(operation: ChildControlOperation) -> ChildRuntimeRecord 
         liveness(),
         restart_limit(),
         ChildStopState::Idle,
+        None,
+        GenerationFencePhase::Open,
         None,
     )
 }

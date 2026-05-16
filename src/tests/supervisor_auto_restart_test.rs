@@ -9,12 +9,13 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::{GroupStrategy, SupervisionStrategy, SupervisorSpec};
 use rust_supervisor::task::factory::{TaskResult, service_fn};
+use rust_supervisor::test_support::test_time::{advance_test_clock, with_auto_clock_drive};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 /// Verifies that `OneForOne` restarts only the failed child after one failure.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn one_for_one_restarts_only_failed_child_after_failure() {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
@@ -30,14 +31,13 @@ async fn one_for_one_restarts_only_failed_child_after_failure() {
     wait_for_count(&first_start_counts, 2).await;
     assert_eq!(second_start_counts.load(Ordering::SeqCst), 1);
 
-    handle
-        .shutdown_tree("test", "one_for_one complete")
+    with_auto_clock_drive(handle.shutdown_tree("test", "one_for_one complete"))
         .await
         .expect("shutdown supervisor");
 }
 
 /// Verifies that `OneForAll` restarts every declared child after one failure.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn one_for_all_restarts_every_child_after_failure() {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
@@ -53,14 +53,13 @@ async fn one_for_all_restarts_every_child_after_failure() {
     wait_for_count(&first_start_counts, 2).await;
     wait_for_count(&second_start_counts, 2).await;
 
-    handle
-        .shutdown_tree("test", "one_for_all complete")
+    with_auto_clock_drive(handle.shutdown_tree("test", "one_for_all complete"))
         .await
         .expect("shutdown supervisor");
 }
 
 /// Verifies that `RestForOne` restarts the failed child and following children.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn rest_for_one_restarts_failed_child_and_following_children() {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
@@ -79,14 +78,13 @@ async fn rest_for_one_restarts_failed_child_and_following_children() {
     wait_for_count(&third_start_counts, 2).await;
     assert_eq!(first_start_counts.load(Ordering::SeqCst), 1);
 
-    handle
-        .shutdown_tree("test", "rest_for_one complete")
+    with_auto_clock_drive(handle.shutdown_tree("test", "rest_for_one complete"))
         .await
         .expect("shutdown supervisor");
 }
 
 /// Verifies that a group strategy limits runtime restarts to group members.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn group_strategy_restarts_only_group_members_after_failure() {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
@@ -114,8 +112,7 @@ async fn group_strategy_restarts_only_group_members_after_failure() {
     assert_eq!(first_start_counts.load(Ordering::SeqCst), 1);
     assert_eq!(fourth_start_counts.load(Ordering::SeqCst), 1);
 
-    handle
-        .shutdown_tree("test", "group_strategy complete")
+    with_auto_clock_drive(handle.shutdown_tree("test", "group_strategy complete"))
         .await
         .expect("shutdown supervisor");
 }
@@ -178,7 +175,7 @@ fn counted_worker(
 /// This function returns after the gate value becomes `true`.
 async fn wait_for_open_gate(gate: &AtomicBool) {
     while !gate.load(Ordering::SeqCst) {
-        tokio::time::sleep(Duration::from_millis(1)).await;
+        tokio::task::yield_now().await;
     }
 }
 
@@ -198,7 +195,7 @@ async fn wait_for_count(start_counts: &AtomicUsize, expected: usize) {
             if start_counts.load(Ordering::SeqCst) >= expected {
                 break;
             }
-            tokio::time::sleep(Duration::from_millis(5)).await;
+            advance_test_clock(Duration::from_millis(5)).await;
         }
     })
     .await

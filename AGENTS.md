@@ -23,6 +23,7 @@
 ## Rust 相关
 
 - 禁止重新导出
+- `src/` 与测试包中的 Rust 源码必须使用英文撰写行注释与文档注释, 含 `//`, `///`, `//!`, 模块与字段文档, 以及 doctest 中的说明性句子; 本条规定优先于面向自然语言的对话术语规则, 仅约束源码注释语言, 不约束仓库内规格与 Markdown 正文的语言选择
 - 代码注释必须要有
   - 模块注释
   - 结构体注释
@@ -36,8 +37,9 @@
 <!-- SPECKIT START -->
 
 项目原则和治理规则读取 `.specify/memory/constitution.md`.
-当前功能计划读取 `specs/004-3-child-runtime-state-control/plan.md`.
+当前功能计划读取 `specs/005-1-failure-policy-reliability/plan.md`.
 功能规格,研究结论,数据模型,接口契约和 quickstart(快速开始) 都在
-`specs/004-3-child-runtime-state-control/` 目录下.
+`specs/005-1-failure-policy-reliability/` 目录下.
+伴随角色默认切片规格读取 `specs/005-2-work-role-defaults/spec.md`.
 
 <!-- SPECKIT END -->

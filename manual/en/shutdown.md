@@ -26,3 +26,7 @@ Startup runs in declaration order. Shutdown runs in reverse declaration order. `
 ## Shutdown Cause
 
 `ShutdownCause` records `requested_by` and `reason`. The cause should appear in audit and diagnostic output.
+
+## Completion Result
+
+`shutdown_tree` returns `ShutdownResult`. After the pipeline finishes, `ShutdownResult.report` contains `ShutdownPipelineReport` with per-child outcomes, a reconcile report, and dashboard socket status. When the core runtime does not own the dashboard IPC socket, the report records socket status as `NotOwned`.

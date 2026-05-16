@@ -78,7 +78,7 @@ impl Supervisor {
     pub async fn start_from_config_file(
         path: impl AsRef<Path>,
     ) -> Result<SupervisorHandle, SupervisorError> {
-        let state = crate::config::loader::load_config_state(path)?;
+        let state = crate::config::loader::load_config_from_yaml_file(path)?;
         Self::start_from_config_state(state).await
     }
 
