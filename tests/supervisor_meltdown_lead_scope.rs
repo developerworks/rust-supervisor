@@ -98,10 +98,15 @@ fn test_scopes_triggered_list() {
 
     let mut tracker = MeltdownTracker::new(policy);
     let now = std::time::Instant::now();
+    let child_id = rust_supervisor::id::types::ChildId::new("test-child".to_string());
 
     // Record enough failures to trigger all layers
-    tracker.record_child_restart(now);
-    tracker.record_child_restart(now + Duration::from_secs(1));
+    tracker.record_child_restart_with_group(child_id.clone(), Some("test-group".to_string()), now);
+    tracker.record_child_restart_with_group(
+        child_id,
+        Some("test-group".to_string()),
+        now + Duration::from_secs(1),
+    );
 
     // All three should be triggered (child=2>1, group=2>1, supervisor=2>1)
     let outcome = tracker.current_outcome_for_test();

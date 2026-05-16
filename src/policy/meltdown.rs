@@ -3,8 +3,9 @@
 //! The module tracks child and supervisor failure windows and emits simple
 //! outcomes that the runtime can map to quarantine or escalation.
 
+use crate::id::types::ChildId;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
 /// Failure fuse limits for child, group, and supervisor scopes.
@@ -93,15 +94,15 @@ pub enum MeltdownOutcome {
     SupervisorFuse,
 }
 
-/// Mutable meltdown counter state.
+/// Mutable meltdown counter state with per-scope isolation (FR-002).
 #[derive(Debug, Clone)]
 pub struct MeltdownTracker {
     /// Policy that defines counter windows and limits.
     pub policy: MeltdownPolicy,
-    /// Child failure timestamps retained inside the child restart window.
-    child_failures: VecDeque<Instant>,
-    /// Group failure timestamps retained inside the group window.
-    group_failures: VecDeque<Instant>,
+    /// Per-child failure timestamps retained inside the child restart window.
+    child_failures: HashMap<ChildId, VecDeque<Instant>>,
+    /// Per-group failure timestamps retained inside the group window.
+    group_failures: HashMap<String, VecDeque<Instant>>,
     /// Supervisor failure timestamps retained inside the supervisor window.
     supervisor_failures: VecDeque<Instant>,
     /// Latest failure timestamp used for stable-window cleanup.
@@ -121,14 +122,18 @@ impl MeltdownTracker {
     pub fn new(policy: MeltdownPolicy) -> Self {
         Self {
             policy,
-            child_failures: VecDeque::new(),
-            group_failures: VecDeque::new(),
+            child_failures: HashMap::new(),
+            group_failures: HashMap::new(),
             supervisor_failures: VecDeque::new(),
             last_failure: None,
         }
     }
 
-    /// Records a child restart failure.
+    #[deprecated(
+        since = "0.1.3",
+        note = "Use record_child_restart_with_group for per-scope isolation"
+    )]
+    /// Records a child restart failure (legacy API, aggregates across all scopes).
     ///
     /// # Arguments
     ///
@@ -138,12 +143,96 @@ impl MeltdownTracker {
     ///
     /// Returns a [`MeltdownOutcome`] for the updated counters.
     pub fn record_child_restart(&mut self, now: Instant) -> MeltdownOutcome {
+        // Legacy behavior: use a synthetic child/group to maintain backward compatibility
+        let synthetic_child = ChildId::new("_legacy".to_string());
+        self.record_child_restart_with_group(synthetic_child, Some("_legacy".to_string()), now)
+    }
+
+    /// Records a child restart failure with explicit group assignment (FR-002).
+    ///
+    /// Maintains independent state per ChildId, group_id, and supervisor instance.
+    /// Returns outcome based on the specific scopes involved in this operation.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child identifier for per-child tracking.
+    /// - `group_id`: Optional group identifier for per-group tracking.
+    /// - `now`: Current monotonic time.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`MeltdownOutcome`] based on the most restrictive scope outcome
+    /// for the specific child, group, and supervisor involved in this call.
+    pub fn record_child_restart_with_group(
+        &mut self,
+        child_id: ChildId,
+        group_id: Option<String>,
+        now: Instant,
+    ) -> MeltdownOutcome {
         self.prune(now);
-        self.child_failures.push_back(now);
-        self.group_failures.push_back(now);
+
+        // Record at child level (per-ChildId isolation)
+        let child_queue = self
+            .child_failures
+            .entry(child_id.clone())
+            .or_insert_with(VecDeque::new);
+        child_queue.push_back(now);
+
+        // Record at group level (per-group_id isolation) if group is specified
+        if let Some(ref gid) = group_id {
+            let group_queue = self
+                .group_failures
+                .entry(gid.clone())
+                .or_insert_with(VecDeque::new);
+            group_queue.push_back(now);
+        }
+
+        // Record at supervisor level (single queue for all)
         self.supervisor_failures.push_back(now);
         self.last_failure = Some(now);
-        self.current_outcome()
+
+        // Evaluate outcomes for the specific scopes involved
+        self.evaluate_outcome_for_scopes(&child_id, group_id.as_deref())
+    }
+
+    /// Evaluates outcome for specific child and group scopes (not global).
+    ///
+    /// This method checks only the provided child_id and group_id against their thresholds,
+    /// plus the global supervisor level. It does NOT check other children or groups.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child identifier to evaluate.
+    /// - `group_id`: Optional group identifier to evaluate.
+    ///
+    /// # Returns
+    ///
+    /// Returns the most restrictive outcome for the specified scopes.
+    fn evaluate_outcome_for_scopes(
+        &self,
+        child_id: &ChildId,
+        group_id: Option<&str>,
+    ) -> MeltdownOutcome {
+        // Check supervisor level (global)
+        if self.supervisor_failures.len() >= self.policy.supervisor_max_failures as usize {
+            return MeltdownOutcome::SupervisorFuse;
+        }
+
+        // Check specific group if provided
+        if let Some(gid) = group_id {
+            let group_count = self.group_failures.get(gid).map_or(0, |q| q.len());
+            if group_count >= self.policy.group_max_failures as usize {
+                return MeltdownOutcome::GroupFuse;
+            }
+        }
+
+        // Check specific child
+        let child_count = self.child_failures.get(child_id).map_or(0, |q| q.len());
+        if child_count >= self.policy.child_max_restarts as usize {
+            return MeltdownOutcome::ChildFuse;
+        }
+
+        MeltdownOutcome::Continue
     }
 
     /// Clears counters after a stable period.
@@ -182,33 +271,33 @@ impl MeltdownTracker {
         self.last_failure = None;
     }
 
-    /// Returns the current child failure count.
+    /// Returns the current child failure count for a specific child.
     ///
     /// # Arguments
     ///
-    /// This function has no arguments.
+    /// - `child_id`: Child identifier to query.
     ///
     /// # Returns
     ///
     /// Returns the number of child failures inside the current window.
-    pub fn child_failure_count(&self) -> usize {
-        self.child_failures.len()
+    pub fn child_failure_count(&self, child_id: &ChildId) -> usize {
+        self.child_failures.get(child_id).map_or(0, |q| q.len())
     }
 
-    /// Returns the current group failure count.
+    /// Returns the current group failure count for a specific group.
     ///
     /// # Arguments
     ///
-    /// This function has no arguments.
+    /// - `group_id`: Group identifier to query.
     ///
     /// # Returns
     ///
     /// Returns the number of group failures inside the current window.
-    pub fn group_failure_count(&self) -> usize {
-        self.group_failures.len()
+    pub fn group_failure_count(&self, group_id: &str) -> usize {
+        self.group_failures.get(group_id).map_or(0, |q| q.len())
     }
 
-    /// Removes expired counter entries.
+    /// Removes expired counter entries for all scopes.
     ///
     /// # Arguments
     ///
@@ -218,8 +307,21 @@ impl MeltdownTracker {
     ///
     /// This function returns nothing.
     fn prune(&mut self, now: Instant) {
-        prune_window(&mut self.child_failures, now, self.policy.child_window);
-        prune_window(&mut self.group_failures, now, self.policy.group_window);
+        // Prune per-child queues
+        for queue in self.child_failures.values_mut() {
+            prune_window(queue, now, self.policy.child_window);
+        }
+        // Remove empty child queues
+        self.child_failures.retain(|_, v| !v.is_empty());
+
+        // Prune per-group queues
+        for queue in self.group_failures.values_mut() {
+            prune_window(queue, now, self.policy.group_window);
+        }
+        // Remove empty group queues
+        self.group_failures.retain(|_, v| !v.is_empty());
+
+        // Prune supervisor queue
         prune_window(
             &mut self.supervisor_failures,
             now,
@@ -227,7 +329,9 @@ impl MeltdownTracker {
         );
     }
 
-    /// Evaluates counters after pruning.
+    /// Evaluates outcomes across all scopes after pruning.
+    ///
+    /// Returns the most restrictive outcome across all tracked children, groups, and supervisor.
     ///
     /// # Arguments
     ///
@@ -236,19 +340,32 @@ impl MeltdownTracker {
     /// # Returns
     ///
     /// Returns the most severe current outcome.
-    fn current_outcome(&self) -> MeltdownOutcome {
-        if self.supervisor_failures.len() > self.policy.supervisor_max_failures as usize {
-            MeltdownOutcome::SupervisorFuse
-        } else if self.group_failures.len() > self.policy.group_max_failures as usize {
-            MeltdownOutcome::GroupFuse
-        } else if self.child_failures.len() > self.policy.child_max_restarts as usize {
-            MeltdownOutcome::ChildFuse
-        } else {
-            MeltdownOutcome::Continue
+    fn evaluate_outcome(&self) -> MeltdownOutcome {
+        // Check supervisor level
+        if self.supervisor_failures.len() >= self.policy.supervisor_max_failures as usize {
+            return MeltdownOutcome::SupervisorFuse;
         }
+
+        // Check all groups (most restrictive wins)
+        for queue in self.group_failures.values() {
+            if queue.len() >= self.policy.group_max_failures as usize {
+                return MeltdownOutcome::GroupFuse;
+            }
+        }
+
+        // Check all children (most restrictive wins)
+        for queue in self.child_failures.values() {
+            if queue.len() >= self.policy.child_max_restarts as usize {
+                return MeltdownOutcome::ChildFuse;
+            }
+        }
+
+        MeltdownOutcome::Continue
     }
 
-    /// Returns the current meltdown outcome for testing purposes.
+    /// Returns the current overall meltdown outcome for testing purposes.
+    ///
+    /// Evaluates the most restrictive outcome across all tracked scopes.
     ///
     /// # Arguments
     ///
@@ -258,7 +375,44 @@ impl MeltdownTracker {
     ///
     /// Returns the current [`MeltdownOutcome`].
     pub fn current_outcome_for_test(&self) -> MeltdownOutcome {
-        self.current_outcome()
+        self.evaluate_outcome()
+    }
+
+    /// Returns the current outcome for a specific group (FR-002).
+    ///
+    /// Queries the per-group failure queue and evaluates against the group threshold.
+    ///
+    /// # Arguments
+    ///
+    /// - `group_id`: Group identifier to query.
+    ///
+    /// # Returns
+    ///
+    /// Returns the [`MeltdownOutcome`] for the specified group only.
+    pub fn get_group_outcome(&self, group_id: &str) -> MeltdownOutcome {
+        let count = self.group_failures.get(group_id).map_or(0, |q| q.len());
+        if count >= self.policy.group_max_failures as usize {
+            MeltdownOutcome::GroupFuse
+        } else {
+            MeltdownOutcome::Continue
+        }
+    }
+
+    /// Returns the current supervisor-level outcome.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the [`MeltdownOutcome`] at supervisor level.
+    pub fn get_supervisor_outcome(&self) -> MeltdownOutcome {
+        if self.supervisor_failures.len() >= self.policy.supervisor_max_failures as usize {
+            MeltdownOutcome::SupervisorFuse
+        } else {
+            MeltdownOutcome::Continue
+        }
     }
 }
 

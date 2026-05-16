@@ -1,143 +1,195 @@
 {
-  "generated": "2026-05-15T21:16:00Z",
-  "based_on_drift_report": "2026-05-15T21:10:00Z",
+  "generated": "2026-05-17T04:59:22+08:00",
+  "based_on_drift_report": "2026-05-17T04:07:27+08:00",
+  "scope": "005-1-failure-policy-reliability",
   "summary": {
-    "backfill_open": 0,
-    "align_applied": 1,
-    "human_decision_open": 0,
-    "backfill_applied": 8,
-    "new_spec": 0,
-    "remove": 0,
-    "applied_closed": 9
+    "backfill": 0,
+    "align": 6,
+    "human_decision": 1,
+    "new_specs": 0,
+    "remove_from_spec": 0
   },
   "interactive_session": {
+    "mode": true,
     "next_proposal_id": null,
-    "instruction": "Proposal P9 APPLIED 2026-05-15; proposal queue empty. Run speckit.sync.analyze after material spec or code changes."
+    "accepted_responses": [
+      "A",
+      "R",
+      "M",
+      "S",
+      "Q"
+    ],
+    "instruction": "Proposal queue completed. Approved P1, P2, P3, P4, P5, P6, and P7 option 7a."
   },
   "proposals": [
     {
       "id": "P1",
-      "spec_id": "001-create-supervisor-core",
-      "requirement": "FR-063",
-      "direction": "BACKFILL",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "FR-001",
+      "direction": "ALIGN",
       "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/001-create-supervisor-core/spec.md",
-      "spec_says": "ChildRuntimeRecord-centered naming; ChildState as legacy display-only",
-      "code_does": "ChildRuntimeRecord, ChildControlResult, current_state API",
-      "resolution": "FR-063 amended; aligned with 004-3 naming",
-      "notes": "Merged in earlier iteration; drift report no longer lists FR-063 as drifted"
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:02:37+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "Every supervised unit completion must enter one fixed six-stage policy pipeline. No automatic restart may bypass the pipeline.",
+        "code_does": "RuntimeControlState refreshes restart limits, calculates restart decisions, and executes restarts directly. SupervisionPipeline exists but is not used by the real control loop, and execute action is placeholder logic."
+      },
+      "proposed_resolution": [
+        "Route the child-exit path through SupervisionPipeline::execute_pipeline.",
+        "Map TaskExit into success, nonzero_exit, panic, timeout, external_cancel, and manual_stop.",
+        "Move automatic restart, queued restart, denied restart, and supervised stop into execute action.",
+        "Emit auditable stage diagnostics for all six stages.",
+        "Replace placeholder acceptance tests with production-path assertions."
+      ],
+      "rationale": "The fixed six-stage pipeline is the central 005-1 contract. Backfilling the current bypass would remove the feature's core behavior.",
+      "recommended_response": "A"
     },
     {
       "id": "P2",
-      "spec_id": "001-create-supervisor-core",
-      "requirement": "SC-010",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "FR-002",
       "direction": "ALIGN",
-      "chosen_option": "2b",
       "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_note": "src/tests/* use #[tokio::test(start_paused = true)] and test_support::test_time; spec SC-010 documents paused Tokio + advance pattern",
-      "residual": "Minor follow-up: direct sleep in some test bodies under paused runtime; tests/dashboard_* outside src/tests/ still worth audit",
-      "options": [
-        {
-          "key": "2a",
-          "direction": "BACKFILL",
-          "summary": "Allow bounded patterns outside paused harness where documented"
-        },
-        {
-          "key": "2b",
-          "direction": "ALIGN",
-          "summary": "Paused runtime plus test_time helpers (implemented)"
-        }
-      ]
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:03:12+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "MeltdownTracker must store separate child, group, and supervisor scope state, and events must include scopes_triggered and lead_scope.",
+        "code_does": "MeltdownTracker stores aggregate queues and writes each child failure into all conceptual layers. Event emission does not populate scopes_triggered or lead_scope."
+      },
+      "proposed_resolution": [
+        "Key meltdown state by ChildId, group_id, and supervisor instance.",
+        "Map each local verdict to ProtectionAction ladder values.",
+        "Choose lead_scope only among scopes that tie for the effective strictest verdict.",
+        "Populate scopes_triggered, lead_scope, and effective_protective_action in the real typed event."
+      ],
+      "rationale": "Scope isolation is required for group-level reliability and for SC-002 acceptance.",
+      "recommended_response": "A"
     },
     {
       "id": "P3",
-      "spec_id": "001-create-supervisor-core",
-      "requirement": "FR-072 FR-073 FR-074",
-      "direction": "BACKFILL",
-      "chosen_option": "3a",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "FR-003",
+      "direction": "ALIGN",
       "confidence": "MEDIUM",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/001-create-supervisor-core/spec.md",
-      "applied_note": "FR-072–074 extended with Governance scope paragraphs: process-level acceptance via tasks.md, .specify/, speckit, PR workflow; no single cargo test guard required",
-      "options": [
-        {
-          "key": "3a",
-          "direction": "BACKFILL",
-          "summary": "Mark as process-level requirements bound to speckit and PR workflow"
-        },
-        {
-          "key": "3b",
-          "summary": "Add lightweight cargo test gate for tasks.md or sync freshness"
-        }
-      ]
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:05:46+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "Production restart throttling must support full jitter, decorrelated jitter, max concurrent restarts, cold start budget, hot loop detection, and reproducible tests.",
+        "code_does": "The related algorithms and types exist, but the real control loop uses BackoffPolicy::new with jitter disabled by default and does not use cold start budget, hot loop detection, or CombinedThrottleGate."
+      },
+      "proposed_resolution": [
+        "Evaluate cold start budget, hot loop detection, and concurrent gate state during evaluate budget.",
+        "Merge those states into ProtectionAction during decide action.",
+        "Execute queue, delay, deny, or supervised stop during execute action.",
+        "Expose deterministic seed and clock control for tests.",
+        "Serialize the global throttle owner as supervisor_global."
+      ],
+      "rationale": "The current code prepares types but does not change production restart behavior.",
+      "recommended_response": "A"
     },
     {
       "id": "P4",
-      "spec_id": "002-config-schema-support",
-      "requirement": "metadata",
-      "direction": "BACKFILL",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "SC-001",
+      "direction": "ALIGN",
       "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/002-config-schema-support/spec.md",
-      "applied_note": "Status promoted Draft to Accepted per interactive approve (2026-05-17)",
-      "resolution": "Update Status from Draft when review completes"
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:06:16+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "All fixed failure samples must be reconcilable with the six-stage pipeline order from events or diagnostics.",
+        "code_does": "The pipeline-order test emits one event into ObservabilityPipeline and leaves TODO comments for real six-stage diagnostics."
+      },
+      "proposed_resolution": [
+        "Drive real SupervisionPipeline or RuntimeControlState in tests.",
+        "Cover success, nonzero_exit, panic, timeout, external_cancel, and manual_stop.",
+        "Assert stage order and diagnostic completeness for every sample."
+      ],
+      "rationale": "This test is the acceptance proof for FR-001.",
+      "recommended_response": "A"
     },
     {
       "id": "P5",
-      "spec_id": "003-supervisor-dashboard",
-      "requirement": "scope-clarification",
-      "direction": "BACKFILL",
-      "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/003-supervisor-dashboard/spec.md",
-      "applied_note": "Append Repository scope table to specs/003-supervisor-dashboard/spec.md (user 下一步 advancing P5, 2026-05-17)",
-      "resolution": "Add repository scope table for target vs relay vs UI"
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "SC-002",
+      "direction": "ALIGN",
+      "confidence": "MEDIUM",
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:07:11+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "After one group trips protection, other groups must remain able to complete controlled restart attempts in at least 90 percent of cases.",
+        "code_does": "Tests simulate group isolation with multiple independent MeltdownTracker instances instead of one supervisor instance with keyed group state."
+      },
+      "proposed_resolution": [
+        "Build one supervisor tree with at least two groups.",
+        "Inject dense failures into one group inside the same supervisor instance.",
+        "Verify the other group count remains independent and can complete one controlled restart attempt.",
+        "Assert scopes_triggered and lead_scope from production events."
+      ],
+      "rationale": "Multiple tracker instances cannot prove production group isolation.",
+      "recommended_response": "A"
     },
     {
       "id": "P6",
-      "spec_id": "004-1 / 004-3",
-      "requirement": "metadata",
-      "direction": "BACKFILL",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "SC-003",
+      "direction": "ALIGN",
       "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/004-1-runtime-lifecycle-guard/spec.md, specs/004-3-child-runtime-state-control/spec.md",
-      "applied_note": "Status Draft to Accepted; tasks.md Polish entries T037 and T051 record Proposal P6; user approve 批准 (2026-05-15)",
-      "resolution": "Promote Draft to Accepted after batch review"
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:08:26+08:00",
+      "approved_response": "A",
+      "current_state": {
+        "spec_says": "Concurrent restart pressure samples must not exceed the declared peak and must show queued or delayed diagnostics for excess attempts.",
+        "code_does": "The test uses a local simulated gate instead of production CombinedThrottleGate and checks supervisor_instance, which conflicts with the contract."
+      },
+      "proposed_resolution": [
+        "Remove the local ConcurrentRestartGate test simulation.",
+        "Use production CombinedThrottleGate or the full runtime path.",
+        "Keep at least ten simultaneous failure samples.",
+        "Assert restart_queued or stricter actions for excess attempts.",
+        "Assert supervisor_global and group:{group_id} owner strings."
+      ],
+      "rationale": "Production gate behavior and event contract must be validated together.",
+      "recommended_response": "A"
     },
     {
       "id": "P7",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "FR-002 backoff",
-      "direction": "BACKFILL",
-      "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/004-4-generation-fencing/spec.md, specs/004-4-generation-fencing/contracts/generation-fencing.md, specs/004-4-generation-fencing/plan.md",
-      "applied_note": "FR-004, SC-005, contract Runtime Semantics DelayedSpawnAttached subsection, plan Delayed spawn mailbox; user 继续 (2026-05-15)",
-      "resolution": "Document FR or sub-bullet for DelayedSpawnAttached and activate_instance on control loop"
-    },
-    {
-      "id": "P8",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "test-only replay API",
-      "direction": "BACKFILL",
-      "confidence": "HIGH",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/004-4-generation-fencing/plan.md",
-      "applied_note": "plan Testing Stale report test replay + Complexity Tracking cross-ref; tasks T034; interactive approve A (2026-05-15)",
-      "resolution": "Document hidden test hook in plan.md for SC-003 stale scenarios"
-    },
-    {
-      "id": "P9",
-      "spec_id": "001 vs 004-3",
-      "requirement": "glossary",
-      "direction": "BACKFILL",
+      "spec_id": "005-1-failure-policy-reliability",
+      "requirement": "SC-004",
+      "direction": "HUMAN_DECISION",
       "confidence": "MEDIUM",
-      "resolution_status": "APPLIED",
-      "applied_path": "specs/001-create-supervisor-core/glossary.md, specs/001-create-supervisor-core/tasks.md (T144)",
-      "applied_note": "Policy And State plus Rust Types rows for ChildState axis, ChildRuntimeRecord, ChildRuntimeState, ManagedChildState, ChildControlResult; drift conflicts cleared; interactive 下一步 approve 2026-05-15",
-      "resolution": "ChildState historical mapping to ChildRuntimeRecord in glossary"
+      "status": "APPROVED",
+      "approved_at": "2026-05-17T05:09:30+08:00",
+      "approved_response": "A 7a",
+      "chosen_option": "7a",
+      "chosen_direction": "ALIGN",
+      "current_state": {
+        "spec_says": "CV_jitter_strategy / CV_fixed_baseline must be at least 1.3.",
+        "code_does": "The test uses a constant delay as fixed baseline, making CV_fixed_baseline equal to zero, and only checks that jitter CV is greater than zero."
+      },
+      "options": [
+        {
+          "key": "7a",
+          "direction": "ALIGN",
+          "summary": "Define CV_fixed_baseline as the no-jitter exponential backoff sample sequence and verify the 1.3 ratio with production BackoffPolicy."
+        },
+        {
+          "key": "7b",
+          "direction": "BACKFILL",
+          "summary": "Amend the contract so a constant-delay zero-CV baseline uses a non-division threshold such as CV_jitter_strategy >= 0.3."
+        },
+        {
+          "key": "7c",
+          "direction": "MODIFY",
+          "summary": "Keep the ratio formula but let the reviewer define a nonzero fixed baseline sequence."
+        }
+      ],
+      "rationale": "The current contract can be read in a way that divides by zero. A human should choose whether the spec or the test interpretation is authoritative.",
+      "recommended_response": "A 7a"
     }
   ]
 }
