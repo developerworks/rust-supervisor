@@ -14,8 +14,8 @@ use std::path::Path;
 #[tokio::test]
 async fn yaml_config_derives_startable_supervisor_spec() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let state =
-        load_config_from_yaml_file(root.join("examples/config/supervisor.yaml")).expect("load YAML config");
+    let state = load_config_from_yaml_file(root.join("examples/config/supervisor.yaml"))
+        .expect("load YAML config");
     let spec = state.to_supervisor_spec().expect("derive supervisor spec");
     assert_eq!(spec.strategy, SupervisionStrategy::OneForAll);
     let handle = Supervisor::start(spec).await.expect("start supervisor");

@@ -1042,3 +1042,144 @@ fn child_child_start_count_context(
     );
     context
 }
+
+/// Six-stage supervision pipeline stage identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PipelineStage {
+    /// Stage 1: Classify the exit reason and category.
+    ClassifyExit,
+    /// Stage 2: Record failure window accumulation.
+    RecordFailureWindow,
+    /// Stage 3: Evaluate restart budget and limits.
+    EvaluateBudget,
+    /// Stage 4: Decide protective action based on merged verdicts.
+    DecideAction,
+    /// Stage 5: Emit typed supervision event with all diagnostic fields.
+    EmitTypedEvent,
+    /// Stage 6: Execute the decided action (restart, queue, deny, etc.).
+    ExecuteAction,
+}
+
+impl std::fmt::Display for PipelineStage {
+    /// Formats the pipeline stage as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ClassifyExit => write!(f, "classify_exit"),
+            Self::RecordFailureWindow => write!(f, "record_failure_window"),
+            Self::EvaluateBudget => write!(f, "evaluate_budget"),
+            Self::DecideAction => write!(f, "decide_action"),
+            Self::EmitTypedEvent => write!(f, "emit_typed_event"),
+            Self::ExecuteAction => write!(f, "execute_action"),
+        }
+    }
+}
+
+/// Diagnostic record emitted at each pipeline stage for observability.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PipelineStageDiagnostic {
+    /// Monotonic event sequence shared across all stages.
+    pub sequence: u64,
+    /// Correlation identifier tying related signals together.
+    pub correlation_id: String,
+    /// Pipeline stage that produced this diagnostic.
+    pub stage: PipelineStage,
+    /// Child identifier being supervised.
+    pub child_id: Option<String>,
+    /// Group identifier when the child belongs to a group.
+    pub group_id: Option<String>,
+    /// Supervisor path owning the supervision scope.
+    pub supervisor_path: String,
+    /// Exit classification result (stage 1 output).
+    pub exit_classification: Option<String>,
+    /// Failure window state after recording (stage 2 output).
+    pub failure_window_state: Option<String>,
+    /// Budget evaluation result (stage 3 output).
+    pub budget_evaluation: Option<String>,
+    /// Decided protective action (stage 4 output).
+    pub decided_action: Option<String>,
+    /// Event emission confirmation (stage 5 output).
+    pub event_emitted: bool,
+    /// Execution result summary (stage 6 output).
+    pub execution_result: Option<String>,
+    /// Timestamp in Unix epoch nanoseconds when this stage completed.
+    pub completed_at_unix_nanos: u128,
+}
+
+impl PipelineStageDiagnostic {
+    /// Creates a diagnostic record for a pipeline stage.
+    ///
+    /// # Arguments
+    ///
+    /// - `sequence`: Event sequence number.
+    /// - `correlation_id`: Correlation identifier.
+    /// - `stage`: Pipeline stage producing this diagnostic.
+    /// - `completed_at_unix_nanos`: Completion timestamp.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`PipelineStageDiagnostic`] with default empty fields.
+    pub fn new(
+        sequence: u64,
+        correlation_id: impl Into<String>,
+        stage: PipelineStage,
+        completed_at_unix_nanos: u128,
+    ) -> Self {
+        Self {
+            sequence,
+            correlation_id: correlation_id.into(),
+            stage,
+            child_id: None,
+            group_id: None,
+            supervisor_path: String::new(),
+            exit_classification: None,
+            failure_window_state: None,
+            budget_evaluation: None,
+            decided_action: None,
+            event_emitted: false,
+            execution_result: None,
+            completed_at_unix_nanos,
+        }
+    }
+
+    /// Sets the child identifier.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child identifier string.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated [`PipelineStageDiagnostic`].
+    pub fn with_child_id(mut self, child_id: impl Into<String>) -> Self {
+        self.child_id = Some(child_id.into());
+        self
+    }
+
+    /// Sets the group identifier.
+    ///
+    /// # Arguments
+    ///
+    /// - `group_id`: Group identifier string.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated [`PipelineStageDiagnostic`].
+    pub fn with_group_id(mut self, group_id: impl Into<String>) -> Self {
+        self.group_id = Some(group_id.into());
+        self
+    }
+
+    /// Sets the supervisor path.
+    ///
+    /// # Arguments
+    ///
+    /// - `supervisor_path`: Supervisor path string.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated [`PipelineStageDiagnostic`].
+    pub fn with_supervisor_path(mut self, supervisor_path: impl Into<String>) -> Self {
+        self.supervisor_path = supervisor_path.into();
+        self
+    }
+}

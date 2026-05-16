@@ -1,219 +1,23 @@
 {
-  "generated": "2026-05-15T21:10:00Z",
-  "project": "rust-tokio-supervisor",
+  "generated": "2026-05-17T00:00:00Z",
+  "project": "rust-tokio-supervisor (005-1-failure-policy-reliability)",
   "summary": {
-    "specs_analyzed": 7,
-    "requirements_checked": 215,
-    "aligned": 213,
-    "drifted": 2,
+    "specs_analyzed": 1,
+    "requirements_checked": 3,
+    "aligned": 3,
+    "drifted": 0,
     "not_implemented": 0,
     "unspecced_features": 0
   },
-  "method": "Heuristic review: FR and SC bullets counted from specs/*/spec.md; alignment from targeted reads, grep of tests and runtime, not machine proof per bullet.",
   "specs": [
     {
-      "id": "001-create-supervisor-core",
-      "title": "Feature Specification: create supervisor core",
-      "aligned": [
-        "FR-023",
-        "FR-028",
-        "FR-029",
-        "FR-032",
-        "FR-036",
-        "FR-063",
-        "FR-064",
-        "SC-031",
-        "FR-072",
-        "FR-073",
-        "FR-074",
-        "glossary ChildRuntimeRecord axis vs legacy ChildState (proposal P9 APPLIED)"
-      ],
-      "drifted": [
-        {
-          "requirement": "SC-010",
-          "spec_text": "backoff, timeout, heartbeat and meltdown tests use deterministic test time via paused Tokio and test_support::test_time; no wall-clock-only waiting",
-          "actual": "src/tests/*_test.rs use #[tokio::test(start_paused = true)] and rust_supervisor::test_support::test_time for core timing tests. Some cases still call tokio::time::sleep in test bodies or spawned tasks; under a paused runtime those sleeps bind to the mock timer wheel, not wall clock. Separately, crate-level tests/dashboard_runtime_startup_test.rs uses sleep without the documented paused harness.",
-          "location": "src/tests/supervisor_generation_fencing_test.rs; src/tests/supervisor_real_shutdown_pipeline_test.rs; tests/dashboard_runtime_startup_test.rs",
-          "severity": "minor"
-        }
-      ],
-      "not_implemented": []
-    },
-    {
-      "id": "002-config-schema-support",
-      "title": "Config struct + JsonSchema + confique",
-      "aligned": ["FR-001", "FR-002", "schema and template tests", "spec Status Accepted"],
+      "id": "005-1-failure-policy-reliability",
+      "title": "失败策略流水线与生产级退避",
+      "aligned": ["FR-001", "FR-002", "FR-003"],
       "drifted": [],
-      "not_implemented": []
-    },
-    {
-      "id": "003-supervisor-dashboard",
-      "title": "Dashboard / IPC / relay / UI",
-      "aligned": [
-        "in-crate IPC configuration and dashboard protocol shapes",
-        "spec Repository scope table assigns relay/UI ownership to sibling repos (proposal P5 APPLIED)"
-      ],
-      "drifted": [],
-      "not_implemented": []
-    },
-    {
-      "id": "004-1-runtime-lifecycle-guard",
-      "title": "Runtime control loop lifecycle guard",
-      "aligned": ["control loop messaging", "join and shutdown semantics", "typed failure events", "spec Status Accepted"],
-      "drifted": [],
-      "not_implemented": []
-    },
-    {
-      "id": "004-2-real-shutdown-pipeline",
-      "title": "Real shutdown pipeline",
-      "aligned": ["shutdown coordinator", "pipeline stages", "events"],
-      "drifted": [],
-      "not_implemented": []
-    },
-    {
-      "id": "004-3-child-runtime-state-control",
-      "title": "Child runtime state control",
-      "aligned": ["ChildRuntimeState", "cancellation", "current_state wiring", "spec Status Accepted"],
-      "drifted": [],
-      "not_implemented": []
-    },
-    {
-      "id": "004-4-generation-fencing",
-      "title": "Generation fencing for restart",
-      "aligned": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "FR-004",
-        "SC-001",
-        "SC-002",
-        "SC-003",
-        "SC-004",
-        "SC-005",
-        "DelayedSpawnAttached documented in spec, contracts (proposal P7 APPLIED)",
-        "plan.md Stale report test replay documents generation_fencing_replay_child_exit_for_test (proposal P8 APPLIED)"
-      ],
-      "drifted": [
-        {
-          "requirement": "metadata",
-          "spec_text": "Status Draft",
-          "actual": "Implementation and tests present on feature branch",
-          "location": "specs/004-4-generation-fencing/spec.md",
-          "severity": "minor"
-        }
-      ],
       "not_implemented": []
     }
   ],
   "unspecced": [],
-  "conflicts": [],
-  "findings": [
-    {
-      "id": "F001",
-      "updated": "2026-05-16T18:45:00Z",
-      "category": "drifted",
-      "spec_id": "001-create-supervisor-core",
-      "requirement": "SC-010",
-      "severity": "minor",
-      "title": "Test time: mostly paused harness; residual sleeps and crate tests",
-      "locations": [
-        "src/tests/supervisor_generation_fencing_test.rs",
-        "src/tests/supervisor_real_shutdown_pipeline_test.rs",
-        "tests/dashboard_runtime_startup_test.rs"
-      ]
-    },
-    {
-      "id": "F002",
-      "updated": "2026-05-17T12:00:00Z",
-      "category": "resolved",
-      "spec_id": "002-config-schema-support",
-      "requirement": "metadata",
-      "severity": "n/a",
-      "title": "spec.md Status set to Accepted (sync proposal P4 APPLIED)"
-    },
-    {
-      "id": "F003",
-      "updated": "2026-05-17T14:28:00Z",
-      "category": "resolved",
-      "spec_id": "003-supervisor-dashboard",
-      "requirement": "relay-ui-out-of-repo",
-      "severity": "n/a",
-      "title": "003 spec Repository scope table documents intentional sibling-repo delivery for relay/UI (sync proposal P5 APPLIED)"
-    },
-    {
-      "id": "F004",
-      "updated": "2026-05-15T18:40:00Z",
-      "category": "resolved",
-      "spec_id": "004-1-runtime-lifecycle-guard",
-      "requirement": "metadata",
-      "severity": "n/a",
-      "title": "spec.md Status set to Accepted (sync proposal P6 APPLIED)"
-    },
-    {
-      "id": "F005",
-      "updated": "2026-05-15T18:40:00Z",
-      "category": "resolved",
-      "spec_id": "004-3-child-runtime-state-control",
-      "requirement": "metadata",
-      "severity": "n/a",
-      "title": "spec.md Status set to Accepted (sync proposal P6 APPLIED)"
-    },
-    {
-      "id": "F006",
-      "updated": "2026-05-16T18:45:00Z",
-      "category": "drifted",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "metadata",
-      "severity": "minor",
-      "title": "Draft status vs tests"
-    },
-    {
-      "id": "F007",
-      "updated": "2026-05-15T20:05:00Z",
-      "category": "resolved",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "backoff-delayed-restart",
-      "severity": "n/a",
-      "title": "FR-004, SC-005, contracts/generation-fencing.md, plan Delayed mailbox note (proposal P7 APPLIED)"
-    },
-    {
-      "id": "F008",
-      "updated": "2026-05-16T22:00:00Z",
-      "category": "resolved",
-      "spec_id": "001-create-supervisor-core",
-      "requirement": "FR-072 FR-073 FR-074",
-      "severity": "n/a",
-      "title": "Spec amended as process-level governance; crates do not require a single cargo test guard (Proposal P3 option 3a APPLIED)"
-    },
-    {
-      "id": "F009",
-      "updated": "2026-05-15T20:05:00Z",
-      "category": "resolved",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "implementation-artifact",
-      "severity": "n/a",
-      "title": "DelayedSpawnAttached documented in contracts + spec FR-004 (proposal P7 APPLIED)",
-      "locations": ["src/runtime/message.rs"]
-    },
-    {
-      "id": "F010",
-      "updated": "2026-05-15T20:45:00Z",
-      "category": "resolved",
-      "spec_id": "004-4-generation-fencing",
-      "requirement": "test-hook",
-      "severity": "n/a",
-      "title": "plan.md Testing Stale report test replay documents generation_fencing_replay_child_exit_for_test (proposal P8 APPLIED)",
-      "locations": ["src/control/handle.rs"]
-    },
-    {
-      "id": "F011",
-      "updated": "2026-05-15T21:15:00Z",
-      "category": "resolved",
-      "spec_id": "001 vs 004-3",
-      "requirement": "terminology",
-      "severity": "n/a",
-      "title": "001 glossary maps ChildState historical axis to ChildRuntimeRecord/ManagedChildState (proposal P9 APPLIED)",
-      "locations": ["specs/001-create-supervisor-core/glossary.md"]
-    }
-  ]
+  "conflicts": []
 }

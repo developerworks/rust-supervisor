@@ -37,6 +37,8 @@ fn child_meltdown_trips_child_fuse() {
     let policy = MeltdownPolicy::new(
         1,
         Duration::from_secs(10),
+        5,
+        Duration::from_secs(30),
         10,
         Duration::from_secs(60),
         Duration::from_secs(120),

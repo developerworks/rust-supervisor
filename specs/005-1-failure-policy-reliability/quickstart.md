@@ -14,12 +14,26 @@ cargo test
 - `src/policy/tests/meltdown_test.rs`,
 - 新增的 **`pipeline ordering`** 与 **`typed event`** 字段断言测试.
 
+### US3 新增验收测试:
+- `tests/supervisor_backoff_jitter_distribution.rs` — 验证全抖动和去相关抖动的分散程度 (5 个测试).
+- `tests/supervisor_concurrent_restart_throttle.rs` — 验证并发闸门原子性和保护档位 (6 个测试,含 10 并发样本原子性测试).
+- `tests/supervisor_cold_start_and_hot_loop.rs` — 验证冷启动预算和热循环检测 (9 个测试).
+- `tests/supervisor_pipeline_full_integration.rs` — 端到端集成测试,覆盖交叉场景 (11 个测试).
+
 ## 2. 代码阅读顺序
 
+### Phase 2-3 (基础与流水线):
 1. `src/tree/order.rs` 里的 **`restart_execution_plan`**, 弄清 **`restart_limit`** 与 **`escalation_policy`** 从哪里来.
-2. `src/runtime/control_loop.rs` 里 **`refresh_restart_limit_for_child`**, **`execute_restart_decision`**, **`restart_strategy_scope`**, 对照 **`spec.md`** **`FR-001`**.
-3. `src/policy/meltdown.rs` 对照 **`FR-002`** 三层 **`scope`** 缺口.
-4. `src/event/payload.rs` 对照 **`contracts/pipeline-and-events.md`**.
+2. `src/policy/failure_window.rs` — 失败窗口滑动累计逻辑.
+3. `src/runtime/pipeline.rs` — 六阶段流水线编排 (`classify exit` → `record failure window` → `evaluate budget` → `decide action` → `emit typed event` → `execute action`).
+4. `src/policy/meltdown.rs` 对照 **`FR-002`** 三层 **`scope`** 缺口与 `merge_meltdown_verdicts` 平局判定.
+5. `src/event/payload.rs` 对照 **`contracts/pipeline-and-events.md`**.
+
+### Phase 4-5 (退避策略与并发闸门):
+6. `src/policy/backoff.rs` — 全抖动 (`calculate_full_jitter`)、去相关抖动 (`calculate_decorrelated_jitter`)、冷启动预算 (`ColdStartBudget`)、热循环检测 (`HotLoopDetector`).
+7. `src/runtime/concurrent_gate.rs` — 实例全局闸门 (`SupervisorInstanceGate`)、分组级闸门 (`GroupLevelGate`)、组合闸门 (`CombinedThrottleGate`).
+8. `src/test_support/factory.rs` — 测试工厂函数 (`deterministic_backoff_policy`, `full_jitter_backoff_policy`, `decorrelated_jitter_backoff_policy`).
+9. `src/test_support/test_time.rs` — 可控时钟 (`advance_test_clock`, `with_auto_clock_drive`).
 
 ## 3. 与 `005-2` 合并验收时的额外一步
 

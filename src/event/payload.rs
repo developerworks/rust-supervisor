@@ -14,6 +14,133 @@ use crate::event::time::{CorrelationId, EventSequence, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use serde::{Deserialize, Serialize};
 
+/// Meltdown scope identifier for failure tracking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MeltdownScope {
+    /// Child-level scope bound to a specific child identifier.
+    Child,
+    /// Group-level scope bound to a restart execution plan group.
+    Group,
+    /// Supervisor-level scope bound to the supervisor instance boundary.
+    Supervisor,
+}
+
+impl std::fmt::Display for MeltdownScope {
+    /// Formats the meltdown scope as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Child => write!(f, "child"),
+            Self::Group => write!(f, "group"),
+            Self::Supervisor => write!(f, "supervisor"),
+        }
+    }
+}
+
+/// Protection restrictiveness ladder defining escalation severity levels.
+///
+/// This enum defines six protection档位 from least to most restrictive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum ProtectionAction {
+    /// Restart is allowed without restrictions.
+    RestartAllowed,
+    /// Restart is queued behind concurrency throttle gates.
+    RestartQueued,
+    /// Restart is denied due to policy limits.
+    RestartDenied,
+    /// Supervision is paused temporarily.
+    SupervisionPaused,
+    /// Failure is escalated to parent supervisor.
+    Escalated,
+    /// Supervised stop is enforced for the child.
+    SupervisedStop,
+}
+
+impl std::fmt::Display for ProtectionAction {
+    /// Formats the protection action as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RestartAllowed => write!(f, "restart_allowed"),
+            Self::RestartQueued => write!(f, "restart_queued"),
+            Self::RestartDenied => write!(f, "restart_denied"),
+            Self::SupervisionPaused => write!(f, "supervision_paused"),
+            Self::Escalated => write!(f, "escalated"),
+            Self::SupervisedStop => write!(f, "supervised_stop"),
+        }
+    }
+}
+
+/// Reason for cold start budget triggering or exhaustion.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ColdStartReason {
+    /// Cold start budget has not been triggered.
+    NotApplicable,
+    /// Initial startup within cold start window.
+    InitialStartup,
+    /// Cold start budget exhausted within time window.
+    BudgetExhausted,
+    /// Too many restarts during cold start period.
+    ExcessiveRestarts,
+}
+
+impl std::fmt::Display for ColdStartReason {
+    /// Formats the cold start reason as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotApplicable => write!(f, "not_applicable"),
+            Self::InitialStartup => write!(f, "initial_startup"),
+            Self::BudgetExhausted => write!(f, "budget_exhausted"),
+            Self::ExcessiveRestarts => write!(f, "excessive_restarts"),
+        }
+    }
+}
+
+/// Reason for hot loop detection triggering.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HotLoopReason {
+    /// Hot loop detection has not been triggered.
+    NotApplicable,
+    /// Rapid crash detected within sliding time window.
+    RapidCrashDetected,
+    /// Crash-restart cycle exceeded threshold frequency.
+    CycleThresholdExceeded,
+    /// Insufficient stable runtime between restarts.
+    InsufficientStableRuntime,
+}
+
+impl std::fmt::Display for HotLoopReason {
+    /// Formats the hot loop reason as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotApplicable => write!(f, "not_applicable"),
+            Self::RapidCrashDetected => write!(f, "rapid_crash_detected"),
+            Self::CycleThresholdExceeded => write!(f, "cycle_threshold_exceeded"),
+            Self::InsufficientStableRuntime => write!(f, "insufficient_stable_runtime"),
+        }
+    }
+}
+
+/// Ownership of the throttle gate that limited concurrent restarts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ThrottleGateOwner {
+    /// No throttle gate was active.
+    None,
+    /// Instance-global supervisor throttle gate.
+    SupervisorInstance,
+    /// Group-level throttle gate with group identifier.
+    Group(String),
+}
+
+impl std::fmt::Display for ThrottleGateOwner {
+    /// Formats the throttle gate owner as a string.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::SupervisorInstance => write!(f, "supervisor_instance"),
+            Self::Group(group) => write!(f, "group:{}", group),
+        }
+    }
+}
+
 /// Location data attached to a supervisor event.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Where {
@@ -647,6 +774,18 @@ pub struct SupervisorEvent {
     pub correlation_id: CorrelationId,
     /// Configuration version that produced this fact.
     pub config_version: u64,
+    /// List of meltdown scopes that reached or exceeded thresholds in this evaluation round.
+    pub scopes_triggered: Vec<MeltdownScope>,
+    /// The dominant attribution scope for the effective meltdown verdict.
+    pub lead_scope: Option<MeltdownScope>,
+    /// The effective protection action on the restrictiveness ladder.
+    pub effective_protective_action: Option<ProtectionAction>,
+    /// Reason for cold start budget triggering or exhaustion.
+    pub cold_start_reason: ColdStartReason,
+    /// Reason for hot loop detection triggering.
+    pub hot_loop_reason: HotLoopReason,
+    /// Ownership of the throttle gate that limited concurrent restarts.
+    pub throttle_gate_owner: ThrottleGateOwner,
 }
 
 impl SupervisorEvent {
@@ -704,6 +843,12 @@ impl SupervisorEvent {
             sequence,
             correlation_id,
             config_version,
+            scopes_triggered: Vec::new(),
+            lead_scope: None,
+            effective_protective_action: None,
+            cold_start_reason: ColdStartReason::NotApplicable,
+            hot_loop_reason: HotLoopReason::NotApplicable,
+            throttle_gate_owner: ThrottleGateOwner::None,
         }
     }
 

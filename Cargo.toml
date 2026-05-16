@@ -256,6 +256,9 @@ path = "src/config/tests/no_baked_in_tree_split_test.rs"
 name = "invalid_config_rejected_test"
 path = "src/config/tests/invalid_config_rejected_test.rs"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tokio_unstable)'] }
+
 [[test]]
 name = "dashboard_module_test"
 path = "src/dashboard/tests/dashboard_module_test.rs"
