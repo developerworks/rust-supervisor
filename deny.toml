@@ -1,0 +1,36 @@
+# cargo-deny configuration for rust-tokio-supervisor
+#
+# This file is consumed by `cargo deny check` and controls license
+# compliance, security advisory blocking, and dependency bans.
+
+[licenses]
+# The project uses MIT. Dependencies must be one of the following.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+# Deny licenses not explicitly listed above.
+unlicensed = "deny"
+copyleft = "warn"
+allow-osi-fsf-free = "neither"
+
+[advisories]
+# Block known vulnerabilities and unmaintained crates.
+vulnerability = "deny"
+unmaintained = "warn"
+unsound = "deny"
+yanked = "deny"
+
+[bans]
+# Empty by default. Add entries when:
+# 1. Multiple crates duplicate the same functionality — ban the lesser-maintained one.
+# 2. A security advisory confirms a crate is malicious — ban immediately.
+# 3. Organizational policy forbids a specific license or source.
+multiple-versions = "warn"
+wildcards = "deny"
+deny = []
+skip = []

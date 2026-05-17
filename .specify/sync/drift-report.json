@@ -1,151 +1,30 @@
 {
-  "generated": "2026-05-17T21:03:07+08:00",
+  "generated": "2026-05-18T00:00:00Z",
   "project": "rust-tokio-supervisor",
-  "scope": [
-    "005-1-failure-policy-reliability",
-    "005-2-work-role-defaults"
-  ],
-  "other_specs_spot_check": [
-    {
-      "id": "001-create-supervisor-core",
-      "status": "baseline_implemented",
-      "note": "Core supervisor modules, policies, and observability present; not re-audited FR-by-FR in this run."
-    },
-    {
-      "id": "002-config-schema-support",
-      "status": "baseline_implemented",
-      "note": "Config loader and schema validation present."
-    },
-    {
-      "id": "003-supervisor-dashboard",
-      "status": "baseline_implemented",
-      "note": "Dashboard model and IPC paths present."
-    },
-    {
-      "id": "004-1-runtime-lifecycle-guard",
-      "status": "baseline_implemented",
-      "note": "Lifecycle guard integrated in runtime."
-    },
-    {
-      "id": "004-2-real-shutdown-pipeline",
-      "status": "baseline_implemented",
-      "note": "shutdown_pipeline module present."
-    },
-    {
-      "id": "004-3-child-runtime-state-control",
-      "status": "baseline_implemented",
-      "note": "ChildRuntimeState and control outcomes present."
-    },
-    {
-      "id": "004-4-generation-fencing",
-      "status": "baseline_implemented",
-      "note": "Generation fencing tests and control_loop paths present."
-    }
-  ],
+  "scope": "006-1-platform-docs-ipc-security",
   "summary": {
-    "specs_analyzed": 2,
-    "requirements_checked": 13,
-    "aligned": 13,
+    "specs_analyzed": 1,
+    "requirements_checked": 3,
+    "aligned": 3,
     "drifted": 0,
     "not_implemented": 0,
     "unspecced_features": 0
   },
-  "validation": [
-    {
-      "command": "cargo test --test work_role_defaults_integration",
-      "status": "passed",
-      "passed": 15,
-      "failed": 0
-    },
-    {
-      "command": "cargo test --test supervisor_pipeline_order",
-      "status": "passed",
-      "passed": 4,
-      "failed": 0
-    },
-    {
-      "command": "cargo test --test supervisor_concurrent_restart_throttle",
-      "status": "passed",
-      "passed": 7,
-      "failed": 0
-    },
-    {
-      "command": "cargo test --test supervisor_backoff_jitter_distribution",
-      "status": "passed",
-      "passed": 7,
-      "failed": 0
-    },
-    {
-      "command": "cargo test --test supervisor_meltdown_group_isolation",
-      "status": "passed",
-      "passed": 5,
-      "failed": 0
-    },
-    {
-      "command": "cargo clippy --all-targets --all-features -- -D warnings",
-      "status": "passed",
-      "warnings": 0
-    },
-    {
-      "command": "cargo test",
-      "status": "passed",
-      "scope": "full workspace test suite and doc-tests"
-    }
-  ],
   "specs": [
     {
-      "id": "005-1-failure-policy-reliability",
-      "title": "Failure policy pipeline and production backoff",
-      "aligned": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "SC-001",
-        "SC-002",
-        "SC-003",
-        "SC-004"
-      ],
+      "id": "006-1-platform-docs-ipc-security",
+      "title": "Platform Boundary, Docs & Dashboard IPC Security",
+      "aligned": ["FR-001", "FR-002", "FR-003"],
       "drifted": [],
-      "not_implemented": [],
-      "implementation_anchors": [
-        "src/runtime/control_loop.rs",
-        "src/runtime/pipeline.rs",
-        "src/policy/backoff.rs",
-        "src/policy/meltdown.rs",
-        "src/runtime/concurrent_gate.rs",
-        "tests/supervisor_pipeline_order.rs",
-        "tests/supervisor_meltdown_group_isolation.rs",
-        "tests/supervisor_concurrent_restart_throttle.rs",
-        "tests/supervisor_backoff_jitter_distribution.rs"
-      ]
-    },
-    {
-      "id": "005-2-work-role-defaults",
-      "title": "Work role defaults",
-      "aligned": [
-        "FR-001",
-        "SC-001",
-        "SC-002",
-        "SC-003",
-        "EC-001",
-        "CONTRACT-SUCCESS-002"
-      ],
-      "drifted": [],
-      "not_implemented": [],
-      "implementation_anchors": [
-        "src/policy/role_defaults.rs",
-        "src/runtime/control_loop.rs",
-        "src/runtime/pipeline.rs",
-        "src/spec/child.rs",
-        "src/spec/supervisor.rs",
-        "tests/work_role_defaults_integration.rs"
-      ]
+      "not_implemented": []
     }
   ],
   "unspecced": [],
   "conflicts": [],
-  "recommendations": [
-    "No drift fixes required in the active scope.",
-    "If ChildSpec.success_exit_codes or custom unknown-role parsing is added later, open a new spec iteration before coding."
-  ]
+  "validation": {
+    "tests": {
+      "ipc_security_integration": "21 passed"
+    },
+    "compile": "cargo check: 0 errors"
+  }
 }

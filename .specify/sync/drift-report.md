@@ -1,92 +1,98 @@
-# Spec Drift Report(规格漂移报告)
+# Spec Drift Report
 
-Generated(生成时间): 2026-05-17T21:03:07+08:00
-Project(项目): rust-tokio-supervisor
-Scope(范围): `specs/005-1-failure-policy-reliability`, `specs/005-2-work-role-defaults` (per `.specify/feature.json` active feature directories)
+Generated: 2026-05-18T00:00:00Z
+Project: rust-supervisor (rust-tokio-supervisor)
+Scope: `specs/006-1-platform-docs-ipc-security` (active feature per `.specify/feature.json`)
 
-一句话结论: 活跃切片 13 项需求与成功标准检查全部对齐, 0 项 drift(漂移). `005-2` 规格, 契约与实现已在 unknown work_role(未知工作任务角色) 与 `success_exit_codes`(成功退出码集合) 边界上闭合.
+## Summary
 
-## Summary(摘要)
+| Category                 | Count                     |
+| ------------------------ | ------------------------- |
+| Specs Analyzed (active)  | 1                         |
+| Requirements Checked     | 3 (FR-001 through FR-003) |
+| Success Criteria Checked | 4 (SC-001 through SC-004) |
+| ✓ Aligned                | 7 (100%)                  |
+| ⚠ Drifted                | 0 (0%)                    |
+| ✗ Not Implemented        | 0 (0%)                    |
+| 🆕 Unspecced Code        | 0                         |
 
-| Category(类别) | Count(数量) |
-| --- | ---: |
-| Specs Analyzed(深度分析规格) | 2 |
-| Other Specs Spot-Check(其余规格抽检) | 7 |
-| Requirements Checked(已检查需求) | 13 |
-| Aligned(已对齐) | 13 (100%) |
-| Drifted(漂移) | 0 |
-| Not Implemented(未实现) | 0 |
-| Unspecced Code(未入规格代码) | 0 |
+## Validation
 
-## Validation(验证)
+| Command                                      | Result                                         |
+| -------------------------------------------- | ---------------------------------------------- |
+| `cargo test --test ipc_security_integration` | 21 passed                                      |
+| `cargo check`                                | 0 errors                                       |
+| `cargo test --test coding_standard_test`     | 7/8 passed (1 minor doc issue, non-functional) |
 
-| Command(命令) | Result(结果) |
-| --- | --- |
-| `cargo test --test work_role_defaults_integration` | 15 passed |
-| `cargo test --test supervisor_pipeline_order` | 4 passed |
-| `cargo test --test supervisor_concurrent_restart_throttle` | 7 passed |
-| `cargo test --test supervisor_backoff_jitter_distribution` | 7 passed |
-| `cargo test --test supervisor_meltdown_group_isolation` | 5 passed |
-| `cargo clippy --all-targets --all-features -- -D warnings` | 0 warnings |
-| `cargo test` | workspace + doc-tests passed |
+## Detailed Findings
 
-## Detailed Findings(详细发现)
+### Spec: 006-1-platform-docs-ipc-security — Platform Boundary, Docs & Dashboard IPC Security
 
-### Spec(规格): 005-1-failure-policy-reliability - 失败策略流水线与生产级退避
+#### Aligned ✓
 
-#### Aligned(已对齐)
+- **FR-001 — Support Matrix**: `README.md:45-51`. Table with Host OS family, Core supervision, Dashboard IPC, Notes columns. Unix-like marked Supported, non-Unix marked Not available with crop field list (`dashboard`, `ipc_server`, `registration`). `#[cfg(unix)]` mechanism documented.
 
-- **FR-001**: 每次运行结束进入六阶段 `policy pipeline(策略流水线)`. `control_loop(控制循环)` 构造 `PipelineContext(管线上下文)`, 调用 `SupervisionPipeline(监督管线)`, 经 `ObservabilityPipeline(可观察性管道)` 发出 `PipelineStageDiagnostic(管线阶段诊断)`. 锚点: `src/runtime/control_loop.rs`, `src/runtime/pipeline.rs:249-590`, `src/observe/pipeline.rs`.
-- **FR-002**: `MeltdownTracker(熔断跟踪器)` 按 `child`(子任务), `group`(分组), `supervisor`(监督器) 三层计数; 合并后事件含 `scopes_triggered`(已触发作用域列表) 与 `lead_scope`(主导归因作用域). 锚点: `src/runtime/pipeline.rs:354-545`, `src/policy/meltdown.rs`.
-- **FR-003**: `BackoffPolicy(退避策略)` 支持 `full jitter`(全抖动), `decorrelated jitter`(去相关抖动), `cold start budget`(冷启动预算), `hot loop detection`(热循环检测); 并发闸门在 `concurrent_gate(并发闸门)` 与 `control_loop` 中可核对. 锚点: `src/policy/backoff.rs`, `src/runtime/concurrent_gate.rs`.
-- **SC-001**: 六阶段顺序可由 `PipelineStageDiagnostic` 与 `tests/supervisor_pipeline_order.rs` 核对.
-- **SC-002**: 分组隔离见 `tests/supervisor_meltdown_group_isolation.rs`.
-- **SC-003**: 并发闸门超限与 `ThrottleGateOwner(闸门归属)` 见 `tests/supervisor_concurrent_restart_throttle.rs`.
-- **SC-004**: 抖动分散度见 `tests/supervisor_backoff_jitter_distribution.rs`.
+- **FR-002 — Architecture Section**: `README.md:73-102`. Three-directory split (core library, relay, user interface) with copyable path examples (`/run/rust-supervisor/payments-worker-a.sock`), socket ownership conventions, log field prefixes per component (`rust_supervisor::dashboard`, `rust_supervisor_relay`, `rust_supervisor_ui`).
 
-#### Drifted(漂移)
+- **FR-003 — Nine IPC Control Points (C1-C9)**:
+  | CP | Implementation | File |
+  |----|--------------|------|
+  | C1 | Socket owner check via `prepare_socket_path_for_bind()` | `src/ipc/security/peer_identity.rs:190` |
+  | C2 | Peer credentials via `verify_peer_identity()` + `extract_peer_identity()` | `src/ipc/security/peer_identity.rs:144` |
+  | C3 | Command authorization via `verify_authorization()` + `IpcRiskAction` | `src/ipc/security/authz.rs:59` |
+  | C4 | Replay protection via `ReplayWindow::check_and_record()` | `src/ipc/security/replay.rs:13` |
+  | C5 | Request size limit via `check_request_size()` | `src/ipc/security/limits.rs:26` |
+  | C6 | Rate limit via `TokenBucket::try_consume()` | `src/ipc/security/limits.rs:51` |
+  | C7 | Audit persistence via `AuditRecord` + `AuditBackend` + `alerts` module | `src/ipc/security/audit.rs` |
+  | C8 | Command idempotency via `IdempotencyCache::get()/put()` | `src/ipc/security/idempotency.rs:22` |
+  | C9 | External command allowlist via `check_allowlist()` | `src/ipc/security/allowlist.rs:13` |
+  - All 9 wired through `IpcSecurityPipeline` (`src/ipc/security/mod.rs`), integrated into `DashboardIpcService` (`src/dashboard/ipc_server.rs:115-130`).
+  - 14 IPC security error variants in `DashboardError` (`src/dashboard/error.rs:137-263`).
+  - Config model: `IpcSecurityConfig` + 9 sub-configs (`src/config/ipc_security.rs`).
+  - `#[cfg(unix)]` gating: `src/dashboard/mod.rs` (10 submodules), `src/lib.rs` (`dashboard`, `ipc`).
 
-无.
+#### Success Criteria ✓
 
-### Spec(规格): 005-2-work-role-defaults - 监督任务角色与默认策略
+- **SC-001**: Support matrix present in README.md, 5 OS families, Boolean columns. Usable for blind artifact selection within 30 minutes.
+- **SC-002**: Architecture section present with three-component table, directory mounts, socket ownership, log prefixes. Usable for whiteboard diagramming.
+- **SC-003**: 21 integration tests covering all C1-C9 with allow/deny pairs. State unchanged after denial. Test file: `tests/ipc_security_integration.rs`.
+- **SC-004**: `alerts` module with atomic failure counter (`src/ipc/security/audit.rs:160-168`). Counter increments on audit write failure.
 
-#### Aligned(已对齐)
+#### Drifted ⚠
 
-- **FR-001**: 五类 `WorkRole(工作任务角色)` 默认策略经 `RoleDefaultPolicy::for_role()` 解析; `EffectivePolicy::merge()` 在 `evaluate budget`(评估预算) 前生效并进入 `decide action`(决定动作). 锚点: `src/policy/role_defaults.rs`, `src/runtime/pipeline.rs:366`, `src/runtime/control_loop.rs`.
-- **SC-001**: 五角色行为见 `tests/work_role_defaults_integration.rs` (15 cases).
-- **SC-002**: `data-model.md` 与 `contracts/role-defaults.md` 已改为私有默认构造函数与 `EffectivePolicy::merge(role, Vec<String>)`, 不再承诺按角色命名的公开默认常量.
-- **SC-003**: `sidecar_config(辅助任务配置)` 缺失, 未知 `primary_child_id(主任务标识)`, 链式 sidecar, `Job + Permanent(一次性作业加永久重启)` 冲突均有可读错误. 锚点: `src/spec/supervisor.rs:486`, `tests/work_role_defaults_integration.rs`.
-- **EC-001**: 缺失 `work_role` 回落 `Worker(工作任务)` 并标注 `FallbackDefault(兜底默认)`; 未知 `work_role` 字符串在规格中定义为加载阶段拒绝, 与 `unknown_work_role_is_rejected_by_deserialization` 测试一致. 锚点: `specs/005-2-work-role-defaults/spec.md:35`, `src/policy/role_defaults.rs:271`.
-- **CONTRACT-SUCCESS-002**: 契约 **Rule SUCCESS-002/003** 写明 `success_exit_codes` 为 `RoleDefaultPolicy` 内部字段, 非 `ChildSpec` 用户覆写; 成功路径由 `TaskResult::Succeeded(任务成功结果)` 进入 `ExitClassification::Success`. 锚点: `specs/005-2-work-role-defaults/contracts/role-defaults.md:255-257`.
+None.
 
-#### Drifted(漂移)
+#### Not Implemented ✗
 
-无.
+None.
 
-## Other Specs Spot-Check(其余规格抽检)
+### Unspecced Code 🆕
 
-下列规格未在本轮逐条核对 FR(功能需求), 仅确认对应实现目录与测试目标仍存在, 视为历史切片基线已实现:
+None. All newly created files are fully covered by 006-1 FR-001 through FR-003.
 
-| Spec ID | Spot-check(抽检结论) |
-| --- | --- |
-| 001-create-supervisor-core | core modules under `src/` |
-| 002-config-schema-support | `src/config/loader.rs` |
-| 003-supervisor-dashboard | `src/dashboard/` |
-| 004-1-runtime-lifecycle-guard | lifecycle guard in runtime |
-| 004-2-real-shutdown-pipeline | `src/runtime/shutdown_pipeline.rs` |
-| 004-3-child-runtime-state-control | `src/runtime/child_runtime_state.rs` |
-| 004-4-generation-fencing | `src/tests/supervisor_generation_fencing_test.rs` |
+### Inter-Spec Conflicts
 
-## Unspecced Code(未入规格代码)
+None. 006-1 explicitly inherits from 003-supervisor-dashboard (path constraints, symlink rejection) without redefining contracts. Orthogonal to 005-1-failure-policy-reliability (different scope: request security vs policy pipeline).
 
-未发现活跃切片范围内需要单独 backfill(回填规格) 的新增能力.
+## Other Specs Spot-Check
 
-## Inter-Spec Conflicts(规格间冲突)
+Legacy baseline slices verified by module existence:
 
-`005-1` 与 `005-2` 在 `evaluate budget`(评估预算) 与 `decide action`(决定动作) 衔接上无互斥要求.
+| Spec ID                           | Status     | Check                                             |
+| --------------------------------- | ---------- | ------------------------------------------------- |
+| 001-create-supervisor-core        | Historical | Core modules under `src/`                         |
+| 002-config-schema-support         | Historical | `src/config/loader.rs`                            |
+| 003-supervisor-dashboard          | Historical | `src/dashboard/`                                  |
+| 004-1-runtime-lifecycle-guard     | Historical | Lifecycle guard in runtime                        |
+| 004-2-real-shutdown-pipeline      | Historical | `src/runtime/shutdown_pipeline.rs`                |
+| 004-3-child-runtime-state-control | Historical | `src/runtime/child_runtime_state.rs`              |
+| 004-4-generation-fencing          | Historical | `src/tests/supervisor_generation_fencing_test.rs` |
+| 005-1-failure-policy-reliability  | Historical | Previous drift report confirmed 100% aligned      |
+| 005-2-work-role-defaults          | Historical | Previous drift report confirmed 100% aligned      |
+| 006-2 through 006-8               | Stub       | `plan.md`/`spec.md` only, no implementation yet   |
 
-## Recommendations(建议)
+## Recommendations
 
-1. 活跃切片无需 drift(漂移) 修复.
-2. 若后续要支持 `ChildSpec.success_exit_codes(子任务规格成功退出码集合)` 或未知角色字符串回落, 先开新 iteration(迭代) 再改代码.
-3. 若需全仓 001-071 级 FR 逐条复检, 运行 `/speckit.sync.analyze` 并指定更宽 scope(范围) 或拆分多次分析.
+1. **Close 006-1**: All 3 FRs aligned, all 4 SCs met, 0 drift. Mark spec as complete.
+2. **Fix coding standard**: 1 remaining doc comment missing in `src/ipc/security/peer_identity.rs:90` (macOS variant function). Non-blocking.
+3. **Prioritize 006-2 through 006-8**: Those 7 specs exist as stubs. Assess which has the largest implementation gap and address next.

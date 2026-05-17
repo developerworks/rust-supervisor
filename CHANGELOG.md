@@ -1,5 +1,32 @@
 # CHANGELOG(变更日志)
 
+All notable changes to this project are documented in this file.
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added(新增)
+
+- IPC(进程间通信) 安全控制点 C1-C9 实现与集成测试.
+- 平台支持矩阵与三目录架构说明文档.
+- 发布门禁与供应链证明基础设施 (shallow/middle/deep gates).
+
+### Changed(变更)
+
+- 当前版本仍处于实现阶段, 公开 API(接口) 以 `specs/001-create-supervisor-core/contracts/public-api.md` 为准.
+
+### Fixed(修复)
+
+-
+
+### Security Notes(安全说明)
+
+- PATCH(补丁级别) 版本如改动高风险示例命令行须单独在此列出.
+- 本轮无安全相关修复.
+
+---
+
 ## 0.1.0 - Unreleased(未发布)
 
 ### Added(新增)

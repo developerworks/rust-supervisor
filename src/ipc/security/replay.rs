@@ -69,19 +69,17 @@ impl ReplayWindow {
         }
 
         // Evict oldest if at capacity
-        if self.entries.len() >= self.max_size {
-            if let Some(oldest_key) = self
+        if self.entries.len() >= self.max_size
+            && let Some(oldest_key) = self
                 .entries
                 .iter()
                 .min_by_key(|(_, t)| **t)
                 .map(|(k, _)| k.clone())
-            {
-                self.entries.remove(&oldest_key);
-            }
+        {
+            self.entries.remove(&oldest_key);
         }
 
-        self.entries
-            .insert(request_id.to_string(), Instant::now());
+        self.entries.insert(request_id.to_string(), Instant::now());
         Ok(())
     }
 
@@ -95,15 +93,14 @@ impl ReplayWindow {
 
     /// Records a request_id unconditionally (for idempotency cache use).
     pub fn record(&mut self, request_id: String) {
-        if self.entries.len() >= self.max_size {
-            if let Some(oldest_key) = self
+        if self.entries.len() >= self.max_size
+            && let Some(oldest_key) = self
                 .entries
                 .iter()
                 .min_by_key(|(_, t)| **t)
                 .map(|(k, _)| k.clone())
-            {
-                self.entries.remove(&oldest_key);
-            }
+        {
+            self.entries.remove(&oldest_key);
         }
         self.entries.insert(request_id, Instant::now());
     }
@@ -111,7 +108,8 @@ impl ReplayWindow {
     /// Purges expired entries.
     pub fn purge_expired(&mut self) {
         let now = Instant::now();
-        self.entries.retain(|_, inserted| now.duration_since(*inserted) < self.ttl);
+        self.entries
+            .retain(|_, inserted| now.duration_since(*inserted) < self.ttl);
     }
 
     /// Returns the current number of entries in the window.

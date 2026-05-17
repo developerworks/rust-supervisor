@@ -88,15 +88,14 @@ impl IdempotencyCache {
     /// - `response`: Serialized IPC response to cache.
     pub fn put(&mut self, request_id: String, response: String) {
         self.purge_expired_internal();
-        if self.entries.len() >= self.max_entries {
-            if let Some(oldest_key) = self
+        if self.entries.len() >= self.max_entries
+            && let Some(oldest_key) = self
                 .entries
                 .iter()
                 .min_by_key(|(_, entry)| entry.inserted)
                 .map(|(k, _)| k.clone())
-            {
-                self.entries.remove(&oldest_key);
-            }
+        {
+            self.entries.remove(&oldest_key);
         }
         self.entries.insert(
             request_id,

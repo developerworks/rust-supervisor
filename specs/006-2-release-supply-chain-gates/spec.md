@@ -53,7 +53,7 @@
 ### Edge Cases (边界情况)
 
 - 当 PATCH(补丁级别) 版本仅更正文档却仍改写高风险示例命令行时, changelog(变更日志) 必须单列小节解释为何仍标记为 PATCH(补丁级别), 以免买方误认为不存在行为层面的误导风险.
-- 当 SBOM(软件物料清单) 生成工具更换导致 schema 版本抬升时, 台账必须附带迁移说明段落或给出双轨并存截止日期, 以免买方存量校验脚本批量失效.
+- 当 SBOM(软件物料清单) 生成工具更换导致 schema 版本抬升时, 台账 `sbom.format_version` 字段必须同步更新; release-record.json 同目录必须附带 `sbom-migration.md` 迁移说明段落或给出双轨并存截止日期, 以免买方存量校验脚本批量失效.
 - 当 supply chain attestation(供应链证明) 宿主服务短时故障时, 发布策略必须在"推迟发布"与"签名降级路径"两条里书面选定其一并写明触发阈值. 禁止无证明条目情况下直接把构件标成 released(已发布).
 
 ## Requirements (需求) _(mandatory (必填))_
@@ -61,8 +61,8 @@
 ### Functional Requirements (功能需求)
 
 - **FR-001**: 发布流水线必须产出并长期保留可被第三方校验的 signed tag(签名标签) 指针, semver(语义化版本) 等级声明, changelog(变更日志) 条目索引, 以及与构件 tarball 同捆的 MSRV(最低 Rust 版本) 自检脚本输出快照. 任一对外版本不得在缺少可读 changelog(变更日志) 小节的情况下标记为 released(已发布).
-- **FR-002**: 发布门禁固定包含 dependency audit(依赖审计), 许可证 policy(策略) 判定, 已知漏洞封锁列表比对, SBOM(软件物料清单) 生成步骤, 以及可被外部工具重放的 supply chain attestation(供应链证明) 摘要步骤. 策略失败时必须阻断放行入口, 或只允许附带 ExemptionTicket(豁免工单) 编号的人工绕行节点.
-- **FR-003**: 发布放行表必须为下列深度检查各自留出独立记录槽位并附带通过阈值字段: 公开接口兼容性判定摘要 (cargo-semver-checks), 变异测试命令与退出码 (cargo-mutants), 覆盖率阈值对比, fuzzing(模糊测试) 会话标识与用时, loom(并发模型测试) 日志归档指针, miri(未定义行为检查) 日志归档指针. 任一槽位本轮若为空则 QualityGateOutcome(质量闸口结果) 导出视图必须把该行标记为 incomplete(不完整).
+- **FR-002**: 发布门禁固定包含 dependency audit(依赖审计), 许可证 policy(策略) 判定, 已知漏洞封锁列表比对, 公开接口兼容性判定摘要 (cargo-semver-checks), SBOM(软件物料清单) 生成步骤, 以及可被外部工具重放的 supply chain attestation(供应链证明) 摘要步骤. 策略失败时必须阻断放行入口, 或只允许附带 ExemptionTicket(豁免工单) 编号的人工绕行节点.
+- **FR-003**: 发布放行表必须为下列深度检查各自留出独立记录槽位并附带通过阈值字段: 变异测试命令与退出码 (cargo-mutants), 覆盖率阈值对比, fuzzing(模糊测试) 会话标识与用时, loom(并发模型测试) 日志归档指针, miri(未定义行为检查) 日志归档指针. 任一槽位本轮若为空则 QualityGateOutcome(质量闸口结果) 导出视图必须把该行标记为 incomplete(不完整).
 
 ### Key Entities (关键实体) _(涉及数据时填写)_
 
@@ -93,10 +93,10 @@
 
 ### Measurable Outcomes (可衡量结果)
 
-- **SC-001**: 连续 3 次模拟发布抽查中, 发布记录表格均能在一页 A4 视图内找齐 FR-001 要求的四类指针, 且校验脚本无需手工改写路径占位符.
+- **SC-001**: 连续 3 次模拟发布抽查中, 发布记录表格均能在一页 A4 视图内找齐 FR-001 要求的四类指针, 且校验脚本无需手工改写路径占位符. 模拟发布(Simulated Release) 定义为: 在 CI 环境中执行完整浅层门禁 (fmt, check, clippy, test, doc, publish --dry-run) 与完整中层门禁 (audit, deny, semver-checks, msrv-verify), 生成 release-record.json 与 attestation.json; 深度门禁可引用最近夜间队列归档指针而不强制当轮重跑.
 - **SC-002**: SBOM(软件物料清单) 外部复验哈希与 ReleaseRecord(发布记录) 登记值在样板数据集上完全一致率达到 100%.
 - **SC-003**: 深度质量矩阵相关列在无豁免样本集中空格率为 0%. 在有豁免样本集中 100% 的行携带可读工单编号列填充.
-- **SC-004**: MSRV(最低 Rust 版本) 违规样本在自检脚本里 100% 在固定五步以内被拒绝并打印指向文档章节号的升级提示.
+- **SC-004**: MSRV(最低 Rust 版本) 违规样本在自检脚本里 100% 在固定五步 (Step1: 从 Cargo.toml 提取 `rust-version`; Step2: 检查对应 rustc 是否已安装; Step3: 若缺失则用 rustup 安装; Step4: 执行 `cargo +<msrv> check`; Step5: 退出并打印结果与文档章节号) 以内被拒绝并打印指向文档章节号的升级提示.
 
 ## Assumptions (假设)
 

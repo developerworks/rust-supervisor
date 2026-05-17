@@ -38,9 +38,9 @@
 <!-- SPECKIT START -->
 
 项目原则和治理规则读取 `.specify/memory/constitution.md`.
-当前功能计划读取 `specs/006-1-platform-docs-ipc-security/plan.md`.
+当前功能计划读取 `specs/006-3-lifecycle-shutdown-realism/plan.md`.
 功能规格,研究结论,数据模型,接口契约和 quickstart(快速开始) 都在
-`specs/006-1-platform-docs-ipc-security/` 目录下.
-依赖功能参考 `specs/005-1-failure-policy-reliability/` 目录.
+`specs/006-3-lifecycle-shutdown-realism/` 目录下.
+依赖功能参考 `specs/006-1-platform-docs-ipc-security/` 目录.
 
 <!-- SPECKIT END -->

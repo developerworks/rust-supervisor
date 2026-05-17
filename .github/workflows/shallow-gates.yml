@@ -1,0 +1,50 @@
+# Shallow release gates — fast checks for every PR and every release.
+# All steps must pass. Failure at any step halts the workflow.
+
+name: Shallow Gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_call:  # reusable by release workflow
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  shallow-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+
+      - name: Format check (fmt)
+        id: fmt
+        run: cargo fmt --check
+
+      - name: Compile check (check)
+        id: check
+        run: cargo check --all-targets
+
+      - name: Lint (clippy)
+        id: clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Unit and integration tests (test)
+        id: test
+        run: cargo test
+
+      - name: Documentation (doc)
+        id: doc
+        run: cargo doc --no-deps --document-private-items
+
+      - name: Publish dry-run (publish_dry_run)
+        id: publish_dry_run
+        run: cargo publish --dry-run

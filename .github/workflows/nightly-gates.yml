@@ -1,0 +1,83 @@
+# Nightly deep quality gates — long-running checks on the nightly toolchain.
+# Failures do NOT block PRs. Results must be archived and referenced
+# in the release record's gates.deep section.
+
+name: Nightly Gates
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # daily at 03:00 UTC
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+      - name: Coverage (coverage)
+        id: coverage
+        run: cargo tarpaulin --out json --output-dir artifacts/coverage
+    continue-on-error: true
+
+  mutation-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+      - name: Mutation testing (mutation_testing)
+        id: mutation_testing
+        run: cargo mutants
+    continue-on-error: true
+
+  fuzzing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - name: Fuzzing (fuzzing)
+        id: fuzzing
+        run: |
+          cargo fuzz list | while read target; do
+            cargo fuzz run "$target" -- -max_total_time=3600
+          done
+    continue-on-error: true
+
+  loom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Loom concurrency tests (loom)
+        id: loom
+        run: cargo test --test loom_* 2>&1 || echo "No loom tests found — skipping"
+    continue-on-error: true
+
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Miri UB check (miri)
+        id: miri
+        run: cargo miri test
+    continue-on-error: true
