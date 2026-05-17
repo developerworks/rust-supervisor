@@ -12,6 +12,7 @@ use crate::control::outcome::{
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
+use crate::policy::role_defaults::{PolicySource, WorkRole};
 use serde::{Deserialize, Serialize};
 
 /// Meltdown scope identifier for failure tracking.
@@ -135,7 +136,7 @@ impl std::fmt::Display for ThrottleGateOwner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::None => write!(f, "none"),
-            Self::SupervisorInstance => write!(f, "supervisor_instance"),
+            Self::SupervisorInstance => write!(f, "supervisor_global"),
             Self::Group(group) => write!(f, "group:{}", group),
         }
     }
@@ -786,6 +787,12 @@ pub struct SupervisorEvent {
     pub hot_loop_reason: HotLoopReason,
     /// Ownership of the throttle gate that limited concurrent restarts.
     pub throttle_gate_owner: ThrottleGateOwner,
+    /// Effective work role used by the policy decision.
+    pub work_role: Option<WorkRole>,
+    /// Whether fallback role defaults were used.
+    pub used_fallback_default: bool,
+    /// Source that produced the effective policy.
+    pub effective_policy_source: Option<PolicySource>,
 }
 
 impl SupervisorEvent {
@@ -849,6 +856,9 @@ impl SupervisorEvent {
             cold_start_reason: ColdStartReason::NotApplicable,
             hot_loop_reason: HotLoopReason::NotApplicable,
             throttle_gate_owner: ThrottleGateOwner::None,
+            work_role: None,
+            used_fallback_default: false,
+            effective_policy_source: None,
         }
     }
 

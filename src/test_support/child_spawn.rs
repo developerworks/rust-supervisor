@@ -64,31 +64,24 @@ pub fn fail_next_child_spawns_for(child_id: ChildId, count: usize) {
 /// # Returns
 ///
 /// Returns `true` when instrumentation decides the deterministic failure hook covers `child_id`.
+#[cfg(debug_assertions)]
 pub(crate) fn take_child_spawn_failure_attempt(child_id: &ChildId) -> bool {
-    #[cfg(debug_assertions)]
-    {
-        let Ok(mut guard) = SPAWN_FAILURE_HOOK.lock() else {
-            return false;
-        };
-        let Some(mut state) = guard.take() else {
-            return false;
-        };
-        if state.child_id != *child_id {
-            *guard = Some(state);
-            return false;
-        }
-        if state.remaining == 0 {
-            return false;
-        }
-        state.remaining = state.remaining.saturating_sub(1);
-        if state.remaining > 0 {
-            *guard = Some(state);
-        }
-        true
+    let Ok(mut guard) = SPAWN_FAILURE_HOOK.lock() else {
+        return false;
+    };
+    let Some(mut state) = guard.take() else {
+        return false;
+    };
+    if state.child_id != *child_id {
+        *guard = Some(state);
+        return false;
     }
-    #[cfg(not(debug_assertions))]
-    {
-        let _ = child_id;
-        false
+    if state.remaining == 0 {
+        return false;
     }
+    state.remaining = state.remaining.saturating_sub(1);
+    if state.remaining > 0 {
+        *guard = Some(state);
+    }
+    true
 }

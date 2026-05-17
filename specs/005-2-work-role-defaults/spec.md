@@ -2,6 +2,7 @@
 
 **Feature Branch(功能分支)**: `[005-2-work-role-defaults]`
 **Created(创建日期)**: 2026-05-16
+**Last Modified(最后修改)**: 2026-05-17
 **Status(状态)**: Draft(草稿)
 **Input(输入)**: 继承自主输入中对任务类别区分的要求: "`Permanent`(永久重启) 策略会在任务成功退出后也重启. 这对 `daemon`(常驻任务) 是合理的, 但是对 `job`(一次性作业) 很危险. 工业产品应该明确区分 `service`(常驻服务), `worker`(工作任务), `job`(一次性作业), `sidecar`(辅助任务), `supervisor`(嵌套监督器), 并为每类任务设置不同默认策略."
 
@@ -9,7 +10,7 @@
 
 本切片依赖 `specs/005-1-failure-policy-reliability/spec.md` 里定义的失败处理流水线. **衔接条款**: 每个 **`WorkRole`(工作任务角色)** 须在 **`evaluate budget`(评估预算)** 阶段接上与本角色匹配的 **`restart limit`(重启次数限制)** 与 **`escalation policy`(升级策略)** 字段用法, 以及升级处置结果进入事件与执行路径的写法; 以上须与 **`005-1`** 正文契约一致. 本切片可在 **`005-1`** 未完成前先起草; 合并验收时, 角色默认必须能够改写流水线里 **`decide action`(决定动作)** 与 **`execute action`(执行动作)** 的最终结论.
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 按角色套用安全默认 (Priority(优先级): P1)
 
@@ -31,23 +32,23 @@
 
 ### Edge Cases(边界情况)
 
-- 角色缺失或未知时, 系统必须回落到 **`documented conservative default`(文档写明的一档保守兜底默认)** , 并在诊断中标注已启用安全回退, 不得在无任何提示的情况下默认启用 **`Permanent`(永久重启)**.
+- 角色缺失时, 系统必须回落到 **`documented conservative default`(文档写明的一档保守兜底默认)** , 并在诊断中标注已启用安全回退, 不得在无任何提示的情况下默认启用 **`Permanent`(永久重启)**. 角色字段存在但值未知时, 系统必须在配置加载阶段拒绝并返回可读错误, 不得静默回落.
 - 运行中热更新角色声明时, 必须定义是否仅影响下一轮执行; 若本版本不支持热更新, 必须明确报错或拒绝并提示需要重建监督单元.
 - 当用户显式覆写默认且覆写与角色语义不一致时, 系统必须输出醒目的警告或拒绝加载, 具体严格度在计划中二选一并写清.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
 - **FR-001**: 系统必须为 `service`(常驻服务), `worker`(工作任务), `job`(一次性作业), `sidecar`(辅助任务), `supervisor`(嵌套监督器) 五类 **`work role`(工作任务角色)** 提供对外完整且可逐项核对的默认监督行为说明, 至少覆盖成功退出, 失败退出, 人为停止, 超时与预算耗尽五类情形下系统自动采取的监督动作; 其中 `job`(一次性作业) 在成功退出后默认不得按 **`Permanent`(永久重启)** 的含义再来一轮, `service`(常驻服务) 默认允许在成功退出后为了保持在线而再拉起, 其余三类角色的默认必须分别写明: `worker`(工作任务) 限次数重试并在用尽预算后停下或升级; `sidecar`(辅助任务) 可以单独重启辅助进程且不连带关掉主进程除非配置把生命周期绑在一起; `supervisor`(嵌套监督器) 外层把整个内层监督树当一个单元来算重启与预算.
 
-### Key Entities(关键实体) *(include if feature involves data(涉及数据时填写))*
+### Key Entities(关键实体) _(include if feature involves data(涉及数据时填写))_
 
-- **`WorkRole`(工作任务角色)**: 受监督单元的分类标签, 决定绑定哪一个 **`RoleDefaultPolicyPack`(角色默认策略包)** 以及随文档发布的角色说明文案.
-- **`RoleDefaultPolicyPack`(角色默认策略包)**: 绑定到某一 `WorkRole`(工作任务角色) 的一套成功, 失败与保护参数组合, 可被用户策略显式替换但不可被静默混用两个角色包.
+- **`WorkRole`(工作任务角色)**: 受监督单元的分类标签, 决定绑定哪一个 **`RoleDefaultPolicy`(角色默认策略包)** 以及随文档发布的角色说明文案.
+- **`RoleDefaultPolicy`(角色默认策略包)**: 绑定到某一 `WorkRole`(工作任务角色) 的一套成功, 失败与保护参数组合, 可被用户策略显式替换但不可被静默混用两个角色包.
 - **`SuccessExitSemantics`(成功退出语义)**: 写明哪种退出算业务上的成功, 用来阻止对 `job`(一次性作业) 的多余重启.
 
-## Constitution Alignment(宪章一致) *(mandatory(必填))*
+## Constitution Alignment(宪章一致) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -68,7 +69,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English(中文说明)`.
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 

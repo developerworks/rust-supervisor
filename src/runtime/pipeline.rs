@@ -10,15 +10,21 @@
 
 use crate::error::types::TaskFailure;
 use crate::event::payload::{
-    ColdStartReason, HotLoopReason, ProtectionAction, SupervisorEvent, ThrottleGateOwner, What,
-    Where,
+    ColdStartReason, HotLoopReason, MeltdownScope, ProtectionAction, SupervisorEvent,
+    ThrottleGateOwner, What, Where,
 };
 use crate::id::types::{ChildId, SupervisorPath};
-use crate::observe::pipeline::ObservabilityPipeline;
+use crate::observe::pipeline::{ObservabilityPipeline, PipelineStage, PipelineStageDiagnostic};
+use crate::policy::backoff::{ColdStartBudget, HotLoopDetector};
 use crate::policy::decision::{PolicyFailureKind, TaskExit};
 use crate::policy::failure_window::FailureWindow;
-use crate::policy::meltdown::MeltdownTracker;
-use crate::spec::supervisor::SupervisorSpec;
+use crate::policy::meltdown::{
+    LocalVerdict, MeltdownOutcome, MeltdownTracker, merge_meltdown_verdicts,
+};
+use crate::policy::role_defaults::{
+    EffectivePolicy, OnBudgetExhaustedAction, OnFailureAction, OnSuccessAction, OnTimeoutAction,
+};
+use crate::spec::supervisor::{EscalationPolicy, RestartLimit, SupervisorSpec};
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::restart_execution_plan;
 use std::time::{Instant, SystemTime};
@@ -45,8 +51,8 @@ impl ExitClassification {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Success => "success",
-            Self::NonZeroExit { .. } => "non_zero_exit",
-            Self::Crash { .. } => "crash",
+            Self::NonZeroExit { .. } => "nonzero_exit",
+            Self::Crash { .. } => "panic",
             Self::Timeout => "timeout",
             Self::ExternalCancel => "external_cancel",
             Self::ManualStop => "manual_stop",
@@ -75,6 +81,8 @@ pub struct BudgetEvaluation {
     pub limit_exhausted: bool,
     /// Escalation policy if defined.
     pub escalation_policy: Option<String>,
+    /// Effective meltdown outcome after merging local verdicts.
+    pub meltdown_outcome: MeltdownOutcome,
 }
 
 /// Final decision from stage 4.
@@ -111,6 +119,16 @@ pub struct PipelineContext {
     pub hot_loop_reason: HotLoopReason,
     /// Throttle gate owner that limited concurrent restarts.
     pub throttle_gate_owner: ThrottleGateOwner,
+    /// Effective role policy applied to this pipeline run.
+    pub effective_policy: Option<EffectivePolicy>,
+    /// Meltdown scopes that triggered in this pipeline round.
+    pub scopes_triggered: Vec<MeltdownScope>,
+    /// Dominant meltdown scope selected for attribution.
+    pub lead_scope: Option<MeltdownScope>,
+    /// Stage diagnostics emitted by the six-stage pipeline.
+    pub stage_diagnostics: Vec<PipelineStageDiagnostic>,
+    /// Result summary produced by the execute action stage.
+    pub execution_result: Option<String>,
     /// Event sequence number.
     pub sequence: u64,
     /// Correlation identifier.
@@ -147,6 +165,11 @@ impl PipelineContext {
             cold_start_reason: ColdStartReason::NotApplicable,
             hot_loop_reason: HotLoopReason::NotApplicable,
             throttle_gate_owner: ThrottleGateOwner::None,
+            effective_policy: None,
+            scopes_triggered: Vec::new(),
+            lead_scope: None,
+            stage_diagnostics: Vec::new(),
+            execution_result: None,
             sequence,
             correlation_id: correlation_id.into(),
         }
@@ -154,6 +177,7 @@ impl PipelineContext {
 }
 
 /// Six-stage supervision pipeline orchestrator.
+#[derive(Debug)]
 pub struct SupervisionPipeline {
     /// Observability pipeline for event emission.
     pub observability: ObservabilityPipeline,
@@ -161,6 +185,10 @@ pub struct SupervisionPipeline {
     pub meltdown_tracker: MeltdownTracker,
     /// Failure window for sliding accumulation.
     pub failure_window: FailureWindow,
+    /// Cold start restart budget for initial startup protection.
+    pub cold_start_budget: ColdStartBudget,
+    /// Hot loop detector for rapid crash-restart cycles.
+    pub hot_loop_detector: HotLoopDetector,
 }
 
 impl SupervisionPipeline {
@@ -182,10 +210,13 @@ impl SupervisionPipeline {
         meltdown_tracker: MeltdownTracker,
         failure_window: FailureWindow,
     ) -> Self {
+        let started_at_secs = current_unix_secs();
         Self {
             observability: ObservabilityPipeline::new(journal_capacity, subscriber_capacity),
             meltdown_tracker,
             failure_window,
+            cold_start_budget: ColdStartBudget::new(60, 5, started_at_secs),
+            hot_loop_detector: HotLoopDetector::new(10, 3),
         }
     }
 
@@ -215,22 +246,22 @@ impl SupervisionPipeline {
             .as_nanos();
 
         // Stage 1: Classify Exit
-        ctx = self.stage_classify_exit(ctx, &exit);
+        ctx = self.stage_classify_exit(ctx, &exit, now_unix_nanos);
 
         // Stage 2: Record Failure Window
-        ctx = self.stage_record_failure_window(ctx, now);
+        ctx = self.stage_record_failure_window(ctx, now, now_unix_nanos);
 
         // Stage 3: Evaluate Budget
-        ctx = self.stage_evaluate_budget(ctx, spec, tree);
+        ctx = self.stage_evaluate_budget(ctx, spec, tree, now, now_unix_nanos);
 
         // Stage 4: Decide Action
-        ctx = self.stage_decide_action(ctx);
+        ctx = self.stage_decide_action(ctx, now_unix_nanos);
 
         // Stage 5: Emit Typed Event
         ctx = self.stage_emit_typed_event(ctx, &exit, now_unix_nanos);
 
         // Stage 6: Execute Action
-        ctx = self.stage_execute_action(ctx);
+        ctx = self.stage_execute_action(ctx, now_unix_nanos);
 
         ctx
     }
@@ -245,17 +276,33 @@ impl SupervisionPipeline {
     /// # Returns
     ///
     /// Returns the updated context with exit classification.
-    fn stage_classify_exit(&self, mut ctx: PipelineContext, exit: &TaskExit) -> PipelineContext {
-        let classification = match exit {
-            TaskExit::Succeeded => ExitClassification::Success,
-            TaskExit::Failed { kind, .. } => match kind {
-                PolicyFailureKind::Cancelled => ExitClassification::ExternalCancel,
-                PolicyFailureKind::Timeout => ExitClassification::Timeout,
-                _ => ExitClassification::NonZeroExit { exit_code: -1 },
-            },
-        };
+    fn stage_classify_exit(
+        &self,
+        mut ctx: PipelineContext,
+        exit: &TaskExit,
+        completed_at_unix_nanos: u128,
+    ) -> PipelineContext {
+        let classification = ctx
+            .exit_classification
+            .clone()
+            .unwrap_or_else(|| match exit {
+                TaskExit::Succeeded => ExitClassification::Success,
+                TaskExit::Failed { kind, .. } => match kind {
+                    PolicyFailureKind::Cancelled => ExitClassification::ExternalCancel,
+                    PolicyFailureKind::Panic => ExitClassification::Crash {
+                        reason: "panic".to_string(),
+                    },
+                    PolicyFailureKind::Timeout => ExitClassification::Timeout,
+                    _ => ExitClassification::NonZeroExit { exit_code: -1 },
+                },
+            });
 
         ctx.exit_classification = Some(classification);
+        append_stage_diagnostic(
+            &mut ctx,
+            PipelineStage::ClassifyExit,
+            completed_at_unix_nanos,
+        );
         ctx
     }
 
@@ -273,6 +320,7 @@ impl SupervisionPipeline {
         &mut self,
         mut ctx: PipelineContext,
         now: Instant,
+        completed_at_unix_nanos: u128,
     ) -> PipelineContext {
         // Only record failures, not successes
         if let Some(ref classification) = ctx.exit_classification
@@ -284,6 +332,11 @@ impl SupervisionPipeline {
                 state.current_count, state.threshold_reached
             ));
         }
+        append_stage_diagnostic(
+            &mut ctx,
+            PipelineStage::RecordFailureWindow,
+            completed_at_unix_nanos,
+        );
         ctx
     }
 
@@ -299,30 +352,78 @@ impl SupervisionPipeline {
     ///
     /// Returns the updated context with budget evaluation.
     fn stage_evaluate_budget(
-        &self,
+        &mut self,
         mut ctx: PipelineContext,
         spec: &SupervisorSpec,
         tree: &SupervisorTree,
+        now: Instant,
+        completed_at_unix_nanos: u128,
     ) -> PipelineContext {
         // Get restart_execution_plan for this child
         let plan = restart_execution_plan(tree, spec, &ctx.child_id);
 
-        let remaining = plan.restart_limit.map(|limit| {
-            let current_count = self.failure_window.failure_count() as u32;
-            limit.max_restarts.saturating_sub(current_count)
-        });
+        let restart_failure_count = self.failure_window.failure_count() as u32;
+        let restart_limit = effective_restart_limit(&ctx, plan.restart_limit);
+        let escalation_policy = effective_escalation_policy(&ctx, plan.escalation_policy);
+        let remaining =
+            restart_limit.map(|limit| limit.max_restarts.saturating_sub(restart_failure_count));
 
-        let limit_exhausted = remaining == Some(0);
+        let limit_exhausted =
+            restart_limit.is_some_and(|limit| restart_failure_count > limit.max_restarts);
+        let group_id = plan.group.clone();
+        let should_restart = ctx
+            .exit_classification
+            .as_ref()
+            .is_some_and(ExitClassification::should_restart);
+        let now_secs = nanos_to_secs(completed_at_unix_nanos);
+        if should_restart {
+            let exhausted = self.cold_start_budget.record_restart(now_secs);
+            ctx.cold_start_reason = if exhausted {
+                ColdStartReason::BudgetExhausted
+            } else if self.cold_start_budget.is_window_active(now_secs) {
+                ColdStartReason::InitialStartup
+            } else {
+                ColdStartReason::NotApplicable
+            };
+
+            if self.hot_loop_detector.record_crash(now_secs) {
+                ctx.hot_loop_reason = HotLoopReason::RapidCrashDetected;
+            }
+        }
+
+        let meltdown_outcome = if should_restart {
+            self.meltdown_tracker.record_child_restart_with_group(
+                ctx.child_id.clone(),
+                group_id.clone(),
+                now,
+            );
+            let merged = merge_meltdown_verdicts(
+                child_local_verdict(&self.meltdown_tracker, &ctx.child_id),
+                group_local_verdict(&self.meltdown_tracker, group_id.as_deref()),
+                supervisor_local_verdict(&self.meltdown_tracker),
+            );
+            ctx.scopes_triggered = merged.scopes_triggered;
+            ctx.lead_scope = merged.lead_scope;
+            merged.effective_outcome
+        } else {
+            MeltdownOutcome::Continue
+        };
 
         ctx.budget_evaluation = Some(BudgetEvaluation {
             remaining_restarts: remaining,
             limit_exhausted,
-            escalation_policy: plan.escalation_policy.map(|p| format!("{:?}", p)),
+            escalation_policy: escalation_policy.map(|policy| format!("{policy:?}")),
+            meltdown_outcome,
         });
 
         // Set group_id from plan if available
-        ctx.group_id = plan.group;
+        ctx.group_id = group_id;
 
+        append_stage_diagnostic(
+            &mut ctx,
+            PipelineStage::EvaluateBudget,
+            completed_at_unix_nanos,
+        );
         ctx
     }
 
@@ -335,36 +436,44 @@ impl SupervisionPipeline {
     /// # Returns
     ///
     /// Returns the updated context with action decision.
-    fn stage_decide_action(&self, mut ctx: PipelineContext) -> PipelineContext {
+    fn stage_decide_action(
+        &self,
+        mut ctx: PipelineContext,
+        completed_at_unix_nanos: u128,
+    ) -> PipelineContext {
         let classification = ctx.exit_classification.as_ref();
         let budget = ctx.budget_evaluation.as_ref();
 
-        // Determine action based on classification and budget
-        let action = match classification {
-            Some(ExitClassification::ExternalCancel) | Some(ExitClassification::ManualStop) => {
-                // Cancel/stop signals have highest priority - do not restart
-                ProtectionAction::SupervisedStop
+        let (mut action, mut reason) = match classification {
+            Some(ExitClassification::ExternalCancel) | Some(ExitClassification::ManualStop) => (
+                ProtectionAction::SupervisedStop,
+                "external_cancel_or_manual_stop".to_string(),
+            ),
+            Some(classification) => {
+                role_or_budget_action(classification, ctx.effective_policy.as_ref(), budget)
             }
-            _ => {
-                // Check budget exhaustion
-                if let Some(budget_eval) = budget {
-                    if budget_eval.limit_exhausted {
-                        ProtectionAction::RestartDenied
-                    } else {
-                        ProtectionAction::RestartAllowed
-                    }
-                } else {
-                    ProtectionAction::RestartAllowed
-                }
-            }
+            None => budget_action(ctx.effective_policy.as_ref(), budget),
         };
 
-        let reason = match &action {
-            ProtectionAction::SupervisedStop => "external_cancel_or_manual_stop".to_string(),
-            ProtectionAction::RestartDenied => "restart_limit_exhausted".to_string(),
-            ProtectionAction::RestartAllowed => "within_restart_budget".to_string(),
-            _ => "default".to_string(),
-        };
+        if let Some(budget_eval) = budget {
+            let meltdown_action = protection_action_for_meltdown(budget_eval.meltdown_outcome);
+            if meltdown_action > action {
+                action = meltdown_action;
+                reason = meltdown_reason(action).to_string();
+            }
+        }
+        if ctx.cold_start_reason == ColdStartReason::BudgetExhausted
+            && ProtectionAction::RestartDenied > action
+        {
+            action = ProtectionAction::RestartDenied;
+            reason = "cold_start_budget_exhausted".to_string();
+        }
+        if ctx.hot_loop_reason != HotLoopReason::NotApplicable
+            && ProtectionAction::SupervisionPaused > action
+        {
+            action = ProtectionAction::SupervisionPaused;
+            reason = "hot_loop_detected".to_string();
+        }
 
         ctx.action_decision = Some(ActionDecision {
             action,
@@ -372,6 +481,11 @@ impl SupervisionPipeline {
             reason,
         });
 
+        append_stage_diagnostic(
+            &mut ctx,
+            PipelineStage::DecideAction,
+            completed_at_unix_nanos,
+        );
         ctx
     }
 
@@ -428,10 +542,19 @@ impl SupervisionPipeline {
         event.cold_start_reason = ctx.cold_start_reason.clone();
         event.hot_loop_reason = ctx.hot_loop_reason.clone();
         event.throttle_gate_owner = ctx.throttle_gate_owner.clone();
+        event.scopes_triggered = ctx.scopes_triggered.clone();
+        event.lead_scope = ctx.lead_scope;
+        if let Some(effective_policy) = ctx.effective_policy.as_ref() {
+            event.work_role = Some(effective_policy.work_role);
+            event.used_fallback_default = effective_policy.used_fallback;
+            event.effective_policy_source = Some(effective_policy.source);
+        }
 
         // Emit through observability pipeline
         let _lagged = self.observability.emit(event);
 
+        let mut ctx = ctx;
+        append_stage_diagnostic(&mut ctx, PipelineStage::EmitTypedEvent, now_unix_nanos);
         ctx
     }
 
@@ -444,25 +567,352 @@ impl SupervisionPipeline {
     /// # Returns
     ///
     /// Returns the updated context with execution result.
-    fn stage_execute_action(&self, ctx: PipelineContext) -> PipelineContext {
-        // In a full implementation, this would:
-        // - Actually restart the child if RestartAllowed
-        // - Queue the restart if RestartQueued
-        // - Block restart if RestartDenied or higher
-        // For now, we just record the decision
-
-        let _execution_result = if let Some(ref decision) = ctx.action_decision {
-            format!("action={:?}", decision.action)
+    fn stage_execute_action(
+        &self,
+        mut ctx: PipelineContext,
+        completed_at_unix_nanos: u128,
+    ) -> PipelineContext {
+        ctx.execution_result = if let Some(ref decision) = ctx.action_decision {
+            Some(match decision.action {
+                ProtectionAction::RestartAllowed => "restart_allowed_for_runtime".to_string(),
+                ProtectionAction::RestartQueued => "restart_queued".to_string(),
+                ProtectionAction::RestartDenied => "restart_denied".to_string(),
+                ProtectionAction::SupervisionPaused => "supervision_paused".to_string(),
+                ProtectionAction::Escalated => "escalated".to_string(),
+                ProtectionAction::SupervisedStop => "supervised_stop".to_string(),
+            })
         } else {
-            "no_decision".to_string()
+            Some("no_decision".to_string())
         };
 
-        // TODO(T014): Implement actual execution logic:
-        // - Check that execute_action does not conflict with earlier stage decisions
-        // - Respect restart delays from backoff policy
-        // - Handle concurrency throttle gates
-
+        append_stage_diagnostic(
+            &mut ctx,
+            PipelineStage::ExecuteAction,
+            completed_at_unix_nanos,
+        );
         ctx
+    }
+}
+
+/// Selects the restart limit for the current pipeline run.
+///
+/// # Arguments
+///
+/// - `ctx`: Pipeline context carrying the effective role policy.
+/// - `plan_limit`: Restart limit selected by the restart execution plan.
+///
+/// # Returns
+///
+/// Returns the explicit plan limit, or the role default limit when the plan does not define one.
+fn effective_restart_limit(
+    ctx: &PipelineContext,
+    plan_limit: Option<RestartLimit>,
+) -> Option<RestartLimit> {
+    plan_limit.or_else(|| {
+        ctx.effective_policy
+            .as_ref()
+            .and_then(|policy| policy.policy_pack.default_restart_limit)
+    })
+}
+
+/// Selects the escalation policy for the current pipeline run.
+///
+/// # Arguments
+///
+/// - `ctx`: Pipeline context carrying the effective role policy.
+/// - `plan_policy`: Escalation policy selected by the restart execution plan.
+///
+/// # Returns
+///
+/// Returns the explicit plan policy, or the role default policy when the plan does not define one.
+fn effective_escalation_policy(
+    ctx: &PipelineContext,
+    plan_policy: Option<EscalationPolicy>,
+) -> Option<EscalationPolicy> {
+    plan_policy.or_else(|| {
+        ctx.effective_policy
+            .as_ref()
+            .and_then(|policy| policy.policy_pack.default_escalation_policy)
+    })
+}
+
+/// Selects either role-specific action or budget-only action.
+///
+/// # Arguments
+///
+/// - `classification`: Exit classification produced by stage 1.
+/// - `effective_policy`: Optional role policy for the child.
+/// - `budget`: Optional budget evaluation produced by stage 3.
+///
+/// # Returns
+///
+/// Returns the protection action and diagnostic reason.
+fn role_or_budget_action(
+    classification: &ExitClassification,
+    effective_policy: Option<&EffectivePolicy>,
+    budget: Option<&BudgetEvaluation>,
+) -> (ProtectionAction, String) {
+    let Some(effective_policy) = effective_policy else {
+        return budget_action(None, budget);
+    };
+    match classification {
+        ExitClassification::Success => match effective_policy.policy_pack.on_success_exit {
+            OnSuccessAction::Restart => (
+                ProtectionAction::RestartAllowed,
+                "role_success_restart".to_string(),
+            ),
+            OnSuccessAction::Stop | OnSuccessAction::NoOp => (
+                ProtectionAction::SupervisedStop,
+                "role_success_stop".to_string(),
+            ),
+        },
+        ExitClassification::Timeout => match effective_policy.policy_pack.on_timeout {
+            OnTimeoutAction::RestartWithBackoff => budget_action(Some(effective_policy), budget),
+            OnTimeoutAction::StopAndEscalate => (
+                ProtectionAction::Escalated,
+                "role_timeout_escalate".to_string(),
+            ),
+        },
+        ExitClassification::NonZeroExit { .. } | ExitClassification::Crash { .. } => {
+            match effective_policy.policy_pack.on_failure_exit {
+                OnFailureAction::RestartWithBackoff | OnFailureAction::RestartPermanent => {
+                    budget_action(Some(effective_policy), budget)
+                }
+                OnFailureAction::StopAndEscalate => (
+                    ProtectionAction::Escalated,
+                    "role_failure_escalate".to_string(),
+                ),
+            }
+        }
+        ExitClassification::ExternalCancel | ExitClassification::ManualStop => (
+            ProtectionAction::SupervisedStop,
+            "external_cancel_or_manual_stop".to_string(),
+        ),
+    }
+}
+
+/// Selects the budget-only protection action.
+///
+/// # Arguments
+///
+/// - `effective_policy`: Optional role policy used for exhausted budget semantics.
+/// - `budget`: Optional budget evaluation produced by stage 3.
+///
+/// # Returns
+///
+/// Returns the protection action and diagnostic reason.
+fn budget_action(
+    effective_policy: Option<&EffectivePolicy>,
+    budget: Option<&BudgetEvaluation>,
+) -> (ProtectionAction, String) {
+    let Some(budget_eval) = budget else {
+        return (
+            ProtectionAction::RestartAllowed,
+            "within_restart_budget".to_string(),
+        );
+    };
+    if !budget_eval.limit_exhausted {
+        return (
+            ProtectionAction::RestartAllowed,
+            "within_restart_budget".to_string(),
+        );
+    }
+    match effective_policy
+        .map(|policy| policy.policy_pack.on_budget_exhausted)
+        .unwrap_or(OnBudgetExhaustedAction::Quarantine)
+    {
+        OnBudgetExhaustedAction::StopAndEscalate => (
+            ProtectionAction::Escalated,
+            "restart_limit_exhausted".to_string(),
+        ),
+        OnBudgetExhaustedAction::Quarantine => (
+            ProtectionAction::RestartDenied,
+            "restart_limit_exhausted".to_string(),
+        ),
+    }
+}
+
+/// Returns a diagnostic reason for a meltdown action override.
+///
+/// # Arguments
+///
+/// - `action`: Protection action selected from a meltdown verdict.
+///
+/// # Returns
+///
+/// Returns a stable reason label.
+fn meltdown_reason(action: ProtectionAction) -> &'static str {
+    match action {
+        ProtectionAction::RestartDenied => "meltdown_child_fuse",
+        ProtectionAction::SupervisionPaused => "meltdown_group_fuse",
+        ProtectionAction::Escalated => "meltdown_supervisor_fuse",
+        ProtectionAction::RestartAllowed => "within_restart_budget",
+        ProtectionAction::RestartQueued => "restart_queued_by_throttle",
+        ProtectionAction::SupervisedStop => "external_cancel_or_manual_stop",
+    }
+}
+
+/// Appends a diagnostic record for one completed pipeline stage.
+///
+/// # Arguments
+///
+/// - `ctx`: Pipeline context that receives the diagnostic record.
+/// - `stage`: Stage that has completed.
+/// - `completed_at_unix_nanos`: Completion timestamp in Unix epoch nanoseconds.
+///
+/// # Returns
+///
+/// This function returns nothing.
+fn append_stage_diagnostic(
+    ctx: &mut PipelineContext,
+    stage: PipelineStage,
+    completed_at_unix_nanos: u128,
+) {
+    let mut diagnostic = PipelineStageDiagnostic::new(
+        ctx.sequence,
+        ctx.correlation_id.clone(),
+        stage,
+        completed_at_unix_nanos,
+    )
+    .with_child_id(ctx.child_id.value.clone())
+    .with_supervisor_path(ctx.supervisor_path.to_string());
+
+    diagnostic.group_id = ctx.group_id.clone();
+    diagnostic.exit_classification = ctx
+        .exit_classification
+        .as_ref()
+        .map(|classification| classification.as_str().to_string());
+    diagnostic.failure_window_state = ctx.failure_window_state.clone();
+    diagnostic.budget_evaluation = ctx.budget_evaluation.as_ref().map(|budget| {
+        format!(
+            "remaining_restarts={:?}, limit_exhausted={}, escalation_policy={:?}, meltdown_outcome={:?}",
+            budget.remaining_restarts,
+            budget.limit_exhausted,
+            budget.escalation_policy,
+            budget.meltdown_outcome
+        )
+    });
+    diagnostic.decided_action = ctx
+        .action_decision
+        .as_ref()
+        .map(|decision| decision.action.to_string());
+    diagnostic.event_emitted = stage == PipelineStage::EmitTypedEvent;
+    diagnostic.execution_result = ctx.execution_result.clone();
+
+    ctx.stage_diagnostics.push(diagnostic);
+}
+
+/// Returns the current Unix epoch timestamp in seconds.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns zero if system time is before Unix epoch.
+fn current_unix_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_secs())
+}
+
+/// Converts Unix nanoseconds to seconds.
+///
+/// # Arguments
+///
+/// - `nanos`: Unix epoch nanoseconds.
+///
+/// # Returns
+///
+/// Returns the whole-second timestamp capped at `u64::MAX`.
+fn nanos_to_secs(nanos: u128) -> u64 {
+    (nanos / 1_000_000_000).min(u128::from(u64::MAX)) as u64
+}
+
+/// Builds a child-scope local meltdown verdict from current tracker state.
+///
+/// # Arguments
+///
+/// - `tracker`: Meltdown tracker containing current counters.
+/// - `child_id`: Child scope to evaluate.
+///
+/// # Returns
+///
+/// Returns the local child verdict.
+fn child_local_verdict(tracker: &MeltdownTracker, child_id: &ChildId) -> LocalVerdict {
+    let triggered =
+        tracker.child_failure_count(child_id) >= tracker.policy.child_max_restarts as usize;
+    LocalVerdict {
+        triggered,
+        outcome: if triggered {
+            MeltdownOutcome::ChildFuse
+        } else {
+            MeltdownOutcome::Continue
+        },
+    }
+}
+
+/// Builds a group-scope local meltdown verdict from current tracker state.
+///
+/// # Arguments
+///
+/// - `tracker`: Meltdown tracker containing current counters.
+/// - `group_id`: Optional group scope to evaluate.
+///
+/// # Returns
+///
+/// Returns the local group verdict.
+fn group_local_verdict(tracker: &MeltdownTracker, group_id: Option<&str>) -> LocalVerdict {
+    let triggered = group_id.is_some_and(|group| {
+        tracker.group_failure_count(group) >= tracker.policy.group_max_failures as usize
+    });
+    LocalVerdict {
+        triggered,
+        outcome: if triggered {
+            MeltdownOutcome::GroupFuse
+        } else {
+            MeltdownOutcome::Continue
+        },
+    }
+}
+
+/// Builds a supervisor-scope local meltdown verdict from current tracker state.
+///
+/// # Arguments
+///
+/// - `tracker`: Meltdown tracker containing current counters.
+///
+/// # Returns
+///
+/// Returns the local supervisor verdict.
+fn supervisor_local_verdict(tracker: &MeltdownTracker) -> LocalVerdict {
+    let triggered = tracker.get_supervisor_outcome() == MeltdownOutcome::SupervisorFuse;
+    LocalVerdict {
+        triggered,
+        outcome: if triggered {
+            MeltdownOutcome::SupervisorFuse
+        } else {
+            MeltdownOutcome::Continue
+        },
+    }
+}
+
+/// Maps meltdown outcomes onto the protection action ladder.
+///
+/// # Arguments
+///
+/// - `outcome`: Effective meltdown outcome.
+///
+/// # Returns
+///
+/// Returns the corresponding protection action.
+fn protection_action_for_meltdown(outcome: MeltdownOutcome) -> ProtectionAction {
+    match outcome {
+        MeltdownOutcome::Continue => ProtectionAction::RestartAllowed,
+        MeltdownOutcome::ChildFuse => ProtectionAction::RestartDenied,
+        MeltdownOutcome::GroupFuse => ProtectionAction::SupervisionPaused,
+        MeltdownOutcome::SupervisorFuse => ProtectionAction::Escalated,
     }
 }
 
@@ -472,7 +922,7 @@ mod tests {
     use crate::id::types::{ChildId, SupervisorPath};
     use crate::policy::decision::{PolicyFailureKind, TaskExit};
     use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
-    use crate::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
+    use crate::policy::meltdown::{MeltdownOutcome, MeltdownPolicy, MeltdownTracker};
     use crate::runtime::pipeline::{
         BudgetEvaluation, ExitClassification, PipelineContext, SupervisionPipeline,
     };
@@ -506,7 +956,7 @@ mod tests {
         let ctx = PipelineContext::new(child_id, path, 1, "test-correlation");
 
         let exit = TaskExit::Succeeded;
-        let ctx = pipeline.stage_classify_exit(ctx, &exit);
+        let ctx = pipeline.stage_classify_exit(ctx, &exit, 1);
 
         assert_eq!(ctx.exit_classification, Some(ExitClassification::Success));
         assert!(!ctx.exit_classification.unwrap().should_restart());
@@ -523,7 +973,7 @@ mod tests {
         let exit = TaskExit::Failed {
             kind: PolicyFailureKind::Recoverable,
         };
-        let ctx = pipeline.stage_classify_exit(ctx, &exit);
+        let ctx = pipeline.stage_classify_exit(ctx, &exit, 1);
 
         assert!(matches!(
             ctx.exit_classification,
@@ -545,13 +995,14 @@ mod tests {
             remaining_restarts: Some(3),
             limit_exhausted: false,
             escalation_policy: None,
+            meltdown_outcome: MeltdownOutcome::Continue,
         });
 
         // Classify as external cancel
         ctx.exit_classification = Some(ExitClassification::ExternalCancel);
 
         // Decide action should prioritize cancel over budget
-        let ctx = pipeline.stage_decide_action(ctx);
+        let ctx = pipeline.stage_decide_action(ctx, 1);
 
         assert_eq!(
             ctx.action_decision.unwrap().action,

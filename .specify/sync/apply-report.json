@@ -1,0 +1,85 @@
+{
+  "applied": "2026-05-17T20:57:05+08:00",
+  "based_on": ".specify/sync/proposals.json",
+  "approval_mode": "auto",
+  "changes_made": {
+    "specs_updated": [
+      {
+        "spec": "005-2-work-role-defaults",
+        "requirement": "SC-002",
+        "change_type": "Modified",
+        "files": [
+          "specs/005-2-work-role-defaults/data-model.md",
+          "specs/005-2-work-role-defaults/research.md",
+          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+        ]
+      },
+      {
+        "spec": "005-2-work-role-defaults",
+        "requirement": "EC-001",
+        "change_type": "Modified",
+        "files": [
+          "specs/005-2-work-role-defaults/spec.md",
+          "specs/005-2-work-role-defaults/data-model.md",
+          "specs/005-2-work-role-defaults/research.md",
+          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+        ]
+      },
+      {
+        "spec": "005-2-work-role-defaults",
+        "requirement": "CONTRACT-SUCCESS-002",
+        "change_type": "Modified",
+        "files": [
+          "specs/005-2-work-role-defaults/data-model.md",
+          "specs/005-2-work-role-defaults/research.md",
+          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+        ]
+      }
+    ],
+    "tests_updated": [
+      {
+        "file": "tests/work_role_defaults_integration.rs",
+        "change": "Added unknown_work_role_is_rejected_by_deserialization regression coverage."
+      }
+    ],
+    "implementation_tasks_generated": 0,
+    "align_tasks_file": ".specify/sync/align-tasks.md",
+    "backups": [
+      ".specify/sync/backups/2026-05-17T20-53-16/spec.md",
+      ".specify/sync/backups/2026-05-17T20-53-16/data-model.md",
+      ".specify/sync/backups/2026-05-17T20-53-16/role-defaults.md"
+    ],
+    "not_applied": [],
+    "reports_updated": [
+      ".specify/sync/drift-report.md",
+      ".specify/sync/drift-report.json"
+    ],
+    "validation_completed": [
+      {
+        "command": "cargo fmt",
+        "status": "passed"
+      },
+      {
+        "command": "cargo test --test work_role_defaults_integration",
+        "status": "passed",
+        "passed": 15,
+        "failed": 0
+      },
+      {
+        "command": "cargo test --test supervisor_pipeline_order",
+        "status": "passed",
+        "passed": 4,
+        "failed": 0
+      },
+      {
+        "command": "cargo clippy --all-targets --all-features -- -D warnings",
+        "status": "passed"
+      },
+      {
+        "command": "cargo test",
+        "status": "passed"
+      }
+    ]
+  },
+  "next_steps": []
+}

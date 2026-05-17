@@ -9,7 +9,9 @@
 //! decide_action → emit_typed_event → execute_action.
 
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
-use rust_supervisor::observe::pipeline::PipelineStage;
+use rust_supervisor::observe::pipeline::{
+    ObservabilityPipeline, PipelineStage, PipelineStageDiagnostic,
+};
 use rust_supervisor::policy::decision::{PolicyFailureKind, TaskExit};
 use rust_supervisor::policy::failure_window::{FailureWindow, FailureWindowConfig, WindowMode};
 use rust_supervisor::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
@@ -86,14 +88,19 @@ fn test_pipeline_stages_exist() {
 fn test_non_zero_exit_goes_through_pipeline() {
     // SC-001: Verify non-zero exit goes through all six pipeline stages in order
 
-    // Simulate various exit types for comprehensive testing
-    // Note: Current implementation maps Panic to NonZeroExit (FR-001 requires separate Crash category)
+    // Simulate all minimum exit types for comprehensive testing.
     let exits = vec![
-        (TaskExit::Succeeded, ExitClassification::Success, "success"),
+        (
+            TaskExit::Succeeded,
+            None,
+            ExitClassification::Success,
+            "success",
+        ),
         (
             TaskExit::Failed {
                 kind: PolicyFailureKind::Recoverable,
             },
+            None,
             ExitClassification::NonZeroExit { exit_code: -1 },
             "nonzero_exit",
         ),
@@ -101,13 +108,17 @@ fn test_non_zero_exit_goes_through_pipeline() {
             TaskExit::Failed {
                 kind: PolicyFailureKind::Panic,
             },
-            ExitClassification::NonZeroExit { exit_code: -1 }, // TODO(FR-001): Should be Crash
-            "panic_mapped_to_nonzero",
+            None,
+            ExitClassification::Crash {
+                reason: "panic".to_string(),
+            },
+            "panic",
         ),
         (
             TaskExit::Failed {
                 kind: PolicyFailureKind::Timeout,
             },
+            None,
             ExitClassification::Timeout,
             "timeout",
         ),
@@ -115,12 +126,21 @@ fn test_non_zero_exit_goes_through_pipeline() {
             TaskExit::Failed {
                 kind: PolicyFailureKind::Cancelled,
             },
+            None,
             ExitClassification::ExternalCancel,
             "external_cancel",
         ),
+        (
+            TaskExit::Failed {
+                kind: PolicyFailureKind::Cancelled,
+            },
+            Some(ExitClassification::ManualStop),
+            ExitClassification::ManualStop,
+            "manual_stop",
+        ),
     ];
 
-    for (exit, expected_classification, name) in exits {
+    for (exit, preclassified, expected_classification, name) in exits {
         let mut pipeline = create_test_pipeline();
         let spec = create_test_spec();
         let tree = SupervisorTree::build(&spec).expect("build tree");
@@ -128,12 +148,13 @@ fn test_non_zero_exit_goes_through_pipeline() {
         let child_id = ChildId::new(format!("test-child-{name}"));
         let supervisor_path = SupervisorPath::root();
 
-        let ctx = PipelineContext::new(
+        let mut ctx = PipelineContext::new(
             child_id.clone(),
             supervisor_path.clone(),
             1,
             format!("correlation-{name}"),
         );
+        ctx.exit_classification = preclassified;
 
         let result_ctx = pipeline.execute_pipeline(ctx, exit, &spec, &tree);
 
@@ -147,6 +168,24 @@ fn test_non_zero_exit_goes_through_pipeline() {
             actual.as_str(),
             expected_classification.as_str(),
             "Exit kind '{name}' should be classified correctly"
+        );
+
+        let stages = result_ctx
+            .stage_diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.stage)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            stages,
+            vec![
+                PipelineStage::ClassifyExit,
+                PipelineStage::RecordFailureWindow,
+                PipelineStage::EvaluateBudget,
+                PipelineStage::DecideAction,
+                PipelineStage::EmitTypedEvent,
+                PipelineStage::ExecuteAction,
+            ],
+            "Exit kind '{name}' should produce six ordered diagnostics"
         );
     }
 }
@@ -177,4 +216,43 @@ fn test_pipeline_stage_diagnostic_creation() {
     assert_eq!(diagnostic.group_id, Some("test-group".to_string()));
     assert_eq!(diagnostic.supervisor_path, "/");
     assert_eq!(diagnostic.completed_at_unix_nanos, now_unix_nanos);
+}
+
+#[test]
+fn test_pipeline_stage_diagnostics_export_through_observability() {
+    let mut observability = ObservabilityPipeline::new(8, 2);
+    let diagnostics = vec![
+        PipelineStageDiagnostic::new(1, "shared-correlation", PipelineStage::ClassifyExit, 1),
+        PipelineStageDiagnostic::new(
+            1,
+            "shared-correlation",
+            PipelineStage::RecordFailureWindow,
+            2,
+        ),
+        PipelineStageDiagnostic::new(1, "shared-correlation", PipelineStage::EvaluateBudget, 3),
+        PipelineStageDiagnostic::new(1, "shared-correlation", PipelineStage::DecideAction, 4),
+        PipelineStageDiagnostic::new(1, "shared-correlation", PipelineStage::EmitTypedEvent, 5),
+        PipelineStageDiagnostic::new(1, "shared-correlation", PipelineStage::ExecuteAction, 6),
+    ];
+
+    observability.record_pipeline_stage_diagnostics(&diagnostics);
+
+    let stages = observability
+        .test_recorder
+        .pipeline_stage_diagnostics
+        .iter()
+        .map(|diagnostic| diagnostic.stage)
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        stages,
+        vec![
+            PipelineStage::ClassifyExit,
+            PipelineStage::RecordFailureWindow,
+            PipelineStage::EvaluateBudget,
+            PipelineStage::DecideAction,
+            PipelineStage::EmitTypedEvent,
+            PipelineStage::ExecuteAction,
+        ]
+    );
 }

@@ -5,6 +5,7 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
+use crate::policy::role_defaults::{WorkRole, semantic_conflicts_for_child};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -23,7 +24,8 @@ pub enum SupervisionStrategy {
 }
 
 /// Policy used when a restart scope cannot remain local.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum EscalationPolicy {
     /// Escalate the failure to the parent supervisor.
     EscalateToParent,
@@ -34,7 +36,7 @@ pub enum EscalationPolicy {
 }
 
 /// Restart limit attached to supervisor, group, or child override settings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RestartLimit {
     /// Maximum allowed restart count inside the accounting window.
     pub max_restarts: u32,
@@ -329,6 +331,7 @@ impl SupervisorSpec {
         validate_restart_limit(self.restart_limit)?;
         validate_group_strategies(&self.group_strategies, &self.children)?;
         validate_child_strategy_overrides(self)?;
+        validate_work_roles(&self.children)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
         Ok(())
     }
@@ -469,6 +472,85 @@ fn validate_child_strategy_overrides(spec: &SupervisorSpec) -> Result<(), Superv
         validate_restart_limit(strategy.restart_limit)?;
     }
     Ok(())
+}
+
+/// Validates work role relationships that require sibling context.
+///
+/// # Arguments
+///
+/// - `children`: Children declared under one supervisor.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when sidecar bindings and semantic diagnostics are valid.
+fn validate_work_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
+    let child_ids = children
+        .iter()
+        .map(|child| child.id.clone())
+        .collect::<HashSet<_>>();
+
+    for child in children {
+        emit_role_conflict_warnings(child);
+        if child.work_role != Some(WorkRole::Sidecar) {
+            continue;
+        }
+
+        let sidecar_config = child.sidecar_config.as_ref().ok_or_else(|| {
+            SupervisorError::fatal_config(format!(
+                "sidecar child {} requires sidecar_config",
+                child.id
+            ))
+        })?;
+
+        if !child_ids.contains(&sidecar_config.primary_child_id) {
+            return Err(SupervisorError::fatal_config(format!(
+                "sidecar child {} references unknown primary_child_id {}",
+                child.id, sidecar_config.primary_child_id
+            )));
+        }
+
+        let primary_child = children
+            .iter()
+            .find(|candidate| candidate.id == sidecar_config.primary_child_id)
+            .ok_or_else(|| {
+                SupervisorError::fatal_config(format!(
+                    "sidecar child {} references unknown primary_child_id {}",
+                    child.id, sidecar_config.primary_child_id
+                ))
+            })?;
+
+        if primary_child.work_role == Some(WorkRole::Sidecar) {
+            return Err(SupervisorError::fatal_config(format!(
+                "sidecar child {} must not use another sidecar {} as primary_child_id",
+                child.id, sidecar_config.primary_child_id
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+/// Emits warning diagnostics for role semantic conflicts.
+///
+/// # Arguments
+///
+/// - `child`: Child specification being inspected.
+///
+/// # Returns
+///
+/// This function does not return a value.
+fn emit_role_conflict_warnings(child: &ChildSpec) {
+    for conflict in semantic_conflicts_for_child(child) {
+        tracing::warn!(
+            child_id = %conflict.child_id,
+            work_role = %conflict.work_role,
+            conflicting_field = %conflict.conflicting_field,
+            user_value = %conflict.user_value,
+            expected_semantic = %conflict.expected_semantic,
+            reason = %conflict.reason,
+            "work role semantic conflict"
+        );
+    }
 }
 
 /// Validates dynamic supervisor policy.

@@ -49,6 +49,8 @@ pub struct AuditRecord {
 pub struct TestRecorder {
     /// Events seen by the recorder.
     pub events: Vec<SupervisorEvent>,
+    /// Pipeline stage diagnostics seen by the recorder.
+    pub pipeline_stage_diagnostics: Vec<PipelineStageDiagnostic>,
     /// Structured log records seen by the recorder.
     pub logs: Vec<StructuredLogRecord>,
     /// Tracing spans seen by the recorder.
@@ -96,6 +98,20 @@ impl TestRecorder {
     pub fn record_lag(&mut self, missed: u64) {
         self.subscriber_lag = self.subscriber_lag.saturating_add(missed);
     }
+
+    /// Records pipeline stage diagnostics.
+    ///
+    /// # Arguments
+    ///
+    /// - `diagnostics`: Stage diagnostics produced by the runtime pipeline.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn record_pipeline_stage_diagnostics(&mut self, diagnostics: &[PipelineStageDiagnostic]) {
+        self.pipeline_stage_diagnostics
+            .extend_from_slice(diagnostics);
+    }
 }
 
 /// Observability fan-out pipeline.
@@ -105,6 +121,10 @@ pub struct ObservabilityPipeline {
     pub journal: EventJournal,
     /// Metrics facade used to derive metric samples.
     pub metrics: MetricsFacade,
+    /// When false, derived metric samples are not appended to the test recorder.
+    metrics_enabled: bool,
+    /// When false, command audit records are not appended to the test recorder.
+    audit_enabled: bool,
     /// Recorder that tests can inspect.
     pub test_recorder: TestRecorder,
     /// Subscriber queues used by simple fan-out.
@@ -132,9 +152,32 @@ impl ObservabilityPipeline {
     /// assert_eq!(pipeline.journal.capacity, 8);
     /// ```
     pub fn new(journal_capacity: usize, subscriber_capacity: usize) -> Self {
+        Self::with_observability_switches(journal_capacity, subscriber_capacity, true, true)
+    }
+
+    /// Creates a pipeline with explicit metric and audit switches.
+    ///
+    /// # Arguments
+    ///
+    /// - `journal_capacity`: Maximum event journal capacity.
+    /// - `subscriber_capacity`: Maximum queued events per subscriber.
+    /// - `metrics_enabled`: When false, [`ObservabilityPipeline::emit`] skips metric samples for the test recorder.
+    /// - `audit_enabled`: When false, [`ObservabilityPipeline::emit`] skips audit records for the test recorder.
+    ///
+    /// # Returns
+    ///
+    /// Returns an [`ObservabilityPipeline`] configured with the requested switches.
+    pub fn with_observability_switches(
+        journal_capacity: usize,
+        subscriber_capacity: usize,
+        metrics_enabled: bool,
+        audit_enabled: bool,
+    ) -> Self {
         Self {
             journal: EventJournal::new(journal_capacity),
             metrics: MetricsFacade::new(),
+            metrics_enabled,
+            audit_enabled,
             test_recorder: TestRecorder::new(),
             subscribers: Vec::new(),
             subscriber_capacity,
@@ -176,10 +219,28 @@ impl ObservabilityPipeline {
         self.test_recorder.logs.push(log);
         self.test_recorder.spans.push(span);
         self.test_recorder.tracing_events.push(tracing_event);
-        self.test_recorder.metrics.extend(metrics);
-        self.test_recorder.audits.extend(audit);
+        if self.metrics_enabled {
+            self.test_recorder.metrics.extend(metrics);
+        }
+        if self.audit_enabled {
+            self.test_recorder.audits.extend(audit);
+        }
         self.test_recorder.record_lag(lagged);
         lagged
+    }
+
+    /// Records pipeline stage diagnostics through the shared recorder.
+    ///
+    /// # Arguments
+    ///
+    /// - `diagnostics`: Stage diagnostics produced by the runtime pipeline.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn record_pipeline_stage_diagnostics(&mut self, diagnostics: &[PipelineStageDiagnostic]) {
+        self.test_recorder
+            .record_pipeline_stage_diagnostics(diagnostics);
     }
 
     /// Drains queued events for a subscriber.

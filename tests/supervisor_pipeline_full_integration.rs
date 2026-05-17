@@ -28,14 +28,14 @@ use std::time::Duration;
 /// Verifies that lead_scope follows the tie-breaking rule: child → group → supervisor.
 #[test]
 fn test_lead_scope_tie_breaking_all_layers_equal_severity() {
-    // Simulate all three layers triggering with same severity (SupervisedStop)
+    // Simulate all three layers triggering with the same effective severity.
     let child_verdict = LocalVerdict {
         triggered: true,
-        outcome: MeltdownOutcome::ChildFuse,
+        outcome: MeltdownOutcome::SupervisorFuse,
     };
     let group_verdict = LocalVerdict {
         triggered: true,
-        outcome: MeltdownOutcome::GroupFuse,
+        outcome: MeltdownOutcome::SupervisorFuse,
     };
     let supervisor_verdict = LocalVerdict {
         triggered: true,
@@ -44,10 +44,10 @@ fn test_lead_scope_tie_breaking_all_layers_equal_severity() {
 
     let merged = merge_meltdown_verdicts(child_verdict, group_verdict, supervisor_verdict);
 
-    // All three triggered, should take most restrictive (SupervisorFuse is highest severity)
+    // All three triggered, should take the shared effective severity.
     assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
 
-    // Lead scope should be Child (highest priority in tie-breaking)
+    // Lead scope should be Child because all matching verdicts are tied.
     assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
 
     // All scopes should be listed as triggered

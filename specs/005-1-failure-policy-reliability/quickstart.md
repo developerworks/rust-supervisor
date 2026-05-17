@@ -15,6 +15,7 @@ cargo test
 - 新增的 **`pipeline ordering`** 与 **`typed event`** 字段断言测试.
 
 ### US3 新增验收测试:
+
 - `tests/supervisor_backoff_jitter_distribution.rs` — 验证全抖动和去相关抖动的分散程度 (5 个测试).
 - `tests/supervisor_concurrent_restart_throttle.rs` — 验证并发闸门原子性和保护档位 (6 个测试,含 10 并发样本原子性测试).
 - `tests/supervisor_cold_start_and_hot_loop.rs` — 验证冷启动预算和热循环检测 (9 个测试).
@@ -23,6 +24,7 @@ cargo test
 ## 2. 代码阅读顺序
 
 ### Phase 2-3 (基础与流水线):
+
 1. `src/tree/order.rs` 里的 **`restart_execution_plan`**, 弄清 **`restart_limit`** 与 **`escalation_policy`** 从哪里来.
 2. `src/policy/failure_window.rs` — 失败窗口滑动累计逻辑.
 3. `src/runtime/pipeline.rs` — 六阶段流水线编排 (`classify exit` → `record failure window` → `evaluate budget` → `decide action` → `emit typed event` → `execute action`).
@@ -30,6 +32,7 @@ cargo test
 5. `src/event/payload.rs` 对照 **`contracts/pipeline-and-events.md`**.
 
 ### Phase 4-5 (退避策略与并发闸门):
+
 6. `src/policy/backoff.rs` — 全抖动 (`calculate_full_jitter`)、去相关抖动 (`calculate_decorrelated_jitter`)、冷启动预算 (`ColdStartBudget`)、热循环检测 (`HotLoopDetector`).
 7. `src/runtime/concurrent_gate.rs` — 实例全局闸门 (`SupervisorInstanceGate`)、分组级闸门 (`GroupLevelGate`)、组合闸门 (`CombinedThrottleGate`).
 8. `src/test_support/factory.rs` — 测试工厂函数 (`deterministic_backoff_policy`, `full_jitter_backoff_policy`, `decorrelated_jitter_backoff_policy`).
@@ -37,7 +40,7 @@ cargo test
 
 ## 3. 与 `005-2` 合并验收时的额外一步
 
-读完 `specs/005-2-work-role-defaults/spec.md` 的 Dependency Note(依赖说明), 确认 **`RoleDefaultPolicyPack`** 只在 **`evaluate budget`** 之后改变 **`decide action`** 输入, **不得短路六阶段顺序**.
+读完 `specs/005-2-work-role-defaults/spec.md` 的 Dependency Note(依赖说明), 确认 **`RoleDefaultPolicy`** 只在 **`evaluate budget`** 之后改变 **`decide action`** 输入, **不得短路六阶段顺序**.
 
 ## 4. 当前代码与结构化验收之间的差距
 

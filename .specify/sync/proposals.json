@@ -1,195 +1,93 @@
 {
-  "generated": "2026-05-17T04:59:22+08:00",
-  "based_on_drift_report": "2026-05-17T04:07:27+08:00",
-  "scope": "005-1-failure-policy-reliability",
+  "generated": "2026-05-17T20:53:16+08:00",
+  "based_on_drift_report": "2026-05-17T20:49:14+08:00",
+  "scope": {
+    "feature_directories": [
+      "specs/005-1-failure-policy-reliability",
+      "specs/005-2-work-role-defaults"
+    ]
+  },
+  "approval_mode": "auto",
   "summary": {
-    "backfill": 0,
-    "align": 6,
-    "human_decision": 1,
+    "backfill": 3,
+    "align": 0,
+    "human_decision": 0,
     "new_specs": 0,
     "remove_from_spec": 0
-  },
-  "interactive_session": {
-    "mode": true,
-    "next_proposal_id": null,
-    "accepted_responses": [
-      "A",
-      "R",
-      "M",
-      "S",
-      "Q"
-    ],
-    "instruction": "Proposal queue completed. Approved P1, P2, P3, P4, P5, P6, and P7 option 7a."
   },
   "proposals": [
     {
       "id": "P1",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "FR-001",
-      "direction": "ALIGN",
+      "spec_id": "005-2-work-role-defaults",
+      "requirement": "SC-002",
+      "direction": "BACKFILL",
       "confidence": "HIGH",
       "status": "APPROVED",
-      "approved_at": "2026-05-17T05:02:37+08:00",
-      "approved_response": "A",
+      "approved": true,
+      "approved_at": "2026-05-17T20:53:16+08:00",
       "current_state": {
-        "spec_says": "Every supervised unit completion must enter one fixed six-stage policy pipeline. No automatic restart may bypass the pipeline.",
-        "code_does": "RuntimeControlState refreshes restart limits, calculates restart decisions, and executes restarts directly. SupervisionPipeline exists but is not used by the real control loop, and execute action is placeholder logic."
+        "spec_says": "data-model.md and contracts/role-defaults.md still describe public role constants and the old UserPolicyOverrides merge signature.",
+        "code_does": "The implementation uses private default constructors, RoleDefaultPolicy::for_role(), and EffectivePolicy::merge(role, Vec<String>)."
       },
       "proposed_resolution": [
-        "Route the child-exit path through SupervisionPipeline::execute_pipeline.",
-        "Map TaskExit into success, nonzero_exit, panic, timeout, external_cancel, and manual_stop.",
-        "Move automatic restart, queued restart, denied restart, and supervised stop into execute action.",
-        "Emit auditable stage diagnostics for all six stages.",
-        "Replace placeholder acceptance tests with production-path assertions."
+        "Remove public SERVICE_DEFAULT, WORKER_DEFAULT, JOB_DEFAULT, SIDECAR_DEFAULT, and SUPERVISOR_DEFAULT constant descriptions.",
+        "Describe RoleDefaultPolicy::for_role() as the public lookup API over private role default constructors.",
+        "Replace the old UserPolicyOverrides merge signature with Vec<String> override field markers.",
+        "Separate missing work_role fallback from unknown work_role configuration errors in the data flow."
       ],
-      "rationale": "The fixed six-stage pipeline is the central 005-1 contract. Backfilling the current bypass would remove the feature's core behavior.",
-      "recommended_response": "A"
+      "rationale": "The tested code is authoritative. Public constants cannot express the complete role default values that include Vec fields without misleading users.",
+      "target_files": [
+        "specs/005-2-work-role-defaults/data-model.md",
+        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+      ]
     },
     {
       "id": "P2",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "FR-002",
-      "direction": "ALIGN",
+      "spec_id": "005-2-work-role-defaults",
+      "requirement": "EC-001",
+      "direction": "BACKFILL",
       "confidence": "HIGH",
       "status": "APPROVED",
-      "approved_at": "2026-05-17T05:03:12+08:00",
-      "approved_response": "A",
+      "approved": true,
+      "approved_at": "2026-05-17T20:53:16+08:00",
       "current_state": {
-        "spec_says": "MeltdownTracker must store separate child, group, and supervisor scope state, and events must include scopes_triggered and lead_scope.",
-        "code_does": "MeltdownTracker stores aggregate queues and writes each child failure into all conceptual layers. Event emission does not populate scopes_triggered or lead_scope."
+        "spec_says": "Missing or unknown work_role values both fall back to the documented conservative default.",
+        "code_does": "Missing work_role falls back to Worker with WARN diagnostics. Unknown work_role strings are rejected by strict serde enum deserialization."
       },
       "proposed_resolution": [
-        "Key meltdown state by ChildId, group_id, and supervisor instance.",
-        "Map each local verdict to ProtectionAction ladder values.",
-        "Choose lead_scope only among scopes that tie for the effective strictest verdict.",
-        "Populate scopes_triggered, lead_scope, and effective_protective_action in the real typed event."
+        "Update the spec edge case so missing work_role falls back to Worker.",
+        "Define unknown work_role strings as fatal configuration errors with readable diagnostics."
       ],
-      "rationale": "Scope isolation is required for group-level reliability and for SC-002 acceptance.",
-      "recommended_response": "A"
+      "rationale": "Rejecting unknown role strings prevents configuration typos from silently changing runtime behavior.",
+      "target_files": [
+        "specs/005-2-work-role-defaults/spec.md",
+        "specs/005-2-work-role-defaults/data-model.md",
+        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+      ]
     },
     {
       "id": "P3",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "FR-003",
-      "direction": "ALIGN",
-      "confidence": "MEDIUM",
-      "status": "APPROVED",
-      "approved_at": "2026-05-17T05:05:46+08:00",
-      "approved_response": "A",
-      "current_state": {
-        "spec_says": "Production restart throttling must support full jitter, decorrelated jitter, max concurrent restarts, cold start budget, hot loop detection, and reproducible tests.",
-        "code_does": "The related algorithms and types exist, but the real control loop uses BackoffPolicy::new with jitter disabled by default and does not use cold start budget, hot loop detection, or CombinedThrottleGate."
-      },
-      "proposed_resolution": [
-        "Evaluate cold start budget, hot loop detection, and concurrent gate state during evaluate budget.",
-        "Merge those states into ProtectionAction during decide action.",
-        "Execute queue, delay, deny, or supervised stop during execute action.",
-        "Expose deterministic seed and clock control for tests.",
-        "Serialize the global throttle owner as supervisor_global."
-      ],
-      "rationale": "The current code prepares types but does not change production restart behavior.",
-      "recommended_response": "A"
-    },
-    {
-      "id": "P4",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "SC-001",
-      "direction": "ALIGN",
+      "spec_id": "005-2-work-role-defaults",
+      "requirement": "CONTRACT-SUCCESS-002",
+      "direction": "BACKFILL",
       "confidence": "HIGH",
       "status": "APPROVED",
-      "approved_at": "2026-05-17T05:06:16+08:00",
-      "approved_response": "A",
+      "approved": true,
+      "approved_at": "2026-05-17T20:53:16+08:00",
       "current_state": {
-        "spec_says": "All fixed failure samples must be reconcilable with the six-stage pipeline order from events or diagnostics.",
-        "code_does": "The pipeline-order test emits one event into ObservabilityPipeline and leaves TODO comments for real six-stage diagnostics."
+        "spec_says": "ChildSpec can override success_exit_codes.",
+        "code_does": "RoleDefaultPolicy contains internal success_exit_codes, but ChildSpec has no external override field and TaskExit does not carry raw process exit codes."
       },
       "proposed_resolution": [
-        "Drive real SupervisionPipeline or RuntimeControlState in tests.",
-        "Cover success, nonzero_exit, panic, timeout, external_cancel, and manual_stop.",
-        "Assert stage order and diagnostic completeness for every sample."
+        "State that current success semantics are driven by TaskResult::Succeeded or equivalent typed success facts.",
+        "Clarify that RoleDefaultPolicy.success_exit_codes is internal policy data in this slice.",
+        "Move ChildSpec.success_exit_codes user override support out of the current contract."
       ],
-      "rationale": "This test is the acceptance proof for FR-001.",
-      "recommended_response": "A"
-    },
-    {
-      "id": "P5",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "SC-002",
-      "direction": "ALIGN",
-      "confidence": "MEDIUM",
-      "status": "APPROVED",
-      "approved_at": "2026-05-17T05:07:11+08:00",
-      "approved_response": "A",
-      "current_state": {
-        "spec_says": "After one group trips protection, other groups must remain able to complete controlled restart attempts in at least 90 percent of cases.",
-        "code_does": "Tests simulate group isolation with multiple independent MeltdownTracker instances instead of one supervisor instance with keyed group state."
-      },
-      "proposed_resolution": [
-        "Build one supervisor tree with at least two groups.",
-        "Inject dense failures into one group inside the same supervisor instance.",
-        "Verify the other group count remains independent and can complete one controlled restart attempt.",
-        "Assert scopes_triggered and lead_scope from production events."
-      ],
-      "rationale": "Multiple tracker instances cannot prove production group isolation.",
-      "recommended_response": "A"
-    },
-    {
-      "id": "P6",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "SC-003",
-      "direction": "ALIGN",
-      "confidence": "HIGH",
-      "status": "APPROVED",
-      "approved_at": "2026-05-17T05:08:26+08:00",
-      "approved_response": "A",
-      "current_state": {
-        "spec_says": "Concurrent restart pressure samples must not exceed the declared peak and must show queued or delayed diagnostics for excess attempts.",
-        "code_does": "The test uses a local simulated gate instead of production CombinedThrottleGate and checks supervisor_instance, which conflicts with the contract."
-      },
-      "proposed_resolution": [
-        "Remove the local ConcurrentRestartGate test simulation.",
-        "Use production CombinedThrottleGate or the full runtime path.",
-        "Keep at least ten simultaneous failure samples.",
-        "Assert restart_queued or stricter actions for excess attempts.",
-        "Assert supervisor_global and group:{group_id} owner strings."
-      ],
-      "rationale": "Production gate behavior and event contract must be validated together.",
-      "recommended_response": "A"
-    },
-    {
-      "id": "P7",
-      "spec_id": "005-1-failure-policy-reliability",
-      "requirement": "SC-004",
-      "direction": "HUMAN_DECISION",
-      "confidence": "MEDIUM",
-      "status": "APPROVED",
-      "approved_at": "2026-05-17T05:09:30+08:00",
-      "approved_response": "A 7a",
-      "chosen_option": "7a",
-      "chosen_direction": "ALIGN",
-      "current_state": {
-        "spec_says": "CV_jitter_strategy / CV_fixed_baseline must be at least 1.3.",
-        "code_does": "The test uses a constant delay as fixed baseline, making CV_fixed_baseline equal to zero, and only checks that jitter CV is greater than zero."
-      },
-      "options": [
-        {
-          "key": "7a",
-          "direction": "ALIGN",
-          "summary": "Define CV_fixed_baseline as the no-jitter exponential backoff sample sequence and verify the 1.3 ratio with production BackoffPolicy."
-        },
-        {
-          "key": "7b",
-          "direction": "BACKFILL",
-          "summary": "Amend the contract so a constant-delay zero-CV baseline uses a non-division threshold such as CV_jitter_strategy >= 0.3."
-        },
-        {
-          "key": "7c",
-          "direction": "MODIFY",
-          "summary": "Keep the ratio formula but let the reviewer define a nonzero fixed baseline sequence."
-        }
-      ],
-      "rationale": "The current contract can be read in a way that divides by zero. A human should choose whether the spec or the test interpretation is authoritative.",
-      "recommended_response": "A 7a"
+      "rationale": "The runtime does not currently expose raw process exit codes to the policy pipeline. Advertising a ChildSpec override would be a false capability.",
+      "target_files": [
+        "specs/005-2-work-role-defaults/data-model.md",
+        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
+      ]
     }
   ]
 }

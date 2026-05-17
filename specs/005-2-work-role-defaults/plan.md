@@ -8,7 +8,7 @@
 
 ## Summary(摘要)
 
-本切片要求为五种工作角色(**service**(服务), **worker**(工作者), **job**(作业), **sidecar**(边车), **supervisor**(监督器))定义并实现**RoleDefaultPolicyPack**(角色默认策略包), 在成功退出、失败退出、人工停止、超时和预算耗尽场景下提供不同的默认行为。依赖 **005-1-failure-policy-reliability** 的失败流水线, 特别是 **evaluate budget**(评估预算) 和 **decide action**(决定动作) 阶段。核心交付物包括: 角色枚举与默认策略数据结构、配置加载集成、运行时默认值注入逻辑、以及针对各角色的验收测试。
+本切片要求为五种工作角色(**service**(服务), **worker**(工作者), **job**(作业), **sidecar**(边车), **supervisor**(监督器))定义并实现**RoleDefaultPolicy**(角色默认策略包), 在成功退出、失败退出、人工停止、超时和预算耗尽场景下提供不同的默认行为。依赖 **005-1-failure-policy-reliability** 的失败流水线, 特别是 **evaluate budget**(评估预算) 和 **decide action**(决定动作) 阶段。核心交付物包括: 角色枚举与默认策略数据结构、配置加载集成、运行时默认值注入逻辑、以及针对各角色的验收测试。
 
 ## Technical Context(技术背景)
 
@@ -20,11 +20,11 @@
 **Project Type(项目类型)**: **`Tokio`(异步运行时)** **`supervisor runtime`(监督器运行时)**。
 **Performance Goals(性能目标)**: **本切片不定义吞吐量或延迟的硬性数值阈值**, **但要求默认值查找与注入在微秒级完成**, **不影响控制循环主路径延迟**。
 **Constraints(约束)**: **禁止 compatibility exports(兼容导出)**, **`src/` Rust 注释英文**, **规格正文中文且术语 **`English(中文说明)`**; **默认行为不得违反宪章规定的监督契约边界**。
-**Scale/Scope(规模和范围)**: **单进程内一棵或多棵监督树**, **每个子任务声明一个工作角色**, **默认策略包在启动时一次性计算**。
+**Scale/Scope(规模和范围)**: **单进程内一棵或多棵监督树**, **每个子任务声明一个工作角色**, **默认策略包在启动时一次性计算\*\*。
 
 ## Constitution Check(宪章检查)
 
-*GATE(关口): Phase 0(研究阶段) 前必须通过。Phase 1(设计阶段) 后必须重新检查。*
+_GATE(关口): Phase 0(研究阶段) 前必须通过。Phase 1(设计阶段) 后必须重新检查。_
 
 ### Phase 0 gate (初次)
 
@@ -38,7 +38,7 @@
 ### Phase 1 post-design gate (复检)
 
 - **`research.md`** 已无 NEEDS CLARIFICATION(需要澄清) 条目。
-- **`data-model.md`** 已写明 **五种工作角色的枚举定义** 与 **RoleDefaultPolicyPack**(角色默认策略包) 字段义务。
+- **`data-model.md`** 已写明 **五种工作角色的枚举定义** 与 **RoleDefaultPolicy**(角色默认策略包) 字段义务。
 - **`contracts/`** 已冻结 **角色到默认行为的映射规则** 与 **配置覆盖优先级**。
 - **`quickstart.md`** 已给出 **`src/`** 阅读顺序锚点。
 
@@ -94,7 +94,7 @@ tests/
 
 > **只有 Constitution Check(宪章检查) 存在违反项时，才填写本节。**
 
-| Violation(违反项) | Why Needed(为什么需要) | Simpler Alternative Rejected Because(为什么拒绝更简单方案) |
-|-------------------|------------------------|-------------------------------------------------------------|
-| [例如第四个项目] | [当前需要] | [为什么三个项目不够] |
-| [例如 Repository pattern(仓储模式)] | [具体问题] | [为什么直接访问数据库不够] |
+| Violation(违反项)                   | Why Needed(为什么需要) | Simpler Alternative Rejected Because(为什么拒绝更简单方案) |
+| ----------------------------------- | ---------------------- | ---------------------------------------------------------- |
+| [例如第四个项目]                    | [当前需要]             | [为什么三个项目不够]                                       |
+| [例如 Repository pattern(仓储模式)] | [具体问题]             | [为什么直接访问数据库不够]                                 |

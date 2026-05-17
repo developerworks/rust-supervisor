@@ -15,19 +15,23 @@ use crate::control::outcome::{
     StaleAttemptReport, StaleReportHandling,
 };
 use crate::error::types::SupervisorError;
-use crate::event::payload::{SupervisorEvent, What, Where};
+use crate::event::payload::{ProtectionAction, SupervisorEvent, ThrottleGateOwner, What, Where};
 use crate::event::time::{CorrelationId, EventSequenceSource, EventTime, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
-use crate::observe::pipeline::ObservabilityPipeline;
+use crate::observe::pipeline::{ObservabilityPipeline, PipelineStageDiagnostic};
 use crate::policy::backoff::BackoffPolicy;
 use crate::policy::decision::{
     PolicyEngine, RestartDecision, RestartPolicy, TaskExit as PolicyTaskExit,
 };
+use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
+use crate::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
+use crate::policy::role_defaults::{EffectivePolicy, OnSuccessAction};
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
 use crate::runtime::child_runtime_state::{ChildRuntimeState, RuntimeTimeBase};
 use crate::runtime::lifecycle::RuntimeExitReport;
 use crate::runtime::message::{ChildStartMessage, ControlPlaneMessage, RuntimeLoopMessage};
+use crate::runtime::pipeline::{ExitClassification, PipelineContext, SupervisionPipeline};
 use crate::runtime::shutdown_pipeline::ShutdownPipeline;
 use crate::shutdown::coordinator::{ShutdownCoordinator, ShutdownResult};
 use crate::shutdown::report::{
@@ -35,7 +39,7 @@ use crate::shutdown::report::{
     ShutdownReconcileReport,
 };
 use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
-use crate::spec::child::RestartPolicy as ChildRestartPolicy;
+use crate::spec::child::{ChildSpec, RestartPolicy as ChildRestartPolicy};
 use crate::spec::supervisor::{RestartLimit, SupervisorSpec};
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::{restart_execution_plan, shutdown_order, startup_order};
@@ -48,11 +52,11 @@ use tokio::time::{Instant, timeout};
 /// Typed event waiting for emission after mutable state borrows end.
 #[derive(Debug)]
 struct PendingRuntimeEvent {
-    /// Child identifier related to the event.
+    /// Child task identifier related to the event.
     child_id: ChildId,
-    /// Child path attached to the event location.
+    /// Child task path attached to the event location.
     path: SupervisorPath,
-    /// Generation attached to event timing.
+    /// Generation number attached to event timing.
     generation: Option<Generation>,
     /// Attempt attached to event timing.
     attempt: Option<ChildStartCount>,
@@ -77,6 +81,10 @@ pub struct RuntimeControlState {
     event_sequences: EventSequenceSource,
     /// Shared typed observability pipeline.
     observability: Arc<Mutex<ObservabilityPipeline>>,
+    /// Six-stage supervision pipeline for failure processing.
+    supervision_pipeline: SupervisionPipeline,
+    /// Instance-global concurrent restart throttle gate (FR-003).
+    concurrent_gate: crate::runtime::concurrent_gate::SupervisorInstanceGate,
     /// Dynamic child manifests accepted after startup.
     manifests: Vec<String>,
     /// Registry that owns declared child runtime records.
@@ -133,6 +141,27 @@ impl RuntimeControlState {
                 })
             })
             .collect::<HashMap<_, _>>();
+
+        // Initialize six-stage supervision pipeline with default configuration
+        let meltdown_policy = MeltdownPolicy::new(
+            3,                        // child_max_restarts
+            Duration::from_secs(10),  // child_window
+            5,                        // group_max_failures
+            Duration::from_secs(30),  // group_window
+            10,                       // supervisor_max_failures
+            Duration::from_secs(60),  // supervisor_window
+            Duration::from_secs(120), // reset_after
+        );
+        let meltdown_tracker = MeltdownTracker::new(meltdown_policy);
+        let failure_config = FailureWindowConfig::time_sliding(60, 5);
+        let failure_window = FailureWindow::new(failure_config);
+        let supervision_pipeline =
+            SupervisionPipeline::new(100, 10, meltdown_tracker, failure_window);
+
+        // Initialize concurrent restart throttle gate (FR-003)
+        // Default to 5 concurrent restarts at instance level
+        let concurrent_gate = crate::runtime::concurrent_gate::SupervisorInstanceGate::new(5);
+
         Ok(Self {
             shutdown: ShutdownCoordinator::new(shutdown_policy),
             shutdown_pipeline: ShutdownPipeline::new(),
@@ -140,6 +169,8 @@ impl RuntimeControlState {
             time_base,
             event_sequences: EventSequenceSource::new(),
             observability,
+            supervision_pipeline,
+            concurrent_gate,
             manifests: Vec::new(),
             registry,
             tree,
@@ -285,6 +316,11 @@ impl RuntimeControlState {
         report: ChildRunReport,
         event_sender: &broadcast::Sender<String>,
     ) {
+        // FR-003: Release concurrent gate slot when child exits (only if gate has active slots)
+        if self.concurrent_gate.get_active_count() > 0 {
+            self.concurrent_gate.release();
+        }
+
         let child_id = report.runtime.id.clone();
         let generation = report.runtime.generation;
         let attempt = report.runtime.child_start_count;
@@ -310,6 +346,10 @@ impl RuntimeControlState {
                         && state.generation == Some(generation)
                         && state.attempt == Some(attempt)
                 });
+        let manual_stop_requested = self
+            .child_runtime_states
+            .get(&child_id)
+            .is_some_and(|state| state.stop_state == ChildStopState::CancelDelivered);
         let mut stale_idle_report = false;
         let count_restart_failure = self
             .child_runtime_states
@@ -451,6 +491,42 @@ impl RuntimeControlState {
             let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
         }
 
+        // Execute six-stage supervision pipeline for failure processing.
+        let sequence = self.event_sequences.next().value;
+        let correlation_id_str = format!("{}", uuid::Uuid::nil());
+        let supervisor_path = self
+            .child_runtime_states
+            .get(&child_id)
+            .map(|state| state.path.clone())
+            .unwrap_or_else(|| SupervisorPath::root().join(child_id.value.clone()));
+
+        let mut pipeline_ctx = PipelineContext::new(
+            child_id.clone(),
+            supervisor_path,
+            sequence,
+            correlation_id_str,
+        );
+        pipeline_ctx.exit_classification = Some(classify_exit_for_pipeline(
+            &exit_kind,
+            manual_stop_requested,
+        ));
+        pipeline_ctx.effective_policy = self
+            .registry
+            .child(&child_id)
+            .map(|runtime| prepare_effective_policy(&runtime.spec));
+
+        // Convert TaskExit to PolicyTaskExit for pipeline.
+        let policy_exit = policy_task_exit(&exit_kind);
+
+        // Execute the complete six-stage pipeline.
+        let pipeline_result = self.supervision_pipeline.execute_pipeline(
+            pipeline_ctx,
+            policy_exit,
+            &self.spec,
+            &self.tree,
+        );
+        self.record_pipeline_stage_diagnostics(&pipeline_result.stage_diagnostics);
+
         if let Some(pending) = fence_pending_release {
             for event in pending_events {
                 self.emit_pending_event(event);
@@ -486,13 +562,47 @@ impl RuntimeControlState {
             self.reconcile_stop_deadlines();
             return;
         }
-        let Some(decision) = self.restart_decision(&child_id) else {
+
+        // Extract action decision from pipeline result.
+        let action_decision = pipeline_result.action_decision.as_ref();
+
+        // Map pipeline protection action to restart decision.
+        let pipeline_driven_decision = if let Some(decision) = action_decision {
+            match decision.action {
+                ProtectionAction::RestartAllowed => {
+                    if role_policy_restarts_success(&pipeline_result) {
+                        Some(RestartDecision::RestartAfter {
+                            delay: Duration::ZERO,
+                        })
+                    } else {
+                        self.restart_decision(&child_id)
+                    }
+                }
+                ProtectionAction::RestartQueued => {
+                    // Queue the restart - for now treat as no immediate restart.
+                    None
+                }
+                ProtectionAction::RestartDenied
+                | ProtectionAction::SupervisionPaused
+                | ProtectionAction::Escalated
+                | ProtectionAction::SupervisedStop => {
+                    // Do not restart - respect pipeline decision.
+                    None
+                }
+            }
+        } else {
+            // Fallback to existing policy engine if pipeline didn't produce a decision.
+            self.restart_decision(&child_id)
+        };
+
+        let Some(decision) = pipeline_driven_decision else {
             for event in pending_events {
                 self.emit_pending_event(event);
             }
             self.reconcile_stop_deadlines();
             return;
         };
+
         if restart_limit_refreshed
             .as_ref()
             .is_some_and(|(_path, restart_limit)| {
@@ -1343,12 +1453,112 @@ impl RuntimeControlState {
         let plan = restart_execution_plan(&self.tree, &self.spec, &failed_child);
         let scope_label = child_scope_label(&plan.scope);
         let group_label = plan.group.as_deref().unwrap_or("supervisor");
+
+        // FR-003: Check concurrent restart gate before spawning
+        if !self.concurrent_gate.try_acquire() {
+            // Gate saturated - emit throttle event and skip restart
+            let _ignored = event_sender.send(format!(
+                "restart_throttled:concurrent_gate_saturated:{group_label}:{scope_label}"
+            ));
+            self.emit_throttle_gate_event(
+                &failed_child,
+                plan.group.as_deref(),
+                ThrottleGateOwner::SupervisorInstance,
+            );
+            return;
+        }
+
         let _ignored = event_sender.send(format!(
             "restart_plan:{:?}:{group_label}:{scope_label}",
             plan.strategy
         ));
         for child_id in plan.scope {
             self.spawn_child_start(child_id, true, delay);
+        }
+        self.concurrent_gate.release();
+    }
+
+    /// Emits a typed event for a restart throttle gate hit.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child whose restart was throttled.
+    /// - `group_id`: Optional restart execution group.
+    /// - `owner`: Gate owner that limited the restart.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn emit_throttle_gate_event(
+        &mut self,
+        child_id: &ChildId,
+        group_id: Option<&str>,
+        owner: ThrottleGateOwner,
+    ) {
+        let now = Instant::now();
+        let uptime = now
+            .duration_since(self.time_base.base_instant)
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        let monotonic_nanos = now.duration_since(self.time_base.base_instant).as_nanos();
+        let path = self
+            .child_runtime_states
+            .get(child_id)
+            .map(|state| state.path.clone())
+            .unwrap_or_else(|| SupervisorPath::root().join(child_id.value.clone()));
+        let child_name = self
+            .registry
+            .child(child_id)
+            .map(|runtime| runtime.spec.name.clone())
+            .unwrap_or_else(|| child_id.to_string());
+        let mut event = SupervisorEvent::new(
+            When::new(EventTime::from_parts(
+                monotonic_nanos,
+                uptime,
+                Generation::initial(),
+                ChildStartCount::first(),
+            )),
+            Where::new(path).with_child(child_id.clone(), child_name),
+            What::ChildFailed {
+                failure: crate::error::types::TaskFailure::new(
+                    crate::error::types::TaskFailureKind::Error,
+                    "restart_throttled",
+                    format!(
+                        "restart denied by throttle gate {} for group {}",
+                        owner,
+                        group_id.unwrap_or("supervisor")
+                    ),
+                ),
+            },
+            self.event_sequences.next(),
+            CorrelationId::new(),
+            1,
+        );
+        event.effective_protective_action = Some(ProtectionAction::RestartDenied);
+        event.throttle_gate_owner = owner;
+        if let Some(runtime) = self.registry.child(child_id) {
+            let effective_policy = prepare_effective_policy(&runtime.spec);
+            event.work_role = Some(effective_policy.work_role);
+            event.used_fallback_default = effective_policy.used_fallback;
+            event.effective_policy_source = Some(effective_policy.source);
+        }
+        if let Ok(mut observability) = self.observability.lock() {
+            let _lagged = observability.emit(event);
+        }
+    }
+
+    /// Records six-stage pipeline diagnostics in shared observability.
+    ///
+    /// # Arguments
+    ///
+    /// - `diagnostics`: Diagnostics produced by the supervision pipeline.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn record_pipeline_stage_diagnostics(&self, diagnostics: &[PipelineStageDiagnostic]) {
+        if let Ok(mut observability) = self.observability.lock() {
+            observability.record_pipeline_stage_diagnostics(diagnostics);
         }
     }
 
@@ -2644,11 +2854,15 @@ fn restart_policy(policy: ChildRestartPolicy) -> RestartPolicy {
 ///
 /// # Arguments
 ///
+/// Maps a child spec backoff policy into the policy-engine equivalent.
+///
+/// # Arguments
+///
 /// - `policy`: Backoff policy stored on the child declaration.
 ///
 /// # Returns
 ///
-/// Returns the equivalent policy-engine value.
+/// Returns the equivalent policy-engine value with full jitter enabled.
 fn backoff_policy(policy: crate::spec::child::BackoffPolicy) -> BackoffPolicy {
     let jitter_percent = (policy.jitter_ratio * 100.0).round().clamp(0.0, 100.0) as u8;
     BackoffPolicy::new(
@@ -2657,6 +2871,7 @@ fn backoff_policy(policy: crate::spec::child::BackoffPolicy) -> BackoffPolicy {
         jitter_percent,
         policy.max_delay,
     )
+    .with_full_jitter(42) // Enable full jitter mode per FR-003
 }
 
 /// Maps a child-runner exit into policy-engine task exit.
@@ -2673,6 +2888,73 @@ fn policy_task_exit(exit: &TaskExit) -> PolicyTaskExit {
         Some(kind) => PolicyTaskExit::Failed { kind: kind.into() },
         None => PolicyTaskExit::Succeeded,
     }
+}
+
+/// Classifies a child-runner exit into pipeline exit classification.
+///
+/// This function maps all six minimum required exit kinds from the specification:
+/// success, nonzero_exit, panic, timeout, external_cancel, manual_stop.
+///
+/// # Arguments
+///
+/// - `exit`: Exit reported by the child runner.
+///
+/// # Returns
+///
+/// Returns the pipeline exit classification value.
+fn classify_exit_for_pipeline(exit: &TaskExit, manual_stop_requested: bool) -> ExitClassification {
+    match exit {
+        TaskExit::Succeeded => ExitClassification::Success,
+        TaskExit::Cancelled if manual_stop_requested => ExitClassification::ManualStop,
+        TaskExit::Cancelled => ExitClassification::ExternalCancel,
+        TaskExit::Failed(failure) => {
+            // Check if this is an external cancel or timeout based on failure kind.
+            match failure.kind {
+                crate::error::types::TaskFailureKind::Cancelled if manual_stop_requested => {
+                    ExitClassification::ManualStop
+                }
+                crate::error::types::TaskFailureKind::Cancelled => {
+                    ExitClassification::ExternalCancel
+                }
+                crate::error::types::TaskFailureKind::Timeout => ExitClassification::Timeout,
+                _ => ExitClassification::NonZeroExit { exit_code: -1 },
+            }
+        }
+        TaskExit::Panicked(_) => ExitClassification::Crash {
+            reason: "panic".to_string(),
+        },
+        TaskExit::TimedOut => ExitClassification::Timeout,
+    }
+}
+
+/// Reports whether the role policy should restart a successful exit.
+///
+/// # Arguments
+///
+/// - `pipeline_result`: Completed supervision pipeline context.
+///
+/// # Returns
+///
+/// Returns `true` when the effective role treats success as a restartable exit.
+fn role_policy_restarts_success(pipeline_result: &PipelineContext) -> bool {
+    pipeline_result.exit_classification == Some(ExitClassification::Success)
+        && pipeline_result
+            .effective_policy
+            .as_ref()
+            .is_some_and(|policy| policy.policy_pack.on_success_exit == OnSuccessAction::Restart)
+}
+
+/// Builds the effective policy for a child before budget evaluation.
+///
+/// # Arguments
+///
+/// - `child_spec`: Child specification whose declared role and overrides should be merged.
+///
+/// # Returns
+///
+/// Returns an [`EffectivePolicy`] ready for the supervision pipeline.
+fn prepare_effective_policy(child_spec: &ChildSpec) -> EffectivePolicy {
+    EffectivePolicy::for_child(child_spec)
 }
 
 /// Reports whether an exit should consume restart limit accounting.

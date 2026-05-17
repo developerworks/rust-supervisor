@@ -172,18 +172,12 @@ impl MeltdownTracker {
         self.prune(now);
 
         // Record at child level (per-ChildId isolation)
-        let child_queue = self
-            .child_failures
-            .entry(child_id.clone())
-            .or_insert_with(VecDeque::new);
+        let child_queue = self.child_failures.entry(child_id.clone()).or_default();
         child_queue.push_back(now);
 
         // Record at group level (per-group_id isolation) if group is specified
         if let Some(ref gid) = group_id {
-            let group_queue = self
-                .group_failures
-                .entry(gid.clone())
-                .or_insert_with(VecDeque::new);
+            let group_queue = self.group_failures.entry(gid.clone()).or_default();
             group_queue.push_back(now);
         }
 
@@ -458,8 +452,11 @@ pub struct MergedVerdict {
 
 /// Merges local verdicts from child, group, and supervisor layers.
 ///
-/// Takes the most restrictive outcome and applies tie-breaking rules:
-/// Priority order for lead_scope: child → group → supervisor
+/// Takes the most restrictive outcome and applies tie-breaking rules.
+///
+/// The lead scope is selected only from scopes whose local verdict equals the
+/// effective outcome. If multiple matching scopes remain, priority order is
+/// child, then group, then supervisor.
 ///
 /// # Arguments
 ///
@@ -516,12 +513,12 @@ pub fn merge_meltdown_verdicts(
     .copied()
     .unwrap_or(MeltdownOutcome::Continue);
 
-    // Determine lead_scope using tie-breaking rule: child > group > supervisor
-    let lead_scope = if child_verdict.triggered {
+    // Determine lead_scope only among scopes tied with the effective outcome.
+    let lead_scope = if child_verdict.triggered && child_verdict.outcome == effective_outcome {
         Some(MeltdownScope::Child)
-    } else if group_verdict.triggered {
+    } else if group_verdict.triggered && group_verdict.outcome == effective_outcome {
         Some(MeltdownScope::Group)
-    } else if supervisor_verdict.triggered {
+    } else if supervisor_verdict.triggered && supervisor_verdict.outcome == effective_outcome {
         Some(MeltdownScope::Supervisor)
     } else {
         None
@@ -571,9 +568,9 @@ mod merge_tests {
         assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
     }
 
-    /// Tests merging verdicts when all three scopes trigger with tie-breaking to most restrictive.
+    /// Tests merging verdicts when all three scopes trigger with different severity.
     #[test]
-    fn test_merge_all_three_tie_break() {
+    fn test_merge_all_three_uses_strictest_scope() {
         let child = LocalVerdict {
             triggered: true,
             outcome: MeltdownOutcome::ChildFuse,
@@ -592,7 +589,28 @@ mod merge_tests {
         assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
         // All scopes triggered
         assert_eq!(merged.scopes_triggered.len(), 3);
-        // Lead scope is child (highest priority in tie-break)
+        // Lead scope is selected from scopes matching the effective outcome.
+        assert_eq!(merged.lead_scope, Some(MeltdownScope::Supervisor));
+    }
+
+    /// Tests tie-breaking when multiple scopes share the effective outcome.
+    #[test]
+    fn test_merge_tie_breaks_matching_effective_outcome() {
+        let child = LocalVerdict {
+            triggered: true,
+            outcome: MeltdownOutcome::GroupFuse,
+        };
+        let group = LocalVerdict {
+            triggered: true,
+            outcome: MeltdownOutcome::GroupFuse,
+        };
+        let supervisor = LocalVerdict {
+            triggered: false,
+            outcome: MeltdownOutcome::Continue,
+        };
+
+        let merged = merge_meltdown_verdicts(child, group, supervisor);
+        assert_eq!(merged.effective_outcome, MeltdownOutcome::GroupFuse);
         assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
     }
 
@@ -615,8 +633,8 @@ mod merge_tests {
         let merged = merge_meltdown_verdicts(child, group, supervisor);
         assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
         assert_eq!(merged.scopes_triggered.len(), 2);
-        // Lead scope is group (child not triggered, so group wins)
-        assert_eq!(merged.lead_scope, Some(MeltdownScope::Group));
+        // Lead scope is selected from scopes matching the effective outcome.
+        assert_eq!(merged.lead_scope, Some(MeltdownScope::Supervisor));
     }
 
     /// Tests merging verdicts when no scopes are triggered.

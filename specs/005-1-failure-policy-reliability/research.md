@@ -4,7 +4,7 @@
 
 ## 1. 流水线是否与现有 `PolicyEngine`(策略引擎) 决策并存
 
-- **Decision(决定)**: 规格里的 **`policy pipeline`(策略流水线)** 写明监督运行时在一次进程结束之后必须先走完的阶段顺序; 现有 **`restart_execution_plan`(重启执行计划)** (见 `src/tree/order.rs`) 继续产出 **`restart scope`(重启范围)** 以及字段快照 **`restart limit`(重启次数限制)**, **`escalation policy`(升级策略)**; **`PolicyEngine`(策略引擎)** 仍产出 **`RestartDecision`(重启决策)**, 但其生效路径须在 **`evaluate budget`(评估预算)** 之后并入熔断结论, **闸门档位**, **`BackoffPolicy`(退避策略)** 给出的等待时长, **然后才能进入 **`execute action`(执行动作)**.
+- **Decision(决定)**: 规格里的 **`policy pipeline`(策略流水线)** 写明监督运行时在一次进程结束之后必须先走完的阶段顺序; 现有 **`restart_execution_plan`(重启执行计划)** (见 `src/tree/order.rs`) 继续产出 **`restart scope`(重启范围)** 以及字段快照 **`restart limit`(重启次数限制)**, **`escalation policy`(升级策略)**; **`PolicyEngine`(策略引擎)** 仍产出 **`RestartDecision`(重启决策)**, 但其生效路径须在 **`evaluate budget`(评估预算)** 之后并入熔断结论, **闸门档位**, **`BackoffPolicy`(退避策略)** 给出的等待时长, **然后才能进入 **`execute action`(执行动作)\*\*.
 - **Rationale(理由)**: 代码已在 `refresh_restart_limit_for_child` 与 `restart_execution_plan` 之间存在碎片化用法; 规格要求 **`restart limit`** 与 **`escalation policy`** 进入单一可对账链条, 避免 **`execute_restart_decision`** 绕开限额语义.
 - **Alternatives considered(曾考虑的备选)**: 完全重写策略引擎为单一巨型函数; 被拒绝, 因为破坏模块边界且迁移风险过高.
 
@@ -27,5 +27,5 @@
 
 ## 5. 与 `specs/005-2-work-role-defaults/spec.md` 的边界
 
-- **Decision(决定)**: **`005-1`** 交付统一 **`evaluate budget`** 语义与事件字段; **`005-2`** 只替换 **`RoleDefaultPolicyPack`(角色默认策略包)** 写入 **`decide action`** 的输入, 不得分叉第二条失败旁路.
+- **Decision(决定)**: **`005-1`** 交付统一 **`evaluate budget`** 语义与事件字段; **`005-2`** 只替换 **`RoleDefaultPolicy`(角色默认策略包)** 写入 **`decide action`** 的输入, 不得分叉第二条失败旁路.
 - **Rationale(理由)**: **`005-2`** Dependency Note(依赖说明) 已写明 **`evaluate budget`** 字段用法一致 **`005-1`**.

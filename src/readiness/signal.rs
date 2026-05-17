@@ -3,11 +3,12 @@
 //! This module owns the small synchronization boundary that allows a task to
 //! report readiness without exposing runtime internals.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::sync::watch;
 
 /// Readiness observation state for one child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ReadinessState {
     /// The child has not reported readiness.
@@ -19,7 +20,8 @@ pub enum ReadinessState {
 }
 
 /// Policy that decides when a child becomes ready.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ReadinessPolicy {
     /// The child becomes ready as soon as its task starts running.
     Immediate,

@@ -5,14 +5,18 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
+use crate::policy::role_defaults::{SidecarConfig, WorkRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::task::factory::TaskFactory;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Kind of task represented by a child declaration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum TaskKind {
     /// Asynchronous worker that can be cancelled through its context.
     AsyncWorker,
@@ -23,7 +27,8 @@ pub enum TaskKind {
 }
 
 /// Importance of a child to its parent supervisor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Criticality {
     /// The child is required for the supervisor to remain healthy.
     Critical,
@@ -32,7 +37,8 @@ pub enum Criticality {
 }
 
 /// Restart behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum RestartPolicy {
     /// Restart regardless of the exit result.
     Permanent,
@@ -43,7 +49,7 @@ pub enum RestartPolicy {
 }
 
 /// Shutdown behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ShutdownPolicy {
     /// Graceful stop budget for cooperative shutdown.
     pub graceful_timeout: Duration,
@@ -81,7 +87,7 @@ impl ShutdownPolicy {
 }
 
 /// Health behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct HealthPolicy {
     /// Expected heartbeat interval.
     pub heartbeat_interval: Duration,
@@ -109,7 +115,7 @@ impl HealthPolicy {
 }
 
 /// Backoff behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BackoffPolicy {
     /// Initial delay before the first restart.
     pub initial_delay: Duration,
@@ -141,7 +147,7 @@ impl BackoffPolicy {
 }
 
 /// Declarative specification for a child task or nested supervisor.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChildSpec {
     /// Stable child identifier.
     pub id: ChildId,
@@ -150,6 +156,8 @@ pub struct ChildSpec {
     /// Child task kind.
     pub kind: TaskKind,
     /// Optional factory for worker children.
+    #[serde(skip)]
+    #[schemars(skip)]
     pub factory: Option<Arc<dyn TaskFactory>>,
     /// Restart policy for this child.
     pub restart_policy: RestartPolicy,
@@ -167,6 +175,12 @@ pub struct ChildSpec {
     pub tags: Vec<String>,
     /// Criticality used by parent policy decisions.
     pub criticality: Criticality,
+    /// Optional role that selects default lifecycle policy semantics.
+    #[serde(default)]
+    pub work_role: Option<WorkRole>,
+    /// Optional sidecar binding used when the role is [`WorkRole::Sidecar`].
+    #[serde(default)]
+    pub sidecar_config: Option<SidecarConfig>,
 }
 
 impl Debug for ChildSpec {
@@ -185,6 +199,8 @@ impl Debug for ChildSpec {
             .field("dependencies", &self.dependencies)
             .field("tags", &self.tags)
             .field("criticality", &self.criticality)
+            .field("work_role", &self.work_role)
+            .field("sidecar_config", &self.sidecar_config)
             .finish()
     }
 }
@@ -240,6 +256,8 @@ impl ChildSpec {
             dependencies: Vec::new(),
             tags: Vec::new(),
             criticality: Criticality::Critical,
+            work_role: Some(WorkRole::Worker),
+            sidecar_config: None,
         }
     }
 
@@ -257,7 +275,8 @@ impl ChildSpec {
         validate_non_empty(&self.name, "child name")?;
         validate_tags(&self.tags)?;
         validate_backoff(self.backoff_policy)?;
-        validate_factory(self.kind, self.factory.is_some())
+        validate_factory(self.kind, self.factory.is_some())?;
+        validate_sidecar_local(self)
     }
 }
 
@@ -338,6 +357,27 @@ fn validate_factory(kind: TaskKind, has_factory: bool) -> Result<(), SupervisorE
         (TaskKind::AsyncWorker | TaskKind::BlockingWorker, false) => Err(
             SupervisorError::fatal_config("worker child requires a task factory"),
         ),
+        _ => Ok(()),
+    }
+}
+
+/// Validates local sidecar fields without inspecting sibling children.
+///
+/// # Arguments
+///
+/// - `child`: Child specification to validate.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when the local sidecar declaration is coherent.
+fn validate_sidecar_local(child: &ChildSpec) -> Result<(), SupervisorError> {
+    match (child.work_role, child.sidecar_config.as_ref()) {
+        (Some(WorkRole::Sidecar), None) => Err(SupervisorError::fatal_config(
+            "sidecar work_role requires sidecar_config",
+        )),
+        (role, Some(_)) if role != Some(WorkRole::Sidecar) => Err(SupervisorError::fatal_config(
+            "sidecar_config requires sidecar work_role",
+        )),
         _ => Ok(()),
     }
 }

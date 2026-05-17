@@ -1,6 +1,6 @@
 {
-  "feature_directory": "specs/005-1-failure-policy-reliability",
-  "active_feature_directory": "specs/005-1-failure-policy-reliability",
+  "feature_directory": "specs/005-2-work-role-defaults",
+  "active_feature_directory": "specs/005-2-work-role-defaults",
   "feature_directories": [
     "specs/005-1-failure-policy-reliability",
     "specs/005-2-work-role-defaults"

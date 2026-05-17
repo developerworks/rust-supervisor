@@ -3,12 +3,13 @@
 //! The module owns stable IDs, paths, start_counts, and generations used across the
 //! supervisor runtime.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 /// Stable identifier for a child task.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct ChildId {
     /// Human-readable child identifier from configuration.
     pub value: String,
@@ -84,7 +85,7 @@ impl Default for SupervisorId {
 }
 
 /// Path of a supervisor or child within a supervisor tree.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct SupervisorPath {
     /// Ordered path segments from root to the current node.
     pub segments: Vec<String>,
@@ -163,7 +164,9 @@ impl Display for SupervisorPath {
 }
 
 /// Monotonic child_start_count number for a child run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub struct ChildStartCount {
     /// One-based child_start_count number.
     pub value: u64,
@@ -200,7 +203,9 @@ impl ChildStartCount {
 }
 
 /// Monotonic generation number for a child runtime slot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Generation {
     /// Zero-based generation number.
     pub value: u64,

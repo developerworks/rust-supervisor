@@ -6,81 +6,78 @@
 //! 2. The dominant attribution scope is correctly identified in events
 
 use rust_supervisor::event::payload::MeltdownScope;
-use rust_supervisor::policy::meltdown::{MeltdownOutcome, MeltdownPolicy, MeltdownTracker};
+use rust_supervisor::policy::meltdown::{
+    LocalVerdict, MeltdownOutcome, MeltdownPolicy, MeltdownTracker, merge_meltdown_verdicts,
+};
 use std::time::Duration;
 
-/// Helper to determine lead_scope based on tie-breaking rules.
-/// Priority: child > group > supervisor (when multiple are equally restrictive)
-fn determine_lead_scope(
-    child_triggered: bool,
-    group_triggered: bool,
-    supervisor_triggered: bool,
-) -> Option<MeltdownScope> {
-    // Tie-breaking rule: child has highest priority, then group, then supervisor
-    if child_triggered {
-        Some(MeltdownScope::Child)
-    } else if group_triggered {
-        Some(MeltdownScope::Group)
-    } else if supervisor_triggered {
-        Some(MeltdownScope::Supervisor)
-    } else {
-        None
-    }
+/// Creates a local verdict for merge-rule tests.
+fn verdict(triggered: bool, outcome: MeltdownOutcome) -> LocalVerdict {
+    LocalVerdict { triggered, outcome }
 }
 
 #[test]
-fn test_lead_scope_child_priority() {
-    // When child and group both trigger, lead_scope should be Child
-    let child_triggered = true;
-    let group_triggered = true;
-    let supervisor_triggered = false;
+fn test_lead_scope_child_priority_when_effective_outcome_ties() {
+    // When child and group both match the effective outcome, child wins the tie.
+    let merged = merge_meltdown_verdicts(
+        verdict(true, MeltdownOutcome::GroupFuse),
+        verdict(true, MeltdownOutcome::GroupFuse),
+        verdict(false, MeltdownOutcome::Continue),
+    );
 
-    let lead = determine_lead_scope(child_triggered, group_triggered, supervisor_triggered);
-    assert_eq!(lead, Some(MeltdownScope::Child));
+    assert_eq!(merged.effective_outcome, MeltdownOutcome::GroupFuse);
+    assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
 }
 
 #[test]
-fn test_lead_scope_group_priority_over_supervisor() {
-    // When group and supervisor both trigger (but not child), lead_scope should be Group
-    let child_triggered = false;
-    let group_triggered = true;
-    let supervisor_triggered = true;
+fn test_lead_scope_group_priority_over_supervisor_when_tied() {
+    // When group and supervisor both match the effective outcome, group wins the tie.
+    let merged = merge_meltdown_verdicts(
+        verdict(false, MeltdownOutcome::Continue),
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+    );
 
-    let lead = determine_lead_scope(child_triggered, group_triggered, supervisor_triggered);
-    assert_eq!(lead, Some(MeltdownScope::Group));
+    assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
+    assert_eq!(merged.lead_scope, Some(MeltdownScope::Group));
 }
 
 #[test]
-fn test_lead_scope_supervisor_only() {
-    // When only supervisor triggers, lead_scope should be Supervisor
-    let child_triggered = false;
-    let group_triggered = false;
-    let supervisor_triggered = true;
+fn test_lead_scope_uses_scope_matching_effective_outcome() {
+    // Lower-severity triggered scopes do not win attribution over the strictest scope.
+    let merged = merge_meltdown_verdicts(
+        verdict(true, MeltdownOutcome::ChildFuse),
+        verdict(true, MeltdownOutcome::GroupFuse),
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+    );
 
-    let lead = determine_lead_scope(child_triggered, group_triggered, supervisor_triggered);
-    assert_eq!(lead, Some(MeltdownScope::Supervisor));
+    assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
+    assert_eq!(merged.lead_scope, Some(MeltdownScope::Supervisor));
 }
 
 #[test]
 fn test_lead_scope_all_three_layers() {
-    // When all three layers trigger, lead_scope should be Child (highest priority)
-    let child_triggered = true;
-    let group_triggered = true;
-    let supervisor_triggered = true;
+    // When all three layers tie at the effective outcome, lead_scope should be Child.
+    let merged = merge_meltdown_verdicts(
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+        verdict(true, MeltdownOutcome::SupervisorFuse),
+    );
 
-    let lead = determine_lead_scope(child_triggered, group_triggered, supervisor_triggered);
-    assert_eq!(lead, Some(MeltdownScope::Child));
+    assert_eq!(merged.effective_outcome, MeltdownOutcome::SupervisorFuse);
+    assert_eq!(merged.lead_scope, Some(MeltdownScope::Child));
 }
 
 #[test]
 fn test_lead_scope_none_when_no_triggers() {
-    // When no layer triggers, lead_scope should be None
-    let child_triggered = false;
-    let group_triggered = false;
-    let supervisor_triggered = false;
+    // When no layer triggers, lead_scope should be None.
+    let merged = merge_meltdown_verdicts(
+        verdict(false, MeltdownOutcome::Continue),
+        verdict(false, MeltdownOutcome::Continue),
+        verdict(false, MeltdownOutcome::Continue),
+    );
 
-    let lead = determine_lead_scope(child_triggered, group_triggered, supervisor_triggered);
-    assert_eq!(lead, None);
+    assert_eq!(merged.lead_scope, None);
 }
 
 #[test]

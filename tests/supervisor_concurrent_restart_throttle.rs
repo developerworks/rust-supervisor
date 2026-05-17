@@ -1,7 +1,7 @@
 //! Acceptance tests for concurrent restart throttle gates (SC-003).
 //!
 //! This test verifies that:
-//! 1. Concurrent restarts exceeding the gate limit enter queued or denied states
+//! 1. Concurrent restarts exceeding the gate limit enter denied states
 //! 2. Events indicate throttle gate ownership (supervisor_global or group:{group_id})
 //! 3. Atomicity test: at least 10 concurrent failure samples all enter protection when exceeding limit
 //!
@@ -34,7 +34,7 @@ fn evaluate_restart_attempt(
             ThrottleGateOwner::SupervisorInstance
         };
 
-        (ProtectionAction::RestartQueued, owner)
+        (ProtectionAction::RestartDenied, owner)
     }
 }
 
@@ -53,7 +53,7 @@ fn test_concurrent_gate_allows_within_limit() {
 }
 
 #[test]
-fn test_concurrent_gate_queues_when_exceeded() {
+fn test_concurrent_gate_denies_when_exceeded() {
     // SC-003: Use production CombinedThrottleGate with group-level gating
     let instance_gate = SupervisorInstanceGate::new(5);
     let group_gate = GroupLevelGate::new(2);
@@ -63,9 +63,9 @@ fn test_concurrent_gate_queues_when_exceeded() {
     evaluate_restart_attempt(&combined, Some("test-group"));
     evaluate_restart_attempt(&combined, Some("test-group"));
 
-    // 3rd should be queued due to group limit
+    // 3rd should be denied due to group limit
     let (action, owner) = evaluate_restart_attempt(&combined, Some("test-group"));
-    assert_eq!(action, ProtectionAction::RestartQueued);
+    assert_eq!(action, ProtectionAction::RestartDenied);
     assert_eq!(owner, ThrottleGateOwner::Group("test-group".to_string()));
 }
 
@@ -90,9 +90,9 @@ fn test_atomicity_ten_concurrent_samples() {
         assert_eq!(result.0, ProtectionAction::RestartAllowed);
     }
 
-    // Last 5 should be queued (protection triggered)
+    // Last 5 should be denied (protection triggered)
     for result in results.iter().take(10).skip(5) {
-        assert_eq!(result.0, ProtectionAction::RestartQueued);
+        assert_eq!(result.0, ProtectionAction::RestartDenied);
         assert_eq!(result.1, ThrottleGateOwner::SupervisorInstance);
     }
 }
@@ -107,9 +107,9 @@ fn test_gate_release_allows_new_restarts() {
     evaluate_restart_attempt(&combined, None);
     evaluate_restart_attempt(&combined, None);
 
-    // Next should be queued
+    // Next should be denied
     let (action, _) = evaluate_restart_attempt(&combined, None);
-    assert_eq!(action, ProtectionAction::RestartQueued);
+    assert_eq!(action, ProtectionAction::RestartDenied);
 
     // Release one slot
     combined.release(None);
@@ -124,7 +124,7 @@ fn test_throttle_gate_owner_display() {
     assert_eq!(format!("{}", ThrottleGateOwner::None), "none");
     assert_eq!(
         format!("{}", ThrottleGateOwner::SupervisorInstance),
-        "supervisor_instance"
+        "supervisor_global"
     );
     assert_eq!(
         format!("{}", ThrottleGateOwner::Group("test-group".to_string())),
@@ -149,9 +149,9 @@ fn test_group_level_isolation_in_production_gate() {
     evaluate_restart_attempt(&combined, Some("group-a"));
     evaluate_restart_attempt(&combined, Some("group-a"));
 
-    // Group A's 3rd attempt should be queued
+    // Group A's 3rd attempt should be denied
     let (action_a, _) = evaluate_restart_attempt(&combined, Some("group-a"));
-    assert_eq!(action_a, ProtectionAction::RestartQueued);
+    assert_eq!(action_a, ProtectionAction::RestartDenied);
 
     // Group B should still be able to restart (isolated from Group A)
     let (action_b, _) = evaluate_restart_attempt(&combined, Some("group-b"));
