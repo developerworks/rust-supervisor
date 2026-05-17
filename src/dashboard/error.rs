@@ -116,4 +116,156 @@ impl DashboardError {
             true,
         )
     }
+
+    // ------------------------------------------------------------------
+    // IPC security error constructors (C1-C9)
+    // ------------------------------------------------------------------
+
+    /// Creates a socket owner mismatch error (C1).
+    pub fn ipc_socket_owner_mismatch(message: impl Into<String>) -> Self {
+        Self::new(
+            "ipc_socket_owner_mismatch",
+            "ipc_bind",
+            None,
+            message,
+            false,
+        )
+    }
+
+    /// Creates a peer credential uid mismatch error (C2).
+    pub fn peer_cred_uid_mismatch(expected: u32, got: u32) -> Self {
+        Self::new(
+            "peer_cred_uid_mismatch",
+            "peer_credentials",
+            None,
+            format!("peer uid mismatch: expected {expected}, got {got}"),
+            false,
+        )
+    }
+
+    /// Creates a peer credential gid not allowed error (C2).
+    pub fn peer_cred_gid_not_allowed(gid: u32) -> Self {
+        Self::new(
+            "peer_cred_gid_not_allowed",
+            "peer_credentials",
+            None,
+            format!("peer gid {gid} is not in the allowed gid list"),
+            false,
+        )
+    }
+
+    /// Creates a peer credential pid not allowed error (C2).
+    pub fn peer_cred_pid_not_allowed(pid: u32) -> Self {
+        Self::new(
+            "peer_cred_pid_not_allowed",
+            "peer_credentials",
+            None,
+            format!("peer pid {pid} is not in the allowed pid list"),
+            false,
+        )
+    }
+
+    /// Creates a peer credential unavailable error (C2).
+    pub fn peer_cred_unavailable(message: impl Into<String>) -> Self {
+        Self::new(
+            "peer_cred_unavailable",
+            "peer_credentials",
+            None,
+            message,
+            false,
+        )
+    }
+
+    /// Creates an authorization denied error (C3).
+    pub fn authz_denied(method: impl Into<String>) -> Self {
+        Self::new(
+            "authz_denied",
+            "authorization",
+            None,
+            format!("command {} is not authorized", method.into()),
+            false,
+        )
+    }
+
+    /// Creates an authorization not configured error (C3).
+    pub fn authz_not_configured() -> Self {
+        Self::new(
+            "authz_not_configured",
+            "authorization",
+            None,
+            "command authorization is not configured",
+            false,
+        )
+    }
+
+    /// Creates a replay detected error (C4).
+    pub fn replay_detected(request_id: impl Into<String>) -> Self {
+        Self::new(
+            "replay_detected",
+            "replay_protection",
+            None,
+            format!("replay detected for request_id {}", request_id.into()),
+            false,
+        )
+    }
+
+    /// Creates a request too large error (C5).
+    pub fn request_too_large(actual: usize, max_bytes: usize) -> Self {
+        Self::new(
+            "request_too_large",
+            "size_limit",
+            None,
+            format!("request body {actual} bytes exceeds limit of {max_bytes} bytes"),
+            false,
+        )
+    }
+
+    /// Creates a rate limit exceeded error (C6).
+    pub fn rate_limit_exceeded() -> Self {
+        Self::new(
+            "rate_limit_exceeded",
+            "rate_limit",
+            None,
+            "rate limit exceeded",
+            false,
+        )
+    }
+
+    /// Creates an audit write failed error (C7).
+    pub fn audit_write_failed(message: impl Into<String>) -> Self {
+        Self::new("audit_write_failed", "audit", None, message, false)
+    }
+
+    /// Creates an audit queue full error (C7).
+    pub fn audit_queue_full() -> Self {
+        Self::new(
+            "audit_queue_full",
+            "audit",
+            None,
+            "audit defer queue is full",
+            false,
+        )
+    }
+
+    /// Creates an allowlist denied error (C9).
+    pub fn allowlist_denied(path: impl Into<String>) -> Self {
+        Self::new(
+            "allowlist_denied",
+            "allowlist",
+            None,
+            format!("external command not in allowlist: {}", path.into()),
+            false,
+        )
+    }
+
+    /// Creates an allowlist empty error (C9).
+    pub fn allowlist_empty() -> Self {
+        Self::new(
+            "allowlist_empty",
+            "allowlist",
+            None,
+            "external command allowlist is empty — all external commands are denied",
+            false,
+        )
+    }
 }

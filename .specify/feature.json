@@ -1,8 +1,9 @@
 {
-  "feature_directory": "specs/005-2-work-role-defaults",
-  "active_feature_directory": "specs/005-2-work-role-defaults",
+  "feature_directory": "specs/006-1-platform-docs-ipc-security",
+  "active_feature_directory": "specs/006-1-platform-docs-ipc-security",
   "feature_directories": [
     "specs/005-1-failure-policy-reliability",
-    "specs/005-2-work-role-defaults"
+    "specs/005-2-work-role-defaults",
+    "specs/006-1-platform-docs-ipc-security"
   ]
 }

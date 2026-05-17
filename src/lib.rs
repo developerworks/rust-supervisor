@@ -7,13 +7,17 @@
 pub mod child_runner;
 pub mod config;
 pub mod control;
+#[cfg(unix)]
 pub mod dashboard;
 pub mod error;
 pub mod event;
 pub mod health;
 pub mod id;
+#[cfg(unix)]
+pub mod ipc;
 pub mod journal;
 pub mod observe;
+pub mod platform;
 pub mod policy;
 pub mod readiness;
 pub mod registry;

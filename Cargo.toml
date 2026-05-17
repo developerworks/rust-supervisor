@@ -34,6 +34,7 @@ path = "src/lib.rs"
 
 [dependencies]
 confique = { version = "0.4.0", features = ["yaml"] }
+libc = "0.2"
 metrics = "0.24"
 rand = "0.10"
 rust-config-tree = "0.1.9"
