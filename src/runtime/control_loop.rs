@@ -2851,13 +2851,19 @@ fn build_child_control_outcome(
     generation_fence: Option<GenerationFenceOutcome>,
 ) -> ChildControlResult {
     let liveness = runtime_state.observe_liveness(time_base.now_unix_nanos());
+    // Data model: status is None when there is no active attempt.
+    let status = if runtime_state.attempt.is_some() {
+        Some(runtime_state.status)
+    } else {
+        None
+    };
     ChildControlResult::new(
         runtime_state.child_id.clone(),
         runtime_state.attempt,
         runtime_state.generation,
         operation_before,
         runtime_state.operation,
-        Some(runtime_state.status),
+        status,
         cancel_delivered,
         runtime_state.stop_state,
         runtime_state.restart_limit.clone(),
@@ -2944,6 +2950,7 @@ fn apply_stop_control_to_runtime_state(
     let cancel_delivered = if had_active_attempt && !already_cancelled_for_target {
         let delivered = runtime_state.cancel();
         if delivered {
+            runtime_state.stop_state = ChildStopState::CancelDelivered;
             runtime_state.stop_deadline_at_unix_nanos = Some(stop_deadline_at_unix_nanos);
             if let (Some(generation), Some(attempt)) =
                 (runtime_state.generation, runtime_state.attempt)

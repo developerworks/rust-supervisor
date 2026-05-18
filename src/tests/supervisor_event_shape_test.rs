@@ -28,7 +28,10 @@ fn supervisor_event_serializes_typed_shape() {
     );
     let json = serde_json::to_string(&event).expect("serialize event");
 
-    assert!(json.contains("ChildRunning"));
+    assert!(
+        json.contains("child_running"),
+        "JSON should contain snake_case variant, got: {json}"
+    );
     assert!(json.contains("config_version"));
 }
 

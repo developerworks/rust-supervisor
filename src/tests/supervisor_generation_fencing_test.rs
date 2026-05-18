@@ -344,6 +344,9 @@ async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() {
 
     for _ in 0..400 {
         advance_test_clock(Duration::from_millis(10)).await;
+        // Call current_state first to drive the control loop through any
+        // pending child exit messages before reading the recorder.
+        let current = expect_current_state(handle.current_state().await.expect("state"));
         recorder_capture = handle.observability_recorder();
         stop_completed_seen |= recorder_capture.events.iter().any(|event| {
             matches!(
@@ -353,7 +356,6 @@ async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() {
             )
         });
 
-        let current = expect_current_state(handle.current_state().await.expect("state"));
         let Some(worker) = current
             .child_runtime_records
             .iter()

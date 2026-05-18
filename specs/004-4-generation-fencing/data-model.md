@@ -1,18 +1,22 @@
 # Data Model(数据模型): 代次隔离重启
 
+## 底层类型约定
+
+`Generation(代次)` 和 `ChildStartCount(子任务启动计数)` (即 attempt(尝试) 计数器) 的底层类型均为 `u32(32位无符号整数)`. 自增到 `u32::MAX` 后使用 `wrapping_add(1)(饱和加一)` 溢出包装到 0, 不得在溢出时 panic(崩溃) 或产生未定义行为. 选择 `u32(32位无符号整数)` 的理由: 即便每秒重启一次也需要约 136 年才能耗尽计数器空间, 因此溢出在实际运行中不会发生. `u64(64位无符号整数)` 被拒绝, 因为 JSON 序列化时存在数字精度损失风险且计数器空间过剩.
+
 ## Entity(实体): `GenerationFenceState(代次隔离状态)`
 
 `GenerationFenceState(代次隔离状态)` 表示一个 `ChildRuntimeState(子任务运行状态记录)` 当前是否允许启动新 attempt(尝试). 它不是时间戳, 也不是 `UNIX_EPOCH(Unix 纪元常量)`. 它只表达同一个 child(子任务) 跨重启的新旧代次边界.
 
 ### Fields(字段)
 
-| Field(字段) | Type(类型) | Description(说明) |
-|-------------|------------|-------------------|
-| `phase` | `GenerationFencePhase` | 当前隔离阶段. |
-| `active_generation` | `Option<Generation>` | 当前活动尝试所属 generation(代次), 无活动尝试时为 `None(无值)`. |
-| `active_attempt` | `Option<ChildStartCount>` | 当前活动 attempt(尝试), 无活动尝试时为 `None(无值)`. |
-| `pending_restart` | `Option<PendingRestart>` | 已接受但尚未完成的待重启请求. |
-| `last_stale_report` | `Option<StaleAttemptReport>` | 最近一次过期报告, 用于诊断和 dashboard(仪表盘) 投影. |
+| Field(字段)         | Type(类型)                   | Description(说明)                                               |
+| ------------------- | ---------------------------- | --------------------------------------------------------------- |
+| `phase`             | `GenerationFencePhase`       | 当前隔离阶段.                                                   |
+| `active_generation` | `Option<Generation>`         | 当前活动尝试所属 generation(代次), 无活动尝试时为 `None(无值)`. |
+| `active_attempt`    | `Option<ChildStartCount>`    | 当前活动 attempt(尝试), 无活动尝试时为 `None(无值)`.            |
+| `pending_restart`   | `Option<PendingRestart>`     | 已接受但尚未完成的待重启请求.                                   |
+| `last_stale_report` | `Option<StaleAttemptReport>` | 最近一次过期报告, 用于诊断和 dashboard(仪表盘) 投影.            |
 
 ### Values(取值): `GenerationFencePhase(代次隔离阶段)`
 
@@ -36,18 +40,18 @@
 
 ### Fields(字段)
 
-| Field(字段) | Type(类型) | Description(说明) |
-|-------------|------------|-------------------|
-| `command_id` | `CommandId` | 原始重启命令标识. |
-| `requested_by` | `String` | 发起重启的操作者. |
-| `reason` | `String` | 发起重启的原因. |
-| `old_generation` | `Generation` | 重启命令锁定的旧 generation(代次). |
-| `old_attempt` | `ChildStartCount` | 重启命令锁定的旧 attempt(尝试). |
-| `target_generation` | `Generation` | 旧 attempt(尝试) 完成后要启动的新 generation(代次). |
-| `requested_at_unix_nanos` | `u128` | 重启请求被接受的时间. |
-| `stop_deadline_at_unix_nanos` | `u128` | 取消送达后允许旧 attempt(尝试) 优雅退出的截止时间. |
-| `abort_requested` | `bool` | runtime(运行时) 是否已经请求强制中止旧 attempt(尝试). |
-| `duplicate_request_count` | `u32` | 已合并的重复重启请求数量. |
+| Field(字段)                   | Type(类型)        | Description(说明)                                     |
+| ----------------------------- | ----------------- | ----------------------------------------------------- |
+| `command_id`                  | `CommandId`       | 原始重启命令标识.                                     |
+| `requested_by`                | `String`          | 发起重启的操作者.                                     |
+| `reason`                      | `String`          | 发起重启的原因.                                       |
+| `old_generation`              | `Generation`      | 重启命令锁定的旧 generation(代次).                    |
+| `old_attempt`                 | `ChildStartCount` | 重启命令锁定的旧 attempt(尝试).                       |
+| `target_generation`           | `Generation`      | 旧 attempt(尝试) 完成后要启动的新 generation(代次).   |
+| `requested_at_unix_nanos`     | `u128`            | 重启请求被接受的时间.                                 |
+| `stop_deadline_at_unix_nanos` | `u128`            | 取消送达后允许旧 attempt(尝试) 优雅退出的截止时间.    |
+| `abort_requested`             | `bool`            | runtime(运行时) 是否已经请求强制中止旧 attempt(尝试). |
+| `duplicate_request_count`     | `u32`             | 已合并的重复重启请求数量.                             |
 
 ### Validation Rules(校验规则)
 
@@ -62,15 +66,15 @@
 
 ### Fields(字段)
 
-| Field(字段) | Type(类型) | Description(说明) |
-|-------------|------------|-------------------|
-| `decision` | `GenerationFenceDecision` | 本次命令对代次隔离的处理结论. |
-| `old_generation` | `Option<Generation>` | 本次命令锁定或观察到的旧 generation(代次). |
-| `old_attempt` | `Option<ChildStartCount>` | 本次命令锁定或观察到的旧 attempt(尝试). |
-| `target_generation` | `Option<Generation>` | 本次命令预期启动的新 generation(代次). |
-| `cancel_delivered` | `bool` | 本次命令是否新发送取消. |
-| `abort_requested` | `bool` | 本次命令是否请求强制中止. |
-| `conflict` | `Option<ChildControlFailure>` | 重启冲突或不可继续时的结构化原因. |
+| Field(字段)         | Type(类型)                    | Description(说明)                          |
+| ------------------- | ----------------------------- | ------------------------------------------ |
+| `decision`          | `GenerationFenceDecision`     | 本次命令对代次隔离的处理结论.              |
+| `old_generation`    | `Option<Generation>`          | 本次命令锁定或观察到的旧 generation(代次). |
+| `old_attempt`       | `Option<ChildStartCount>`     | 本次命令锁定或观察到的旧 attempt(尝试).    |
+| `target_generation` | `Option<Generation>`          | 本次命令预期启动的新 generation(代次).     |
+| `cancel_delivered`  | `bool`                        | 本次命令是否新发送取消.                    |
+| `abort_requested`   | `bool`                        | 本次命令是否请求强制中止.                  |
+| `conflict`          | `Option<ChildControlFailure>` | 重启冲突或不可继续时的结构化原因.          |
 
 ### Values(取值): `GenerationFenceDecision(代次隔离决定)`
 
@@ -93,16 +97,16 @@
 
 ### Fields(字段)
 
-| Field(字段) | Type(类型) | Description(说明) |
-|-------------|------------|-------------------|
-| `child_id` | `ChildId` | 报告所属子任务. |
-| `reported_generation` | `Generation` | 过期报告中的 generation(代次). |
-| `reported_attempt` | `ChildStartCount` | 过期报告中的 attempt(尝试). |
-| `current_generation` | `Option<Generation>` | 报告到达时运行状态记录中的当前 generation(代次). |
-| `current_attempt` | `Option<ChildStartCount>` | 报告到达时运行状态记录中的当前 attempt(尝试). |
-| `exit_kind` | `ExitKind` | 过期尝试的退出分类. |
-| `handled_as` | `StaleReportHandling` | runtime(运行时) 对该报告的处理结果. |
-| `observed_at_unix_nanos` | `u128` | 报告被识别为过期的时间. |
+| Field(字段)              | Type(类型)                | Description(说明)                                |
+| ------------------------ | ------------------------- | ------------------------------------------------ |
+| `child_id`               | `ChildId`                 | 报告所属子任务.                                  |
+| `reported_generation`    | `Generation`              | 过期报告中的 generation(代次).                   |
+| `reported_attempt`       | `ChildStartCount`         | 过期报告中的 attempt(尝试).                      |
+| `current_generation`     | `Option<Generation>`      | 报告到达时运行状态记录中的当前 generation(代次). |
+| `current_attempt`        | `Option<ChildStartCount>` | 报告到达时运行状态记录中的当前 attempt(尝试).    |
+| `exit_kind`              | `ExitKind`                | 过期尝试的退出分类.                              |
+| `handled_as`             | `StaleReportHandling`     | runtime(运行时) 对该报告的处理结果.              |
+| `observed_at_unix_nanos` | `u128`                    | 报告被识别为过期的时间.                          |
 
 ### Values(取值): `StaleReportHandling(过期报告处理)`
 

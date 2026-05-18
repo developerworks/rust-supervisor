@@ -468,7 +468,7 @@ fn make_backpressure_degradation(
     };
 
     // Also emit an AuditRecorded event.
-    let audit_event = SupervisorEvent::new(
+    let _audit_event = SupervisorEvent::new(
         ev.when.clone(),
         ev.r#where.clone(),
         What::AuditRecorded {

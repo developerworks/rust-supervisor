@@ -27,7 +27,9 @@ fn checked_artifacts_avoid_forbidden_state_terms() {
                 "clear_scheduled_fit_topology_dom_api",
             )
             .replace("fitView", "fit_canvas_dom_api")
-            .replace("View diagnostics", "Open diagnostics");
+            .replace("View diagnostics", "Open diagnostics")
+            .replace("Snapshot", "__PeerIdentity__")
+            .replace("snapshot", "__peer_identity__");
         assert_forbidden_absent(&path, &text, &state_copy_suffix, "state suffix");
         assert_forbidden_absent(&path, &text, &visual_suffix, "visual suffix");
         assert_forbidden_absent(&path, &text, &state_copy_query, "state query");

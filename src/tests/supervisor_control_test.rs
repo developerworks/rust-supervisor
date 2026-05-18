@@ -26,13 +26,9 @@ async fn control_commands_update_child_state() {
         .expect("start supervisor");
     let child_id = ChildId::new("worker");
 
+    let manifest = "name: worker\nkind: async_worker\n";
     let added = handle
-        .add_child(
-            SupervisorPath::root(),
-            "worker manifest",
-            "operator",
-            "test",
-        )
+        .add_child(SupervisorPath::root(), manifest, "operator", "test")
         .await
         .expect("add child");
     assert!(matches!(added, CommandResult::ChildAdded { .. }));

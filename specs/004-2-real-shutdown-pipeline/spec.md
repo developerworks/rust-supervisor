@@ -107,3 +107,4 @@
 - 功能目录名为 `004-2-real-shutdown-pipeline`, 与功能分支名 `004-runtime-semantics` 可能一对多: 同分支上可并列其它运行时语义规格, 以目录名区分交付单元.
 - ShutdownCoordinator(关闭协调器) 继续作为阶段状态机, 不直接拥有任务句柄.
 - 本规格不改变 supervision strategy(监督策略) 的重启决策, 只改变关闭执行语义.
+- 可观测写入采用 at-least-once(至少一次) 语义: 关闭阶段变化, 取消送达, 任务退出和对账状态等可观测事实, 在正常路径下保证写入 journal(事件日志), metrics(指标) 和 audit(审计), 仅在 shutdown pipeline(关闭流水线) 自身异常时允许部分丢失.

@@ -59,6 +59,18 @@
 
 **Decision(决定)**: 当 exit handler(退出处理) 收到的 `(generation, attempt)(代次和尝试)` 既不是当前 active attempt(活动尝试), 也不是 pending restart(待重启请求) 中的 old attempt(旧尝试) 时, runtime(运行时) 必须把它记录为 `StaleAttemptReport(过期尝试报告)`. 该报告不得覆盖当前 `ChildRuntimeState(子任务运行状态记录)`, 但必须发布 `ChildAttemptStaleReport(子任务过期报告)` 事件, 写入 audit(审计), 并增加 metrics(指标).
 
+## 决策七: generation(代次) 和 attempt(尝试) 使用 u32 计数器, 溢出后包装到 0
+
+**Decision(决定)**: `Generation(代次)` 和 `Attempt(尝试)` 的底层类型使用 `u32(32位无符号整数)`, 自增到 `u32::MAX` 后溢出包装到 0. 实现使用 `wrapping_add(1)(饱和加一)` 确保无 panic(崩溃). 溢出速率为: 即便每秒重启一次也需要约 136 年耗尽 `u32` 空间, 因此溢出在实际运行中不会发生.
+
+**Rationale(理由)**: `u32(32位无符号整数)` 在序列化友好性和计数器空间之间取得平衡. 溢出后包装到 0 在理论上是可能的, 但因为重启速率上限和计数器空间的乘积远大于系统设计寿命, 实际不会发生. `wrapping_add(1)(饱和加一)` 确保即使在极端测试 (如混沌测试中的快速失败循环) 中也不会 panic(崩溃) 或产生未定义行为.
+
+**Alternatives considered(备选方案)**:
+
+- `u64(64位无符号整数)`: 被拒绝, 因为序列化 JSON 数字精度损失风险和计数器空间过剩.
+- 溢出后 panic(崩溃) 或 saturate(饱和): 被拒绝, 因为溢出在实际运行中不会发生, panic(崩溃) 增加不必要的风险, saturate(饱和) 让同一 child(子任务) 的两个不同运行实例可能共享同一个计数.
+- 溢出后使用 `u64(64位无符号整数)` 升级: 被拒绝, 因为类型变更会破坏序列化兼容性.
+
 **Rationale(理由)**: 迟到报告如果被静默丢弃, 操作者无法解释日志中旧任务的退出时间. 如果迟到报告覆盖当前状态, 新 generation(代次) 的事实会被污染. 把它作为可观察事实记录可以同时满足安全性和可诊断性.
 
 **Alternatives considered(备选方案)**:

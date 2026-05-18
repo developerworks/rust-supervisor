@@ -604,12 +604,18 @@ impl ChildSlot {
     ///
     /// Returns a [`ChildRuntimeRecord`].
     pub fn to_record(&self, liveness: ChildLivenessState) -> ChildRuntimeRecord {
+        // Data model: status is None when there is no active attempt.
+        let status = if self.attempt.is_some() {
+            Some(self.status)
+        } else {
+            None
+        };
         ChildRuntimeRecord::new(
             self.child_id.clone(),
             self.path.clone(),
             self.generation,
             self.attempt,
-            Some(self.status),
+            status,
             self.operation,
             liveness,
             self.restart_limit.clone(),
