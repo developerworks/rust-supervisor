@@ -2,13 +2,16 @@
 
 语言: [English](../en/getting-started.html)
 
-## 前置条件
+> **步骤指引**: 本指南共 5 步(Step 1 of 5 至 Step 5 of 5).
+> 预计完成时间: 5 分钟.
+
+## Step 1 of 5: 前置条件
 
 本项目是 Rust(编程语言) library(库), 需要 Cargo(构建工具) 和 Tokio(异步运行时) 应用环境. 本仓库示例已经包含运行所需依赖.
 
 主配置文件是 `examples/config/supervisor.yaml`. 配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式), 然后形成 `ConfigState`(配置状态).
 
-## 最小运行命令
+## Step 2 of 5: 最小运行命令
 
 ```bash
 cargo run --example supervisor_quickstart
@@ -16,7 +19,7 @@ cargo run --example supervisor_quickstart
 
 该示例执行固定路径: `load_config_from_yaml_file` 读取 YAML(数据序列化格式), `ConfigState::to_supervisor_spec` 派生 `SupervisorSpec`(监督器规格), `Supervisor::start` 启动 runtime(运行时), `current_state` 查询当前状态, `shutdown_tree` 关闭整棵树.
 
-## 最小代码路径
+## Step 3 of 5: 最小代码路径
 
 ```rust
 use rust_supervisor::config::loader::load_config_from_yaml_file;
@@ -34,6 +37,25 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 }
 ```
 
-## 运行结果
+## Step 4 of 5: 运行结果
 
 当前示例用于验证接入路径, 不是业务任务模板. 使用者需要把自己的 worker(工作任务) 放入 `ChildSpec`(子任务规格) 和 `TaskFactory`(任务工厂)边界, 不应该在业务代码中分散启动无人管理的后台任务.
+
+## Step 5 of 5: 健康自检
+
+启动后, supervisor(监督器) 会向 stdout(标准输出) 打印健康自检 JSON.
+JSON schema(模式) 定义在 [health-selfcheck-schema.md](../specs/006-8-product-bundle-runbooks/contracts/health-selfcheck-schema.md).
+
+预期输出示例:
+
+```json
+{
+  "status": "ready",
+  "supervisor_version": "0.1.2",
+  "uptime_secs": 3600,
+  "children": { "total": 5, "running": 5, "failed": 0 },
+  "dashboard_link": "connected"
+}
+```
+
+如果 `status` 不是 `"ready"`, 请参考 operations runbook(运维手册) 的故障排查步骤.

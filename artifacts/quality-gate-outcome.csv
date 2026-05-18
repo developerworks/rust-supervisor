@@ -16,3 +16,5 @@ mutation_testing,deep,,,,,,
 fuzzing,deep,,,,,,
 loom,deep,,,,,,
 miri,deep,,,,,,
+chaos-test,deep,,,,,,specs/006-7-chaos-soak-reliability/
+soak-24h,deep,,,,,,artifacts/validation/

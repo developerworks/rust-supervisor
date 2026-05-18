@@ -12,4 +12,5 @@
 - [关闭](shutdown.md)
 - [可观测性](observability.md)
 - [示例](examples.md)
+- [运维手册](operations-runbook.md)
 - [质量门禁](quality-gates.md)

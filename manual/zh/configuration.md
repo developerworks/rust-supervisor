@@ -59,3 +59,20 @@ observability:
   metrics_enabled: true
   audit_enabled: true
 ```
+
+## 密钥占位符
+
+配置值中引用敏感信息的字段使用 `${SECRET_NAME}` 占位符格式.
+在启动 supervisor(监督器) 前, 需要将这些占位符替换为实际的环境变量值或密钥管理方案的值. 示例:
+
+```yaml
+ipc:
+  tls_cert_path: "${IPC_TLS_CERT}"
+  tls_key_path: "${IPC_TLS_KEY}"
+```
+
+supervisor(监督器) 本身不解析运行时占位符; 替换必须在配置加载前完成(例如通过 `envsubst` 或部署流水线).
+
+## 升级
+
+本版本不支持原地升级. 如需升级, 请部署新版本的全新实例, 并通过外部 IPC(进程间通信) 接口迁移状态.

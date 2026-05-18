@@ -59,3 +59,23 @@ observability:
   metrics_enabled: true
   audit_enabled: true
 ```
+
+## Secret Placeholders
+
+Configuration values that reference secrets use the `${SECRET_NAME}` placeholder format.
+Replace these placeholders with environment variables or your secret management solution
+before starting the supervisor. Example:
+
+```yaml
+ipc:
+  tls_cert_path: "${IPC_TLS_CERT}"
+  tls_key_path: "${IPC_TLS_KEY}"
+```
+
+The supervisor does not resolve placeholders at runtime; replacement must happen
+before configuration loading (e.g., via `envsubst` or your deployment pipeline).
+
+## Upgrade
+
+This version does not support in-place upgrades. To upgrade, deploy a fresh instance
+with the new version and migrate state through the external IPC interface.
