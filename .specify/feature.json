@@ -1,11 +1,12 @@
 {
-  "feature_directory": "specs/006-3-lifecycle-shutdown-realism",
-  "active_feature_directory": "specs/006-3-lifecycle-shutdown-realism",
+  "feature_directory": "specs/006-4-restart-policy-production",
+  "active_feature_directory": "specs/006-4-restart-policy-production",
   "feature_directories": [
     "specs/005-1-failure-policy-reliability",
     "specs/005-2-work-role-defaults",
     "specs/006-1-platform-docs-ipc-security",
     "specs/006-2-release-supply-chain-gates",
-    "specs/006-3-lifecycle-shutdown-realism"
+    "specs/006-3-lifecycle-shutdown-realism",
+    "specs/006-4-restart-policy-production"
   ]
 }

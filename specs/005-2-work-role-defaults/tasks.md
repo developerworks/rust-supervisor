@@ -60,7 +60,7 @@
 
 > **NOTE(说明): 必须先写这些测试,并确认它们在实现前失败.**
 
-- [X] T015 [P] [US1] 在 `tests/work_role_defaults_integration.rs` 中添加 Job 角色成功退出后不得自动再起的集成测试 (验收场景 1).
+- [X] T015 [P] [US1] 在 `tests/work_role_defaults_integration.rs` 中添加 Job 角色成功退出后不得自动重启的集成测试 (验收场景 1).
 - [X] T016 [P] [US1] 在 `tests/work_role_defaults_integration.rs` 中添加 Service 角色成功退出后允许自动重启的集成测试 (验收场景 2).
 - [X] T017 [P] [US1] 在 `tests/work_role_defaults_integration.rs` 中添加 Worker 角色失败后限次数重试并在预算耗尽后停止的集成测试 (验收场景 3).
 - [X] T018 [P] [US1] 在 `tests/work_role_defaults_integration.rs` 中添加 Sidecar 角色失败时单独重启且不连带主服务的集成测试 (验收场景 4, `linked_lifecycle: false`).
@@ -165,6 +165,6 @@ Phase 4 (Polish) 为可选打磨阶段,不影响功能可用性.
 
 **Independent Test Criteria(独立测试标准)**:
 
-- US1: 五个角色的标准验收样例中,Job 成功后再起比例为 0%,Service 成功后保持自动恢复,Worker 限次数重试,Sidecar 单独重启不连带主服务,Supervisor 外层核算预算.抽样一致率 100%.
+- US1: 五个角色的标准验收样例中,Job 成功后重启比例为 0%,Service 成功后保持自动恢复,Worker 限次数重试,Sidecar 单独重启不连带主服务,Supervisor 外层核算预算.抽样一致率 100%.
 
 **Format Validation(格式验证)**: 所有任务均遵循 `- [ ] [TaskID] [P?] [Story?] Description with file path` 格式,复选框、任务 ID、故事标签、文件路径齐全.

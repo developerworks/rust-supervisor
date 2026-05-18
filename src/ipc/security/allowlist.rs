@@ -18,10 +18,7 @@ use crate::dashboard::error::DashboardError;
 ///
 /// Returns `Ok(())` when the path is allowed, or `Err(DashboardError)`
 /// with `allowlist_empty` or `allowlist_denied`.
-pub fn check_allowlist(
-    path: &str,
-    config: &AllowlistConfig,
-) -> Result<(), DashboardError> {
+pub fn check_allowlist(path: &str, config: &AllowlistConfig) -> Result<(), DashboardError> {
     if !config.enabled {
         return Ok(());
     }

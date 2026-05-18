@@ -29,3 +29,4 @@ pub mod summary;
 pub mod task;
 pub mod test_support;
 pub mod tree;
+pub mod types;

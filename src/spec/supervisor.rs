@@ -5,11 +5,13 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
-use crate::policy::role_defaults::{WorkRole, semantic_conflicts_for_child};
+use crate::policy::budget::RestartBudgetConfig;
+use crate::policy::group::GroupDependencyEdge;
+use crate::policy::role_defaults::{SeverityClass, WorkRole, semantic_conflicts_for_child};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// Strategy used when a child exits and a restart scope is needed.
@@ -93,6 +95,43 @@ impl GroupStrategy {
             strategy,
             restart_limit: None,
             escalation_policy: None,
+        }
+    }
+}
+
+/// Group-level configuration for restart budget, dependency edges, and
+/// severity defaults used by US1/US2/US3 policy evaluation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupConfig {
+    /// Low-cardinality group name shared by member children.
+    pub name: String,
+    /// Child identifiers that belong to this group.
+    pub children: Vec<ChildId>,
+    /// Restart budget configuration applied to this group.
+    pub budget: RestartBudgetConfig,
+}
+
+impl GroupConfig {
+    /// Creates a group configuration.
+    ///
+    /// # Arguments
+    ///
+    /// - `name`: Group name.
+    /// - `children`: Child identifiers belonging to this group.
+    /// - `budget`: Restart budget configuration for the group.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`GroupConfig`].
+    pub fn new(
+        name: impl Into<String>,
+        children: Vec<ChildId>,
+        budget: RestartBudgetConfig,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            children,
+            budget,
         }
     }
 }
@@ -236,6 +275,12 @@ pub struct SupervisorSpec {
     pub escalation_policy: Option<EscalationPolicy>,
     /// Group-level strategy overrides.
     pub group_strategies: Vec<GroupStrategy>,
+    /// Group-level configurations for restart budget, membership, and isolation.
+    pub group_configs: Vec<GroupConfig>,
+    /// Cross-group dependency edges for fault propagation.
+    pub group_dependencies: Vec<GroupDependencyEdge>,
+    /// Default severity class per work role for escalation bifurcation (US3).
+    pub severity_defaults: HashMap<WorkRole, SeverityClass>,
     /// Child-level strategy overrides.
     pub child_strategy_overrides: Vec<ChildStrategyOverride>,
     /// Runtime policy for dynamic child additions.
@@ -288,6 +333,9 @@ impl SupervisorSpec {
             restart_limit: None,
             escalation_policy: None,
             group_strategies: Vec::new(),
+            group_configs: Vec::new(),
+            group_dependencies: Vec::new(),
+            severity_defaults: HashMap::new(),
             child_strategy_overrides: Vec::new(),
             dynamic_supervisor_policy: DynamicSupervisorPolicy::unbounded(),
             control_channel_capacity: channel_capacity,

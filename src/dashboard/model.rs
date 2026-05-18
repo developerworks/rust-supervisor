@@ -4,7 +4,7 @@
 //! dashboard UI. They intentionally use owned values so callers can serialize,
 //! clone, and test messages without borrowing runtime internals.
 
-use crate::control::command::{CommandResult, CurrentState, ManagedChildState};
+use crate::control::command::{CommandResult, CurrentState};
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailure, ChildControlFailurePhase, ChildControlOperation,
     ChildControlResult as RuntimeChildControlResult, ChildLivenessState, ChildRuntimeRecord,
@@ -235,14 +235,14 @@ pub enum DashboardManagedChildState {
     Removed,
 }
 
-impl From<ManagedChildState> for DashboardManagedChildState {
-    /// Converts a runtime managed state into a dashboard managed state.
-    fn from(value: ManagedChildState) -> Self {
+impl From<ChildControlOperation> for DashboardManagedChildState {
+    /// Converts a runtime control operation into a dashboard managed state.
+    fn from(value: ChildControlOperation) -> Self {
         match value {
-            ManagedChildState::Running => Self::Running,
-            ManagedChildState::Paused => Self::Paused,
-            ManagedChildState::Quarantined => Self::Quarantined,
-            ManagedChildState::Removed => Self::Removed,
+            ChildControlOperation::Active => Self::Running,
+            ChildControlOperation::Paused => Self::Paused,
+            ChildControlOperation::Quarantined => Self::Quarantined,
+            ChildControlOperation::Removed => Self::Removed,
         }
     }
 }
@@ -675,9 +675,7 @@ impl DashboardChildRuntimeRecord {
             attempt: record.attempt.map(|attempt| attempt.value),
             status: record.status.map(DashboardChildAttemptStatus::from),
             operation: DashboardChildControlOperation::from(record.operation),
-            managed_child_state: DashboardManagedChildState::from(
-                managed_child_state_from_operation(record.operation),
-            ),
+            managed_child_state: DashboardManagedChildState::from(record.operation),
             liveness: DashboardChildLivenessState::from_liveness(&record.liveness),
             restart_limit: DashboardRestartLimitState::from_restart_limit(&record.restart_limit),
             stop_state: DashboardChildStopState::from(record.stop_state),
@@ -780,12 +778,8 @@ impl DashboardChildControlResult {
             generation: outcome.generation.map(|generation| generation.value),
             operation_before: DashboardChildControlOperation::from(outcome.operation_before),
             operation_after: DashboardChildControlOperation::from(outcome.operation_after),
-            managed_child_state_before: DashboardManagedChildState::from(
-                managed_child_state_from_operation(outcome.operation_before),
-            ),
-            managed_child_state_after: DashboardManagedChildState::from(
-                managed_child_state_from_operation(outcome.operation_after),
-            ),
+            managed_child_state_before: DashboardManagedChildState::from(outcome.operation_before),
+            managed_child_state_after: DashboardManagedChildState::from(outcome.operation_after),
             status: outcome.status.map(DashboardChildAttemptStatus::from),
             cancel_delivered: outcome.cancel_delivered,
             stop_state: DashboardChildStopState::from(outcome.stop_state),
@@ -878,18 +872,6 @@ pub fn dashboard_command_result_value(result: &CommandResult) -> Result<Value, s
 ///
 /// - `operation`: Runtime control operation.
 ///
-/// # Returns
-///
-/// Returns the managed child state required by the public mapping table.
-pub fn managed_child_state_from_operation(operation: ChildControlOperation) -> ManagedChildState {
-    match operation {
-        ChildControlOperation::Active => ManagedChildState::Running,
-        ChildControlOperation::Paused => ManagedChildState::Paused,
-        ChildControlOperation::Quarantined => ManagedChildState::Quarantined,
-        ChildControlOperation::Removed => ManagedChildState::Removed,
-    }
-}
-
 /// Converts a child runtime record into the existing dashboard runtime row.
 ///
 /// # Arguments
@@ -904,8 +886,7 @@ pub fn runtime_state_from_child_runtime_record(
     record: &ChildRuntimeRecord,
     shutdown_completed: bool,
 ) -> RuntimeState {
-    let managed_child_state =
-        DashboardManagedChildState::from(managed_child_state_from_operation(record.operation));
+    let managed_child_state = DashboardManagedChildState::from(record.operation);
     let readiness = DashboardReadinessState::from(record.liveness.readiness);
     RuntimeState {
         child_path: record.path.to_string(),

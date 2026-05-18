@@ -10,13 +10,13 @@
 | -------------------------- | ------------------------------ | ----------------------------------------------- | --------------------- | ------------------------------ | -------------------------------------- |
 | **Service**(常驻服务)      | Restart(重启) - 保持在线       | RestartWithBackoff(带退避重启)                  | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级)            |
 | **Worker**(工作任务)       | Stop(停止) - 任务完成          | RestartWithBackoff(带退避重启) - 限次数         | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级)            |
-| **Job**(一次性作业)        | Stop(停止) - 不得再起          | RestartWithBackoff(带退避重启) - 有限重试       | StopForever(永久停止) | StopAndEscalate(停止并升级)    | StopAndEscalate(停止并升级)            |
+| **Job**(一次性作业)        | Stop(停止) - 不得重启          | RestartWithBackoff(带退避重启) - 有限重试       | StopForever(永久停止) | StopAndEscalate(停止并升级)    | StopAndEscalate(停止并升级)            |
 | **Sidecar**(辅助任务)      | Restart(重启) - 单独重启辅进程 | RestartWithBackoff(带退避重启) - 不连带主进程   | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级)            |
 | **Supervisor**(嵌套监督器) | Restart(重启) - 外层核算预算   | RestartWithBackoff(带退避重启) - 内层树作为单元 | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级) - 外层核算 |
 
 **Contract Invariants(契约不变量)**:
 
-- **INV-001**: **`Job`** 角色在成功退出后永远不得自动再起 (除非用户显式覆写为 **`Restart`**)
+- **INV-001**: **`Job`** 角色在成功退出后永远不得自动重启 (除非用户显式覆写为 **`Restart`**)
 - **INV-002**: 所有角色在人工停止后必须进入 **`StopForever`** 状态, 角色默认不得覆盖显式停止请求
 - **INV-003**: 预算耗尽后所有角色必须进入 **`StopAndEscalate`** 或 **`Quarantine`**, 不得继续无限重启
 - **INV-004**: **`Sidecar`** 角色失败时默认不得连带停止主服务, 除非 **`linked_lifecycle`** 显式设为 `true`
@@ -337,7 +337,7 @@ WARN supervisor::policy::role_defaults: Work role missing for child 'unknown-tas
 
 **Test CONTRACT-001**: 为每个角色准备一份最小的示例拓扑, 在只用默认策略且不额外覆写时, 验证成功退出与失败退出触发的自动动作与第 1 节的映射表一致。
 
-**Test CONTRACT-002**: 验证 **`Job`** 角色在成功退出后自动再起比例为 0%。
+**Test CONTRACT-002**: 验证 **`Job`** 角色在成功退出后自动重启比例为 0%。
 
 **Test CONTRACT-003**: 验证 **`Service`** 角色在成功退出后仍保持可用的自动恢复行为。
 

@@ -213,6 +213,10 @@ impl ObservabilityPipeline {
         let span = ChildStartCountSpan::from_event(&event);
         let tracing_event = TracingEvent::from_event(&event);
         let audit = audit_record(&event);
+
+        // T042: Generate PipelineStageDiagnostic for policy-significant event types.
+        self.emit_policy_diagnostic(&event);
+
         let lagged = self.fan_out(event.clone());
         self.journal.push(event.clone());
         self.test_recorder.events.push(event);
@@ -227,6 +231,89 @@ impl ObservabilityPipeline {
         }
         self.test_recorder.record_lag(lagged);
         lagged
+    }
+
+    /// Generates PipelineStageDiagnostic for BudgetExhausted, GroupFuseTriggered,
+    /// and EscalationBifurcated event types (T042).
+    ///
+    /// # Arguments
+    ///
+    /// - `event`: The supervisor event being processed.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn emit_policy_diagnostic(&mut self, event: &SupervisorEvent) {
+        let diagnostic = match &event.what {
+            What::BudgetExhausted {
+                child_id,
+                retry_after_ns,
+                budget_source_group,
+            } => {
+                let mut diag = PipelineStageDiagnostic::new(
+                    event.sequence.value,
+                    event.correlation_id.value.to_string(),
+                    PipelineStage::EvaluateBudget,
+                    event.when.time.unix_nanos,
+                )
+                .with_child_id(child_id.to_string());
+                if let Some(group) = budget_source_group {
+                    diag = diag.with_group_id(group.clone());
+                }
+                diag = diag.with_supervisor_path(event.r#where.supervisor_path.to_string());
+                diag.budget_evaluation =
+                    Some(format!("BudgetExhausted:retry_after_ns={}", retry_after_ns));
+                Some(diag)
+            }
+            What::GroupFuseTriggered {
+                group_name,
+                propagated_from_group,
+            } => {
+                let mut diag = PipelineStageDiagnostic::new(
+                    event.sequence.value,
+                    event.correlation_id.value.to_string(),
+                    PipelineStage::EvaluateBudget,
+                    event.when.time.unix_nanos,
+                )
+                .with_group_id(group_name.clone());
+                diag = diag.with_supervisor_path(event.r#where.supervisor_path.to_string());
+                diag.budget_evaluation = Some(format!(
+                    "GroupFuseTriggered:propagated_from={}",
+                    propagated_from_group.as_deref().unwrap_or("self")
+                ));
+                Some(diag)
+            }
+            What::EscalationBifurcated {
+                severity,
+                budget_verdict,
+                fuse_outcome,
+                tie_break_reason: _,
+            } => {
+                let mut diag = PipelineStageDiagnostic::new(
+                    event.sequence.value,
+                    event.correlation_id.value.to_string(),
+                    PipelineStage::EvaluateBudget,
+                    event.when.time.unix_nanos,
+                );
+                if let Some(ref child_id) = event.r#where.child_id {
+                    diag = diag.with_child_id(child_id.to_string());
+                }
+                diag = diag.with_supervisor_path(event.r#where.supervisor_path.to_string());
+                diag.budget_evaluation = Some(format!(
+                    "EscalationBifurcated:severity={}:budget={}:fuse={}",
+                    severity,
+                    budget_verdict.as_deref().unwrap_or("none"),
+                    fuse_outcome.as_deref().unwrap_or("none"),
+                ));
+                Some(diag)
+            }
+            _ => None,
+        };
+
+        if let Some(diag) = diagnostic {
+            self.test_recorder
+                .record_pipeline_stage_diagnostics(&[diag]);
+        }
     }
 
     /// Records pipeline stage diagnostics through the shared recorder.

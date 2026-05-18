@@ -1,93 +1,93 @@
 {
-  "generated": "2026-05-17T20:53:16+08:00",
-  "based_on_drift_report": "2026-05-17T20:49:14+08:00",
-  "scope": {
-    "feature_directories": [
-      "specs/005-1-failure-policy-reliability",
-      "specs/005-2-work-role-defaults"
-    ]
-  },
-  "approval_mode": "auto",
+  "generated": "2026-05-18T00:00:00Z",
+  "based_on": "drift-report from 2026-05-18T00:00:00Z",
+  "mode": "auto-approve",
   "summary": {
+    "total": 7,
+    "align": 4,
     "backfill": 3,
-    "align": 0,
     "human_decision": 0,
     "new_specs": 0,
     "remove_from_spec": 0
   },
   "proposals": [
     {
-      "id": "P1",
-      "spec_id": "005-2-work-role-defaults",
-      "requirement": "SC-002",
-      "direction": "BACKFILL",
+      "id": 1,
+      "spec_id": "006-4-restart-policy-production",
+      "requirement": "SC-000",
+      "direction": "ALIGN",
+      "spec_text": "所有策略决策路径可被 typed event 日志完整复现",
+      "actual": "stage_emit_typed_event 仅发射泛型 What::ChildFailed",
+      "resolution": "改造 stage_emit_typed_event 根据 ctx.budget_evaluation 和 ctx.effective_policy.severity 选择正确 What 变体",
+      "location": "src/runtime/pipeline.rs:578-625",
       "confidence": "HIGH",
-      "status": "APPROVED",
-      "approved": true,
-      "approved_at": "2026-05-17T20:53:16+08:00",
-      "current_state": {
-        "spec_says": "data-model.md and contracts/role-defaults.md still describe public role constants and the old UserPolicyOverrides merge signature.",
-        "code_does": "The implementation uses private default constructors, RoleDefaultPolicy::for_role(), and EffectivePolicy::merge(role, Vec<String>)."
-      },
-      "proposed_resolution": [
-        "Remove public SERVICE_DEFAULT, WORKER_DEFAULT, JOB_DEFAULT, SIDECAR_DEFAULT, and SUPERVISOR_DEFAULT constant descriptions.",
-        "Describe RoleDefaultPolicy::for_role() as the public lookup API over private role default constructors.",
-        "Replace the old UserPolicyOverrides merge signature with Vec<String> override field markers.",
-        "Separate missing work_role fallback from unknown work_role configuration errors in the data flow."
-      ],
-      "rationale": "The tested code is authoritative. Public constants cannot express the complete role default values that include Vec fields without misleading users.",
-      "target_files": [
-        "specs/005-2-work-role-defaults/data-model.md",
-        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-      ]
+      "approved": true
     },
     {
-      "id": "P2",
-      "spec_id": "005-2-work-role-defaults",
-      "requirement": "EC-001",
-      "direction": "BACKFILL",
+      "id": 2,
+      "spec_id": "006-4-restart-policy-production",
+      "requirement": "FR-003 CorrelationId",
+      "direction": "ALIGN",
+      "spec_text": "CorrelationId 贯穿整个故障链路",
+      "actual": "stage_emit_typed_event 硬编码 uuid::Uuid::nil()",
+      "resolution": "使用 ctx.correlation_id 替代 nil UUID 构造 SupervisorEvent",
+      "location": "src/runtime/pipeline.rs:609",
       "confidence": "HIGH",
-      "status": "APPROVED",
-      "approved": true,
-      "approved_at": "2026-05-17T20:53:16+08:00",
-      "current_state": {
-        "spec_says": "Missing or unknown work_role values both fall back to the documented conservative default.",
-        "code_does": "Missing work_role falls back to Worker with WARN diagnostics. Unknown work_role strings are rejected by strict serde enum deserialization."
-      },
-      "proposed_resolution": [
-        "Update the spec edge case so missing work_role falls back to Worker.",
-        "Define unknown work_role strings as fatal configuration errors with readable diagnostics."
-      ],
-      "rationale": "Rejecting unknown role strings prevents configuration typos from silently changing runtime behavior.",
-      "target_files": [
-        "specs/005-2-work-role-defaults/spec.md",
-        "specs/005-2-work-role-defaults/data-model.md",
-        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-      ]
+      "approved": true
     },
     {
-      "id": "P3",
-      "spec_id": "005-2-work-role-defaults",
-      "requirement": "CONTRACT-SUCCESS-002",
-      "direction": "BACKFILL",
+      "id": 3,
+      "spec_id": "006-4-restart-policy-production",
+      "requirement": "FR-001 FairnessProbe typed event",
+      "direction": "ALIGN",
+      "spec_text": "探针告警应通过 typed event 通道",
+      "actual": "仅文本事件, 非 What::FairnessProbeStarvation",
+      "resolution": "新增 What::FairnessProbeStarvation 变体，check_fairness_probe 发射 typed event",
+      "location": "src/runtime/control_loop.rs:1603",
       "confidence": "HIGH",
-      "status": "APPROVED",
-      "approved": true,
-      "approved_at": "2026-05-17T20:53:16+08:00",
-      "current_state": {
-        "spec_says": "ChildSpec can override success_exit_codes.",
-        "code_does": "RoleDefaultPolicy contains internal success_exit_codes, but ChildSpec has no external override field and TaskExit does not carry raw process exit codes."
-      },
-      "proposed_resolution": [
-        "State that current success semantics are driven by TaskResult::Succeeded or equivalent typed success facts.",
-        "Clarify that RoleDefaultPolicy.success_exit_codes is internal policy data in this slice.",
-        "Move ChildSpec.success_exit_codes user override support out of the current contract."
-      ],
-      "rationale": "The runtime does not currently expose raw process exit codes to the policy pipeline. Advertising a ChildSpec override would be a false capability.",
-      "target_files": [
-        "specs/005-2-work-role-defaults/data-model.md",
-        "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-      ]
+      "approved": true
+    },
+    {
+      "id": 4,
+      "spec_id": "006-4-restart-policy-production",
+      "requirement": "SC-003",
+      "direction": "ALIGN",
+      "spec_text": "事件/指标一致率 >= 98%",
+      "actual": "无逐条比对验证测试",
+      "resolution": "标记为 known gap, 推迟到 006-5 切片实现联合验证",
+      "location": "tests/policy_critical_optional_test.rs",
+      "confidence": "MEDIUM",
+      "approved": true
+    },
+    {
+      "id": 5,
+      "spec_id": "006-4-restart-policy-production",
+      "direction": "BACKFILL",
+      "feature": "emit_policy_diagnostic (T042)",
+      "location": "src/observe/pipeline.rs:246-316",
+      "resolution": "在 spec.md Diagnostics 节补充诊断流水线描述",
+      "confidence": "HIGH",
+      "approved": true
+    },
+    {
+      "id": 6,
+      "spec_id": "006-4-restart-policy-production",
+      "direction": "BACKFILL",
+      "feature": "GroupConfig (T039)",
+      "location": "src/spec/supervisor.rs:107-128",
+      "resolution": "在 spec.md Key Entities 节补充 GroupConfig/GroupDependencyEdge/SeverityDefaults",
+      "confidence": "HIGH",
+      "approved": true
+    },
+    {
+      "id": 7,
+      "spec_id": "006-4-restart-policy-production",
+      "direction": "BACKFILL",
+      "feature": "ChildSpec.severity/group (T040)",
+      "location": "src/spec/child.rs:189-195",
+      "resolution": "在 spec.md Key Entities 节补充 ChildSpec.severity 和 ChildSpec.group",
+      "confidence": "HIGH",
+      "approved": true
     }
   ]
 }

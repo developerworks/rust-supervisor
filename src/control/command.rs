@@ -208,19 +208,6 @@ fn validate_required_text(value: &str, field: &str) -> Result<(), SupervisorErro
     Ok(())
 }
 
-/// State assigned to a managed child by the control loop.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ManagedChildState {
-    /// Child is known and running.
-    Running,
-    /// Child is paused by operator command.
-    Paused,
-    /// Child is quarantined and cannot auto-restart.
-    Quarantined,
-    /// Child was removed from active governance.
-    Removed,
-}
-
 /// Current runtime state returned by `current_state`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CurrentState {

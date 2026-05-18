@@ -7,6 +7,7 @@
 use crate::child_runner::run_exit::TaskExit;
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::readiness::signal::ReadinessState;
+use crate::runtime::admission::AdmissionConflict;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use uuid::Uuid;
@@ -613,6 +614,9 @@ pub struct ChildControlResult {
     /// Optional generation fencing outcome exclusively used by restart control commands.
     #[serde(default)]
     pub generation_fence: Option<GenerationFenceOutcome>,
+    /// Admission conflict detail when a concurrent request was rejected.
+    #[serde(default)]
+    pub admission_conflict: Option<AdmissionConflict>,
 }
 
 impl ChildControlResult {
@@ -667,6 +671,36 @@ impl ChildControlResult {
             idempotent,
             failure,
             generation_fence,
+            admission_conflict: None,
+        }
+    }
+
+    /// Creates a conflict result when admission is denied.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child that already has an active attempt.
+    /// - `conflict`: Admission conflict detail.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`ChildControlResult`] carrying the conflict.
+    pub fn conflict(child_id: ChildId, conflict: AdmissionConflict) -> Self {
+        Self {
+            child_id,
+            attempt: Some(conflict.active_attempt),
+            generation: Some(conflict.active_generation),
+            operation_before: ChildControlOperation::Active,
+            operation_after: ChildControlOperation::Active,
+            status: Some(ChildAttemptStatus::Running),
+            cancel_delivered: false,
+            stop_state: ChildStopState::Idle,
+            restart_limit: RestartLimitState::default(),
+            liveness: ChildLivenessState::new(None, false, ReadinessState::Unreported),
+            idempotent: false,
+            failure: None,
+            generation_fence: None,
+            admission_conflict: Some(conflict),
         }
     }
 }

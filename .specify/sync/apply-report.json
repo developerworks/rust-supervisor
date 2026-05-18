@@ -1,85 +1,67 @@
 {
-  "applied": "2026-05-17T20:57:05+08:00",
-  "based_on": ".specify/sync/proposals.json",
-  "approval_mode": "auto",
-  "changes_made": {
-    "specs_updated": [
-      {
-        "spec": "005-2-work-role-defaults",
-        "requirement": "SC-002",
-        "change_type": "Modified",
-        "files": [
-          "specs/005-2-work-role-defaults/data-model.md",
-          "specs/005-2-work-role-defaults/research.md",
-          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-        ]
-      },
-      {
-        "spec": "005-2-work-role-defaults",
-        "requirement": "EC-001",
-        "change_type": "Modified",
-        "files": [
-          "specs/005-2-work-role-defaults/spec.md",
-          "specs/005-2-work-role-defaults/data-model.md",
-          "specs/005-2-work-role-defaults/research.md",
-          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-        ]
-      },
-      {
-        "spec": "005-2-work-role-defaults",
-        "requirement": "CONTRACT-SUCCESS-002",
-        "change_type": "Modified",
-        "files": [
-          "specs/005-2-work-role-defaults/data-model.md",
-          "specs/005-2-work-role-defaults/research.md",
-          "specs/005-2-work-role-defaults/contracts/role-defaults.md"
-        ]
-      }
-    ],
-    "tests_updated": [
-      {
-        "file": "tests/work_role_defaults_integration.rs",
-        "change": "Added unknown_work_role_is_rejected_by_deserialization regression coverage."
-      }
-    ],
-    "implementation_tasks_generated": 0,
-    "align_tasks_file": ".specify/sync/align-tasks.md",
-    "backups": [
-      ".specify/sync/backups/2026-05-17T20-53-16/spec.md",
-      ".specify/sync/backups/2026-05-17T20-53-16/data-model.md",
-      ".specify/sync/backups/2026-05-17T20-53-16/role-defaults.md"
-    ],
-    "not_applied": [],
-    "reports_updated": [
-      ".specify/sync/drift-report.md",
-      ".specify/sync/drift-report.json"
-    ],
-    "validation_completed": [
-      {
-        "command": "cargo fmt",
-        "status": "passed"
-      },
-      {
-        "command": "cargo test --test work_role_defaults_integration",
-        "status": "passed",
-        "passed": 15,
-        "failed": 0
-      },
-      {
-        "command": "cargo test --test supervisor_pipeline_order",
-        "status": "passed",
-        "passed": 4,
-        "failed": 0
-      },
-      {
-        "command": "cargo clippy --all-targets --all-features -- -D warnings",
-        "status": "passed"
-      },
-      {
-        "command": "cargo test",
-        "status": "passed"
-      }
-    ]
+  "generated": "2026-05-18T00:00:00Z",
+  "based_on": "proposals from 2026-05-18T00:00:00Z",
+  "summary": {
+    "specs_updated": 1,
+    "proposals_applied": 6,
+    "align_tasks_generated": 3,
+    "not_applied": 1
   },
-  "next_steps": []
+  "spec_updates": [
+    {
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Key Entities",
+      "change_type": "modified",
+      "proposal_id": 6,
+      "description": "Added GroupConfig, GroupDependencyEdge, SeverityDefaults"
+    },
+    {
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Key Entities",
+      "change_type": "modified",
+      "proposal_id": 7,
+      "description": "Added ChildSpec.severity and ChildSpec.group"
+    },
+    {
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Diagnostics",
+      "change_type": "modified",
+      "proposal_id": 5,
+      "description": "Added emit_policy_diagnostic pipeline description"
+    }
+  ],
+  "align_tasks": [
+    {
+      "id": "ALIGN-001",
+      "requirement": "SC-000",
+      "description": "Fix stage_emit_typed_event to emit BudgetExhausted/GroupFuseTriggered/EscalationBifurcated",
+      "priority": "P0",
+      "effort": "medium",
+      "files": ["src/runtime/pipeline.rs", "src/event/payload.rs"]
+    },
+    {
+      "id": "ALIGN-002",
+      "requirement": "FR-003",
+      "description": "Use ctx.correlation_id instead of uuid::Uuid::nil()",
+      "priority": "P0",
+      "effort": "small",
+      "files": ["src/runtime/pipeline.rs"]
+    },
+    {
+      "id": "ALIGN-003",
+      "requirement": "FR-001",
+      "description": "Add What::FairnessProbeStarvation typed event variant",
+      "priority": "P1",
+      "effort": "medium",
+      "files": ["src/event/payload.rs", "src/runtime/control_loop.rs"]
+    }
+  ],
+  "not_applied": [
+    {
+      "proposal_id": 4,
+      "requirement": "SC-003",
+      "reason": "Deferred to 006-5-typed-events-observability"
+    }
+  ],
+  "backup": ".specify/sync/backups/spec.md.2026-05-18"
 }

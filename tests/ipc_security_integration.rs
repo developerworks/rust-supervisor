@@ -11,16 +11,11 @@
 
 #[cfg(test)]
 mod ipc_security_tests {
-    use rust_supervisor::config::ipc_security::{
-        AllowlistConfig, AuditConfig, AuthorizationConfig, IdempotencyConfig, PeerIdentityConfig,
-        RateLimitConfig, ReplayProtectionConfig, RequestSizeLimitConfig,
-    };
-    use rust_supervisor::dashboard::error::DashboardError;
-    use rust_supervisor::ipc::security::allowlist::check_allowlist;
+    use rust_supervisor::config::ipc_security::PeerIdentityConfig;
     use rust_supervisor::ipc::security::audit::{AuditBackend, AuditRecord};
-    use rust_supervisor::ipc::security::authz::{IpcRiskAction, verify_authorization};
+    use rust_supervisor::ipc::security::authz::IpcRiskAction;
     use rust_supervisor::ipc::security::idempotency::IdempotencyCache;
-    use rust_supervisor::ipc::security::limits::{TokenBucket, check_request_size};
+    use rust_supervisor::ipc::security::limits::TokenBucket;
     use rust_supervisor::ipc::security::peer_identity::{PeerIdentity, verify_peer_identity};
     use rust_supervisor::ipc::security::replay::ReplayWindow;
     use std::time::Duration;

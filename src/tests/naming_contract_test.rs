@@ -50,7 +50,6 @@ fn source_code_uses_approved_state_names() {
     let approved_names = [
         "ConfigState",
         "SupervisorState",
-        "ManagedChildState",
         "ChildAttemptStatus",
         "ChildControlOperation",
         "ChildStopState",
@@ -58,7 +57,6 @@ fn source_code_uses_approved_state_names() {
         "ChildControlFailure",
         "RestartLimitState",
         "ChildLivenessState",
-        "ChildRuntimeState",
         "ChildRuntimeRecord",
         "ChildControlResult",
         "GenerationFencePhase",

@@ -88,7 +88,7 @@ pub enum OnSuccessAction {
 
 - **`Service`** → **`Restart`** (保持在线)
 - **`Worker`** → **`Stop`** (任务完成即停止)
-- **`Job`** → **`Stop`** (一次性作业成功后不得再起)
+- **`Job`** → **`Stop`** (一次性作业成功后不得重启)
 - **`Sidecar`** → **`Restart`** (辅助进程应保持可用)
 - **`Supervisor`** → **`Restart`** (嵌套监督器应保持运行)
 
@@ -221,7 +221,7 @@ pub struct RoleDefaultPolicy {
 
 **Field Obligations(字段义务)**:
 
-- **`on_success_exit`**: 决定成功退出后是否自动再起; **`Job`** 角色必须为 **`Stop`**
+- **`on_success_exit`**: 决定成功退出后是否自动重启; **`Job`** 角色必须为 **`Stop`**
 - **`on_failure_exit`**: 决定失败后的重启策略; 所有角色默认不得使用 **`RestartPermanent`** 除非显式覆写
 - **`on_manual_stop`**: 人工停止必须优先于任何自动恢复逻辑
 - **`on_timeout`**: 超时视为一种特殊失败, 动作可与普通失败不同

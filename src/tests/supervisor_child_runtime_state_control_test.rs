@@ -13,7 +13,7 @@ use rust_supervisor::event::payload::What;
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::observe::metrics::SupervisorMetricName;
 use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadinessState};
-use rust_supervisor::runtime::child_runtime_state::DEFAULT_HEARTBEAT_TIMEOUT_SECS;
+use rust_supervisor::runtime::child_slot::DEFAULT_HEARTBEAT_TIMEOUT_SECS;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{
     BackoffPolicy, ChildSpec, RestartPolicy, ShutdownPolicy, TaskKind,

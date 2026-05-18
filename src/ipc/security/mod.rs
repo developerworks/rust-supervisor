@@ -134,15 +134,15 @@ impl IpcSecurityPipeline {
         }
 
         // C4: Replay protection
-        if self.config.replay_protection.enabled {
-            if let Err(err) = self.replay_window.check_and_record(request_id) {
-                tracing::warn!(
-                    target: "rust_supervisor::ipc::security::replay",
-                    %request_id,
-                    "replay detected"
-                );
-                return CheckOutcome::Denied(err);
-            }
+        if self.config.replay_protection.enabled
+            && let Err(err) = self.replay_window.check_and_record(request_id)
+        {
+            tracing::warn!(
+                target: "rust_supervisor::ipc::security::replay",
+                %request_id,
+                "replay detected"
+            );
+            return CheckOutcome::Denied(err);
         }
 
         // C3: Command authorization

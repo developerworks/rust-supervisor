@@ -1,4 +1,4 @@
-use rust_supervisor::control::command::{CommandResult, CurrentState, ManagedChildState};
+use rust_supervisor::control::command::{CommandResult, CurrentState};
 use rust_supervisor::control::outcome::{
     ChildAttemptStatus, ChildControlOperation, ChildControlResult, ChildLivenessState,
     ChildRuntimeRecord, ChildStopState, GenerationFencePhase, RestartLimitState,
@@ -7,8 +7,8 @@ use rust_supervisor::dashboard::config::ValidatedDashboardIpcConfig;
 use rust_supervisor::dashboard::ipc_server::DashboardIpcService;
 use rust_supervisor::dashboard::ipc_server::validate_command;
 use rust_supervisor::dashboard::model::{
-    ControlCommandKind, ControlCommandRequest, ControlCommandTarget,
-    dashboard_command_result_value, managed_child_state_from_operation,
+    ControlCommandKind, ControlCommandRequest, ControlCommandTarget, DashboardManagedChildState,
+    dashboard_command_result_value,
 };
 use rust_supervisor::dashboard::protocol::{
     IpcMethod, IpcRequest, IpcResponse, IpcResult, parse_request_line, response_to_line,
@@ -170,20 +170,20 @@ fn child_control_command_request_shape_stays_stable() {
 #[test]
 fn dashboard_model_maps_operation_to_managed_child_state() {
     assert_eq!(
-        managed_child_state_from_operation(ChildControlOperation::Active),
-        ManagedChildState::Running
+        DashboardManagedChildState::from(ChildControlOperation::Active),
+        DashboardManagedChildState::Running
     );
     assert_eq!(
-        managed_child_state_from_operation(ChildControlOperation::Paused),
-        ManagedChildState::Paused
+        DashboardManagedChildState::from(ChildControlOperation::Paused),
+        DashboardManagedChildState::Paused
     );
     assert_eq!(
-        managed_child_state_from_operation(ChildControlOperation::Quarantined),
-        ManagedChildState::Quarantined
+        DashboardManagedChildState::from(ChildControlOperation::Quarantined),
+        DashboardManagedChildState::Quarantined
     );
     assert_eq!(
-        managed_child_state_from_operation(ChildControlOperation::Removed),
-        ManagedChildState::Removed
+        DashboardManagedChildState::from(ChildControlOperation::Removed),
+        DashboardManagedChildState::Removed
     );
 }
 

@@ -1,26 +1,34 @@
-//! Child runtime state records.
+//! ChildSlot placed on each supervised child runtime identity.
+//!
+//! A [`ChildSlot`] owns the live handles (cancellation token, join handle) for at
+//! most one active attempt at any moment. The control loop manipulates slots
+//! through the methods defined here rather than rewriting in-memory labels.
 
 use crate::child_runner::runner::{ChildRunHandle, ChildRunReport, wait_for_report};
 use crate::control::outcome::{
     ChildAttemptStatus, ChildControlFailure, ChildControlOperation, ChildLivenessState,
-    ChildRuntimeRecord, ChildStopState, GenerationFencePhase, GenerationFenceState,
-    PendingRestartSummary, RestartLimitState,
+    ChildRuntimeRecord, ChildStopState, GenerationFenceState, RestartLimitState,
 };
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::readiness::signal::ReadinessState;
-use crate::registry::entry::ChildRuntimeStatus;
+use serde::Serialize;
 use std::collections::VecDeque;
+use std::fmt::{Display, Formatter};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::watch;
 use tokio::task::AbortHandle;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
+// ---------------------------------------------------------------------------
+// Shared types (migrated from child_runtime_state)
+// ---------------------------------------------------------------------------
+
 /// Default heartbeat stale threshold in seconds.
 pub const DEFAULT_HEARTBEAT_TIMEOUT_SECS: u64 = 5;
 
-/// Restart accounting history for one child runtime state record.
+/// Restart accounting history for one child runtime slot.
 #[derive(Debug, Clone, Default)]
 pub struct RestartLimitTracker {
     /// Failure timestamps that are still relevant to the restart window.
@@ -29,14 +37,6 @@ pub struct RestartLimitTracker {
 
 impl RestartLimitTracker {
     /// Creates an empty restart limit tracker.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`RestartLimitTracker`] without recorded failures.
     pub fn new() -> Self {
         Self::default()
     }
@@ -60,16 +60,7 @@ impl RestartLimitTracker {
         self.failure_timestamps.len().min(u32::MAX as usize) as u32
     }
 
-    /// Removes failure timestamps that are outside the accounting window.
-    ///
-    /// # Arguments
-    ///
-    /// - `now_unix_nanos`: Current Unix timestamp in nanoseconds.
-    /// - `window`: Restart accounting window.
-    ///
-    /// # Returns
-    ///
-    /// This function does not return a value.
+    /// Removes failure timestamps outside the accounting window.
     fn prune(&mut self, now_unix_nanos: u128, window: Duration) {
         let window_nanos = window.as_nanos();
         while self
@@ -93,14 +84,6 @@ pub struct RuntimeTimeBase {
 
 impl RuntimeTimeBase {
     /// Creates a runtime time base.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`RuntimeTimeBase`] value.
     pub fn new() -> Self {
         Self {
             base_instant: Instant::now(),
@@ -111,14 +94,6 @@ impl RuntimeTimeBase {
     }
 
     /// Returns the current Unix epoch timestamp in nanoseconds.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the current nanosecond timestamp.
     pub fn now_unix_nanos(&self) -> u128 {
         self.instant_to_unix_nanos(Instant::now())
     }
@@ -127,11 +102,7 @@ impl RuntimeTimeBase {
     ///
     /// # Arguments
     ///
-    /// - `instant`: Monotonic instant that should be converted.
-    ///
-    /// # Returns
-    ///
-    /// Returns a Unix epoch timestamp in nanoseconds.
+    /// - `instant`: Monotonic instant to convert.
     pub fn instant_to_unix_nanos(&self, instant: Instant) -> u128 {
         if instant >= self.base_instant {
             self.base_unix_nanos
@@ -150,44 +121,120 @@ impl Default for RuntimeTimeBase {
     }
 }
 
-/// Runtime state record for one child.
-#[derive(Debug)]
-pub struct ChildRuntimeState {
+// ---------------------------------------------------------------------------
+// ChildExitSummary
+// ---------------------------------------------------------------------------
+
+/// Summary recorded when a child attempt exits.
+#[derive(Debug, Clone, Serialize)]
+pub struct ChildExitSummary {
+    /// Process exit code when available.
+    pub exit_code: Option<i32>,
+    /// Human-readable exit reason.
+    pub exit_reason: String,
+    /// Unix epoch timestamp in nanoseconds when the exit was recorded.
+    pub exited_at_unix_nanos: u128,
+}
+
+impl ChildExitSummary {
+    /// Creates an exit summary from a [`ChildRunReport`].
+    ///
+    /// # Arguments
+    ///
+    /// - `report`: Completed child run report.
+    /// - `exited_at_unix_nanos`: Timestamp when the exit was observed.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`ChildExitSummary`].
+    pub fn from_report(report: &ChildRunReport, exited_at_unix_nanos: u128) -> Self {
+        let exit_reason = match &report.exit {
+            crate::child_runner::run_exit::TaskExit::Succeeded => "succeeded".to_owned(),
+            crate::child_runner::run_exit::TaskExit::Cancelled => "cancelled".to_owned(),
+            crate::child_runner::run_exit::TaskExit::Failed(f) => f.message.clone(),
+            crate::child_runner::run_exit::TaskExit::Panicked(msg) => format!("panicked: {msg}"),
+            crate::child_runner::run_exit::TaskExit::TimedOut => "timed out".to_owned(),
+        };
+        Self {
+            exit_code: None,
+            exit_reason,
+            exited_at_unix_nanos,
+        }
+    }
+}
+
+impl Display for ChildExitSummary {
+    /// Formats the exit summary as `code=<code> reason=<reason>`.
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.exit_code {
+            Some(code) => write!(formatter, "code={} reason={}", code, self.exit_reason),
+            None => write!(formatter, "reason={}", self.exit_reason),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ChildSlot
+// ---------------------------------------------------------------------------
+
+/// Runtime slot for one supervised child.
+///
+/// At most one active attempt may occupy the slot at any moment. The slot owns
+/// the cancellation token, abort handle, and completion/health receivers for
+/// the active attempt.
+#[derive(Debug, Serialize)]
+pub struct ChildSlot {
     /// Stable child identifier.
     pub child_id: ChildId,
     /// Child path in the supervisor tree.
     pub path: SupervisorPath,
-    /// Current active generation.
-    pub generation: Option<Generation>,
-    /// Current active attempt.
-    pub attempt: Option<ChildStartCount>,
     /// Current active attempt status.
-    pub status: Option<ChildAttemptStatus>,
-    /// Current control operation.
+    pub status: ChildAttemptStatus,
+    /// Current control operation requested by the operator.
     pub operation: ChildControlOperation,
-    /// Cancellation token for the active attempt.
+    /// Generation of the active attempt.
+    pub generation: Option<Generation>,
+    /// Monotonic attempt number for the active attempt.
+    pub attempt: Option<ChildStartCount>,
+    /// Cumulative restart count across all generations.
+    pub restart_count: u64,
+    /// Cancellation token for the active attempt (runtime-only, not serialized).
+    #[serde(skip)]
     pub cancellation_token: Option<CancellationToken>,
-    /// Abort handle for the active attempt.
+    /// Abort handle for the active attempt (runtime-only, not serialized).
+    #[serde(skip)]
     pub abort_handle: Option<AbortHandle>,
-    /// Completion receiver for the active attempt.
+    /// Completion receiver for the active attempt (runtime-only, not serialized).
+    #[serde(skip)]
     pub completion_receiver:
         Option<watch::Receiver<Option<Result<ChildRunReport, SupervisorError>>>>,
-    /// Heartbeat receiver for the active attempt.
+    /// Heartbeat receiver for the active attempt (runtime-only, not serialized).
+    #[serde(skip)]
     pub heartbeat_receiver: Option<watch::Receiver<Option<Instant>>>,
-    /// Readiness receiver for the active attempt.
+    /// Readiness receiver for the active attempt (runtime-only, not serialized).
+    #[serde(skip)]
     pub readiness_receiver: Option<watch::Receiver<ReadinessState>>,
-    /// Last observed heartbeat timestamp in Unix epoch nanoseconds.
-    pub last_observed_heartbeat_at_unix_nanos: Option<u128>,
-    /// Last observed readiness state.
-    pub last_observed_readiness: ReadinessState,
-    /// Current restart limit state.
-    pub restart_limit: RestartLimitState,
-    /// Runtime-side restart accounting history.
-    pub restart_limit_tracker: RestartLimitTracker,
+    /// Summary of the most recent exit, if any.
+    pub last_exit: Option<ChildExitSummary>,
+    /// Unix epoch timestamp in nanoseconds when the child last reported ready.
+    pub last_ready_at: Option<u128>,
+    /// Unix epoch timestamp in nanoseconds of the last observed heartbeat.
+    pub last_heartbeat_at: Option<u128>,
+    /// Restart accounting window duration.
+    pub restart_window: Duration,
+    /// Whether a restart is pending but not yet activated.
+    pub pending_restart: bool,
     /// Whether cancellation has been delivered to the active attempt.
     pub attempt_cancel_delivered: bool,
     /// Whether abort has been requested for the active attempt.
     pub abort_requested: bool,
+    // --- Fields migrated from ChildRuntimeState for compatibility ---
+    /// Current restart limit state.
+    #[serde(skip)]
+    pub restart_limit: RestartLimitState,
+    /// Runtime-side restart accounting history.
+    #[serde(skip)]
+    pub restart_limit_tracker: RestartLimitTracker,
     /// Current stop progress.
     pub stop_state: ChildStopState,
     /// Stop deadline in Unix epoch nanoseconds.
@@ -197,13 +244,65 @@ pub struct ChildRuntimeState {
     /// Attempt for the most recent stale heartbeat event.
     pub stale_event_attempt: Option<ChildStartCount>,
     /// Generation fencing state for restart coordination.
+    #[serde(skip)]
     pub generation_fence: GenerationFenceState,
-    /// Captured [`ChildRuntime`] identifiers registered immediately before a fenced restart advances the registry so spawn failures restore the superseded bookkeeping.
+    /// Registry identity anchor captured before a fenced restart.
+    #[serde(skip)]
     pub registry_identity_anchor_for_spawn_attempt: Option<(Generation, ChildStartCount, u64)>,
+    /// Last observed readiness state.
+    #[serde(skip)]
+    pub last_observed_readiness: ReadinessState,
 }
 
-impl ChildRuntimeState {
-    /// Creates a runtime state record without an active attempt.
+impl ChildSlot {
+    /// Creates an empty slot with no active attempt.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child identifier.
+    /// - `path`: Child path in the supervisor tree.
+    /// - `restart_window`: Restart accounting window duration.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`ChildSlot`] in idle state.
+    pub fn new(child_id: ChildId, path: SupervisorPath, restart_window: Duration) -> Self {
+        Self {
+            child_id,
+            path,
+            status: ChildAttemptStatus::Stopped,
+            operation: ChildControlOperation::Active,
+            generation: None,
+            attempt: None,
+            restart_count: 0,
+            cancellation_token: None,
+            abort_handle: None,
+            completion_receiver: None,
+            heartbeat_receiver: None,
+            readiness_receiver: None,
+            last_exit: None,
+            last_ready_at: None,
+            last_heartbeat_at: None,
+            restart_window,
+            pending_restart: false,
+            attempt_cancel_delivered: false,
+            abort_requested: false,
+            restart_limit: RestartLimitState::default(),
+            restart_limit_tracker: RestartLimitTracker::new(),
+            stop_state: ChildStopState::NoActiveAttempt,
+            stop_deadline_at_unix_nanos: None,
+            last_control_failure: None,
+            stale_event_attempt: None,
+            generation_fence: GenerationFenceState::placeholder(),
+            registry_identity_anchor_for_spawn_attempt: None,
+            last_observed_readiness: ReadinessState::Unreported,
+        }
+    }
+
+    /// Creates an empty slot with a default 60-second restart window.
+    ///
+    /// Convenience constructor for [`ChildSlot::new`] when the restart window
+    /// is not yet known.
     ///
     /// # Arguments
     ///
@@ -212,58 +311,24 @@ impl ChildRuntimeState {
     ///
     /// # Returns
     ///
-    /// Returns a [`ChildRuntimeState`] value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let state = rust_supervisor::runtime::child_runtime_state::ChildRuntimeState::new_placeholder(
-    ///     rust_supervisor::id::types::ChildId::new("worker"),
-    ///     rust_supervisor::id::types::SupervisorPath::root().join("worker"),
-    /// );
-    /// assert!(state.attempt.is_none());
-    /// ```
+    /// Returns a [`ChildSlot`] in idle state.
     pub fn new_placeholder(child_id: ChildId, path: SupervisorPath) -> Self {
-        Self {
-            child_id,
-            path,
-            generation: None,
-            attempt: None,
-            status: None,
-            operation: ChildControlOperation::Active,
-            cancellation_token: None,
-            abort_handle: None,
-            completion_receiver: None,
-            heartbeat_receiver: None,
-            readiness_receiver: None,
-            last_observed_heartbeat_at_unix_nanos: None,
-            last_observed_readiness: ReadinessState::Unreported,
-            restart_limit: RestartLimitState::default(),
-            restart_limit_tracker: RestartLimitTracker::new(),
-            attempt_cancel_delivered: false,
-            abort_requested: false,
-            stop_state: ChildStopState::NoActiveAttempt,
-            stop_deadline_at_unix_nanos: None,
-            last_control_failure: None,
-            stale_event_attempt: None,
-            generation_fence: GenerationFenceState::placeholder(),
-            registry_identity_anchor_for_spawn_attempt: None,
-        }
+        Self::new(child_id, path, Duration::from_secs(60))
     }
 
-    /// Activates an attempt on this runtime state record.
+    /// Activates an attempt on this slot.
     ///
     /// # Arguments
     ///
     /// - `generation`: Generation owned by the active attempt.
-    /// - `attempt`: Active attempt number.
+    /// - `attempt`: Monotonic attempt number.
     /// - `status`: Initial active attempt status.
-    /// - `handle`: Child run handle.
+    /// - `handle`: Child run handle carrying cancellation token and receivers.
     ///
     /// # Returns
     ///
     /// This function does not return a value.
-    pub fn activate_instance(
+    pub fn activate(
         &mut self,
         generation: Generation,
         attempt: ChildStartCount,
@@ -272,7 +337,7 @@ impl ChildRuntimeState {
     ) {
         self.generation = Some(generation);
         self.attempt = Some(attempt);
-        self.status = Some(status);
+        self.status = status;
         self.generation_fence.active_generation = Some(generation);
         self.generation_fence.active_attempt = Some(attempt);
         self.cancellation_token = Some(handle.cancellation_token);
@@ -280,17 +345,59 @@ impl ChildRuntimeState {
         self.completion_receiver = Some(handle.completion_receiver);
         self.heartbeat_receiver = Some(handle.heartbeat_receiver);
         self.readiness_receiver = Some(handle.readiness_receiver);
-        self.last_observed_heartbeat_at_unix_nanos = None;
+        self.last_exit = None;
+        self.last_ready_at = None;
+        self.last_heartbeat_at = None;
         self.last_observed_readiness = ReadinessState::Unreported;
         self.attempt_cancel_delivered = false;
         self.abort_requested = false;
+        self.pending_restart = false;
         self.stop_state = ChildStopState::Idle;
         self.stop_deadline_at_unix_nanos = None;
         self.last_control_failure = None;
         self.stale_event_attempt = None;
         self.registry_identity_anchor_for_spawn_attempt = None;
-        self.generation_fence.phase = GenerationFencePhase::Open;
+        self.generation_fence.phase = GenerationFenceState::placeholder().phase;
     }
+
+    /// Deactivates the current attempt and records its exit summary.
+    ///
+    /// The caller must have already awaited or consumed the completion
+    /// receiver. This method clears handles and advances the restart counter.
+    ///
+    /// # Arguments
+    ///
+    /// - `exit_summary`: Summary captured from the completed child run.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn deactivate(&mut self, exit_summary: ChildExitSummary) {
+        self.last_exit = Some(exit_summary);
+        self.restart_count = self.restart_count.saturating_add(1);
+        self.generation = None;
+        self.attempt = None;
+        self.status = ChildAttemptStatus::Stopped;
+        self.cancellation_token = None;
+        self.abort_handle = None;
+        self.completion_receiver = None;
+        self.heartbeat_receiver = None;
+        self.readiness_receiver = None;
+        self.last_ready_at = None;
+        self.last_heartbeat_at = None;
+        self.attempt_cancel_delivered = false;
+        self.abort_requested = false;
+        self.pending_restart = false;
+        self.generation_fence.active_generation = None;
+        self.generation_fence.active_attempt = None;
+        self.stop_state = ChildStopState::NoActiveAttempt;
+        self.stop_deadline_at_unix_nanos = None;
+        self.stale_event_attempt = None;
+        self.registry_identity_anchor_for_spawn_attempt = None;
+    }
+
+    /// Clears the active instance without recording an exit (migration
+    /// compatibility with [`ChildRuntimeState::clear_instance`]).
     ///
     /// # Arguments
     ///
@@ -302,7 +409,7 @@ impl ChildRuntimeState {
     pub fn clear_instance(&mut self) {
         self.generation = None;
         self.attempt = None;
-        self.status = None;
+        self.status = ChildAttemptStatus::Stopped;
         self.generation_fence.active_generation = None;
         self.generation_fence.active_attempt = None;
         self.cancellation_token = None;
@@ -318,7 +425,7 @@ impl ChildRuntimeState {
         self.stop_state = ChildStopState::NoActiveAttempt;
     }
 
-    /// Returns whether the record has an active attempt.
+    /// Returns whether the slot currently holds an active attempt.
     ///
     /// # Arguments
     ///
@@ -339,10 +446,9 @@ impl ChildRuntimeState {
     ///
     /// # Returns
     ///
-    /// Returns `true` when this call delivered cancellation.
+    /// Returns `true` when this call delivered cancellation (first delivery).
     pub fn cancel(&mut self) -> bool {
         let Some(token) = &self.cancellation_token else {
-            self.stop_state = ChildStopState::NoActiveAttempt;
             return false;
         };
         if self.attempt_cancel_delivered {
@@ -350,8 +456,7 @@ impl ChildRuntimeState {
         }
         token.cancel();
         self.attempt_cancel_delivered = true;
-        self.status = Some(ChildAttemptStatus::Cancelling);
-        self.stop_state = ChildStopState::CancelDelivered;
+        self.status = ChildAttemptStatus::Cancelling;
         true
     }
 
@@ -363,7 +468,7 @@ impl ChildRuntimeState {
     ///
     /// # Returns
     ///
-    /// Returns `true` when this call requested abort.
+    /// Returns `true` when this call requested abort (first request).
     pub fn abort(&mut self) -> bool {
         let Some(handle) = &self.abort_handle else {
             return false;
@@ -388,44 +493,46 @@ impl ChildRuntimeState {
     pub async fn wait_for_report(&mut self) -> Result<ChildRunReport, SupervisorError> {
         let Some(receiver) = &mut self.completion_receiver else {
             return Err(SupervisorError::InvalidTransition {
-                message: "child runtime state has no active completion receiver".to_owned(),
+                message: "child slot has no active completion receiver".to_owned(),
             });
         };
         wait_for_report(receiver).await
     }
 
-    /// Observes current liveness for the active attempt.
+    /// Observes current readiness and heartbeat from the active attempt.
     ///
     /// # Arguments
     ///
-    /// - `time_base`: Runtime time base.
+    /// - `now_unix_nanos`: Current Unix epoch timestamp in nanoseconds.
     ///
     /// # Returns
     ///
-    /// Returns the latest [`ChildLivenessState`] value.
-    pub fn observe_liveness(&mut self, time_base: &RuntimeTimeBase) -> ChildLivenessState {
+    /// Returns the latest [`ChildLivenessState`].
+    pub fn observe_liveness(&mut self, now_unix_nanos: u128) -> ChildLivenessState {
         if let Some(receiver) = &self.heartbeat_receiver {
             let heartbeat = *receiver.borrow();
-            self.last_observed_heartbeat_at_unix_nanos =
-                heartbeat.map(|instant| time_base.instant_to_unix_nanos(instant));
+            if heartbeat.is_some() {
+                self.last_heartbeat_at = Some(now_unix_nanos);
+            }
         }
-        if let Some(receiver) = &self.readiness_receiver {
-            self.last_observed_readiness = *receiver.borrow();
-        }
-        let heartbeat_stale = self
-            .last_observed_heartbeat_at_unix_nanos
-            .is_some_and(|heartbeat| {
-                let elapsed_nanos = time_base.now_unix_nanos().saturating_sub(heartbeat);
-                elapsed_nanos >= Duration::from_secs(DEFAULT_HEARTBEAT_TIMEOUT_SECS).as_nanos()
-            });
-        ChildLivenessState::new(
-            self.last_observed_heartbeat_at_unix_nanos,
-            heartbeat_stale,
-            self.last_observed_readiness,
-        )
+        let readiness = if let Some(receiver) = &self.readiness_receiver {
+            let r = *receiver.borrow();
+            if r == ReadinessState::Ready {
+                self.last_ready_at = Some(now_unix_nanos);
+            }
+            r
+        } else {
+            ReadinessState::Unreported
+        };
+        let heartbeat_stale = self.last_heartbeat_at.is_some_and(|heartbeat| {
+            let elapsed_nanos = now_unix_nanos.saturating_sub(heartbeat);
+            elapsed_nanos >= Duration::from_secs(DEFAULT_HEARTBEAT_TIMEOUT_SECS).as_nanos()
+        });
+        ChildLivenessState::new(self.last_heartbeat_at, heartbeat_stale, readiness)
     }
 
-    /// Updates restart limit state.
+    /// Updates restart limit state (migration compatibility with
+    /// [`ChildRuntimeState::update_restart_limit`]).
     ///
     /// # Arguments
     ///
@@ -436,7 +543,7 @@ impl ChildRuntimeState {
     ///
     /// # Returns
     ///
-    /// Returns the updated [`RestartLimitState`] value.
+    /// Returns the updated [`RestartLimitState`].
     pub fn update_restart_limit(
         &mut self,
         window: Duration,
@@ -448,22 +555,30 @@ impl ChildRuntimeState {
         if updated_at <= self.restart_limit.updated_at_unix_nanos {
             updated_at = self.restart_limit.updated_at_unix_nanos.saturating_add(1);
         }
-        self.restart_limit = RestartLimitState::new(window, limit, used, updated_at);
+        self.restart_limit = RestartLimitState {
+            window,
+            limit,
+            used,
+            remaining: limit.saturating_sub(used),
+            exhausted: used >= limit,
+            updated_at_unix_nanos: updated_at,
+        };
         self.restart_limit.clone()
     }
 
-    /// Refreshes restart limit state from runtime accounting history.
+    /// Refreshes the restart limit tracker and updates the state (migration
+    /// compatibility).
     ///
     /// # Arguments
     ///
     /// - `window`: Restart accounting window.
     /// - `limit`: Restart limit inside the window.
-    /// - `count_failure`: Whether the current exit should consume the limit.
+    /// - `count_failure`: Whether the current exit counts as a failure.
     /// - `time_base`: Runtime time base.
     ///
     /// # Returns
     ///
-    /// Returns the updated [`RestartLimitState`] value.
+    /// Returns the updated [`RestartLimitState`].
     pub fn refresh_restart_limit(
         &mut self,
         window: Duration,
@@ -478,7 +593,8 @@ impl ChildRuntimeState {
         self.update_restart_limit(window, limit, used, time_base)
     }
 
-    /// Builds a public runtime state record.
+    /// Builds a public runtime state record (migration compatibility with
+    /// [`ChildRuntimeState::to_record`]).
     ///
     /// # Arguments
     ///
@@ -486,44 +602,21 @@ impl ChildRuntimeState {
     ///
     /// # Returns
     ///
-    /// Returns a [`ChildRuntimeRecord`] value.
+    /// Returns a [`ChildRuntimeRecord`].
     pub fn to_record(&self, liveness: ChildLivenessState) -> ChildRuntimeRecord {
         ChildRuntimeRecord::new(
             self.child_id.clone(),
             self.path.clone(),
             self.generation,
             self.attempt,
-            self.status,
+            Some(self.status),
             self.operation,
             liveness,
             self.restart_limit.clone(),
             self.stop_state,
             self.last_control_failure.clone(),
             self.generation_fence.phase,
-            self.generation_fence
-                .pending_restart
-                .as_ref()
-                .map(PendingRestartSummary::from),
+            None, // pending_restart
         )
-    }
-}
-
-/// Maps a registry status into a public attempt status.
-///
-/// # Arguments
-///
-/// - `status`: Status stored in the registry.
-///
-/// # Returns
-///
-/// Returns the public child attempt status.
-pub fn child_attempt_status_from_runtime(status: ChildRuntimeStatus) -> ChildAttemptStatus {
-    match status {
-        ChildRuntimeStatus::Registered | ChildRuntimeStatus::Starting => {
-            ChildAttemptStatus::Starting
-        }
-        ChildRuntimeStatus::Running => ChildAttemptStatus::Running,
-        ChildRuntimeStatus::Ready => ChildAttemptStatus::Ready,
-        ChildRuntimeStatus::Exited => ChildAttemptStatus::Stopped,
     }
 }

@@ -8,7 +8,7 @@
 
 ## Summary(摘要)
 
-本功能解决 `RestartChild(重启子任务)` 在未先收敛旧尝试的情况下直接再起新实例的问题。规格要求同一时间每个 `ChildId(子任务标识)` 至多一个 `ActiveAttempt(活动尝试)`, 重启前先发取消并经 `generation fencing(代次隔离)` 等待或升级中止旧尝试, `late report(迟到上报)` 必须成为 `StaleReport(过期报告)` 或可审计事实且不覆盖当前代次事实。
+本功能解决 `RestartChild(重启子任务)` 在未先收敛旧尝试的情况下直接重启新实例的问题。规格要求同一时间每个 `ChildId(子任务标识)` 至多一个 `ActiveAttempt(活动尝试)`, 重启前先发取消并经 `generation fencing(代次隔离)` 等待或升级中止旧尝试, `late report(迟到上报)` 必须成为 `StaleReport(过期报告)` 或可审计事实且不覆盖当前代次事实。
 
 Phase 0(研究阶段) 已确定技术路线: `RestartChild(重启子任务)` 采用异步 `pending restart(待重启)` 状态机, 不向 `control loop(控制循环)` 同步阻塞等待退出。隔离身份使用 `(child_id, generation, attempt)(子任务标识,代次与尝试)` 三元组。手动与自动重启共用同一 `spawn`(派生启动)门禁。重复重启请求默认合并并返回 `AlreadyPending(已存在待重启)`. 超时后可请求 `abort(强制中止)`, 但仍须等退出报告到达后才能启动目标代次新尝试。
 

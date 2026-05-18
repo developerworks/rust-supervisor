@@ -91,6 +91,20 @@ fn extract_peer_identity_linux(stream: &StdUnixStream) -> Result<PeerIdentity, D
 }
 
 #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+/// Extracts peer identity via `LOCAL_PEERCRED` (macOS / FreeBSD `xucred`).
+///
+/// On macOS the credential structure provides `cr_uid` and `cr_groups[]`
+/// but no single `cr_gid`. This function uses `cr_uid` for identity and
+/// sets `gid` to 0 (gid checks are opt-in).
+///
+/// # Arguments
+///
+/// - `stream`: Connected Unix-domain stream socket.
+///
+/// # Returns
+///
+/// Returns [`PeerIdentity`] on success, or a `DashboardError` when
+/// `getsockopt` fails.
 fn extract_peer_identity_macos(stream: &StdUnixStream) -> Result<PeerIdentity, DashboardError> {
     use std::os::unix::io::AsRawFd;
 

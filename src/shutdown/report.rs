@@ -145,6 +145,15 @@ pub struct ShutdownReconcileReport {
     pub metrics_status: ResourceReconcileStatus,
     /// Socket reconciliation status.
     pub socket_status: ResourceReconcileStatus,
+    /// Child identifiers whose slots still held handles after shutdown.
+    #[serde(default)]
+    pub orphan_slots: Vec<ChildId>,
+    /// Total number of child slots checked during reconciliation.
+    #[serde(default)]
+    pub total_slots_checked: usize,
+    /// Whether all slots were verified clean (no residual handles).
+    #[serde(default)]
+    pub verified_clean: bool,
     /// Non-fatal reconciliation warnings.
     pub warnings: Vec<String>,
 }
@@ -167,6 +176,9 @@ impl ShutdownReconcileReport {
             journal_status: ResourceReconcileStatus::Recorded,
             metrics_status: ResourceReconcileStatus::Recorded,
             socket_status: ResourceReconcileStatus::NotOwned,
+            orphan_slots: Vec::new(),
+            total_slots_checked: 0,
+            verified_clean: true,
             warnings: Vec::new(),
         }
     }

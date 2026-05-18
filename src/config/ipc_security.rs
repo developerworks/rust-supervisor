@@ -311,7 +311,7 @@ pub struct AuditConfig {
     /// Failure strategy when audit backend is unavailable.
     /// - "fail_closed": reject write commands when audit cannot be written.
     /// - "defer_bounded": defer audit writes with bounded queue.
-    /// Default: "fail_closed".
+    ///   Default: "fail_closed".
     #[serde(default = "default_fail_closed")]
     pub failure_strategy: String,
 

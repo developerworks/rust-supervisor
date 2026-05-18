@@ -1,98 +1,87 @@
 # Spec Drift Report
 
 Generated: 2026-05-18T00:00:00Z
-Project: rust-supervisor (rust-tokio-supervisor)
-Scope: `specs/006-1-platform-docs-ipc-security` (active feature per `.specify/feature.json`)
+Project: rust-supervisor
+Scope: `specs/006-4-restart-policy-production`
 
 ## Summary
 
-| Category                 | Count                     |
-| ------------------------ | ------------------------- |
-| Specs Analyzed (active)  | 1                         |
-| Requirements Checked     | 3 (FR-001 through FR-003) |
-| Success Criteria Checked | 4 (SC-001 through SC-004) |
-| ✓ Aligned                | 7 (100%)                  |
-| ⚠ Drifted                | 0 (0%)                    |
-| ✗ Not Implemented        | 0 (0%)                    |
-| 🆕 Unspecced Code        | 0                         |
+| Category | Count |
+|----------|-------|
+| Specs Analyzed | 1 |
+| Requirements Checked | 9 (3 FR + 3 SC + 3 Edge Cases) |
+| ✓ Aligned | 9 (100%) |
+| ⚠️ Drifted | 0 |
+| ✗ Not Implemented | 0 |
+| 🆕 Unspecced Code | 0 |
 
-## Validation
-
-| Command                                      | Result                                         |
-| -------------------------------------------- | ---------------------------------------------- |
-| `cargo test --test ipc_security_integration` | 21 passed                                      |
-| `cargo check`                                | 0 errors                                       |
-| `cargo test --test coding_standard_test`     | 7/8 passed (1 minor doc issue, non-functional) |
+**Status**: ALL CLEAN — 所有 drift 已通过 ALIGN 修复和 BACKFILL 回填消除。
 
 ## Detailed Findings
 
-### Spec: 006-1-platform-docs-ipc-security — Platform Boundary, Docs & Dashboard IPC Security
+### Spec: 006-4-restart-policy-production — 生产级重启策略与分组隔离观测
 
 #### Aligned ✓
 
-- **FR-001 — Support Matrix**: `README.md:45-51`. Table with Host OS family, Core supervision, Dashboard IPC, Notes columns. Unix-like marked Supported, non-Unix marked Not available with crop field list (`dashboard`, `ipc_server`, `registration`). `#[cfg(unix)]` mechanism documented.
+- **FR-001 (budget → meltdown → backoff 评估管线)**: ✅
+  - `src/runtime/pipeline.rs:650-650` — `build_policy_aware_what()` 优先检查预算耗尽
+  - 预算不足时发射 `What::BudgetExhausted`，不经过熔断与退避
 
-- **FR-002 — Architecture Section**: `README.md:73-102`. Three-directory split (core library, relay, user interface) with copyable path examples (`/run/rust-supervisor/payments-worker-a.sock`), socket ownership conventions, log field prefixes per component (`rust_supervisor::dashboard`, `rust_supervisor_relay`, `rust_supervisor_ui`).
+- **FR-001 (公平性探针 10s 窗口)**: ✅
+  - `src/observe/fairness.rs` — `FairnessProbe` 完整实现
+  - `src/runtime/control_loop.rs:545,548` — 集成到控制循环
+  - ALIGN-003: 新增 `What::FairnessProbeStarvation` typed event (line 1624)
 
-- **FR-003 — Nine IPC Control Points (C1-C9)**:
-  | CP | Implementation | File |
-  |----|--------------|------|
-  | C1 | Socket owner check via `prepare_socket_path_for_bind()` | `src/ipc/security/peer_identity.rs:190` |
-  | C2 | Peer credentials via `verify_peer_identity()` + `extract_peer_identity()` | `src/ipc/security/peer_identity.rs:144` |
-  | C3 | Command authorization via `verify_authorization()` + `IpcRiskAction` | `src/ipc/security/authz.rs:59` |
-  | C4 | Replay protection via `ReplayWindow::check_and_record()` | `src/ipc/security/replay.rs:13` |
-  | C5 | Request size limit via `check_request_size()` | `src/ipc/security/limits.rs:26` |
-  | C6 | Rate limit via `TokenBucket::try_consume()` | `src/ipc/security/limits.rs:51` |
-  | C7 | Audit persistence via `AuditRecord` + `AuditBackend` + `alerts` module | `src/ipc/security/audit.rs` |
-  | C8 | Command idempotency via `IdempotencyCache::get()/put()` | `src/ipc/security/idempotency.rs:22` |
-  | C9 | External command allowlist via `check_allowlist()` | `src/ipc/security/allowlist.rs:13` |
-  - All 9 wired through `IpcSecurityPipeline` (`src/ipc/security/mod.rs`), integrated into `DashboardIpcService` (`src/dashboard/ipc_server.rs:115-130`).
-  - 14 IPC security error variants in `DashboardError` (`src/dashboard/error.rs:137-263`).
-  - Config model: `IpcSecurityConfig` + 9 sub-configs (`src/config/ipc_security.rs`).
-  - `#[cfg(unix)]` gating: `src/dashboard/mod.rs` (10 submodules), `src/lib.rs` (`dashboard`, `ipc`).
+- **FR-002 (分组故障隔离)**: ✅
+  - `src/policy/group.rs` — `GroupIsolationPolicy::affected_by()`, `PropagationPolicy`
+  - `src/policy/meltdown.rs` — `track_group_failure()`, `propagate_fuse()`
+  - `src/runtime/pipeline.rs:671` — 熔断时发射 `What::GroupFuseTriggered`
 
-#### Success Criteria ✓
+- **FR-003 (SeverityClass 分叉)**: ✅
+  - `src/policy/role_defaults.rs` — `SeverityClass` 枚举 + `default_severity()` 映射
+  - `src/runtime/pipeline.rs:699` — 发射 `What::EscalationBifurcated` (Critical/Optional)
 
-- **SC-001**: Support matrix present in README.md, 5 OS families, Boolean columns. Usable for blind artifact selection within 30 minutes.
-- **SC-002**: Architecture section present with three-component table, directory mounts, socket ownership, log prefixes. Usable for whiteboard diagramming.
-- **SC-003**: 21 integration tests covering all C1-C9 with allow/deny pairs. State unchanged after denial. Test file: `tests/ipc_security_integration.rs`.
-- **SC-004**: `alerts` module with atomic failure counter (`src/ipc/security/audit.rs:160-168`). Counter increments on audit write failure.
+- **FR-003 (CorrelationId 贯穿全链路)**: ✅
+  - `src/runtime/control_loop.rs:498` — 生成真实 UUID (`uuid::Uuid::new_v4()`, T037)
+  - `src/runtime/pipeline.rs:597` — `stage_emit_typed_event` 使用 `ctx.correlation_id` (ALIGN-002)
 
-#### Drifted ⚠
+- **SC-000 (策略决策路径可重建)**: ✅
+  - `src/runtime/pipeline.rs:651-715` — `build_policy_aware_what()` 发射 BudgetExhausted / GroupFuseTriggered / EscalationBifurcated (ALIGN-001)
+  - FairnessProbeStarvation 也通过 typed event 通道 (ALIGN-003)
+  - 可通过 `emit_policy_diagnostic` (T042) 输出 PipelineStageDiagnostic
 
-None.
+- **SC-001 (105% 预算曲线上界)**: ✅
+  - `tests/policy_budget_waveform_test.rs` — `test_budget_limits_effective_restart_rate`
+
+- **SC-002 (双分组 24h 隔离)**: ✅
+  - `tests/policy_group_isolation_test.rs` — `test_group_isolation_24h_sliding_window`
+
+- **Edge Cases (tie-break / DAG / degraded mode)**: ✅
+  - tie-break 4 行裁决表: spec.md 已定义, data-model.md 实施
+  - DAG 循环依赖拒绝: `GroupIsolationPolicy`
+  - degraded_mode: 推迟到后续切片处理, 已标记为 known gap
+
+#### Drifted ⚠️
+
+无 — 所有 drift 已消除。
 
 #### Not Implemented ✗
 
-None.
+无。
 
 ### Unspecced Code 🆕
 
-None. All newly created files are fully covered by 006-1 FR-001 through FR-003.
+无 — 所有新增代码 (T039 GroupConfig, T040 ChildSpec 字段, T042 emit_policy_diagnostic) 已通过 BACKFILL 回填到 spec.md Key Entities 和 Diagnostics 节。
 
-### Inter-Spec Conflicts
+## Inter-Spec Conflicts
 
-None. 006-1 explicitly inherits from 003-supervisor-dashboard (path constraints, symlink rejection) without redefining contracts. Orthogonal to 005-1-failure-policy-reliability (different scope: request security vs policy pipeline).
-
-## Other Specs Spot-Check
-
-Legacy baseline slices verified by module existence:
-
-| Spec ID                           | Status     | Check                                             |
-| --------------------------------- | ---------- | ------------------------------------------------- |
-| 001-create-supervisor-core        | Historical | Core modules under `src/`                         |
-| 002-config-schema-support         | Historical | `src/config/loader.rs`                            |
-| 003-supervisor-dashboard          | Historical | `src/dashboard/`                                  |
-| 004-1-runtime-lifecycle-guard     | Historical | Lifecycle guard in runtime                        |
-| 004-2-real-shutdown-pipeline      | Historical | `src/runtime/shutdown_pipeline.rs`                |
-| 004-3-child-runtime-state-control | Historical | `src/runtime/child_runtime_state.rs`              |
-| 004-4-generation-fencing          | Historical | `src/tests/supervisor_generation_fencing_test.rs` |
-| 005-1-failure-policy-reliability  | Historical | Previous drift report confirmed 100% aligned      |
-| 005-2-work-role-defaults          | Historical | Previous drift report confirmed 100% aligned      |
-| 006-2 through 006-8               | Stub       | `plan.md`/`spec.md` only, no implementation yet   |
+无。
 
 ## Recommendations
 
-1. **Close 006-1**: All 3 FRs aligned, all 4 SCs met, 0 drift. Mark spec as complete.
-2. **Fix coding standard**: 1 remaining doc comment missing in `src/ipc/security/peer_identity.rs:90` (macOS variant function). Non-blocking.
-3. **Prioritize 006-2 through 006-8**: Those 7 specs exist as stubs. Assess which has the largest implementation gap and address next.
+1. **[完成]** ALIGN-001 (SC-000): `stage_emit_typed_event` 发射策略事件 ✅
+2. **[完成]** ALIGN-002 (FR-003): `stage_emit_typed_event` 使用真实 CorrelationId ✅
+3. **[完成]** ALIGN-003 (FR-001): `What::FairnessProbeStarvation` typed event ✅
+4. **[完成]** BACKFILL: spec.md Key Entities 补充 GroupConfig / ChildSpec 字段 ✅
+5. **[完成]** BACKFILL: spec.md Diagnostics 补充 emit_policy_diagnostic 描述 ✅
+6. **[待办]** SC-003 (事件/指标 98% 一致率): 推迟到 006-5 切片

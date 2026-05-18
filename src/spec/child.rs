@@ -5,7 +5,7 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
-use crate::policy::role_defaults::{SidecarConfig, WorkRole};
+use crate::policy::role_defaults::{SeverityClass, SidecarConfig, WorkRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::task::factory::TaskFactory;
 use schemars::JsonSchema;
@@ -181,6 +181,12 @@ pub struct ChildSpec {
     /// Optional sidecar binding used when the role is [`WorkRole::Sidecar`].
     #[serde(default)]
     pub sidecar_config: Option<SidecarConfig>,
+    /// Optional explicit severity classification that overrides the role default (US3).
+    #[serde(default)]
+    pub severity: Option<SeverityClass>,
+    /// Optional group name for group-level isolation and budget tracking (US2).
+    #[serde(default)]
+    pub group: Option<String>,
 }
 
 impl Debug for ChildSpec {
@@ -201,6 +207,8 @@ impl Debug for ChildSpec {
             .field("criticality", &self.criticality)
             .field("work_role", &self.work_role)
             .field("sidecar_config", &self.sidecar_config)
+            .field("severity", &self.severity)
+            .field("group", &self.group)
             .finish()
     }
 }
@@ -258,6 +266,8 @@ impl ChildSpec {
             criticality: Criticality::Critical,
             work_role: Some(WorkRole::Worker),
             sidecar_config: None,
+            severity: None,
+            group: None,
         }
     }
 

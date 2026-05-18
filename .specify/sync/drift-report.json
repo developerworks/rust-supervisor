@@ -1,30 +1,45 @@
 {
   "generated": "2026-05-18T00:00:00Z",
-  "project": "rust-tokio-supervisor",
-  "scope": "006-1-platform-docs-ipc-security",
+  "project": "rust-supervisor",
+  "scope": "specs/006-4-restart-policy-production",
   "summary": {
     "specs_analyzed": 1,
-    "requirements_checked": 3,
-    "aligned": 3,
+    "requirements_checked": 9,
+    "aligned": 9,
     "drifted": 0,
     "not_implemented": 0,
     "unspecced_features": 0
   },
   "specs": [
     {
-      "id": "006-1-platform-docs-ipc-security",
-      "title": "Platform Boundary, Docs & Dashboard IPC Security",
-      "aligned": ["FR-001", "FR-002", "FR-003"],
+      "id": "006-4-restart-policy-production",
+      "title": "生产级重启策略与分组隔离观测",
+      "aligned": [
+        "FR-001 (budget-meltdown-backoff 评估管线)",
+        "FR-001 (FairnessProbe 10s 窗口 + FairnessProbeStarvation typed event)",
+        "FR-002 (分组故障隔离 + GroupFuseTriggered typed event)",
+        "FR-003 (SeverityClass 分叉 + EscalationBifurcated typed event)",
+        "FR-003 (CorrelationId 贯穿全链路)",
+        "SC-000 (策略决策路径可重建: BudgetExhausted/GroupFuseTriggered/EscalationBifurcated/FairnessProbeStarvation)",
+        "SC-001 (105% 预算曲线上界测试)",
+        "SC-002 (双分组 24h 隔离测试)",
+        "Edge Cases (tie-break / DAG)"
+      ],
       "drifted": [],
       "not_implemented": []
     }
   ],
   "unspecced": [],
   "conflicts": [],
-  "validation": {
-    "tests": {
-      "ipc_security_integration": "21 passed"
-    },
-    "compile": "cargo check: 0 errors"
-  }
+  "recommendations": [
+    "[完成] ALIGN-001: stage_emit_typed_event 发射策略事件",
+    "[完成] ALIGN-002: stage_emit_typed_event 使用真实 CorrelationId",
+    "[完成] ALIGN-003: What::FairnessProbeStarvation typed event",
+    "[完成] BACKFILL: spec.md Key Entities + Diagnostics 回填",
+    "[待办] SC-003: 推迟到 006-5 切片"
+  ],
+  "last_analysis": "2026-05-18T00:00:00Z",
+  "previous_drift_count": 3,
+  "resolved_drift_count": 3,
+  "remaining_drift_count": 0
 }
