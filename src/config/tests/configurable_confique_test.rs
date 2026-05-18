@@ -37,6 +37,13 @@ fn confique_metadata_contains_public_sections() {
 
     assert_eq!(
         field_names,
-        ["supervisor", "policy", "shutdown", "observability", "ipc"]
+        [
+            "supervisor",
+            "policy",
+            "shutdown",
+            "observability",
+            "ipc",
+            "children"
+        ]
     );
 }

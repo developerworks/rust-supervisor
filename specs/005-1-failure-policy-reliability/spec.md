@@ -2,7 +2,8 @@
 
 **Feature Branch(功能分支)**: `[005-1-failure-policy-reliability]`
 **Created(创建日期)**: 2026-05-16
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-19
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述: "项目已经有 PolicyEngine(策略引擎), BackoffPolicy(退避策略), MeltdownTracker(熔断跟踪器) 等模型. PolicyEngine(策略引擎) 会根据成功, 失败, 取消, panic(崩溃), timeout(超时) 返回 restart decision(重启决策). BackoffPolicy(退避策略) 也有指数退避和确定性 jitter(抖动) 计算. 但是 runtime control loop(运行时控制循环) 里没有看到 MeltdownTracker(熔断跟踪器) 和 restart limit(重启次数限制) 被真正使用. restart_execution_plan(重启执行计划) 虽然会把 restart limit(重启次数限制) 和 escalation policy(升级策略) 放进计划, 但是控制循环并没有用上这些字段.
 
 这里要做三件事. 第一, 所有失败必须进入同一个 policy pipeline(策略流水线): classify exit(分类退出), record failure window(记录失败窗口), evaluate budget(评估预算), decide action(决定动作), emit typed event(发出类型化事件), execute action(执行动作). 第二, MeltdownTracker(熔断跟踪器) 必须按 child(子任务), group(分组), supervisor(监督器) 三个维度保存, 防止局部雪崩变成全局重启风暴. 第三, BackoffPolicy(退避策略) 要从确定性测试工具升级为生产退避策略, 支持 full jitter(全抖动), decorrelated jitter(去相关抖动), 最大并发重启限制, cold start budget(冷启动预算), hot loop detection(热循环检测).
@@ -29,9 +30,9 @@
 - Q: 是否补充 `classify exit`(分类退出) 的概念描述 → A: 是, 见"概念描述"第 3 条并与 **`policy pipeline`(策略流水线)** 第一阶段用词一致.
 - Q: 是否补充 `tie-break`(平局判定) 的概念描述 → A: 是, 见"概念描述"第 4 条并与 **`classify exit`(分类退出)** 里多规则同样适用时的说法一致.
 - Q: **`child`(子任务)**, **`group`(分组)**, **`supervisor`(监督器)** 三层 **`MeltdownTracker`(熔断跟踪器)** 阈值同在时怎样合并多层判定并在事件里写明主导归因落在哪一层 **`scope`(作用域)** → A: 见 **`FR-002`**, **Normative Ordering** 与 **Edge Cases** 多层阈值条目; **`effective meltdown verdict`(有效熔断判定)** 取 **`protection restrictiveness ladder`(保护从严档位序)** 上各层 **`local verdict`(局部判定)** 里最严那一档作为对外公布的统一处置结论用语; **`TypedSupervisionEvent`(类型化监督事件)** 必须带 **`scopes_triggered`(已触发作用域列表)** 与 **`lead_scope`(主导归因作用域)**, 当多层 **`local verdict`(局部判定)** 一样严时 **`lead_scope`** 按固定次序取 **`child`(子任务)** → **`group`(分组)** → **`supervisor`(监督器)**.
-- Q: **`FR-001` 流水线入口是否循环定义 **`exit kind`** 最小集合 **`restrictiveness ladder`** 并发闸门 **`cold start`** 与 **`hot loop`** 整条含义 → A: 见 **`FR-001`**, **`FR-002`**, **Normative Ordering**, **User Story 3**, **Edge Cases**, **Assumptions** 上文各节; 流水线入口改为"每一次运行结束情形"先进 **`classify exit`(分类退出)**; **`protection restrictiveness ladder`(保护从严档位序)** 在本 **`spec.md`** 写明固定的从严顺序; **`supervisor`(监督器)** 内 **`global`(全局)** 闸门不与进程内其它监督器实例共享计数桶.
+- Q: **`FR-001` 流水线入口是否循环定义 **`exit kind`** 最小集合 **`restrictiveness ladder`** 并发闸门 **`cold start`** 与 **`hot loop`** 整条含义 → A: 见 **`FR-001`**, **`FR-002`**, **Normative Ordering**, **User Story 3**, **Edge Cases**, **Assumptions** 上文各节; 流水线入口改为"每一次运行结束情形"先进 **`classify exit`(分类退出)**; **`protection restrictiveness ladder`(保护从严档位序)** 在本 **`spec.md`** 写明固定的从严顺序; **`supervisor`(监督器)** 内 **`global`(全局)\*\* 闸门不与进程内其它监督器实例共享计数桶.
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 失败路径进入单一可查流水线 (Priority(优先级): P1)
 
@@ -75,8 +76,8 @@
 **Acceptance Scenarios(验收场景)**:
 
 1. **Given(假设)** 策略声明使用 **`full jitter`(全抖动)** 或 **`decorrelated jitter`(去相关抖动)**, **When(当)** 为同类失败批量安排重启前等待, **Then(则)** 相邻两次重启间隔比固定 **`jitter`(抖动)** 更分散, 且在回归模式下可用固定种子复现相同等待序列.
-2. **Given(假设)** 在同一 **`supervisor`(监督器)** 实例内启用 **实例全局闸门计数** (对该实例托管的全部 **`child`(子任务)** 生效, **计数不与进程内其他 **`supervisor`(监督器)** 实例合并**), **或为某 **`group`(分组)** 启用分组闸门计数**, **When(当)** 同一时段触发失败数超出闸门上限, **Then(则)** 超出部分必须进入 **`restart_queued`(排队重启)** 或 **`restart_denied`(拒绝重启)** 等符合 **`protection restrictiveness ladder`(保护从严档位序)** 的保护档位, 且该限速决策写入类型化事件流, **事件中须注明闸门作用于 **`supervisor` 实例全局** 还是某 **`group`(分组)**.
-3. **Given(假设)** 监督树处于 **`cold start`(冷启动)** 定义的初始窗口且失败密集到来, **When(当)** **`cold start budget`(冷启动预算)** 耗尽或硬性触发条件满足, **Then(则)** **`effective_protective_action`(生效的保护处置)** 至少收紧到 **`restart_denied`(拒绝重启)**, **除非 **`restart_execution_plan`(重启执行计划)** 明确声明耗尽档位仅为 **`restart_queued`(排队重启)**; **`TypedSupervisionEvent`(类型化监督事件)** 必须写明所选档位与耗尽依据.
+2. **Given(假设)** 在同一 **`supervisor`(监督器)** 实例内启用 **实例全局闸门计数** (对该实例托管的全部 **`child`(子任务)** 生效, **计数不与进程内其他 **`supervisor`(监督器)** 实例合并**), **或为某 **`group`(分组)** 启用分组闸门计数**, **When(当)** 同一时段触发失败数超出闸门上限, **Then(则)** 超出部分必须进入 **`restart_queued`(排队重启)** 或 **`restart_denied`(拒绝重启)** 等符合 **`protection restrictiveness ladder`(保护从严档位序)** 的保护档位, 且该限速决策写入类型化事件流, **事件中须注明闸门作用于 **`supervisor` 实例全局** 还是某 **`group`(分组)\*\*.
+3. **Given(假设)** 监督树处于 **`cold start`(冷启动)** 定义的初始窗口且失败密集到来, **When(当)** **`cold start budget`(冷启动预算)** 耗尽或硬性触发条件满足, **Then(则)** **`effective_protective_action`(生效的保护处置)** 至少收紧到 **`restart_denied`(拒绝重启)**, **除非 **`restart_execution_plan`(重启执行计划)** 明确声明耗尽档位仅为 **`restart_queued`(排队重启)**; **`TypedSupervisionEvent`(类型化监督事件)\*\* 必须写明所选档位与耗尽依据.
 4. **Given(假设)** 滑动时间窗内可观察到崩溃后短时间再次被拉起的记录序列, **When(当)** **`hot loop detection`(热循环检测)** 触发, **Then(则)** **`effective_protective_action`(生效的保护处置)** 必须与仅凭 **`restart limit`(重启次数限制)** 超限给出的处置在事件字段上可区分, **且取值必须是 **`restart_denied`(拒绝重启)**、**`supervision_paused`(暂停监督)**、**`escalated`(升级)** 或 **`supervised_stop`(监督停止)** 之一**, **`TypedSupervisionEvent`(类型化监督事件)** 必须写明检测窗口阈值与档位.
 
 ---
@@ -88,11 +89,11 @@
 - 当外部取消或人为停止与自动重启竞争执行权时, **`execute action`(执行动作)** 不得将已经标明必须结束的任务再次自动拉起.
 - 当 **`cold start budget`(冷启动预算)** 与 **`hot loop detection`(热循环检测)** 在同一轮预算评估里同时触发时, **`effective_protective_action`(生效的保护处置)** 必须按 **`protection restrictiveness ladder`(保护从严档位序)** 从这两类触发各自给出的候选档位里挑出 **更严** 那一档作为结果; **`TypedSupervisionEvent`(类型化监督事件)** 必须把两条触发原因和最终选用的档位一并写出, **不得在未写明取舍理由的情况下合并或省略其中任一触发原因**.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
-- **FR-001**: 系统必须把每一条受监督单元的运行结束情形送入单一 **`policy pipeline`(策略流水线)**. **不得以"预判是否会补救"作为放进流水线的门槛**; **是否采取补救措施以及补救措施的具体内容** 只在 **`decide action`(决定动作)** 与 **`execute action`(执行动作)** 才会实际落地. 流水线入口固定为 **`classify exit`(分类退出)**, **每一条运行结束情形必须先归入 **`exit kind`(退出类别)**. **最小必选集合** 至少包含 **`success`(成功)**, **`nonzero_exit`(非零退出)**, **`panic`(崩溃)**, **`timeout`(超时)**, **`external_cancel`(外部取消)**, **`manual_stop`(人工停止)**; 六种都必须进入 **`classify exit`(分类退出)** 以满足测试夹具覆盖全集. 契约只能增添细分标签并声明其与最小集合的 **`tie-break`(平局判定)**, **不得删除任一最小标签**. **六个阶段顺序固定**: **`classify exit`(分类退出)** → **`record failure window`(记录失败窗口)** → **`evaluate budget`(评估预算)** → **`decide action`(决定动作)** → **`emit typed event`(发出类型化事件)** → **`execute action`(执行动作)**; **`success`(成功)** 在后继阶段可为 **`no-op`(空操作)**, **但每一阶段至少在事件流里留下可对账的记录点**, **禁止跳过流水线直接去自动重启**.
+- **FR-001**: 系统必须把每一条受监督单元的运行结束情形送入单一 **`policy pipeline`(策略流水线)**. **不得以"预判是否会补救"作为放进流水线的门槛**; **是否采取补救措施以及补救措施的具体内容** 只在 **`decide action`(决定动作)** 与 **`execute action`(执行动作)** 才会实际落地. 流水线入口固定为 **`classify exit`(分类退出)**, **每一条运行结束情形必须先归入 **`exit kind`(退出类别)**. **最小必选集合** 至少包含 **`success`(成功)**, **`nonzero_exit`(非零退出)**, **`panic`(崩溃)**, **`timeout`(超时)**, **`external_cancel`(外部取消)**, **`manual_stop`(人工停止)**; 六种都必须进入 **`classify exit`(分类退出)** 以满足测试夹具覆盖全集. 契约只能增添细分标签并声明其与最小集合的 **`tie-break`(平局判定)**, **不得删除任一最小标签**. **六个阶段顺序固定**: **`classify exit`(分类退出)** → **`record failure window`(记录失败窗口)** → **`evaluate budget`(评估预算)** → **`decide action`(决定动作)** → **`emit typed event`(发出类型化事件)** → **`execute action`(执行动作)**; **`success`(成功)** 在后继阶段可为 **`no-op`(空操作)**, **但每一阶段至少在事件流里留下可对账的记录点**, **禁止跳过流水线直接去自动重启\*\*.
 - **FR-002**: 系统必须把 **`MeltdownTracker`(熔断跟踪器)** 的状态按三个互不混算的 **`scope`(作用域)** 分开保存: 单个 `child`(子任务), 配置里绑定的 `group`(分组), 以及托管这棵监督树的 `supervisor`(监督器) 实例; 每一层都要有清楚的阈值扣减与越线判定路径, 在未约定计数迁移规则的前提下默认不得使单层计数占用其它层的配额. 在同一轮 **`evaluate budget`(评估预算)** 需要同时看多 **`MeltdownTracker`(熔断跟踪器)** 的结论时, 必须先得出每一层的 **`local verdict`(局部判定)**, **`local verdict`(局部判定)** 只能落在 **`protection restrictiveness ladder`(保护从严档位序)** 的某一档上, **或是写在契约里的别名与本档位序中的唯一一档建立一一对应且从严顺序不乱**; **`effective meltdown verdict`(有效熔断判定)** 等于各层 **`local verdict`(局部判定)** 在该档位序上取其中最严一档的总结果. **`emit typed event`(发出类型化事件)** 里与熔断合并结论有关的字段必须带 **`scopes_triggered`(已触发作用域列表)**, 列出这一轮达到或越过阈值的 **`scope`(作用域)**; 还必须带 **`lead_scope`(主导归因作用域)**, 当多层 **`local verdict`(局部判定)** 都与 **`effective meltdown verdict`(有效熔断判定)** 一样严时, 按 **`tie-break`(平局判定)** 固定次序取 **`child`(子任务)** 先于 **`group`(分组)** 先于 **`supervisor`(监督器)**, 便于驱动状态机并支撑对外验收查阅, 亦无须依赖源码中仅为边界情形预备的分支方可获知判定依据.
 - **FR-003**: 系统必须把 **`BackoffPolicy`(退避策略)** 扩展成在线上负载下约束相邻两次自动重启之间等待时长时必须遵守的规则, 至少支持 **`full jitter`(全抖动)**, **`decorrelated jitter`(去相关抖动)**, **最大并发重启限制**, **`cold start budget`(冷启动预算)**, **`hot loop detection`(热循环检测)**; 并允许在固定种子或注入时钟的测试模式下保持测试结果可重复, **以免同一验收夹具因随机种子漂移而得不到稳定结论**.
 
@@ -112,7 +113,7 @@
 5. **`escalated`(升级)**: 转入 **`escalation policy`(升级策略)** 写明的一套外层处置步骤.
 6. **`supervised_stop`(监督停止)**: **停止自动拉起并保持停住直到有人明确说要再运行**.
 
-### Key Entities(关键实体) *(include if feature involves data(涉及数据时填写))*
+### Key Entities(关键实体) _(include if feature involves data(涉及数据时填写))_
 
 - **`PolicyPipelineStage`(策略流水线阶段)**: 六阶段流水线中的固定一节; 承接上一阶段落在订阅端或导出文件里的摘要字段; 为本阶段 **`TypedSupervisionEvent`(类型化监督事件)** 载荷应出现的字段名给出核对清单, **不写具体 Rust trait 或函数签名**.
 - **`FailureWindow`(失败窗口)**: 按时间滑动或按次数滑动, 把相近的失败归到一起的一段区间或一格计数, 用来滚动累计失败并与阈值比较.
@@ -120,7 +121,7 @@
 - **`RestartThrottlePlan`(重启节流计划)**: 说明并发上限, 冷启动收紧与热循环降级如何根据策略参数算出最终等待时长以及是否允许重启, 写成验收时能逐项核对的一份说明.
 - **`TypedSupervisionEvent`(类型化监督事件)**: 面向诊断订阅的统一事件类型, 须能判定事件对应的流水线阶段, 并须能从字段读出预算驳回, 熔断触发, 退避选择以及最终是否重启等结论; 涉及多层 **`MeltdownTracker`(熔断跟踪器)** 合并结论时, 事件中的 **`scopes_triggered`(已触发作用域列表)** 与 **`lead_scope`(主导归因作用域)** 须符合 **`FR-002`** 的字段约定.
 
-## Constitution Alignment(宪章一致) *(mandatory(必填))*
+## Constitution Alignment(宪章一致) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -141,7 +142,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English(中文说明)`.
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 

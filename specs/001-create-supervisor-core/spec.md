@@ -2,7 +2,8 @@
 
 **Feature Branch(功能分支)**: `001-create-supervisor-core`
 **Created(创建日期)**: 2026-05-04
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-19
+**Status(状态)**: Accepted(已接受)
 **Last Modified(最后修改日期)**: 2026-05-16
 **Input(输入)**: 用户描述:"吸收 `task-supervisor`,`taskvisor`,`tokio-graceful-shutdown`,`ractor-supervisor`,`task_scope`,Tokio(异步运行时) `JoinSet`,`supertrees`,Tokio(异步运行时) `watch`,`tokio-util` `CancellationToken` 和 `tracing`(结构化追踪) 的成熟概念,创建一个基于 Tokio(异步运行时) 的轻量 supervisor(监督器) 运行时治理层.它负责启动,停止,重启,隔离,降级,熔断,状态查询,事件记录,健康检查和关闭顺序;不引入 actor(参与者) 框架,不照搬第三方 crate(库) API(接口)."
 
@@ -33,7 +34,7 @@
 - Q: 并行开发中主代理怎样监督子代理? → A: parallel development(并行开发) 必须由 lead agent(主代理) 监督 subagent(子代理) 的开发工作.lead agent(主代理) 必须分派 workstream(工作流),检查 subagent output(子代理输出),识别 development drift(开发偏差),及时启动 correction loop(纠偏循环),并在 workstream(工作流) 标记完成前形成 correction record(纠偏记录) 或 clean review record(清洁审查记录).
 - Q: Source Code(源代码) 模块结构怎样安排? → A: 核心源码必须采用 top-level directory module(顶层目录模块) 结构,模块直接位于 `src/<module>/`,不得保留 `src/supervision/` 中间层,不得使用 `src/<module>.rs` 平铺模块文件.`src/lib.rs` 只允许包含 crate doc(包文档) 和顶层 `pub mod <mod_name>;` 声明,每个 `src/<module>/mod.rs` 只允许包含 `pub mod <mod_name>;` 声明.
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 声明并运行子任务 (Priority(优先级): P1)
 
@@ -226,7 +227,7 @@
 - lead agent(主代理) 未监督 subagent(子代理) 输出,未识别 development drift(开发偏差),未记录 correction action(纠偏动作),或在 correction loop(纠偏循环) 未闭环前把 workstream(工作流) 标记完成时,lead agent supervision check(主代理监督检查) 必须失败.
 - subagent(子代理) 修改不属于自己 ownership boundary(所有权边界) 的文件,绕过 module dependency map(模块依赖图),新增 compatibility method(兼容方法),破坏测试命名或遗漏文档同步时,lead agent(主代理) 必须在同一 implementation cycle(实现周期) 中纠偏.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
@@ -308,7 +309,7 @@
 - **FR-076**: 系统必须提供 correction loop(纠偏循环) 和 correction record(纠偏记录).当 subagent(子代理) 输出出现偏差时,lead agent(主代理) 必须记录 drift type(偏差类型),affected workstream(受影响工作流),affected files(受影响文件),expected requirement(期望要求),actual output(实际输出),correction action(纠偏动作),review result(复核结果) 和 final evidence(最终证据).
 - **FR-077**: 系统必须采用 top-level directory module(顶层目录模块) 源码结构.核心模块必须直接位于 `src/<module>/`,不得使用 `src/supervision/` 中间层,不得使用 `src/<module>.rs` 平铺模块文件,每个模块必须在自己的目录内维护 `mod.rs` 和 `tests/*_test.rs`.
 
-### Key Entities(关键实体) *(include if feature involves data(涉及数据时填写))*
+### Key Entities(关键实体) _(include if feature involves data(涉及数据时填写))_
 
 - **Supervisor(监督器)**: 运行时治理节点,负责 child(子任务) 注册,策略评估,状态跟踪,事件发送,重启编排和关闭协调.
 - **SupervisorTree(监督树)**: 分层结构,其中 root(根节点) 和子 supervisor(监督器) 治理 worker(工作任务) 和嵌套监督范围.
@@ -367,7 +368,7 @@
 - **ReleasePackage(发布包)**: crates.io(软件包发布平台) 发布前的 package metadata(软件包元数据),README(说明文档),LICENSE(许可证),CHANGELOG(变更日志),package contents(打包内容),package size(打包大小) 和 dry-run result(试运行结果).
 - **SBOMArtifact(软件物料清单产物)**: 发布准备阶段生成的依赖清单,包含 CycloneDX JSON(CycloneDX JSON 格式),SPDX JSON(SPDX JSON 格式),生成时间,生成工具,root package(根软件包),直接依赖,传递依赖,license(许可证),checksum(校验和) 和 source reference(来源引用).
 
-## Constitution Alignment(宪章对齐) *(mandatory(必填))*
+## Constitution Alignment(宪章对齐) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -405,7 +406,7 @@
 - **Term format(术语格式)**: 英文术语以 `English(中文说明)` 形式出现.
 - **Forbidden style(禁止风格)**: 本规格不使用非中文正文,片段式语言,生僻词或方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 

@@ -26,6 +26,13 @@ pub enum TaskKind {
     Supervisor,
 }
 
+impl Default for TaskKind {
+    /// Returns the default task kind: [`AsyncWorker`](TaskKind::AsyncWorker).
+    fn default() -> Self {
+        Self::AsyncWorker
+    }
+}
+
 /// Importance of a child to its parent supervisor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -34,6 +41,13 @@ pub enum Criticality {
     Critical,
     /// The child can fail without forcing parent shutdown.
     Optional,
+}
+
+impl Default for Criticality {
+    /// Returns the default criticality: [`Optional`](Criticality::Optional).
+    fn default() -> Self {
+        Self::Optional
+    }
 }
 
 /// Restart behavior attached to a child.
@@ -46,6 +60,13 @@ pub enum RestartPolicy {
     Transient,
     /// Do not restart after any exit.
     Temporary,
+}
+
+impl Default for RestartPolicy {
+    /// Returns the default restart policy: [`Permanent`](RestartPolicy::Permanent).
+    fn default() -> Self {
+        Self::Permanent
+    }
 }
 
 /// Shutdown behavior attached to a child.
@@ -112,6 +133,102 @@ impl HealthPolicy {
             stale_after,
         }
     }
+}
+
+/// Health check configuration for a child declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct HealthCheckConfig {
+    /// Interval between health checks in seconds.
+    pub check_interval_secs: u64,
+    /// Timeout for each health check in seconds.
+    pub timeout_secs: u64,
+    /// Maximum retries before marking the child as unhealthy.
+    pub max_retries: u32,
+}
+
+impl Default for HealthCheckConfig {
+    /// Returns the default health check config: 10s interval, 5s timeout, 3 retries.
+    fn default() -> Self {
+        Self {
+            check_interval_secs: 10,
+            timeout_secs: 5,
+            max_retries: 3,
+        }
+    }
+}
+
+/// Readiness check configuration for a child declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ReadinessConfig {
+    /// Interval between readiness checks in seconds.
+    pub check_interval_secs: u64,
+    /// Timeout for each readiness check in seconds.
+    pub timeout_secs: u64,
+}
+
+impl Default for ReadinessConfig {
+    /// Returns the default readiness config: 5s interval, 3s timeout.
+    fn default() -> Self {
+        Self {
+            check_interval_secs: 5,
+            timeout_secs: 3,
+        }
+    }
+}
+
+/// Resource limits for a child process.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceLimits {
+    /// Maximum memory in megabytes.
+    pub max_memory_mb: Option<u64>,
+    /// Maximum CPU usage as a percentage.
+    pub max_cpu_percent: Option<u8>,
+    /// Maximum number of open file descriptors.
+    pub max_file_descriptors: Option<u64>,
+}
+
+/// Command permissions granted to a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CommandPermissions {
+    /// Whether the child may trigger supervisor shutdown.
+    pub allow_shutdown: bool,
+    /// Whether the child may request its own restart.
+    pub allow_restart: bool,
+    /// Signals the child is allowed to send.
+    pub allowed_signals: Vec<String>,
+}
+
+impl Default for CommandPermissions {
+    /// Returns the default command permissions: no shutdown, no restart, SIGTERM only.
+    fn default() -> Self {
+        Self {
+            allow_shutdown: false,
+            allow_restart: false,
+            allowed_signals: vec!["SIGTERM".to_string()],
+        }
+    }
+}
+
+/// Environment variable for a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EnvVar {
+    /// Environment variable name.
+    pub name: String,
+    /// Plain-text value (mutually exclusive with secret_ref).
+    pub value: Option<String>,
+    /// Secret reference in `${SECRET_NAME}` format (mutually exclusive with value).
+    pub secret_ref: Option<String>,
+}
+
+/// Secret reference for a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SecretRef {
+    /// Secret name used as an identifier.
+    pub name: String,
+    /// Key path within the vault.
+    pub key: String,
+    /// Whether the secret is required (vault offline treated as rejection when true).
+    pub required: bool,
 }
 
 /// Backoff behavior attached to a child.
@@ -187,6 +304,24 @@ pub struct ChildSpec {
     /// Optional group name for group-level isolation and budget tracking (US2).
     #[serde(default)]
     pub group: Option<String>,
+    /// Optional health check configuration.
+    #[serde(default)]
+    pub health_check: Option<HealthCheckConfig>,
+    /// Optional readiness check configuration.
+    #[serde(default)]
+    pub readiness: Option<ReadinessConfig>,
+    /// Optional resource limits.
+    #[serde(default)]
+    pub resource_limits: Option<ResourceLimits>,
+    /// Command permissions granted to this child.
+    #[serde(default)]
+    pub command_permissions: CommandPermissions,
+    /// Environment variables for this child.
+    #[serde(default)]
+    pub environment: Vec<EnvVar>,
+    /// Secret references for this child.
+    #[serde(default)]
+    pub secrets: Vec<SecretRef>,
 }
 
 impl Debug for ChildSpec {
@@ -209,6 +344,12 @@ impl Debug for ChildSpec {
             .field("sidecar_config", &self.sidecar_config)
             .field("severity", &self.severity)
             .field("group", &self.group)
+            .field("health_check", &self.health_check)
+            .field("readiness", &self.readiness)
+            .field("resource_limits", &self.resource_limits)
+            .field("command_permissions", &self.command_permissions)
+            .field("environment", &self.environment)
+            .field("secrets", &self.secrets)
             .finish()
     }
 }
@@ -268,6 +409,12 @@ impl ChildSpec {
             sidecar_config: None,
             severity: None,
             group: None,
+            health_check: None,
+            readiness: None,
+            resource_limits: None,
+            command_permissions: CommandPermissions::default(),
+            environment: Vec::new(),
+            secrets: Vec::new(),
         }
     }
 

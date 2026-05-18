@@ -2,8 +2,8 @@
 
 **Feature Branch(功能分支)**: `[005-2-work-role-defaults]`
 **Created(创建日期)**: 2026-05-16
-**Last Modified(最后修改)**: 2026-05-17
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-19
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 继承自主输入中对任务类别区分的要求: "`Permanent`(永久重启) 策略会在任务成功退出后也重启. 这对 `daemon`(常驻任务) 是合理的, 但是对 `job`(一次性作业) 很危险. 工业产品应该明确区分 `service`(常驻服务), `worker`(工作任务), `job`(一次性作业), `sidecar`(辅助任务), `supervisor`(嵌套监督器), 并为每类任务设置不同默认策略."
 
 ## Dependency Note(依赖说明)

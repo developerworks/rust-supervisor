@@ -2,10 +2,11 @@
 
 **Feature Branch(功能分支)**: `004-runtime-semantics`
 **Created(创建日期)**: 2026-05-14
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-19
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述: "当前 ShutdownTree(关闭监督树) 只是推进阶段并标记完成. 它没有对正在运行的 child task(子任务) 发送取消信号, 没有等待 graceful drain(优雅排空), 没有超时后 abort stragglers(强制中止滞留任务), 也没有 join(等待结束) 每个任务. 应该重构成真实 shutdown pipeline(关闭流水线): 第一阶段发送 CancellationToken(取消令牌), 第二阶段按 shutdown_order(关闭顺序) 等待任务正常返回, 第三阶段对超时任务 abort(强制中止), 第四阶段清理运行时拥有的注册表, journal(日志) 和 metrics(指标) 输出, 对非运行时拥有的 socket(套接字) 记录对账状态, 最后返回每个 child(子任务) 的退出结果."
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 请求所有任务协作关闭 (Priority(优先级): P1)
 
@@ -56,7 +57,7 @@
 - 重复 ShutdownTree(关闭监督树) 请求必须返回同一关闭结果或当前关闭进度.
 - 关闭期间有任务迟到上报时, 系统必须把它归入对应 child(子任务) 的最终结果, 或标记为迟到报告.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
@@ -70,7 +71,7 @@
 - **ChildShutdownOutcome(子任务关闭结果)**: 表示每个 child(子任务) 是优雅完成, 被强制中止, 已经退出, 还是关闭失败.
 - **ShutdownReconcileReport(关闭对账报告)**: 表示关闭后注册表, socket(套接字), journal(日志) 和 metrics(指标) 的最终状态.
 
-## Constitution Alignment(宪章对齐) *(mandatory(必填))*
+## Constitution Alignment(宪章对齐) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -91,7 +92,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English(中文说明)`.
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 

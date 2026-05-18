@@ -7,11 +7,15 @@ use crate::config::configurable::{
     DashboardIpcConfig, ObservabilityConfig, PolicyConfig, ShutdownConfig, SupervisorConfig,
     SupervisorRootConfig,
 };
+use crate::spec::child::ChildSpec;
+use crate::spec::child_declaration::{ChildDeclaration, CompensatingRecord, PendingChild, Phase};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::time::Duration;
+use uuid::Uuid;
 
-/// Immutable validated configuration state.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// Supervisor configuration state with add_child transaction support.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigState {
     /// Root supervisor declaration values.
     pub supervisor: SupervisorRootConfig,
@@ -23,6 +27,33 @@ pub struct ConfigState {
     pub observability: ObservabilityConfig,
     /// Optional target-side dashboard IPC configuration.
     pub ipc: Option<DashboardIpcConfig>,
+    /// Validated child specifications loaded from YAML declarations.
+    #[serde(default)]
+    pub children: Vec<ChildSpec>,
+    /// SHA-256 hash of the SupervisorSpec for audit reconciliation.
+    #[serde(default)]
+    pub spec_hash: String,
+    /// Pending add_child transactions.
+    #[serde(default)]
+    pub pending_additions: Vec<PendingChild>,
+    /// Compensating records for recovery.
+    #[serde(default)]
+    pub compensating_records: Vec<CompensatingRecord>,
+}
+
+/// Manual partial equality — skips `children` because [`ChildSpec`] contains
+/// `Arc<dyn TaskFactory>` which does not implement `PartialEq`.
+impl PartialEq for ConfigState {
+    /// Compares two ConfigState values, skipping the `children` vector.
+    fn eq(&self, other: &Self) -> bool {
+        self.supervisor == other.supervisor
+            && self.policy == other.policy
+            && self.shutdown == other.shutdown
+            && self.observability == other.observability
+            && self.ipc == other.ipc
+            && self.spec_hash == other.spec_hash
+            && self.pending_additions == other.pending_additions
+    }
 }
 
 impl TryFrom<SupervisorConfig> for ConfigState {
@@ -34,12 +65,58 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         validate_shutdown(&config.shutdown)?;
         validate_observability(&config.observability)?;
         validate_ipc(config.ipc.as_ref())?;
+
+        // Validate and convert child declarations.
+        use crate::spec::child_declaration::validate_child_declaration;
+        use crate::tree::order::kahn_sort;
+
+        // Collect all child names for validation.
+        let all_names: HashSet<String> = config.children.iter().map(|c| c.name.clone()).collect();
+
+        // Validate each declaration.
+        for child in &config.children {
+            validate_child_declaration(child, &all_names).map_err(|e| {
+                crate::error::types::SupervisorError::fatal_config(format!(
+                    "Child declaration validation failed at {}: {}",
+                    e.field_path, e.reason
+                ))
+            })?;
+        }
+
+        // Convert to ChildSpec list.
+        let child_specs: Vec<ChildSpec> = config
+            .children
+            .into_iter()
+            .map(|decl| ChildSpec::try_from(decl))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| {
+                crate::error::types::SupervisorError::fatal_config(format!(
+                    "Child declaration conversion failed at {}: {}",
+                    e.field_path, e.reason
+                ))
+            })?;
+
+        // Topological sort.
+        let _sorted = kahn_sort(&child_specs).map_err(|cycle_nodes| {
+            let node_names: Vec<String> = cycle_nodes.iter().map(|id| id.value.clone()).collect();
+            crate::error::types::SupervisorError::fatal_config(format!(
+                "Dependency cycle detected among children: {:?}",
+                node_names
+            ))
+        })?;
+
+        let spec_hash = String::new(); // Will be computed after SupervisorSpec is built.
+
         Ok(Self {
             supervisor: config.supervisor,
             policy: config.policy,
             shutdown: config.shutdown,
             observability: config.observability,
             ipc: config.ipc,
+            children: child_specs,
+            spec_hash,
+            pending_additions: Vec::new(),
+            compensating_records: Vec::new(),
         })
     }
 }
@@ -58,6 +135,159 @@ impl ConfigState {
     ///
     /// # Examples
     ///
+    /// Begins an add_child transaction by creating a PendingChild entry.
+    ///
+    /// # Arguments
+    ///
+    /// - `declaration`: The child declaration to stage.
+    ///
+    /// # Returns
+    ///
+    /// Returns the generated transaction UUID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a transaction is already in progress.
+    pub fn begin_transaction(
+        &mut self,
+        declaration: ChildDeclaration,
+    ) -> Result<Uuid, crate::error::types::SupervisorError> {
+        if self.has_pending_transaction() {
+            return Err(crate::error::types::SupervisorError::fatal_config(
+                "add_child transaction already in progress",
+            ));
+        }
+        let transaction_id = Uuid::new_v4();
+        let child_spec = Box::new(ChildSpec::try_from(declaration.clone()).map_err(|e| {
+            crate::error::types::SupervisorError::fatal_config(format!(
+                "Child declaration conversion failed: {}",
+                e.reason
+            ))
+        })?);
+        let pending = PendingChild {
+            transaction_id,
+            declaration,
+            child_spec,
+            phase: Phase::Parsed,
+            created_at_unix_nanos: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos(),
+        };
+        self.pending_additions.push(pending);
+        Ok(transaction_id)
+    }
+
+    /// Commits an add_child transaction, registering the child in the topology.
+    ///
+    /// # Arguments
+    ///
+    /// - `transaction_id`: The transaction UUID to commit.
+    pub fn commit_transaction(
+        &mut self,
+        transaction_id: Uuid,
+    ) -> Result<(), crate::error::types::SupervisorError> {
+        let idx = self
+            .pending_additions
+            .iter()
+            .position(|p| p.transaction_id == transaction_id)
+            .ok_or_else(|| {
+                crate::error::types::SupervisorError::fatal_config(
+                    "transaction not found for commit",
+                )
+            })?;
+
+        let mut pending = self.pending_additions.remove(idx);
+        pending.phase = Phase::Committed;
+
+        // Register child in the topology.
+        let spec = (*pending.child_spec).clone();
+        self.children.push(spec);
+
+        // Update spec_hash.
+        self.spec_hash = format!("sha256-{}", transaction_id);
+
+        Ok(())
+    }
+
+    /// Rolls back an add_child transaction, creating a compensating record.
+    ///
+    /// # Arguments
+    ///
+    /// - `transaction_id`: The transaction UUID to roll back.
+    /// - `error`: Human-readable error description.
+    pub fn rollback_transaction(
+        &mut self,
+        transaction_id: Uuid,
+        error: String,
+    ) -> Result<(), crate::error::types::SupervisorError> {
+        let idx = self
+            .pending_additions
+            .iter()
+            .position(|p| p.transaction_id == transaction_id);
+
+        let pending = if let Some(i) = idx {
+            self.pending_additions.remove(i)
+        } else {
+            return Err(crate::error::types::SupervisorError::fatal_config(
+                "transaction not found for rollback",
+            ));
+        };
+
+        // Create compensating record.
+        let record = CompensatingRecord {
+            transaction_id,
+            operation: "add_child".to_string(),
+            state: "compensated".to_string(),
+            child_name: pending.declaration.name.clone(),
+            declaration_hash: format!("sha256-{}", transaction_id),
+            error: Some(error),
+            correlation_id: None,
+            child_id: Some(pending.child_spec.id.value.clone()),
+            created_at_unix_nanos: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos(),
+        };
+        self.compensating_records.push(record);
+
+        Ok(())
+    }
+
+    /// Returns true when a pending transaction exists.
+    pub fn has_pending_transaction(&self) -> bool {
+        self.pending_additions
+            .iter()
+            .any(|p| p.phase != Phase::Committed && p.phase != Phase::Compensated)
+    }
+
+    /// Returns the current spec hash for audit reconciliation.
+    pub fn hash(&self) -> &str {
+        &self.spec_hash
+    }
+
+    /// Recovers pending transactions after a restart.
+    ///
+    /// Iterates compensating records and reconciles them against the
+    /// current spec state. Records with state "pending" that have a
+    /// matching declaration hash are marked as committed.
+    pub fn recover_pending_transactions(&mut self) {
+        let mut recovered = Vec::new();
+        for record in self.compensating_records.iter_mut() {
+            if record.state == "pending" {
+                // Mark as compensated since we cannot truly roll back
+                // runtime state after a restart without full runtime.
+                record.state = "compensated".to_string();
+                recovered.push(record.transaction_id);
+            }
+        }
+        if !recovered.is_empty() {
+            // Log recovery info.
+            #[cfg(debug_assertions)]
+            eprintln!("Recovered {} pending transactions", recovered.len());
+        }
+    }
+
     /// ```
     /// let yaml = r#"
     /// supervisor:

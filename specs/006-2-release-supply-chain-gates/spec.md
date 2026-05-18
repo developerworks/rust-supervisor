@@ -2,7 +2,8 @@
 
 **Feature Branch (功能分支)**: `[006-2-release-supply-chain-gates]`
 **Created (创建日期)**: 2026-05-17
-**Status (状态)**: Draft (草稿)
+**Updated (更新日期)**: 2026-05-19
+**Status (状态)**: Accepted (已接受)
 **Input (输入)**: 本规格处理第二条横切线: 发布流程与供应链安全. 仓库页面显示还没有发布 release(版本发布). 工业级发布要补齐 signed tag(签名标签), changelog(变更日志), semver(语义化版本), MSRV(最低 Rust 版本) 验证, dependency audit(依赖审计), cargo-deny(依赖策略检查), cargo-semver-checks(接口兼容检查), cargo-mutants(变异测试), code coverage(覆盖率), fuzzing(模糊测试), loom(并发模型测试), miri(未定义行为检查), supply chain attestation(供应链证明). 当前 README 已列出部分门禁 (cargo fmt, cargo check, cargo test, cargo doc, SBOM, cargo publish --dry-run), 但缺少 signed tag 策略和完整门禁台账.
 
 ## Dependency Note (依赖说明)

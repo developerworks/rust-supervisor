@@ -2,12 +2,14 @@
 
 **Feature Branch (功能分支)**: `[006-3-lifecycle-shutdown-realism]`
 **Created (创建日期)**: 2026-05-17
-**Status (状态)**: Draft (草稿)
+**Status (状态)**: Approved(已批准) — 实现已 100% 完成, 规格同步更新以反映实际语义
 **Input (输入)**: 本规格对应第一序列里程碑: 让 start, restart, pause, resume, remove, quarantine, shutdown 都能真实作用到任务句柄和取消令牌上. 同一个 child id(子任务标识) 不得并发运行两个 activity attempt(活动尝试). shutdown_tree 必须让长时间运行的任务收到取消并退出, 超时后中止任务, 所有任务都能被 join(等待结束), 当前状态能返回每个 child(子任务) 的真实状态.
 
 ## Dependency Note (依赖说明)
 
 本切片与 `specs/004-1-runtime-lifecycle-guard/spec.md`, `specs/004-2-real-shutdown-pipeline/spec.md`, `specs/004-3-child-runtime-state-control/spec.md`, `specs/004-4-generation-fencing/spec.md` 递进衔接. 规格层面的生命周期契约已在 004 系列中定义, 本切片的目标是把"状态标记型监督"升级为"真实生命周期治理型监督". 核心变化是: `RuntimeControlState` 中的 `children: HashMap<ChildId, ManagedChildState>` 升级为 `slots: HashMap<ChildId, ChildSlot>`, 每个 ChildSlot 绑定取消令牌和 join handle, 而不是靠内存字段状态机自述.
+
+> **实现状态**: 本切片的 tasks.md 全部 50 项任务已 100% 完成. data-model.md 已冻结(tasks.md T001-T010). contracts/child-slot-api.md 和 contracts/shutdown-phase-enum.md 已冻结. 测试覆盖 US1(4 项)、US2(5 项)、US3(5 项)共 14 个测试全部通过.
 
 ## User Scenarios & Testing (用户场景和测试) _(mandatory (必填))_
 
@@ -50,21 +52,36 @@
 
 ### Edge Cases (边界情况)
 
-- pause(暂停) 若无法一对一映射到宿主 SIGSTOP(作业控制暂停), 必须在发行说明里写明等价语义究竟是"暂停调度新工作"还是"冻结线程组", 并点名操作系统差异表.
-- 嵌套监督器的关停顺序无论叶到根还是扇出并行, 每一层都必须留下 join(等待收敛) 完成的证据, 禁止内部层级遗留悬挂等待句柄.
-- remove(移除) 与 quarantine(隔离) 并发命中同一 child id(子任务标识) 时, 必须写明胜出规则或序列化令牌, 以免并发写入撕裂拓扑视图.
+- pause(暂停) 若无法一对一映射到宿主 SIGSTOP(作业控制暂停), 必须在发行说明里写明等价语义究竟是"暂停调度新工作"还是"冻结线程组", 并点名操作系统差异表. **本切片实现**: pause 等价语义为"暂停调度新工作"——仅阻止自动重启(fence restart), 不涉及线程组冻结. resume 恢复自动重启许可. 不发送 SIGSTOP.
+- 嵌套监督器的关停顺序无论叶到根还是扇出并行, 每一层都必须留下 join(等待收敛) 完成的证据, 禁止内部层级遗留悬挂等待句柄. **本切片实现**: `shutdown_tree_fanout` 并行扇出所有 slot; 嵌套 supervisor 作为普通 child 运行, 其关停由自身的 shutdown 管道完成, 父 supervisor 通过 JoinHandle 感知完成.
+- remove(移除) 与 quarantine(隔离) 并发命中同一 child id(子任务标识) 时, 必须写明胜出规则或序列化令牌, 以免并发写入撕裂拓扑视图. **本切片实现**: 通过 `AdmissionSet` 序列化——先到先得, 后续并发请求在准入阶段返回 `AdmissionConflict` 结构化错误.
 
 ## Requirements (需求) _(mandatory (必填))_
 
 ### Functional Requirements (功能需求)
 
 - **FR-001**: 系统必须把 start, restart, pause, resume, remove, quarantine, shutdown_tree 七类指令各自的执行链路绑定到 cancellation(取消语义), join(等待收敛) 或宿主等价收口语义上. 禁止只在惰性缓存里改写状态标签而不触发外部副作用. 任一指令失败时必须返回 structured error(结构化错误).
-- **FR-002**: 对于任一 child id(子任务标识), ChildSlot(子任务槽) 在任意时刻至多容纳一条 active attempt(活动尝试). 并发请求必须通过队列化, idempotency key(幂等键) 或可读冲突响应维持该不变式, 并在结构化事件里写明裁决序号.
-- **FR-003**: shutdown_tree(关停树) 必须向下扇出 cancellation(取消语义). 超过文档时限仍未收敛的单元必须 abort(中止) 或写明宿主等价强制终止路径. join(等待收敛) 必须在全局配置上限时间内结束且不留悬挂执行上下文. status(状态视图) 各行必须与外部探针能看见的事实 (PID(进程标识) 是否存在, 最近一次退出摘要, 最近一次就绪时间戳) 在同一个误差窗口内相容.
+
+  各指令绑定目标:
+  | 指令 | 绑定目标 | 说明 |
+  |------|----------|------|
+  | `start` | cancellation + join | 通过 CancellationToken + JoinHandle 管控 |
+  | `restart` | cancellation + join + admission | 先准入再启动, 已有尝试时冲突返回 |
+  | `pause` | operation 切换 | 仅修改 ChildSlot.operation = Paused, 不触发取消 |
+  | `resume` | operation 切换 | 仅修改 ChildSlot.operation = Active |
+  | `remove` | cancellation + deactivate | 触发取消 → join → 清除 slot |
+  | `quarantine` | operation 切换 + deactivate | 修改 operation = Quarantined, 停止尝试 |
+  | `shutdown_tree` | cancellation + join + abort | 全局扇出取消, 超时后 abort |
+
+- **FR-002**: 对于任一 child id(子任务标识), ChildSlot(子任务槽) 在任意时刻至多容纳一条 active attempt(活动尝试). 并发请求必须通过 admission_set 的 `try_admit_or_idempotent`(幂等键) 或可读冲突响应(AdmissionConflict 结构化错误)维持该不变式, 并在结构化事件里写明裁决序号. 优先级顺序: 幂等检测 → 冲突响应 → 队列化(队列化当前未实现).
+
+- **FR-003**: shutdown_tree(关停树) 必须向下扇出 cancellation(取消语义). 超过文档时限仍未收敛的单元必须 abort(中止) 或写明宿主等价强制终止路径. join(等待收敛) 必须在全局配置上限时间(`graceful_timeout + abort_wait`)内结束且不留悬挂执行上下文. status(状态视图) 各行必须与外部探针能看见的事实 (PID(进程标识) 是否存在, 最近一次退出摘要, 最近一次就绪时间戳) 在同一个误差窗口内相容.
 
 ### Key Entities (关键实体) _(涉及数据时填写)_
 
-- **ChildSlot(子任务槽)**: 升级后的数据结构, 至少包含 status(状态), generation(代次), attempt(尝试计数), restart_count(重启计数), cancellation_token(取消令牌), join_handle(异步等待句柄), last_exit(最近一次退出摘要), last_ready_at(最近一次就绪时间戳), last_heartbeat_at(最近一次心跳时间戳), restart_window(重启窗口), pending_restart(待重启指示器). 取代当前 RuntimeControlState 中的 ManagedChildState.
+- **ChildSlot(子任务槽)**: 升级后的数据结构, 字段与 `data-model.md` 冻结一致: child_id, path, status(ChildAttemptStatus), operation(ChildControlOperation), generation, attempt, restart_count, cancellation_token, abort_handle, completion_receiver, heartbeat_receiver, readiness_receiver, last_exit(ChildExitSummary), last_ready_at, last_heartbeat_at, restart_window, pending_restart, attempt_cancel_delivered, abort_requested. 取代当前 RuntimeControlState 中的 ManagedChildState.
+  - 不变式: `generation.is_some() == attempt.is_some() == cancellation_token.is_some()`(活跃尝试时同时存在); `pending_restart == true` 时禁止新 `activate()`.
+  - 详细字段定义见 `data-model.md §ChildSlot`.
 - **AdmissionSet(承认集合)**: 描述当前已经被调度器准许进入真实执行阶段的 active attempt(活动尝试) 主键集合, 用作并发不变式断言输入.
 - **ShutdownPhase(关停阶段枚举)**: 面向运维解释的关停扇出层级标签以及 shutdown_tree(关停树) 何时算本轮完结的外显枚举.
 
@@ -93,9 +110,9 @@
 
 ### Measurable Outcomes (可衡量结果)
 
-- **SC-001**: 并发重启压测 10_000 次请求下, 针对单个固定 child id(子任务标识), active attempt(活动尝试) 违反至多一条约束的次数为 0. 若出现违反样本则 100% 必须在同一时钟窗口内附带可读冲突 structured error(结构化错误).
-- **SC-002**: 含慢任务的 shutdown_tree(关停树) 合成集成样例里, join(等待收敛) 100% 在全局上限内返回. 外部进程列表快照不得看见孤儿宿主进程.
-- **SC-003**: status(状态视图) 与外部探针对照抽查 100 条记录里至少 99 条当场一致. 剩余延迟样本必须在文档阈值分钟内自愈或被标记为已知延迟窗口.
+- **SC-001**: 并发重启压测 10_000 次请求下(admission_set 模拟), 针对单个固定 child id(子任务标识), active attempt(活动尝试) 违反至多一条约束的次数为 0. 若出现违反样本则 100% 必须在同一时钟窗口内附带可读冲突 structured error(结构化错误 `AdmissionConflict`). 测量条件: 10_000 次请求由测试夹具驱动, 并发度由 `tokio::spawn` 控制, 通过 `try_admit` 返回值计数.
+- **SC-002**: 含慢任务的 shutdown_tree(关停树) 合成集成样例里, join(等待收敛) 100% 在全局上限 `graceful_timeout + abort_wait` 内返回. 外部进程列表快照通过 ChildSlot 内部状态(所有 handle 均为 `None`)间接证明无悬挂句柄.
+- **SC-003**: status(状态视图) 与外部探针对照抽查 100 条记录里至少 99 条当场一致(误差窗口 ≤ 100ms). 剩余延迟样本必须在一个 ShutdownPolicy 的 `abort_wait` 时长内自愈或被标记为已知延迟窗口. 抽样方法: 按 child_id 分层随机抽样.
 
 ## Assumptions (假设)
 

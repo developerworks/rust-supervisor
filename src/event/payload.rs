@@ -14,6 +14,7 @@ use crate::event::time::{CorrelationId, EventSequence, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::policy::role_defaults::{PolicySource, WorkRole};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Wrapper around [`f64`] that implements [`Eq`] via bit comparison.
 ///
@@ -874,6 +875,28 @@ pub enum What {
         /// Number of events discarded by sampling.
         events_discarded: u64,
     },
+    /// Child declaration was accepted and committed via add_child.
+    ChildDeclarationAccepted {
+        /// Transaction identifier for audit tracing.
+        transaction_id: Uuid,
+        /// Name of the accepted child.
+        child_name: String,
+        /// Runtime child identifier.
+        child_id: ChildId,
+        /// Supervisor spec hash after this operation.
+        spec_hash: String,
+    },
+    /// Child declaration was rejected via add_child.
+    ChildDeclarationRejected {
+        /// Transaction identifier for audit tracing.
+        transaction_id: Uuid,
+        /// Name of the rejected child.
+        child_name: String,
+        /// Human-readable rejection reason.
+        reason: String,
+        /// Optional JSON Pointer field path pointing to the error source.
+        field_path: Option<String>,
+    },
 }
 
 impl What {
@@ -955,6 +978,8 @@ impl What {
             Self::BackpressureAlert { .. } => "BackpressureAlert",
             Self::BackpressureDegradation { .. } => "BackpressureDegradation",
             Self::AuditRecorded { .. } => "AuditRecorded",
+            Self::ChildDeclarationAccepted { .. } => "ChildDeclarationAccepted",
+            Self::ChildDeclarationRejected { .. } => "ChildDeclarationRejected",
         }
     }
 }

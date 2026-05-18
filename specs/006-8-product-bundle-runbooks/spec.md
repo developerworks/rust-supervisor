@@ -2,7 +2,8 @@
 
 **Feature Branch (功能分支)**: `[006-8-product-bundle-runbooks]`
 **Created (创建日期)**: 2026-05-17
-**Status (状态)**: Draft (草稿)
+**Updated (更新日期)**: 2026-05-19
+**Status (状态)**: Accepted (已接受)
 **Input (输入)**: 本规格对应第六序列里程碑: 做一个最小可用生产包. 核心 crate(包) + examples(示例) + reference service(参考服务) + dashboard relay(看板中继) + deployment guide(部署指南) + operations runbook(运维手册). 每个版本发布前都要跑: unit test(单元测试), integration test(集成测试), property test(性质测试), fuzz test(模糊测试), loom test(并发模型测试), chaos test(混沌测试), 24 小时 soak test(长稳测试), dependency audit(依赖审计), SBOM(软件物料清单), release dry run(发布预演).
 
 ## Dependency Note (依赖说明)

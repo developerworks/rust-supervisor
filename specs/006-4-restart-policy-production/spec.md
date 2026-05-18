@@ -2,7 +2,8 @@
 
 **Feature Branch (功能分支)**: `[006-4-restart-policy-production]`
 **Created (创建日期)**: 2026-05-17
-**Status (状态)**: Draft (草稿)
+**Updated (更新日期)**: 2026-05-19
+**Status (状态)**: Accepted (已接受)
 **Input (输入)**: 本规格对应第二序列里程碑: 接入 restart budget(重启预算), meltdown fuse(熔断器), group strategy(分组策略), escalation policy(升级策略), backoff jitter(退避抖动). 快速失败不会造成无限重启风暴, group(分组) 故障不会误伤无关任务, critical child(关键子任务) 和 optional child(可选子任务) 有不同处理, 所有策略决策都有事件和指标.
 
 ## Dependency Note (依赖说明)

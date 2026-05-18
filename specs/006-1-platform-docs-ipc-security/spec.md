@@ -2,7 +2,8 @@
 
 **Feature Branch (功能分支)**: `[006-1-platform-docs-ipc-security]`
 **Created (创建日期)**: 2026-05-17
-**Status (状态)**: Draft (草稿)
+**Updated (更新日期)**: 2026-05-19
+**Status (状态)**: Accepted (已接受)
 **Input (输入)**: 本规格处理一条横切线: IPC 安全与平台边界. 当前代码大量使用 tokio::net::UnixListener(Unix 域套接字监听器) 和 std::os::unix(Unix 平台接口), 但没有 feature gate(功能开关) 或平台条件编译保护. 必须明确只支持 Unix-like(类 Unix 系统), 或者把 dashboard IPC(看板进程间通信) 做成可选 feature(功能开关). 已实现的正确做法包括: 要求绝对路径, stale socket(陈旧套接字) 替换时拒绝 symlink(符号链接), 危险命令需要确认. 工业级还需补齐 9 项控制点: socket owner(套接字所有者) 校验, peer credentials(对端身份) 校验, command authorization(命令授权), replay protection(重放保护), request size limit(请求大小限制), rate limit(速率限制), audit persistence(审计持久化), command idempotency key(命令幂等键), 外部命令 allowlist(白名单). 三目录看板架构 (core library(核心库), relay(中继), user interface(用户界面)) 以及 target process(目标进程) 只开启本地 Unix domain socket IPC(Unix 域套接字进程间通信) 的策略必须在 README 中固定写明.
 
 ## Dependency Note (依赖说明)

@@ -25,6 +25,9 @@ pub struct SupervisorConfig {
     pub observability: ObservabilityConfig,
     /// Optional target-side dashboard IPC configuration.
     pub ipc: Option<DashboardIpcConfig>,
+    /// Child declarations loaded from YAML children array.
+    #[serde(default)]
+    pub children: Vec<crate::spec::child_declaration::ChildDeclaration>,
 }
 
 impl rust_config_tree::ConfigSchema for SupervisorConfig {

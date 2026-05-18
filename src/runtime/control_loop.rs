@@ -274,7 +274,48 @@ impl RuntimeControlState {
         match command {
             ControlCommand::AddChild { child_manifest, .. } => {
                 self.ensure_dynamic_child_allowed()?;
+
+                // Reject add_child when shutdown is in progress.
+                if self.shutdown.phase() != ShutdownPhase::Idle {
+                    return Err(SupervisorError::fatal_config(
+                        "Cannot add child: supervisor is shutting down",
+                    ));
+                }
+
+                // Parse manifest as ChildDeclaration.
+                let declaration: crate::spec::child_declaration::ChildDeclaration =
+                    serde_yaml::from_str(&child_manifest).map_err(|e| {
+                        SupervisorError::fatal_config(format!(
+                            "Failed to parse child manifest: {e}"
+                        ))
+                    })?;
+
+                // Validate declaration against existing children.
+                let all_names: std::collections::HashSet<String> =
+                    self.spec.children.iter().map(|c| c.name.clone()).collect();
+                let mut new_names = all_names.clone();
+                new_names.insert(declaration.name.clone());
+
+                crate::spec::child_declaration::validate_child_declaration(
+                    &declaration,
+                    &all_names,
+                )
+                .map_err(|e| {
+                    SupervisorError::fatal_config(format!(
+                        "Child validation failed at {}: {}",
+                        e.field_path, e.reason
+                    ))
+                })?;
+
+                // Staged via begin_transaction — for now register directly
+                // since we operate inside the control loop's mutable state.
+                let child_spec =
+                    crate::spec::child::ChildSpec::try_from(declaration).map_err(|e| {
+                        SupervisorError::fatal_config(format!("Child conversion failed: {e:?}"))
+                    })?;
+
                 self.manifests.push(child_manifest.clone());
+                self.spec.children.push(child_spec);
                 Ok(CommandResult::ChildAdded { child_manifest })
             }
             ControlCommand::RemoveChild { meta, child_id } => Ok(self.execute_stop_child_control(

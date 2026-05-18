@@ -2,10 +2,11 @@
 
 **Feature Branch(功能分支)**: `004-runtime-semantics`
 **Created(创建日期)**: 2026-05-14
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-19
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述: "当前 `RestartChild`(重启子任务) 直接生成一个新 `attempt`(尝试), 没有先停止旧 `attempt`(尝试). 如果旧任务还没有退出, 可能出现同一个 `child id`(子任务标识) 有多个运行实例. 正确做法是引入 `generation fencing`(代次隔离): 每个 `child runtime state`(子任务运行状态记录) 同一时间最多一个 `active attempt`(活动尝试), 重启前先发取消, 等待或中止旧任务, 新任务启动时检查 `generation`(代次), 旧任务迟到上报时必须被丢弃或记为 `stale report`(过期报告)."
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 重启前停止旧尝试 (Priority(优先级): P1)
 
@@ -56,7 +57,7 @@
 - 新尝试启动失败时, 运行状态记录必须保留旧尝试的最终结果和新尝试失败原因.
 - 重启流水线带 **正的 `backoff`** 时, **不得**在未经过 **`DelayedSpawnAttached` 等价邮箱路径**的条件下, 让仅由 **`tokio::spawn`** 派生的任务独立完成 **`activate_instance`** 却仍声称 **`FR-004`** **与** **`FR-002`** **同时满足**.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
@@ -74,7 +75,7 @@
 - **ActiveAttempt(活动尝试)**: 表示 `child runtime state`(子任务运行状态记录) 当前唯一允许运行的任务尝试.
 - **`ChildStartMessage::DelayedSpawnAttached(延迟附着启动子任务消息)`**: 发往 **`runtime control loop`** 的内部 **`mailbox`(邮箱)** 变体 **之一**, **唯一用途**是让 **正的 `backoff`** 结束时 **`activate_instance`** **仍然**落在 **`control loop`** **同一线程上下文**, 从而让 **`FR-004`** 与 **`FR-002`** 在定时重启路径上互相一致. 本条 **不是** **`pub`(公开关键字)** **`API`(应用程序接口)**. **读者以** **`contracts/generation-fencing.md`** **Runtime Semantics(运行时语义)** **专节为准**.
 
-## Constitution Alignment(宪章对齐) *(mandatory(必填))*
+## Constitution Alignment(宪章对齐) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -103,7 +104,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English`(中文说明), 例如 `generation`(代次), `attempt`(尝试).
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 
