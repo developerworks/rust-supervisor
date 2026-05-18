@@ -20,7 +20,7 @@
 **Target Platform(目标平台)**: Linux 与 macOS 开发者工作站.
 **Project Type(项目类型)**: Tokio supervisor runtime(监督器运行时), Rust library(库).
 **Performance Goals(性能目标)**: 单次事件构造+发射延迟 p99 < 10µs(微秒); 完整扇出到 journal/tracing/metrics/audit 四通道 p99 < 100µs. 不改变控制循环主路径延迟基线.
-**Constraints(约束)**: 禁止兼容导出. `src/` Rust 注释英文. 规格正文中文且术语 `English(中文说明)`. 已有 `What` 枚举变体不得重命名已有字段(仅可新增), 保持与 005-1 契约的向后兼容.
+**Constraints(约束)**: 禁止兼容导出. `src/` Rust 注释英文. 规格正文中文且术语 `English(中文说明)`. 已有 `What` 枚举变体不得重命名已有字段(仅可新增), 保持与 005-1 契约的向后兼容. `What` 枚举标记为 `#[non_exhaustive]`, 测试中无法直接穷尽 `match`; 穷尽覆盖测试改为遍历通过 `What` 辅助函数或序列化 roundtrip 验证, 而非直接 `match`.
 **Scale/Scope(规模和范围)**: 单进程内单 supervisor 实例; 每个事件扇出到最多 4 个 subscriber(对应 journal/tracing/metrics/audit). 背压策略对每个 subscriber 独立生效.
 
 ## Constitution Check(宪章检查)

@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - 当前版本仍处于实现阶段, 公开 API(接口) 以 `specs/001-create-supervisor-core/contracts/public-api.md` 为准.
 
+### Migration(迁移脚注)
+
+- **Event schema_id = 1**: 首次冻结事件 schema 版本. 本次新增 10 个 `What` 枚举变体 (`BudgetDenied`, `GenerationFenced`, `HealthCheckPassed`, `HealthCheckFailed`, `Paused`, `Resumed`, `Quarantined`, `BackpressureAlert`, `BackpressureDegradation`, `AuditRecorded`) 和 1 个新顶层字段 (`schema_id: u64`). 序列化格式变更为 `{"type": "snake_case", "payload": {...}}` 结构. 向后兼容: 旧版本事件仍可在 journal 中回放, 未知字段静默忽略.
+
 ### Fixed(修复)
 
 -

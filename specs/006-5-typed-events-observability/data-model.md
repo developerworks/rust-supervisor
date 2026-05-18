@@ -23,18 +23,18 @@
 
 已有 30+ 变体(见 `src/event/payload.rs`), 本切片扩展以下新变体:
 
-| Variant(变体)             | Fields(字段)                                                       | Arc(监督弧段) |
-| ------------------------- | ------------------------------------------------------------------ | ------------- |
-| `BudgetDenied`            | `group: Option<String>`, `reason: String`, `budget_remaining: f64` | 预算拒绝      |
-| `GenerationFenced`        | `old_generation: u64`, `new_generation: u64`, `reason: String`     | 代次隔离      |
-| `HealthCheckPassed`       | `age_ms: u64`, `healthy_since_unix_nanos: u128`                    | 健康检查通过  |
-| `HealthCheckFailed`       | `reason: String`, `consecutive_failures: u32`                      | 健康检查失败  |
-| `Paused`                  | `reason: String`, `paused_by: String`                              | 暂停监督      |
-| `Resumed`                 | `reason: String`                                                   | 恢复监督      |
-| `Quarantined`             | `scope: MeltdownScope`, `reason: String`, `duration_secs: u64`     | 隔离          |
-| `BackpressureAlert`       | `subscriber: String`, `buffer_pct: u8`, `threshold_pct: u8`        | 背压告警      |
-| `BackpressureDegradation` | `subscriber: String`, `strategy: String`, `sample_ratio: f64`      | 背压降级/采样 |
-| `AuditRecorded`           | `command_id: String`, `event_type: String`, `sample_ratio: f64`    | 审计记录      |
+| Variant(变体)             | Fields(字段)                                                                                                                               | Arc(监督弧段) |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `BudgetDenied`            | `group: Option<String>`, `reason: String`, `budget_remaining: f64`                                                                         | 预算拒绝      |
+| `GenerationFenced`        | `old_generation: u64`, `new_generation: u64`, `reason: String`                                                                             | 代次隔离      |
+| `HealthCheckPassed`       | `age_ms: u64`, `healthy_since_unix_nanos: u128`                                                                                            | 健康检查通过  |
+| `HealthCheckFailed`       | `reason: String`, `consecutive_failures: u32`                                                                                              | 健康检查失败  |
+| `Paused`                  | `reason: String`, `paused_by: String`                                                                                                      | 暂停监督      |
+| `Resumed`                 | `reason: String`                                                                                                                           | 恢复监督      |
+| `Quarantined`             | `scope: MeltdownScope`, `reason: String`, `duration_secs: u64`                                                                             | 隔离          |
+| `BackpressureAlert`       | `subscriber: String`, `buffer_pct: u8`, `threshold_pct: u8`                                                                                | 背压告警      |
+| `BackpressureDegradation` | `subscriber: String`, `strategy: String`, `sample_ratio: f64`, `buffer_peak_pct: u8`, `recovered: bool`                                    | 背压降级/采样 |
+| `AuditRecorded`           | `command_id: String`, `event_type: String`, `sample_ratio: f64`, `correlation_id: Uuid`, `trigger_reason: String`, `events_discarded: u64` | 审计记录      |
 
 ### CorrelationHandle(关联句柄)
 
@@ -63,6 +63,15 @@
 | ---------------- | ------------------------------------ |
 | `AlertAndBlock`  | 告警并阻塞生产者, 不丢事件           |
 | `SampleAndAudit` | 按采样率丢弃事件, audit 记录采样比例 |
+
+### Backpressure Behavior(背压行为定义)
+
+- **告警严重级别**: 软阈值(80%)触发时发射 `warn` 级别 tracing event + `BackpressureAlert` 事件; 硬阈值(95%)触发时发射 `error` 级别 tracing event + `BackpressureDegradation` 事件.
+- **采样率范围**: `[0.01, 1.0]`, 步长 0.01. 默认 `sample_ratio = 0.5`.
+- **降级范围**: 仅影响触发背压的单个 subscriber; 其他 subscriber 不受影响.
+- **恢复机制**: 当缓冲区占用率连续 3 个 `window_secs` 周期低于 `warn_threshold_pct` 时, 自动恢复正常(停止采样或解除阻塞).
+- **Broadcast 通道容量**: 默认 256. 容量满时 `AlertAndBlock` 策略阻塞生产者; `SampleAndAudit` 策略按采样率丢弃.
+- **内存预算估值**: 单事件约 512 字节(含序列化开销). 256 容量 × 512 字节 ≈ 128KB 每通道. 四通道约 512KB.
 
 ## Relationships(关系)
 
@@ -93,6 +102,31 @@ BackpressureConfig
 4. **背压阈值范围**: `warn_threshold_pct` < `critical_threshold_pct`; 两者均必须在 [1, 100] 范围内.
 5. **Audit 禁止采样**: 当 `audit_enabled: true` 时, `strategy` 为 `SampleAndAudit` 也不得对 audit 通道采样.
 6. **序列化失败处理**: 若 `SupervisorEvent` 序列化失败, 控制循环不得 panic. 必须记录结构化错误到 stderr 并继续执行. 审计记录必须包含原始事件的 child_id 和 what 变体名.
+7. **"高风险" 判定标准**: 满足以下任一条件的事件为高风险: (a) 命令来源非本地环回地址; (b) 命令影响受监督单元的生命周期状态(启动/停止/重启/关闭); (c) 事件携带 `audit_required: true` 标记. 高风险事件禁止采样.
+8. **Schema 版本治理**: schema_id 的晋升由技术负责人(tech lead)在 PR 审阅时批准. 每次晋升必须在 `CHANGELOG.md` 中记录迁移脚注, 包含: 变更摘要、变更字段列表、兼容性类型(向后兼容/不兼容).
+9. **audit_enabled: false 行为**: 当 `audit_enabled: false` 时, audit 通道不发射任何事件; "禁止采样"约束自然不适用. 不提供替代防护措施, 因为 audit 禁用是管理员的有意选择.
+10. **Journal 满行为**: 事件 journal(`src/journal/ring.rs`) 在容量满时丢弃最旧事件, 始终保留最新事件. `dropped_count` 计数器跟踪丢弃总数. 此行为与背压策略独立.
+
+## Deployment Recommendations(部署推荐)
+
+### 环境配置基线
+
+| 环境 | backpressure_strategy   | warn_threshold_pct | critical_threshold_pct | window_secs | audit_channel_capacity |
+| ---- | ----------------------- | ------------------ | ---------------------- | ----------- | ---------------------- |
+| 开发 | `alert_and_block`       | 90                 | 98                     | 60          | 256                    |
+| 预发 | `alert_and_block`       | 85                 | 96                     | 30          | 512                    |
+| 生产 | `alert_and_block`(推荐) | 80                 | 95                     | 30          | 1024                   |
+
+### 配置热加载
+
+本切片不支持运行时配置热加载. 背压策略更改需要重启 supervisor 实例生效. 此项限制可在后续切片(如 006-6 动态配置)解除.
+
+### Scope & Boundaries(范围与边界)
+
+- **背压场景范围**: 本切片仅覆盖 event subscriber(事件订阅者) 慢消费的背压场景. command channel 满、IPC connection 风暴、event bus 内部缓冲区溢出等其他背压场景不在本切片范围, 由后续切片或基础设施层处理.
+- **订阅者隔离**: 本切片不实现 per-subscriber 独立缓冲区. 一个慢订阅者可能影响其他共享同一 broadcast channel 的订阅者. 此项限制可在后续切片中通过独立广播通道或 per-subscriber 队列解除.
+- **Audit channel 瓶颈**: 当 audit channel 满时, 生产者被阻塞(不采样 audit). 这保持了"禁止采样"的承诺但可能反压控制循环. 生产环境应配置充足的 audit_channel_capacity(推荐 ≥ 1024).
+- **机器可读格式**: `What` 枚举定义在 `src/event/payload.rs` 中, 是 Rust 类型系统的第一等成员, 可被 `cargo doc` 和 IDE 工具解析. 虽无独立 DOT 图, 但枚举定义本身是机器可读的架构事实来源.
 
 ## State Transitions(状态迁移)
 

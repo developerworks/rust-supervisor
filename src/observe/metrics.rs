@@ -556,6 +556,10 @@ fn labels_for_event(event: &SupervisorEvent) -> BTreeMap<String, String> {
     if let Some(policy) = &event.policy {
         labels.insert("decision".to_owned(), policy.decision.clone());
     }
+    labels.insert(
+        "correlation_id".to_owned(),
+        event.correlation_id.value.to_string(),
+    );
     labels
 }
 

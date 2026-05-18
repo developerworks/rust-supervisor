@@ -81,13 +81,13 @@ pub enum CorrelationQueryError {
 
 调用方使用 `CorrelationHandle::export_chain()` 后, 必须验证返回的事件链是否覆盖下列五个强制阶段:
 
-| 阶段(Stage) | 对应 What 变体 | 强制(Mandatory) |
-|-------------|---------------|-----------------|
-| `spawn` | `ChildStarting` | 是 |
-| `ready` | `ChildReady` / `HealthCheckPassed` | 是 |
-| `failure_decision` | `ChildFailed` / `ChildPanicked` / `BudgetDenied` | 是(若失败发生) |
-| `restart_attempt` | `ChildRestarting` / `BackoffScheduled` | 是(若重启发生) |
-| `shutdown` | `ChildStopped` / `ShutdownRequested` / `ShutdownCompleted` | 是(若关闭发生) |
+| 阶段(Stage)        | 对应 What 变体                                             | 强制(Mandatory) |
+| ------------------ | ---------------------------------------------------------- | --------------- |
+| `spawn`            | `ChildStarting`                                            | 是              |
+| `ready`            | `ChildReady` / `HealthCheckPassed`                         | 是              |
+| `failure_decision` | `ChildFailed` / `ChildPanicked` / `BudgetDenied`           | 是(若失败发生)  |
+| `restart_attempt`  | `ChildRestarting` / `BackoffScheduled`                     | 是(若重启发生)  |
+| `shutdown`         | `ChildStopped` / `ShutdownRequested` / `ShutdownCompleted` | 是(若关闭发生)  |
 
 缺失阶段必须在 `CorrelationGapDetected.missing_stages` 中列出.
 

@@ -252,6 +252,68 @@ pub struct StrategyExecutionPlan {
     pub dynamic_supervisor_enabled: bool,
 }
 
+/// Backpressure strategy for slow event subscribers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum BackpressureStrategy {
+    /// Alert and block the producer when buffers fill up; never drop events.
+    AlertAndBlock,
+    /// Sample and discard events when buffers fill up; record the ratio in the audit trail.
+    SampleAndAudit,
+}
+
+/// Configuration for event subscriber backpressure.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct BackpressureConfig {
+    /// Backpressure strategy selection.
+    pub strategy: BackpressureStrategy,
+    /// Buffer occupancy soft threshold percentage (triggers warning alert).
+    #[serde(default = "default_warn_threshold")]
+    pub warn_threshold_pct: u8,
+    /// Buffer occupancy hard threshold percentage (triggers degradation).
+    #[serde(default = "default_critical_threshold")]
+    pub critical_threshold_pct: u8,
+    /// Sliding window duration in seconds for backpressure evaluation.
+    #[serde(default = "default_window_secs")]
+    pub window_secs: u64,
+    /// Capacity of the dedicated audit channel.
+    #[serde(default = "default_audit_capacity")]
+    pub audit_channel_capacity: usize,
+}
+
+/// Returns the default backpressure warning threshold (80%).
+fn default_warn_threshold() -> u8 {
+    80
+}
+
+/// Returns the default backpressure critical threshold (95%).
+fn default_critical_threshold() -> u8 {
+    95
+}
+
+/// Returns the default backpressure evaluation window in seconds (30).
+fn default_window_secs() -> u64 {
+    30
+}
+
+/// Returns the default audit channel capacity (1024).
+fn default_audit_capacity() -> usize {
+    1024
+}
+
+impl Default for BackpressureConfig {
+    /// Returns the default backpressure configuration with `AlertAndBlock` strategy.
+    fn default() -> Self {
+        Self {
+            strategy: BackpressureStrategy::AlertAndBlock,
+            warn_threshold_pct: default_warn_threshold(),
+            critical_threshold_pct: default_critical_threshold(),
+            window_secs: default_window_secs(),
+            audit_channel_capacity: default_audit_capacity(),
+        }
+    }
+}
+
 /// Declarative specification for one supervisor node.
 #[derive(Debug, Clone)]
 pub struct SupervisorSpec {

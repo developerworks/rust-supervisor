@@ -15,6 +15,64 @@ use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::policy::role_defaults::{PolicySource, WorkRole};
 use serde::{Deserialize, Serialize};
 
+/// Wrapper around [`f64`] that implements [`Eq`] via bit comparison.
+///
+/// NaN is disallowed. If a NaN value is constructed at runtime, equality
+/// panics. This type exists solely to satisfy the `Eq` bound on the `What`
+/// enum and should not be used outside this module.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct FiniteF64(#[serde(with = "finite_f64_serde")] f64);
+
+impl Eq for FiniteF64 {}
+
+impl FiniteF64 {
+    /// Creates a `FiniteF64` from a raw `f64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `value` is NaN.
+    pub fn new(value: f64) -> Self {
+        assert!(!value.is_nan(), "FiniteF64 does not support NaN");
+        Self(value)
+    }
+
+    /// Returns the inner `f64` value.
+    pub fn into_inner(self) -> f64 {
+        self.0
+    }
+}
+
+impl From<f64> for FiniteF64 {
+    /// Creates a `FiniteF64` from a raw `f64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `value` is NaN.
+    fn from(value: f64) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Serde helper that serializes `FiniteF64` as a plain JSON number.
+mod finite_f64_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    /// Serializes an `f64` as a plain JSON number.
+    pub fn serialize<S: Serializer>(value: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+        value.serialize(serializer)
+    }
+
+    /// Deserializes an `f64` from a JSON number, rejecting NaN.
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
+        let value = f64::deserialize(deserializer)?;
+        if value.is_nan() {
+            return Err(serde::de::Error::custom("FiniteF64 does not support NaN"));
+        }
+        Ok(value)
+    }
+}
+
 /// Meltdown scope identifier for failure tracking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MeltdownScope {
@@ -300,6 +358,7 @@ pub struct CommandAudit {
 
 /// Typed payload for supervisor lifecycle events.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "payload", rename_all = "snake_case")]
 pub enum What {
     /// Child is being started.
     ChildStarting {
@@ -725,6 +784,96 @@ pub enum What {
         /// End of the probe window (Unix nanos).
         probe_end_unix_nanos: u128,
     },
+    /// Restart budget denied by policy.
+    BudgetDenied {
+        /// Group associated with the budget check.
+        group: Option<String>,
+        /// Reason for the denial.
+        reason: String,
+        /// Remaining budget ratio.
+        budget_remaining: FiniteF64,
+    },
+    /// Generation fence engaged for child restart isolation.
+    GenerationFenced {
+        /// Old generation that was fenced.
+        old_generation: u64,
+        /// New generation that was allowed.
+        new_generation: u64,
+        /// Reason for the fence.
+        reason: String,
+    },
+    /// Health check passed for a child.
+    HealthCheckPassed {
+        /// Time since last check in milliseconds.
+        age_ms: u64,
+        /// Wall clock time when the child became healthy.
+        healthy_since_unix_nanos: u128,
+    },
+    /// Health check failed for a child.
+    HealthCheckFailed {
+        /// Failure reason.
+        reason: String,
+        /// Consecutive failure count.
+        consecutive_failures: u32,
+    },
+    /// Supervision paused for a child or group.
+    Paused {
+        /// Pause reason.
+        reason: String,
+        /// Actor that initiated the pause.
+        paused_by: String,
+    },
+    /// Supervision resumed for a child or group.
+    Resumed {
+        /// Resume reason.
+        reason: String,
+    },
+    /// Child or group was quarantined.
+    Quarantined {
+        /// Meltdown scope that triggered quarantine.
+        scope: MeltdownScope,
+        /// Quarantine reason.
+        reason: String,
+        /// Quarantine duration in seconds.
+        duration_secs: u64,
+    },
+    /// Backpressure alert emitted when subscriber buffer exceeds soft threshold.
+    BackpressureAlert {
+        /// Subscriber name or identifier.
+        subscriber: String,
+        /// Current buffer occupancy percentage.
+        buffer_pct: u8,
+        /// Threshold that triggered the alert.
+        threshold_pct: u8,
+    },
+    /// Backpressure degradation when subscriber buffer exceeds hard threshold.
+    BackpressureDegradation {
+        /// Subscriber name or identifier.
+        subscriber: String,
+        /// Active backpressure strategy.
+        strategy: String,
+        /// Current sampling ratio.
+        sample_ratio: FiniteF64,
+        /// Peak buffer occupancy during the degradation window.
+        buffer_peak_pct: u8,
+        /// Whether the subscriber has recovered.
+        recovered: bool,
+    },
+    /// Audit record for a command or lifecycle event.
+    AuditRecorded {
+        /// Command identifier.
+        command_id: String,
+        /// Event type being audited.
+        event_type: String,
+        /// Sampling ratio in effect when the audit was recorded.
+        sample_ratio: FiniteF64,
+        /// Correlation identifier linking this audit to the event chain.
+        correlation_id: CorrelationId,
+        /// Reason the audit was triggered.
+        trigger_reason: String,
+        /// Number of events discarded by sampling.
+        events_discarded: u64,
+    },
 }
 
 impl What {
@@ -796,6 +945,16 @@ impl What {
             Self::GroupFuseTriggered { .. } => "GroupFuseTriggered",
             Self::EscalationBifurcated { .. } => "EscalationBifurcated",
             Self::FairnessProbeStarvation { .. } => "FairnessProbeStarvation",
+            Self::BudgetDenied { .. } => "BudgetDenied",
+            Self::GenerationFenced { .. } => "GenerationFenced",
+            Self::HealthCheckPassed { .. } => "HealthCheckPassed",
+            Self::HealthCheckFailed { .. } => "HealthCheckFailed",
+            Self::Paused { .. } => "Paused",
+            Self::Resumed { .. } => "Resumed",
+            Self::Quarantined { .. } => "Quarantined",
+            Self::BackpressureAlert { .. } => "BackpressureAlert",
+            Self::BackpressureDegradation { .. } => "BackpressureDegradation",
+            Self::AuditRecorded { .. } => "AuditRecorded",
         }
     }
 }
@@ -803,6 +962,8 @@ impl What {
 /// Complete lifecycle event envelope.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SupervisorEvent {
+    /// Schema version identifier, monotonically increasing.
+    pub schema_id: u64,
     /// Time information for the lifecycle fact.
     pub when: When,
     /// Location information for the lifecycle fact.
@@ -885,6 +1046,7 @@ impl SupervisorEvent {
         config_version: u64,
     ) -> Self {
         Self {
+            schema_id: 1,
             when,
             r#where,
             what,

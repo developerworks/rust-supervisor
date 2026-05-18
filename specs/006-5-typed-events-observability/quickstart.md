@@ -8,25 +8,25 @@
 
 ## 现有代码入口
 
-| 文件 | 说明 |
-|------|------|
-| `src/event/payload.rs` | `What` 枚举(30+ 变体) 和 `SupervisorEvent` 结构体 |
-| `src/event/time.rs` | `CorrelationId`, `EventSequence`, `EventTime` |
-| `src/observe/pipeline.rs` | `ObservabilityPipeline` 事件扇出 |
-| `src/journal/ring.rs` | 环形缓冲区事件日志 |
-| `src/runtime/control_loop.rs` | 控制循环主逻辑 |
+| 文件                          | 说明                                              |
+| ----------------------------- | ------------------------------------------------- |
+| `src/event/payload.rs`        | `What` 枚举(30+ 变体) 和 `SupervisorEvent` 结构体 |
+| `src/event/time.rs`           | `CorrelationId`, `EventSequence`, `EventTime`     |
+| `src/observe/pipeline.rs`     | `ObservabilityPipeline` 事件扇出                  |
+| `src/journal/ring.rs`         | 环形缓冲区事件日志                                |
+| `src/runtime/control_loop.rs` | 控制循环主逻辑                                    |
 
 ## 新增代码预期位置
 
-| 文件 | 说明 |
-|------|------|
-| `src/event/correlation.rs` | `CorrelationHandle` 关联句柄 |
-| `src/event/payload.rs` | 新增 10 个 `What` 变体 |
-| `src/observe/pipeline.rs` | 背压检测与降级采样 |
-| `src/spec/supervisor.rs` | `BackpressureConfig`, `BackpressureStrategy` |
-| `tests/typed_event_coverage_test.rs` | 穷尽 What 枚举变体冒烟 |
-| `tests/correlation_tracking_test.rs` | correlation id 5 段覆盖 |
-| `tests/backpressure_strategy_test.rs` | 背压告警与采样降级 |
+| 文件                                  | 说明                                         |
+| ------------------------------------- | -------------------------------------------- |
+| `src/event/correlation.rs`            | `CorrelationHandle` 关联句柄                 |
+| `src/event/payload.rs`                | 新增 10 个 `What` 变体                       |
+| `src/observe/pipeline.rs`             | 背压检测与降级采样                           |
+| `src/spec/supervisor.rs`              | `BackpressureConfig`, `BackpressureStrategy` |
+| `tests/typed_event_coverage_test.rs`  | 穷尽 What 枚举变体冒烟                       |
+| `tests/correlation_tracking_test.rs`  | correlation id 5 段覆盖                      |
+| `tests/backpressure_strategy_test.rs` | 背压告警与采样降级                           |
 
 ## 配置
 
@@ -34,7 +34,7 @@
 
 ```yaml
 event:
-  backpressure_strategy: alert_and_block  # 或 sample_and_audit
+  backpressure_strategy: alert_and_block # 或 sample_and_audit
   backpressure_warn_threshold_pct: 80
   backpressure_critical_threshold_pct: 95
   backpressure_window_secs: 30
