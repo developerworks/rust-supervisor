@@ -10,6 +10,8 @@
 
 本切片与 specs/006-8-product-bundle-runbooks/spec.md 分工如下: 本切片只约束发布工程能力与记录模板, 006-8 约束对外交付目录与值守文档载体. 闸口是否通过只写在发布流水与归档路径上, 006-8 正文不重复罗列工具命令行.
 
+**混沌与浸泡归档引用**: `specs/006-7-chaos-soak-reliability` 切片的混沌套件 JSON 判决书与 SoakReport Markdown 归档路径登记在本切片 `QualityGateOutcome`(质量闸口结果) 的外链列中. 归档格式分别遵循 `specs/006-7-chaos-soak-reliability/contracts/chaos-scenario-verdict.md`(JSON 判决书 schema) 和 `specs/006-7-chaos-soak-reliability/contracts/soak-report-format.md`(SoakReport 格式契约). CI nightly 混沌套件输出位于 stdout(由 CI 日志捕获), 浸泡报告写入 `artifacts/validation/soak-<timestamp>.md`. 这两个归档路径必须随发布记录一同登记, 不得仅依靠个人笔记本留存.
+
 ## User Scenarios & Testing (用户场景和测试) _(mandatory (必填))_
 
 ### User Story 1 (用户故事一) - 版本可追溯 (Priority (优先级): P1)

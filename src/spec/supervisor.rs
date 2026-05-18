@@ -463,15 +463,15 @@ fn validate_child_group_names(
         group_configs.iter().map(|g| g.name.as_str()).collect();
 
     for child in children {
-        if let Some(ref group_name) = child.group {
-            if !group_names.contains(group_name.as_str()) {
-                return Err(SupervisorError::fatal_config(format!(
-                    "child '{}' references unknown group '{}'; available groups: {:?}",
-                    child.id,
-                    group_name,
-                    group_names.iter().copied().collect::<Vec<_>>(),
-                )));
-            }
+        if let Some(ref group_name) = child.group
+            && !group_names.contains(group_name.as_str())
+        {
+            return Err(SupervisorError::fatal_config(format!(
+                "child '{}' references unknown group '{}'; available groups: {:?}",
+                child.id,
+                group_name,
+                group_names.iter().copied().collect::<Vec<_>>(),
+            )));
         }
     }
     Ok(())

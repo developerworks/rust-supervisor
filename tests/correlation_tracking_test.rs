@@ -6,11 +6,10 @@
 
 use rust_supervisor::event::correlation::{CorrelationHandle, CorrelationQueryError};
 use rust_supervisor::event::payload::Where;
-use rust_supervisor::event::payload::{FiniteF64, StateTransition, What};
+use rust_supervisor::event::payload::{StateTransition, What};
 use rust_supervisor::event::time::EventTime;
 use rust_supervisor::event::time::{CorrelationId, EventSequence, When};
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
-use uuid::Uuid;
 
 /// Helper: builds a deterministic `SupervisorEvent` with a given sequence and What variant.
 fn make_event(

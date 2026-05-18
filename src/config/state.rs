@@ -87,7 +87,7 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         let child_specs: Vec<ChildSpec> = config
             .children
             .into_iter()
-            .map(|decl| ChildSpec::try_from(decl))
+            .map(ChildSpec::try_from)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| {
                 crate::error::types::SupervisorError::fatal_config(format!(

@@ -113,10 +113,10 @@ fn test_add_child_transaction_in_progress() {
 /// when a pending transaction exists after a simulated restart.
 #[test]
 fn test_recovery_after_crash() {
-    use rust_supervisor::spec::child_declaration::{ChildDeclaration, CompensatingRecord, Phase};
+    use rust_supervisor::spec::child_declaration::{ChildDeclaration, CompensatingRecord};
     use uuid::Uuid;
 
-    let decl = ChildDeclaration {
+    let _decl = ChildDeclaration {
         name: "crash-child".to_string(),
         kind: rust_supervisor::spec::child::TaskKind::AsyncWorker,
         criticality: rust_supervisor::spec::child::Criticality::Optional,

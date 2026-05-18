@@ -13,7 +13,6 @@ use rust_supervisor::event::payload::What;
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::observe::metrics::SupervisorMetricName;
 use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadinessState};
-use rust_supervisor::runtime::child_slot::DEFAULT_HEARTBEAT_TIMEOUT_SECS;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{
     BackoffPolicy, ChildSpec, RestartPolicy, ShutdownPolicy, TaskKind,
@@ -906,6 +905,7 @@ async fn assert_no_extra_cancel(receiver: &mut mpsc::Receiver<String>) {
 }
 
 /// Counts stale heartbeat events for one child.
+#[allow(dead_code)]
 fn heartbeat_stale_events(
     events: &[rust_supervisor::event::payload::SupervisorEvent],
     name: &str,
@@ -926,6 +926,7 @@ fn heartbeat_stale_events(
 }
 
 /// Counts stale heartbeat metric samples without child labels.
+#[allow(dead_code)]
 fn heartbeat_stale_metrics_without_child_id(
     metrics: &[rust_supervisor::observe::metrics::MetricSample],
 ) -> usize {

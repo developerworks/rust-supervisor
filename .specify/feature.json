@@ -1,6 +1,6 @@
 {
-  "feature_directory": "specs/006-6-config-dynamic-children",
-  "active_feature_directory": "specs/006-6-config-dynamic-children",
+  "feature_directory": "specs/006-7-chaos-soak-reliability",
+  "active_feature_directory": "specs/006-7-chaos-soak-reliability",
   "feature_directories": [
     "specs/005-1-failure-policy-reliability",
     "specs/005-2-work-role-defaults",
@@ -9,6 +9,7 @@
     "specs/006-3-lifecycle-shutdown-realism",
     "specs/006-4-restart-policy-production",
     "specs/006-5-typed-events-observability",
-    "specs/006-6-config-dynamic-children"
+    "specs/006-6-config-dynamic-children",
+    "specs/006-7-chaos-soak-reliability"
   ]
 }

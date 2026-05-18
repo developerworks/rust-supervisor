@@ -264,3 +264,11 @@ path = "src/dashboard/tests/dashboard_module_test.rs"
 [[test]]
 name = "supervisor_generation_fencing_test"
 path = "src/tests/supervisor_generation_fencing_test.rs"
+
+[[test]]
+name = "chaos_suite"
+path = "tests/chaos_suite.rs"
+
+[[test]]
+name = "soak_suite"
+path = "tests/soak_suite.rs"

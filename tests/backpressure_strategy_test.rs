@@ -5,34 +5,9 @@
 //! `SampleAndAudit` drops events while recording the sampling ratio in the audit
 //! trail.
 
-use rust_supervisor::event::correlation::CorrelationHandle;
-use rust_supervisor::event::payload::What;
-use rust_supervisor::event::payload::{FiniteF64, Where};
-use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
-use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
-use rust_supervisor::observe::pipeline::ObservabilityPipeline;
-use rust_supervisor::observe::pipeline::TestRecorder;
+use rust_supervisor::event::payload::{FiniteF64, What};
+use rust_supervisor::event::time::CorrelationId;
 use rust_supervisor::spec::supervisor::{BackpressureConfig, BackpressureStrategy};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
-/// Helper: builds a simple event for backpressure tests.
-fn make_event(sequence: u64, what: What) -> rust_supervisor::event::payload::SupervisorEvent {
-    rust_supervisor::event::payload::SupervisorEvent::new(
-        When::new(EventTime::deterministic(
-            sequence as u128,
-            sequence as u128,
-            0,
-            Generation::initial(),
-            ChildStartCount::first(),
-        )),
-        Where::new(SupervisorPath::root()),
-        what,
-        EventSequence::new(sequence),
-        CorrelationId::new(),
-        1,
-    )
-}
 
 #[tokio::test]
 async fn test_backpressure_config_defaults() {

@@ -67,7 +67,7 @@ fn test_correlation_id_uuid_v4_uniqueness() {
         let path = SupervisorPath::root();
         // Each PipelineContext generates a correlation_id; in production
         // this would use UUID v4 via the `uuid` crate.
-        let ctx = PipelineContext::new(child_id, path, 1, &format!("corr-{:08x}", i));
+        let ctx = PipelineContext::new(child_id, path, 1, format!("corr-{:08x}", i));
         let inserted = ids.insert(ctx.correlation_id.clone());
         assert!(
             inserted,

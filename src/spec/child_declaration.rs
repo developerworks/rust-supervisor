@@ -188,11 +188,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
         let restart_policy = decl.restart_policy;
 
         // Convert dependency names to ChildIds.
-        let dependencies: Vec<ChildId> = decl
-            .dependencies
-            .iter()
-            .map(|dep| ChildId::new(dep))
-            .collect();
+        let dependencies: Vec<ChildId> = decl.dependencies.iter().map(ChildId::new).collect();
 
         // Map health_check to health_policy.
         let health_policy = match &decl.health_check {
@@ -207,11 +203,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
         };
 
         // Map readiness using the existing ReadinessPolicy::Immediate as default.
-        let readiness_policy = if decl.readiness.is_some() {
-            crate::readiness::signal::ReadinessPolicy::Immediate
-        } else {
-            crate::readiness::signal::ReadinessPolicy::Immediate
-        };
+        let readiness_policy = crate::readiness::signal::ReadinessPolicy::Immediate;
 
         let command_permissions = decl.command_permissions.unwrap_or_default();
 
@@ -307,17 +299,16 @@ pub fn validate_child_declaration(
         }
     }
     for env in &declaration.environment {
-        if let Some(ref secret_ref) = env.secret_ref {
-            if !is_valid_secret_placeholder(secret_ref) {
-                return Err(ValidationError {
-                    field_path: format!("environment[{}].secret_ref", env.name),
-                    reason: format!("Secret reference '{}' has invalid syntax", secret_ref),
-                    hint: Some(
-                        "Secret references must match ^\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}$"
-                            .to_string(),
-                    ),
-                });
-            }
+        if let Some(ref secret_ref) = env.secret_ref
+            && !is_valid_secret_placeholder(secret_ref)
+        {
+            return Err(ValidationError {
+                field_path: format!("environment[{}].secret_ref", env.name),
+                reason: format!("Secret reference '{}' has invalid syntax", secret_ref),
+                hint: Some(
+                    "Secret references must match ^\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}$".to_string(),
+                ),
+            });
         }
     }
 
