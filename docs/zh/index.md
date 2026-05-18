@@ -2,7 +2,15 @@
 
 ## 文档地图
 
+- `adr/`: 技术决策记录 — 12 条决策, 覆盖监督模型, Tokio 原语, 三目录架构, IPC 安全, 策略管线等.
+- `architecture.md`: 系统架构, 模块依赖图, 数据流和关键技术决策.
+- `change-log.md`: 文档变更记录.
+- `context-map.md`: 上下文地图 — 代码, 文档, 规格, 测试, CI/CD 全景概览.
+- `environment.md`: 环境说明 — 开发环境搭建, 工具链, 依赖和 CI/CD 配置.
+- `operations.md`: 运维指南 — 部署, 健康检查, 故障处理剧本, 性能调优.
+- `product-roadmap.md`: 产品路线图, 里程碑规划和功能切片状态.
 - `quality-gates.md`: quality gate(质量门禁) 和发布检查.
+- `security.md`: 安全说明 — IPC 控制点 C1-C9, 供应链安全, 审计追踪.
 - `parallel-governance.md`: parallel governance(并行治理) 和 Worker D 文档所有权.
 
 ## 核心契约

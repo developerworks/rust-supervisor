@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - IPC(进程间通信) 安全控制点 C1-C9 实现与集成测试.
 - 平台支持矩阵与三目录架构说明文档.
 - 发布门禁与供应链证明基础设施 (shallow/middle/deep gates).
+- 产品路线图文档 `docs/product-roadmap.md` 及工程文档入口索引.
+- 系统架构文档 `docs/architecture.md`.
+- 工程文档系列: `docs/adr/` (12 条 ADR), `docs/security.md`, `docs/operations.md`, `docs/context-map.md`, `docs/change-log.md`.
 
 ### Changed(变更)
 

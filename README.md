@@ -200,6 +200,7 @@ cargo run --example diagnostic_replay
 - `manual/zh/index.md`: Chinese user manual.
 - `docs/en/index.md`: English engineering documentation.
 - `docs/zh/index.md`: Chinese engineering documentation.
+- `docs/product-roadmap.md`: Product roadmap with milestone planning and feature slice status.
 
 ## Quality Gates
 

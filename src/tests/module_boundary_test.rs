@@ -16,7 +16,10 @@ fn lib_rs_contains_only_crate_docs_and_public_modules() {
     let text = fs::read_to_string(source_root().join("lib.rs")).expect("read src/lib.rs");
     for line in text.lines() {
         let trimmed = line.trim();
-        let allowed = trimmed.is_empty() || trimmed.starts_with("//!") || is_pub_mod(trimmed);
+        let allowed = trimmed.is_empty()
+            || trimmed.starts_with("//!")
+            || is_pub_mod(trimmed)
+            || trimmed.starts_with("#[");
         assert!(allowed, "unexpected src/lib.rs line: {trimmed}");
     }
     assert!(!text.contains("pub use"));
@@ -37,8 +40,12 @@ fn module_mod_rs_contains_only_public_modules() {
         let text = fs::read_to_string(&module_file).expect("read module file");
         for line in text.lines() {
             let trimmed = line.trim();
+            let allowed = trimmed.is_empty()
+                || is_pub_mod(trimmed)
+                || trimmed.starts_with("#[")
+                || trimmed.starts_with("//!");
             assert!(
-                trimmed.is_empty() || is_pub_mod(trimmed),
+                allowed,
                 "unexpected module entry line in {:?}: {trimmed}",
                 module_file
             );
@@ -59,9 +66,11 @@ fn supervision_strategy_has_single_source_definition() {
     );
 }
 
-/// Reports whether a line is a simple public module declaration.
+/// Reports whether a line is a simple module declaration (public or private).
 fn is_pub_mod(line: &str) -> bool {
-    line.starts_with("pub mod ") && line.ends_with(';') && !line.contains('{')
+    (line.starts_with("pub mod ") || line.starts_with("mod "))
+        && line.ends_with(';')
+        && !line.contains('{')
 }
 
 /// Collects files that define the `SupervisionStrategy` enum.

@@ -15,6 +15,8 @@
 
 字段约束: `window > 0s`, `max_burst >= 1`, `0.0 < recovery_rate_per_sec <= 1000.0`, `max_tokens >= 1`. 非法值在配置加载阶段以结构化错误拒绝.
 
+实际业务上限: `max_burst` 建议不超过 10_000(一万), 超过此值时滑动窗口队列内存占用约 160KB(每条目 16 字节), 在 64 位系统上仍然可控; 但若设置接近 `u32::MAX`, 队列将耗尽进程内存(约 64GB), 此类极端值应在配置校验阶段拒绝. `recovery_rate_per_sec` 的实际建议下限为 0.001(每 1000 秒恢复 1 个令牌), 低于此值的恢复速率在工程上等价于永不恢复, 应产生配置告警.
+
 ### RestartBudgetSnapshot(重启预算快照)
 
 | 字段         | 类型 | 说明                      |
@@ -91,7 +93,12 @@ pub struct StarvationAlert {
 ```rust
 pub enum PropagationPolicy {
     None,           // 不传播故障 — 分组完全隔离
-    EscalateOnly,   // 仅升级到父监督器 — 不影响当前组内 child 调度
+    EscalateOnly,   // 仅升级到父监督器 — 不影响当前组内 child 调度.
+                    // 父监督器收到升级后, 按父级策略(EscalationPolicy)决定后续动作:
+                    // 若父级为 EscalateToParent 则继续向上升级;
+                    // 若父级为 ShutdownTree 则关闭整棵子树;
+                    // 若父级为 QuarantineScope 则隔离故障分组范围.
+                    // 当前组 child 继续运行不受影响.
     Full,           // 完全传播 — 当前组内所有 child 标记为不可重启, 当前组进入熔断状态. 传播方向: 故障从 to_group 单向传播到 from_group, 不反向传播
 }
 ```
@@ -121,14 +128,14 @@ pub enum PropagationPolicy {
 
 `EscalationBifurcated` 事件在 typed event 和 metrics 双通道中至少携带以下互不混淆的诊断键:
 
-| 诊断键 (metrics label / event field) | 类型                    | 说明                                                       |
-| ------------------------------------ | ----------------------- | ---------------------------------------------------------- |
-| `severity_class`                     | `SeverityClass`         | Critical / Optional / Standard                             |
-| `escalation_path`                    | `String`                | `"upgrade"`(升级) 或 `"noise_reduction"`(降噪)             |
-| `budget_verdict`                     | `Option<BudgetVerdict>` | 若参与预算评估则携带 Granted/Exhausted, 否则 None          |
-| `fuse_active`                        | `bool`                  | 该 child 所在 group 是否处于熔断状态                       |
-| `tie_break_reason`                   | `Option<String>`        | 若触发平局裁决则携带原因, 否则 None                        |
-| `correlation_id`                     | `CorrelationId`         | 关联标识(与同链路 BudgetExhausted/GroupFuseTriggered 共享) |
+| 诊断键 (metrics label / event field) | 类型                    | 说明                                                                                                |
+| ------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `severity_class`                     | `SeverityClass`         | Critical / Optional / Standard                                                                      |
+| `escalation_path`                    | `String`                | `"upgrade"`(升级) 或 `"noise_reduction"`(降噪)                                                      |
+| `budget_verdict`                     | `Option<BudgetVerdict>` | 若参与预算评估则携带 Granted/Exhausted; 若因预算通过被跳过则为 `None`(而非特殊的 NotEvaluated 变体) |
+| `fuse_active`                        | `bool`                  | 该 child 所在 group 是否处于熔断状态                                                                |
+| `tie_break_reason`                   | `Option<String>`        | 若触发平局裁决则携带原因, 否则 None                                                                 |
+| `correlation_id`                     | `CorrelationId`         | 关联标识(与同链路 BudgetExhausted/GroupFuseTriggered 共享)                                          |
 
 以上 6 个键满足 spec.md US3 验收场景中"至少多出 3 个互不混淆的诊断键"的要求.
 
@@ -179,7 +186,7 @@ SupervisorSpec
   └─ groups: Vec<GroupConfig>
        ├─ name: String
        ├─ children: Vec<ChildId>
-       └─ budget: RestartBudgetConfig
+       └─ budget: Option<RestartBudgetConfig>   (可选, 未声明时继承 SupervisorSpec 级默认预算)
   └─ group_dependencies: Vec<GroupDependencyEdge>
   └─ severity_defaults: HashMap<WorkRole, SeverityClass>
 
@@ -188,3 +195,7 @@ ChildSpec
   ├─ severity: Option<SeverityClass>     (覆盖角色默认值)
   └─ group: Option<String>               (所属分组)
 ```
+
+GroupConfig 中 `budget` 为可选字段. 当 group 未显式声明 budget 时, 使用 `SupervisorSpec` 级默认 `RestartBudgetConfig`(从 `ConfigState.defaults` 派生). 若 supervisor 级也未配置默认预算, 则使用内置安全默认值: `window=60s, max_burst=10, recovery_rate_per_sec=0.5, max_tokens=10`.
+
+`ChildSpec.group` 引用的分组名必须在 `SupervisorSpec.group_configs` 中存在. 若不存在, 配置加载阶段拒绝启动并返回结构化错误, 指出未找到的分组名. 不允许运行时按无分组兜底处理, 以防止拼写错误导致分组隔离失效.

@@ -108,7 +108,11 @@ pub struct GroupConfig {
     /// Child identifiers that belong to this group.
     pub children: Vec<ChildId>,
     /// Restart budget configuration applied to this group.
-    pub budget: RestartBudgetConfig,
+    ///
+    /// When `None`, the supervisor-level default budget is inherited.
+    /// If the supervisor also has no default, [`RestartBudgetConfig::safe_default`]
+    /// is used as a fallback.
+    pub budget: Option<RestartBudgetConfig>,
 }
 
 impl GroupConfig {
@@ -118,7 +122,7 @@ impl GroupConfig {
     ///
     /// - `name`: Group name.
     /// - `children`: Child identifiers belonging to this group.
-    /// - `budget`: Restart budget configuration for the group.
+    /// - `budget`: Restart budget configuration for the group (None = inherit).
     ///
     /// # Returns
     ///
@@ -126,7 +130,7 @@ impl GroupConfig {
     pub fn new(
         name: impl Into<String>,
         children: Vec<ChildId>,
-        budget: RestartBudgetConfig,
+        budget: Option<RestartBudgetConfig>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -381,8 +385,34 @@ impl SupervisorSpec {
         validate_child_strategy_overrides(self)?;
         validate_work_roles(&self.children)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
+        validate_child_group_names(&self.children, &self.group_configs)?;
         Ok(())
     }
+}
+
+/// Validates that every child referencing a group name actually points to an
+/// existing [`GroupConfig`]. Unknown group names are rejected at load time
+/// to prevent silent isolation failures due to typos.
+fn validate_child_group_names(
+    children: &[ChildSpec],
+    group_configs: &[GroupConfig],
+) -> Result<(), SupervisorError> {
+    let group_names: std::collections::HashSet<&str> =
+        group_configs.iter().map(|g| g.name.as_str()).collect();
+
+    for child in children {
+        if let Some(ref group_name) = child.group {
+            if !group_names.contains(group_name.as_str()) {
+                return Err(SupervisorError::fatal_config(format!(
+                    "child '{}' references unknown group '{}'; available groups: {:?}",
+                    child.id,
+                    group_name,
+                    group_names.iter().copied().collect::<Vec<_>>(),
+                )));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Validates an optional restart limit.

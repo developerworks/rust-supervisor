@@ -1250,6 +1250,11 @@ pub struct PipelineStageDiagnostic {
     pub group_id: Option<String>,
     /// Supervisor path owning the supervision scope.
     pub supervisor_path: String,
+    /// Whether the stage was actually evaluated (`true`) or skipped (`false`).
+    /// When `false`, `skip_reason` explains why the stage was bypassed.
+    pub evaluated: bool,
+    /// Reason for skipping this stage, populated when `evaluated` is `false`.
+    pub skip_reason: Option<String>,
     /// Exit classification result (stage 1 output).
     pub exit_classification: Option<String>,
     /// Failure window state after recording (stage 2 output).
@@ -1292,6 +1297,8 @@ impl PipelineStageDiagnostic {
             child_id: None,
             group_id: None,
             supervisor_path: String::new(),
+            evaluated: true,
+            skip_reason: None,
             exit_classification: None,
             failure_window_state: None,
             budget_evaluation: None,
