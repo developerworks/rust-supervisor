@@ -3,9 +3,12 @@
 //! This module defines the stable metric names used by the supervisor core and
 //! validates labels before a recorder receives them.
 
+use crate::control::outcome::StaleReportHandling;
 use crate::event::payload::{SupervisorEvent, What};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, Ordering};
 
 /// Stable metric names emitted by the supervisor core.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,6 +41,20 @@ pub enum SupervisorMetricName {
     RuntimeControlLoopExitTotal,
     /// Runtime control plane alive gauge.
     RuntimeControlPlaneAlive,
+    /// Total child control commands.
+    ChildControlCommandTotal,
+    /// Remaining restart limit for child runtime state.
+    ChildRuntimeRestartLimitRemaining,
+    /// Total stale heartbeat observations.
+    ChildRuntimeHeartbeatStaleTotal,
+    /// Total child control operation transitions.
+    ChildRuntimeOperationTransitionsTotal,
+    /// Total generation fence lifecycle transitions for manual restart isolation.
+    ChildRestartFenceTotal,
+    /// Total stale completion reports classified outside authoritative triples.
+    ChildAttemptStaleReportTotal,
+    /// Observed pending restart gauge mirrored from lifecycle signals.
+    ChildRestartPendingTotal,
 }
 
 impl SupervisorMetricName {
@@ -73,6 +90,19 @@ impl SupervisorMetricName {
             Self::ConfigVersion => "supervisor_config_version",
             Self::RuntimeControlLoopExitTotal => "supervisor_runtime_control_loop_exit_total",
             Self::RuntimeControlPlaneAlive => "supervisor_runtime_control_plane_alive",
+            Self::ChildControlCommandTotal => "supervisor_child_control_command_total",
+            Self::ChildRuntimeRestartLimitRemaining => {
+                "supervisor_child_runtime_restart_limit_remaining"
+            }
+            Self::ChildRuntimeHeartbeatStaleTotal => {
+                "supervisor_child_runtime_heartbeat_stale_total"
+            }
+            Self::ChildRuntimeOperationTransitionsTotal => {
+                "supervisor_child_runtime_operation_transitions_total"
+            }
+            Self::ChildRestartFenceTotal => "supervisor_child_restart_fence_total",
+            Self::ChildAttemptStaleReportTotal => "supervisor_child_attempt_stale_report_total",
+            Self::ChildRestartPendingTotal => "supervisor_child_restart_pending_total",
         }
     }
 }
@@ -119,10 +149,34 @@ pub struct MetricLabelError {
 }
 
 /// Facade that maps lifecycle events to metrics.
-#[derive(Debug, Clone)]
 pub struct MetricsFacade {
     /// Maximum accepted label value length.
     pub max_label_value_len: usize,
+    /// Best-effort mirror of pending restart depth for gauge export.
+    restart_pending_total: Arc<AtomicI64>,
+}
+
+impl Clone for MetricsFacade {
+    /// Clones this metrics facade while sharing the pending restart gauge counter.
+    fn clone(&self) -> Self {
+        Self {
+            max_label_value_len: self.max_label_value_len,
+            restart_pending_total: Arc::clone(&self.restart_pending_total),
+        }
+    }
+}
+
+impl std::fmt::Debug for MetricsFacade {
+    /// Renders diagnostic information for this metrics facade.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MetricsFacade")
+            .field("max_label_value_len", &self.max_label_value_len)
+            .field(
+                "restart_pending_total",
+                &self.restart_pending_total.load(Ordering::SeqCst),
+            )
+            .finish()
+    }
 }
 
 impl MetricsFacade {
@@ -145,6 +199,7 @@ impl MetricsFacade {
     pub fn new() -> Self {
         Self {
             max_label_value_len: 96,
+            restart_pending_total: Arc::new(AtomicI64::new(0)),
         }
     }
 
@@ -178,6 +233,27 @@ impl MetricsFacade {
             });
         }
         Ok(())
+    }
+
+    /// Applies a bounded adjustment to the mirrored pending restart gauge counter.
+    ///
+    /// # Arguments
+    ///
+    /// - `delta`: Signed delta applied to the gauge counter (never drops below zero).
+    ///
+    /// # Returns
+    ///
+    /// Returns the gauge counter after applying `delta`.
+    fn adjust_restart_pending_total(&self, delta: i64) -> i64 {
+        let mut next = self
+            .restart_pending_total
+            .load(Ordering::SeqCst)
+            .saturating_add(delta);
+        if next < 0 {
+            next = 0;
+        }
+        self.restart_pending_total.store(next, Ordering::SeqCst);
+        next
     }
 
     /// Maps a lifecycle event into metric samples.
@@ -245,6 +321,81 @@ impl MetricsFacade {
             What::RuntimeControlLoopFailed { phase, .. } => {
                 runtime_terminal_samples(event, "failed", phase)
             }
+            What::ChildControlCommandCompleted {
+                command, result, ..
+            } => vec![MetricSample::new(
+                SupervisorMetricName::ChildControlCommandTotal,
+                1.0,
+                child_control_command_labels(command, result),
+            )],
+            What::ChildControlOperationChanged { from, to, .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeOperationTransitionsTotal,
+                1.0,
+                operation_transition_labels(format!("{from:?}"), format!("{to:?}")),
+            )],
+            What::ChildRuntimeRestartLimitUpdated {
+                child_id,
+                restart_limit,
+            } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeRestartLimitRemaining,
+                restart_limit.remaining as f64,
+                restart_limit_labels(child_id),
+            )],
+            What::ChildRestartFenceEntered { .. } => {
+                let gauge = self.adjust_restart_pending_total(1);
+                vec![
+                    MetricSample::new(
+                        SupervisorMetricName::ChildRestartFenceTotal,
+                        1.0,
+                        child_restart_fence_labels(event, "entered"),
+                    ),
+                    MetricSample::new(
+                        SupervisorMetricName::ChildRestartPendingTotal,
+                        gauge as f64,
+                        restart_pending_gauge_labels(),
+                    ),
+                ]
+            }
+            What::ChildRestartFenceAbortRequested { .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRestartFenceTotal,
+                1.0,
+                child_restart_fence_labels(event, "abort_requested"),
+            )],
+            What::ChildRestartFenceReleased { .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRestartFenceTotal,
+                1.0,
+                child_restart_fence_labels(event, "released"),
+            )],
+            What::ChildRestartFencePendingDrained { .. } => {
+                let gauge = self.adjust_restart_pending_total(-1);
+                vec![MetricSample::new(
+                    SupervisorMetricName::ChildRestartPendingTotal,
+                    gauge as f64,
+                    restart_pending_gauge_labels(),
+                )]
+            }
+            What::ChildRestartConflict { decision, .. } => {
+                let fence_bucket = if decision == "already_pending" {
+                    "already_pending"
+                } else {
+                    "rejected"
+                };
+                vec![MetricSample::new(
+                    SupervisorMetricName::ChildRestartFenceTotal,
+                    1.0,
+                    child_restart_fence_labels(event, fence_bucket),
+                )]
+            }
+            What::ChildAttemptStaleReport { handled_as, .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildAttemptStaleReportTotal,
+                1.0,
+                stale_report_metric_labels(*handled_as),
+            )],
+            What::ChildHeartbeatStale { .. } => vec![MetricSample::new(
+                SupervisorMetricName::ChildRuntimeHeartbeatStaleTotal,
+                1.0,
+                BTreeMap::new(),
+            )],
             _ => Vec::new(),
         }
     }
@@ -278,7 +429,110 @@ fn allowed_label_key(key: &str) -> bool {
             | "reason"
             | "decision"
             | "failure_category"
+            | "command"
+            | "from"
+            | "to"
+            | "handled_as"
     )
+}
+
+/// Builds an empty label map for pending restart gauges to avoid label cardinality explosions.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns an empty [`BTreeMap`] suitable for gauge exports.
+fn restart_pending_gauge_labels() -> BTreeMap<String, String> {
+    BTreeMap::new()
+}
+
+/// Builds metric labels for stale completion counters without embedding child identifiers.
+///
+/// # Arguments
+///
+/// - `handled_as`: Low-cardinality handling bucket copied into the label map.
+///
+/// # Returns
+///
+/// Returns a label map safe for `supervisor_child_attempt_stale_report_total`.
+fn stale_report_metric_labels(handled_as: StaleReportHandling) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("handled_as".to_owned(), format!("{handled_as:?}"));
+    labels
+}
+
+/// Extends event labels with the low-cardinality classification for generation-fence metrics.
+///
+/// # Arguments
+///
+/// - `event`: Supervisor event whose identifiers should seed the label map.
+/// - `result`: Stable fence outcome fragment such as `entered`, `abort_requested`, or `released`.
+///
+/// # Returns
+///
+/// Returns merged labels ready for [`SupervisorMetricName::ChildRestartFenceTotal`].
+fn child_restart_fence_labels(event: &SupervisorEvent, result: &str) -> BTreeMap<String, String> {
+    let mut labels = labels_for_event(event);
+    labels.insert("result".to_owned(), result.to_owned());
+    labels
+}
+
+/// Builds labels for child control command counters.
+///
+/// # Arguments
+///
+/// - `command`: Stable command name.
+/// - `result`: Stable result classification.
+///
+/// # Returns
+///
+/// Returns labels for a child control command counter.
+fn child_control_command_labels(
+    command: impl Into<String>,
+    result: impl Into<String>,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("command".to_owned(), command.into());
+    labels.insert("result".to_owned(), result.into());
+    labels
+}
+
+/// Builds labels for operation transition counters.
+///
+/// # Arguments
+///
+/// - `from`: Previous operation.
+/// - `to`: New operation.
+///
+/// # Returns
+///
+/// Returns labels for an operation transition counter.
+fn operation_transition_labels(
+    from: impl Into<String>,
+    to: impl Into<String>,
+) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("from".to_owned(), from.into());
+    labels.insert("to".to_owned(), to.into());
+    labels
+}
+
+/// Builds labels for restart limit gauges.
+///
+/// # Arguments
+///
+/// - `child_id`: Child whose restart limit was refreshed.
+///
+/// # Returns
+///
+/// Returns labels for the restart limit gauge.
+fn restart_limit_labels(child_id: &crate::id::types::ChildId) -> BTreeMap<String, String> {
+    let mut labels = BTreeMap::new();
+    labels.insert("child_id".to_owned(), child_id.to_string());
+    labels
 }
 
 /// Builds labels that are safe to attach to event-derived metrics.
@@ -302,6 +556,10 @@ fn labels_for_event(event: &SupervisorEvent) -> BTreeMap<String, String> {
     if let Some(policy) = &event.policy {
         labels.insert("decision".to_owned(), policy.decision.clone());
     }
+    labels.insert(
+        "correlation_id".to_owned(),
+        event.correlation_id.value.to_string(),
+    );
     labels
 }
 

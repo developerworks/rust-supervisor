@@ -19,7 +19,7 @@ use rust_supervisor::event::payload::{
 // Import event timing values.
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
 // Import identifier and attempt values.
-use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 // Import fixed-capacity event journal.
 use rust_supervisor::journal::ring::EventJournal;
 // Import metrics facade.
@@ -216,7 +216,7 @@ fn event(
             // Set the initial child generation.
             Generation::initial(),
             // Set the first attempt.
-            Attempt::first(),
+            ChildStartCount::first(),
             // Finish deterministic event time.
         )),
         // Build the event location.

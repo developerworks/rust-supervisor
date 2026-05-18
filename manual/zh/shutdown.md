@@ -26,3 +26,7 @@
 ## 关闭原因
 
 `ShutdownCause`(关闭原因)记录 `requested_by`(请求者)和 `reason`(原因). 它应该进入审计和诊断输出.
+
+## 完成结果
+
+`shutdown_tree`(关闭监督树)返回 `ShutdownResult`(关闭结果). 流水线完成后 `ShutdownResult.report` 含有 `ShutdownPipelineReport`(关闭流水线报告), 包含逐子任务结果, 对账报告和 dashboard socket(看板套接字)状态. 核心 runtime(运行时)不拥有 dashboard IPC socket(看板进程间通信套接字)时, 报告会把 socket status(套接字状态)记录为 `NotOwned`(非运行时拥有).

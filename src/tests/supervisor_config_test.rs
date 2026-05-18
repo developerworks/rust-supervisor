@@ -2,7 +2,7 @@
 //!
 //! These tests verify that validated configuration can drive supervisor startup.
 
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::runtime::supervisor::Supervisor;
@@ -14,8 +14,8 @@ use std::path::Path;
 #[tokio::test]
 async fn yaml_config_derives_startable_supervisor_spec() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let state =
-        load_config_state(root.join("examples/config/supervisor.yaml")).expect("load YAML config");
+    let state = load_config_from_yaml_file(root.join("examples/config/supervisor.yaml"))
+        .expect("load YAML config");
     let spec = state.to_supervisor_spec().expect("derive supervisor spec");
     assert_eq!(spec.strategy, SupervisionStrategy::OneForAll);
     let handle = Supervisor::start(spec).await.expect("start supervisor");

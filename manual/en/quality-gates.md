@@ -23,12 +23,12 @@ The manual, engineering docs, README files, examples, quickstart, public API con
 
 ## Coding Standard
 
-`scripts/check-coding-standard.sh` checks required release materials, example files, primary configuration, documentation punctuation, and No Compatibility language.
+`scripts/check-coding-standard.sh` checks required release materials, example files, primary configuration, documentation punctuation, and No Compatibility language. Chinese-language docs in this repository must use ASCII punctuation.
 
 ## Maintainability
 
-`scripts/check-maintainability.sh` checks paired manual and docs entries, example count, validation artifacts, the Shutdown Without Orphaned Tasks term, and the rust-config-tree term.
+`scripts/check-maintainability.sh` checks isomorphic `manual/zh` and `manual/en` entries, isomorphic `docs/zh` and `docs/en` entries for quality gate and parallel governance pages, example count against the contract, validation artifacts, the Shutdown Without Orphaned Tasks term, and the rust-config-tree term.
 
 ## SBOM And Release
 
-`scripts/generate-sbom.sh` creates minimal CycloneDX JSON and SPDX JSON release artifacts. `scripts/validate-sbom.sh` checks file existence, JSON shape, package name, `Cargo.lock` digest, and sensitive path leakage.
+`scripts/generate-sbom.sh` creates `artifacts/sbom/rust-supervisor.cdx.json` and `artifacts/sbom/rust-supervisor.spdx.json`. `scripts/validate-sbom.sh` checks file presence, JSON shape, package name, `Cargo.lock` digest, and leakage of secrets, tokens, local absolute paths, or build scratch paths.

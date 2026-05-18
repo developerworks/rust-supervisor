@@ -6,9 +6,9 @@
 use crate::event::payload::SupervisorEvent;
 use serde::{Deserialize, Serialize};
 
-/// Tracing span metadata for a child attempt.
+/// Tracing span metadata for a child child_start_count.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AttemptSpan {
+pub struct ChildStartCountSpan {
     /// Span name used for tracing output.
     pub name: String,
     /// Event sequence that opened the span.
@@ -19,16 +19,16 @@ pub struct AttemptSpan {
     pub child_id: Option<String>,
 }
 
-impl AttemptSpan {
+impl ChildStartCountSpan {
     /// Creates span metadata from a supervisor event.
     ///
     /// # Arguments
     ///
-    /// - `event`: Lifecycle event that starts or describes an attempt.
+    /// - `event`: Lifecycle event that starts or describes an child_start_count.
     ///
     /// # Returns
     ///
-    /// Returns an [`AttemptSpan`] value.
+    /// Returns an [`ChildStartCountSpan`] value.
     ///
     /// # Examples
     ///
@@ -38,7 +38,7 @@ impl AttemptSpan {
     ///     1,
     ///     0,
     ///     rust_supervisor::id::types::Generation::initial(),
-    ///     rust_supervisor::id::types::Attempt::first(),
+    ///     rust_supervisor::id::types::ChildStartCount::first(),
     /// );
     /// let event = rust_supervisor::event::payload::SupervisorEvent::new(
     ///     rust_supervisor::event::time::When::new(time),
@@ -50,12 +50,12 @@ impl AttemptSpan {
     ///     rust_supervisor::event::time::CorrelationId::from_uuid(uuid::Uuid::nil()),
     ///     1,
     /// );
-    /// let span = rust_supervisor::observe::tracing::AttemptSpan::from_event(&event);
-    /// assert_eq!(span.name, "supervisor.child_attempt");
+    /// let span = rust_supervisor::observe::tracing::ChildStartCountSpan::from_event(&event);
+    /// assert_eq!(span.name, "supervisor.child_child_start_count");
     /// ```
     pub fn from_event(event: &SupervisorEvent) -> Self {
         Self {
-            name: "supervisor.child_attempt".to_owned(),
+            name: "supervisor.child_child_start_count".to_owned(),
             sequence: event.sequence.value,
             correlation_id: event.correlation_id.value.to_string(),
             child_id: event

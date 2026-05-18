@@ -65,9 +65,9 @@ impl TryFrom<rust_supervisor::config::configurable::SupervisorConfig> for rust_s
 
 ## Loader API(加载接口)
 
-### `rust_supervisor::config::loader::load_config_state`
+### `rust_supervisor::config::loader::load_config_from_yaml_file`
 
-`load_config_state`(加载配置状态) 必须接收 YAML(数据序列化格式) 文件路径,读取完整配置,反序列化为 `SupervisorConfig`(监督器配置),再转换为 `ConfigState`(配置状态)。
+`load_config_from_yaml_file`(加载配置状态) 必须接收 YAML(数据序列化格式) 文件路径,读取完整配置,反序列化为 `SupervisorConfig`(监督器配置),再转换为 `ConfigState`(配置状态)。
 
 错误规则:
 
@@ -78,7 +78,7 @@ impl TryFrom<rust_supervisor::config::configurable::SupervisorConfig> for rust_s
 
 ### `rust_supervisor::config::yaml::parse_config_state`
 
-`parse_config_state`(解析配置状态) 必须接收内存中的 YAML(数据序列化格式) 文本,并使用与 `load_config_state`(加载配置状态) 相同的输入模型和校验路径。
+`parse_config_state`(解析配置状态) 必须接收内存中的 YAML(数据序列化格式) 文本,并使用与 `load_config_from_yaml_file`(加载配置状态) 相同的输入模型和校验路径。
 
 ## Runtime Startup API(运行时启动接口)
 
@@ -88,7 +88,7 @@ impl TryFrom<rust_supervisor::config::configurable::SupervisorConfig> for rust_s
 
 ### `rust_supervisor::runtime::supervisor::Supervisor::start_from_config_file`
 
-该入口接收 YAML(数据序列化格式) 文件路径,先调用 `load_config_state`(加载配置状态),再调用 `start_from_config_state`(从配置状态启动)。错误边界与 `load_config_state`(加载配置状态) 和 `start_from_config_state`(从配置状态启动) 保持一致。
+该入口接收 YAML(数据序列化格式) 文件路径,先调用 `load_config_from_yaml_file`(加载配置状态),再调用 `start_from_config_state`(从配置状态启动)。错误边界与 `load_config_from_yaml_file`(加载配置状态) 和 `start_from_config_state`(从配置状态启动) 保持一致。
 
 ## Enum Contract(枚举契约)
 

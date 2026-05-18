@@ -7,7 +7,7 @@ use crate::output::print_startup_summary;
 // Import graceful shutdown helper.
 use crate::shutdown::shutdown_demo;
 // Import configuration loading.
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 // Import validated configuration state.
 use rust_supervisor::config::state::ConfigState;
 // Import the supervisor runtime entry point.
@@ -30,7 +30,7 @@ pub(crate) async fn run_demo(
     // Continue the demo expression.
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Load the full demo configuration.
-    let state = load_config_state(&config_path)?;
+    let state = load_config_from_yaml_file(&config_path)?;
     // Start the demo-owned dashboard IPC and registration runtime.
     let demo_runtime = start_demo_dashboard_runtime(&state)?;
     // Build a pure supervisor runtime configuration.

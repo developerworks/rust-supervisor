@@ -68,6 +68,7 @@ pub fn build_dashboard_state(
         },
         topology: topology_from_spec(spec),
         runtime_state: runtime_state_rows(state),
+        child_runtime_records: Vec::new(),
         recent_events,
         recent_logs,
         dropped_event_count: journal.dropped_count,
@@ -162,7 +163,7 @@ pub fn runtime_state_rows(state: &SupervisorState) -> Vec<RuntimeState> {
             health: format!("{:?}", child.health).to_lowercase(),
             readiness: format!("{:?}", child.readiness).to_lowercase(),
             generation: child.generation.value,
-            attempt: child.attempt.value,
+            child_start_count: child.child_start_count.value,
             restart_count: child.restart_count,
             last_failure: child
                 .last_failure

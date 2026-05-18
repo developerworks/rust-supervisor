@@ -14,6 +14,10 @@ The screenshot below shows the dashboard client view for target lists, topology,
 - `rust-supervisor-relay`: The relay listens on the registration socket, stores the target registry, exposes external `wss://` dashboard sessions, validates mTLS and allowed IPC path prefixes, and forwards session commands to the target process.
 - `rust-supervisor-ui`: The dashboard client connects to the relay through `wss://` and displays the target list, topology, state, event stream, log tail, and command audit.
 
+## Generation fencing projections
+
+IPC-visible child control envelopes include nullable **`generation_fence`** payloads on **`DashboardChildControlResult`**. **`DashboardChildRuntimeRecord`** mirrors **`pending_restart`** summaries whenever the runtime pins an older attempt while a restart waits behind the fence.
+
 ## Local Demo Flow
 
 1. Start the relay first. It must listen on the registration socket before the target process can register itself.

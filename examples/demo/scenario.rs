@@ -166,6 +166,8 @@ impl DemoScenario {
             topology: topology(&visible),
             // Include runtime rows.
             runtime_state: runtime_rows(&visible),
+            // The demo keeps runtime rows separate and does not simulate control-loop records.
+            child_runtime_records: Vec::new(),
             // Include recent event rows.
             recent_events: event_records(&self.target_id, &visible),
             // Include recent log rows.
@@ -741,7 +743,7 @@ fn runtime_row(child: &DemoChild) -> RuntimeState {
         // Include the generation number.
         generation: child.restart_count,
         // Include the attempt number.
-        attempt: child.restart_count.saturating_add(1),
+        child_start_count: child.restart_count.saturating_add(1),
         // Include restart count.
         restart_count: child.restart_count,
         // Include last failure when present.

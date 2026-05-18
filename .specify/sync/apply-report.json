@@ -1,35 +1,67 @@
 {
-  "applied": "2026-05-15T01:30:16+08:00",
-  "based_on": {
-    "proposals_path": ".specify/sync/proposals.json",
-    "drift_report_path": ".specify/sync/drift-report.json"
+  "generated": "2026-05-18T00:00:00Z",
+  "based_on": "proposals from 2026-05-18T00:00:00Z",
+  "summary": {
+    "specs_updated": 1,
+    "proposals_applied": 6,
+    "align_tasks_generated": 3,
+    "not_applied": 1
   },
-  "specs_updated": [],
-  "new_specs_created": [],
-  "workflow_files_created": [
+  "spec_updates": [
     {
-      "path": ".specify/sync/drift-supersession.md",
-      "reason": "P007 Option C superseded-by-004 index"
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Key Entities",
+      "change_type": "modified",
+      "proposal_id": 6,
+      "description": "Added GroupConfig, GroupDependencyEdge, SeverityDefaults"
+    },
+    {
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Key Entities",
+      "change_type": "modified",
+      "proposal_id": 7,
+      "description": "Added ChildSpec.severity and ChildSpec.group"
+    },
+    {
+      "spec": "006-4-restart-policy-production/spec.md",
+      "section": "Diagnostics",
+      "change_type": "modified",
+      "proposal_id": 5,
+      "description": "Added emit_policy_diagnostic pipeline description"
     }
   ],
-  "implementation_tasks_file": ".specify/sync/align-tasks.md",
-  "align_tasks_generated": [
-    "P001",
-    "P002",
-    "P003",
-    "P004",
-    "P005",
-    "P006",
-    "M007"
+  "align_tasks": [
+    {
+      "id": "ALIGN-001",
+      "requirement": "SC-000",
+      "description": "Fix stage_emit_typed_event to emit BudgetExhausted/GroupFuseTriggered/EscalationBifurcated",
+      "priority": "P0",
+      "effort": "medium",
+      "files": ["src/runtime/pipeline.rs", "src/event/payload.rs"]
+    },
+    {
+      "id": "ALIGN-002",
+      "requirement": "FR-003",
+      "description": "Use ctx.correlation_id instead of uuid::Uuid::nil()",
+      "priority": "P0",
+      "effort": "small",
+      "files": ["src/runtime/pipeline.rs"]
+    },
+    {
+      "id": "ALIGN-003",
+      "requirement": "FR-001",
+      "description": "Add What::FairnessProbeStarvation typed event variant",
+      "priority": "P1",
+      "effort": "medium",
+      "files": ["src/event/payload.rs", "src/runtime/control_loop.rs"]
+    }
   ],
-  "proposals_marked_applied": [
-    "P001",
-    "P002",
-    "P003",
-    "P004",
-    "P005",
-    "P006",
-    "P007"
+  "not_applied": [
+    {
+      "proposal_id": 4,
+      "requirement": "SC-003",
+      "reason": "Deferred to 006-5-typed-events-observability"
+    }
   ],
-  "not_applied": []
+  "backup": ".specify/sync/backups/spec.md.2026-05-18"
 }

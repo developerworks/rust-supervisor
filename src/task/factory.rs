@@ -1,7 +1,7 @@
 //! Task factory and service adapter types.
 //!
 //! This module owns the public task construction contract. Every call to
-//! [`TaskFactory::build`] must create a fresh future for one attempt.
+//! [`TaskFactory::build`] must create a fresh future for one child_start_count.
 
 use crate::error::types::TaskFailure;
 use crate::task::context::TaskContext;
@@ -11,7 +11,7 @@ use std::pin::Pin;
 /// Boxed task future returned by task factories.
 pub type BoxTaskFuture = Pin<Box<dyn Future<Output = TaskResult> + Send + 'static>>;
 
-/// Result produced by a supervised task attempt.
+/// Result produced by a supervised task child_start_count.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskResult {
     /// The task completed successfully.
@@ -44,13 +44,13 @@ impl TaskResult {
     }
 }
 
-/// Factory that creates a fresh task future for each attempt.
+/// Factory that creates a fresh task future for each child_start_count.
 pub trait TaskFactory: Send + Sync + 'static {
     /// Builds a new task future.
     ///
     /// # Arguments
     ///
-    /// - `ctx`: Per-attempt context with cancellation, heartbeat, and readiness.
+    /// - `ctx`: Per-child_start_count context with cancellation, heartbeat, and readiness.
     ///
     /// # Returns
     ///
@@ -60,15 +60,15 @@ pub trait TaskFactory: Send + Sync + 'static {
 
 /// Service adapter that can be converted into a [`TaskFactory`].
 pub trait Service: Send + Sync + 'static {
-    /// Calls the service for one task attempt.
+    /// Calls the service for one task child_start_count.
     ///
     /// # Arguments
     ///
-    /// - `ctx`: Per-attempt context passed to the service.
+    /// - `ctx`: Per-child_start_count context passed to the service.
     ///
     /// # Returns
     ///
-    /// Returns a boxed future for the attempt.
+    /// Returns a boxed future for the child_start_count.
     fn call(&self, ctx: TaskContext) -> BoxTaskFuture;
 }
 
@@ -103,7 +103,7 @@ where
 ///
 /// # Arguments
 ///
-/// - `function`: Function that creates a fresh future for each task attempt.
+/// - `function`: Function that creates a fresh future for each task child_start_count.
 ///
 /// # Returns
 ///
@@ -119,7 +119,7 @@ where
 ///     rust_supervisor::id::types::ChildId::new("worker"),
 ///     rust_supervisor::id::types::SupervisorPath::root().join("worker"),
 ///     rust_supervisor::id::types::Generation::initial(),
-///     rust_supervisor::id::types::Attempt::first(),
+///     rust_supervisor::id::types::ChildStartCount::first(),
 /// );
 /// let _future = rust_supervisor::task::factory::TaskFactory::build(&service, ctx);
 /// ```

@@ -5,6 +5,10 @@
 
 use crate::error::types::TaskFailureKind;
 use crate::policy::backoff::BackoffPolicy;
+// Re-export ProtectionAction from event payload for policy decision usage.
+// This is the protection restrictiveness ladder with six tiers:
+// restart_allowed → restart_queued → restart_denied → supervision_paused → escalated → supervised_stop
+pub use crate::event::payload::ProtectionAction;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -22,7 +26,7 @@ pub enum RestartPolicy {
 /// Failure category consumed by the policy engine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PolicyFailureKind {
-    /// A failure that may succeed on a later attempt.
+    /// A failure that may succeed on a later child_start_count.
     Recoverable,
     /// A configuration error that should stop the tree.
     FatalConfig,
@@ -72,7 +76,7 @@ pub enum RestartDecision {
     DoNotRestart,
     /// Restart after the supplied delay.
     RestartAfter {
-        /// Delay before the next restart attempt.
+        /// Delay before the next restart child_start_count.
         delay: Duration,
     },
     /// Stop automatic restart and place the child in quarantine.
@@ -114,7 +118,7 @@ impl PolicyEngine {
     ///
     /// - `policy`: Restart policy configured for the child.
     /// - `exit`: Typed task exit.
-    /// - `attempt`: One-based restart attempt used for backoff.
+    /// - `child_start_count`: One-based restart child_start_count used for backoff.
     /// - `backoff`: Backoff policy used when a restart is allowed.
     ///
     /// # Returns
@@ -124,12 +128,14 @@ impl PolicyEngine {
         &self,
         policy: RestartPolicy,
         exit: TaskExit,
-        attempt: u64,
+        child_start_count: u64,
         backoff: &BackoffPolicy,
     ) -> RestartDecision {
         match exit {
-            TaskExit::Succeeded => self.decide_success(policy, attempt, backoff),
-            TaskExit::Failed { kind } => self.decide_failure(policy, kind, attempt, backoff),
+            TaskExit::Succeeded => self.decide_success(policy, child_start_count, backoff),
+            TaskExit::Failed { kind } => {
+                self.decide_failure(policy, kind, child_start_count, backoff)
+            }
         }
     }
 
@@ -138,7 +144,7 @@ impl PolicyEngine {
     /// # Arguments
     ///
     /// - `policy`: Restart policy configured for the child.
-    /// - `attempt`: One-based restart attempt used for backoff.
+    /// - `child_start_count`: One-based restart child_start_count used for backoff.
     /// - `backoff`: Backoff policy used when a restart is allowed.
     ///
     /// # Returns
@@ -147,12 +153,12 @@ impl PolicyEngine {
     fn decide_success(
         &self,
         policy: RestartPolicy,
-        attempt: u64,
+        child_start_count: u64,
         backoff: &BackoffPolicy,
     ) -> RestartDecision {
         match policy {
             RestartPolicy::Permanent => RestartDecision::RestartAfter {
-                delay: backoff.delay_for_attempt(attempt),
+                delay: backoff.delay_for_child_start_count(child_start_count),
             },
             RestartPolicy::Transient | RestartPolicy::Temporary => RestartDecision::DoNotRestart,
         }
@@ -164,7 +170,7 @@ impl PolicyEngine {
     ///
     /// - `policy`: Restart policy configured for the child.
     /// - `kind`: Failure kind supplied by the runner.
-    /// - `attempt`: One-based restart attempt used for backoff.
+    /// - `child_start_count`: One-based restart child_start_count used for backoff.
     /// - `backoff`: Backoff policy used when a restart is allowed.
     ///
     /// # Returns
@@ -174,14 +180,14 @@ impl PolicyEngine {
         &self,
         policy: RestartPolicy,
         kind: PolicyFailureKind,
-        attempt: u64,
+        child_start_count: u64,
         backoff: &BackoffPolicy,
     ) -> RestartDecision {
         match kind {
             PolicyFailureKind::FatalConfig => RestartDecision::ShutdownTree,
             PolicyFailureKind::FatalBug => RestartDecision::EscalateToParent,
             PolicyFailureKind::Cancelled => RestartDecision::DoNotRestart,
-            _ => self.restartable_failure(policy, attempt, backoff),
+            _ => self.restartable_failure(policy, child_start_count, backoff),
         }
     }
 
@@ -190,7 +196,7 @@ impl PolicyEngine {
     /// # Arguments
     ///
     /// - `policy`: Restart policy configured for the child.
-    /// - `attempt`: One-based restart attempt used for backoff.
+    /// - `child_start_count`: One-based restart child_start_count used for backoff.
     /// - `backoff`: Backoff policy used when a restart is allowed.
     ///
     /// # Returns
@@ -199,12 +205,12 @@ impl PolicyEngine {
     fn restartable_failure(
         &self,
         policy: RestartPolicy,
-        attempt: u64,
+        child_start_count: u64,
         backoff: &BackoffPolicy,
     ) -> RestartDecision {
         match policy {
             RestartPolicy::Permanent | RestartPolicy::Transient => RestartDecision::RestartAfter {
-                delay: backoff.delay_for_attempt(attempt),
+                delay: backoff.delay_for_child_start_count(child_start_count),
             },
             RestartPolicy::Temporary => RestartDecision::DoNotRestart,
         }

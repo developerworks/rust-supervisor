@@ -22,12 +22,12 @@ use std::path::Path;
 /// # Examples
 ///
 /// ```no_run
-/// let state = rust_supervisor::config::loader::load_config_state(
+/// let state = rust_supervisor::config::loader::load_config_from_yaml_file(
 ///     "examples/config/supervisor.yaml",
 /// );
 /// assert!(state.is_ok());
 /// ```
-pub fn load_config_state(path: impl AsRef<Path>) -> Result<ConfigState, SupervisorError> {
+pub fn load_config_from_yaml_file(path: impl AsRef<Path>) -> Result<ConfigState, SupervisorError> {
     ensure_yaml_format(path.as_ref())?;
     let contents = fs::read_to_string(path.as_ref()).map_err(|error| {
         SupervisorError::fatal_config(format!("failed to read config file: {error}"))

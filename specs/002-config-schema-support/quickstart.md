@@ -18,10 +18,10 @@ rust-config-tree = "0.1.9"
 ## 2. Load YAML config(加载 YAML 配置)
 
 ```rust
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 
 fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
-    let state = load_config_state("examples/config/supervisor.yaml")?;
+    let state = load_config_from_yaml_file("examples/config/supervisor.yaml")?;
     let spec = state.to_supervisor_spec()?;
     spec.validate()?;
     Ok(())

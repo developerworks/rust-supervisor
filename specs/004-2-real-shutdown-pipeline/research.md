@@ -54,4 +54,17 @@
 
 **Rationale(理由)**: 真实关闭流水线的风险集中在异步边界. 只测试阶段枚举无法证明任务真的停止. 测试必须通过真实 task factory(任务工厂) 观察 token(令牌), completion(完成), abort(强制中止) 和最终摘要.
 
+## 决策八: 可观测写入采用 at-least-once(至少一次) 语义
+
+**Decision(决定)**: 关闭阶段变化, 取消送达, 任务退出和对账状态等可观测事实, 在正常路径下保证写入 journal(事件日志), metrics(指标) 和 audit(审计), 仅在 shutdown pipeline(关闭流水线) 自身异常时允许部分丢失.
+
+**Rationale(理由)**: 关闭流水线的审计价值(故障复盘, 合规追溯)要求操作者可以依赖关闭报告中的可观测事实. at-least-once(至少一次) 让消费者不需要处理事件丢失的情形, 降低了复盘复杂度. 在 pipeline(流水线) 自身崩溃(如 panic 或 OOM)的极端情况下允许丢失, 因为此时整个进程状态已不可信.
+
+**Alternatives considered(备选方案)**:
+
+- exactly-once(恰好一次) 语义: 被拒绝, 因为在关闭过程中保证幂等写入需要持久化存储和去重, 超出了关闭流水线的职责.
+- at-most-once(至多一次) 语义: 被拒绝, 因为操作者需要可靠的事实来进行关闭后状态判断.
+
+**Rationale(理由)**: 真实关闭流水线的风险集中在异步边界. 只测试阶段枚举无法证明任务真的停止. 测试必须通过真实 task factory(任务工厂) 观察 token(令牌), completion(完成), abort(强制中止) 和最终摘要.
+
 **Alternatives considered(备选方案)**: 只写 coordinator(协调器) 单元测试不能覆盖运行时句柄. 只依赖 dashboard protocol(仪表盘协议) 形状测试不能证明关闭行为.

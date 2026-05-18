@@ -1,4 +1,0 @@
-interface:
-  display_name: "Rust DDD Design"
-  short_description: "Rust DDD architecture and review guide"
-  default_prompt: "Use $rust-domain-driven-design to design a Rust DDD module with clear aggregate, application, and infrastructure boundaries."

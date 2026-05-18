@@ -1,0 +1,60 @@
+{
+    "version": "0.0.0",
+    "semver_level": "patch",
+    "commit": "",
+    "signed_tag": {
+        "tag": "",
+        "signature_type": "gpg",
+        "fingerprint": "",
+        "verify_command": "git tag -v <tag>"
+    },
+    "msrv": {
+        "version": "1.88",
+        "verify_script": "scripts/verify-msrv.sh",
+        "verified": false
+    },
+    "changelog": {
+        "path": "CHANGELOG.md",
+        "section": "## [Unreleased]"
+    },
+    "sbom": {
+        "path": "artifacts/sbom/sbom.spdx.json",
+        "sha256": "",
+        "format": "spdx-2.3",
+        "format_version": "2.3",
+        "migration_note": "artifacts/sbom-migration.md",
+        "verify_script": "scripts/verify-sbom.sh"
+    },
+    "supply_chain_attestation": {
+        "path": "artifacts/attestation.json",
+        "sha256": "",
+        "verify_script": "scripts/verify-attestation.sh"
+    },
+    "gates": {
+        "shallow": {
+            "fmt": "",
+            "check": "",
+            "clippy": "",
+            "test": "",
+            "doc": "",
+            "publish_dry_run": ""
+        },
+        "middle": {
+            "dependency_audit": "",
+            "license_check": "",
+            "advisory_check": "",
+            "semver_checks": "",
+            "msrv_verify": ""
+        },
+        "deep": {
+            "coverage": "",
+            "mutation_testing": "",
+            "fuzzing": "",
+            "loom": "",
+            "miri": ""
+        }
+    },
+    "released_at": "",
+    "released_by": "",
+    "waived_by": null
+}

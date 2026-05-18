@@ -6,6 +6,8 @@
 
 `rust-supervisor` 是 Rust(编程语言) 任务监督核心库. 它面向 Tokio(异步运行时) 服务, 用声明式模型管理 child(子任务) 的启动, 停止, 重启, 隔离, 状态查询, 事件记录, 健康检查和 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
 
+配置边界使用 rust-config-tree v0.1.9 与 YAML(数据序列化格式) 文件. 运行时可调参数必须通过这条集中配置路径进入系统.
+
 本项目没有旧接口负担. 使用者应该通过拥有模块路径读取公开类型, 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
 
 ## 阅读路径
@@ -24,4 +26,4 @@
 
 ## 能力边界
 
-supervisor core(监督器核心) 只管理 lifecycle governance(生命周期治理). 高频业务消息属于 data plane(数据面), 不应该每条都经过 supervisor(监督器). control plane(控制面) 只处理生命周期命令, 当前状态, 事件和治理决策.
+supervisor core(监督器核心) 只治理生命周期行为. 高频业务消息属于 data plane(数据面). control plane(控制面) 处理生命周期命令, 当前状态查询, 事件和治理决策.

@@ -2,10 +2,11 @@
 
 **Feature Branch(功能分支)**: `004-runtime-semantics`
 **Created(创建日期)**: 2026-05-14
-**Status(状态)**: Draft(草稿)
+**Updated(更新日期)**: 2026-05-15
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述: "第一阶段, 先修正运行时语义. 当前 Supervisor::start_with_policy 会启动 runtime control loop(运行时控制循环), 但是没有把 JoinHandle(任务句柄) 纳入 SupervisorHandle(监督器控制句柄) 管理. 工业级改造应该把控制循环本身作为受监督对象, 保存 JoinHandle(任务句柄), 建立 runtime watchdog(运行时看门狗), 并在控制循环异常退出时发出 typed event(类型化事件), metrics(指标), audit log(审计日志), 同时让 SupervisorHandle(监督器控制句柄) 暴露 is_alive, join, shutdown, health 这类能力."
 
-## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*
+## User Scenarios & Testing(用户场景和测试) _(mandatory(必填))_
 
 ### User Story 1(用户故事一) - 查询运行时健康状态 (Priority(优先级): P1)
 
@@ -56,7 +57,7 @@
 - watchdog(看门狗) 自身无法发布事件时, 健康状态必须保留失败原因.
 - 操作者在控制循环结束后发送命令时, 系统必须返回包含已知退出原因的结构化错误.
 
-## Requirements(需求) *(mandatory(必填))*
+## Requirements(需求) _(mandatory(必填))_
 
 ### Functional Requirements(功能需求)
 
@@ -70,7 +71,7 @@
 - **RuntimeWatchdog(运行时看门狗)**: 表示观察控制循环退出结果并发布诊断的运行时监督单元.
 - **RuntimeHealthReport(运行时健康报告)**: 表示调用者可见的控制面健康状态, 最近观测时间和失败原因.
 
-## Constitution Alignment(宪章对齐) *(mandatory(必填))*
+## Constitution Alignment(宪章对齐) _(mandatory(必填))_
 
 ### Supervision Contract(监督契约)
 
@@ -91,7 +92,7 @@
 - **Term format(术语格式)**: 英文术语必须写成 `English(中文说明)`.
 - **Forbidden style(禁止风格)**: 禁止非中文写作, 片段式语言, 生僻词和方言.
 
-## Success Criteria(成功标准) *(mandatory(必填))*
+## Success Criteria(成功标准) _(mandatory(必填))_
 
 ### Measurable Outcomes(可衡量结果)
 
@@ -104,4 +105,5 @@
 
 - 本规格只覆盖当前核心库中的运行时控制面, 不覆盖 relay(中继) 或 dashboard client(看板客户端).
 - 控制循环异常退出默认视为运行时故障, 不默认自动重启控制循环.
-- 后续规格会处理真实 child task(子任务) 关闭和代际隔离.
+- 后续规格会处理真实 child task(子任务) 关闭和代次隔离.
+- 事件发布采用 at-least-once(至少一次) 语义, watchdog(看门狗) 在正常路径下保证事件送达, 仅在自身崩溃时允许事件丢失.

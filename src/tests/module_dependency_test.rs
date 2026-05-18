@@ -17,6 +17,16 @@ fn top_level_modules_have_owned_files_and_tests() {
             .trim_end_matches(';')
             .trim();
         let module_root = source_root.join(module);
+        // Skip file modules (e.g. `src/platform.rs`), only check directory
+        // modules (e.g. `src/runtime/mod.rs`).
+        if !module_root.join("mod.rs").exists() && !module_root.is_dir() {
+            // File module — no directory to check.
+            assert!(
+                source_root.join(format!("{module}.rs")).exists(),
+                "module {module} declared in lib.rs but neither {module}.rs nor {module}/mod.rs exists"
+            );
+            continue;
+        }
         let owned_files = fs::read_dir(&module_root)
             .expect("read module root")
             .filter_map(Result::ok)
@@ -28,9 +38,20 @@ fn top_level_modules_have_owned_files_and_tests() {
             })
             .filter(|entry| entry.file_name() != "mod.rs")
             .count();
-        assert!(owned_files > 0, "module {module} has no owned files");
+        let has_submodules = fs::read_dir(&module_root)
+            .expect("read module root")
+            .filter_map(Result::ok)
+            .any(|entry| entry.file_type().is_ok_and(|t| t.is_dir()));
+        assert!(
+            owned_files > 0 || has_submodules,
+            "module {module} has no owned files or submodules"
+        );
         // Skip tests directory check for bridge-only modules (owned_files == 0
-        // but has_submodules == true) and leaf-type modules (owned_files <= 1).
+        // but has_submodules == true), e.g. `ipc` which only re-exports
+        // sub-modules like `ipc::security`.
+        // Also skip for leaf-type modules (owned_files <= 1) that only define
+        // types without behavior logic, e.g. `types` with a single
+        // `running_instance_id.rs`.
         if owned_files > 1 {
             assert!(
                 module_root.join("tests").is_dir(),

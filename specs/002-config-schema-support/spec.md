@@ -2,7 +2,7 @@
 
 **Feature Branch(功能分支)**: `002-config-schema-support`
 **Created(创建日期)**: 2026-05-05
-**Status(状态)**: Draft(草稿)
+**Status(状态)**: Accepted(已接受)
 **Input(输入)**: 用户描述:"根配置结构体必须同时支持 `confique::Config`(配置派生) 和 `JsonSchema`(结构模式生成特征).配置输入结构体集中存放在 config module(配置模块) 的 configurable boundary(可配置边界).本 crate(包) 不默认启用 `x-tree-split`(树形拆分扩展),使用者可以在自己的项目中自行决定是否启用.配置校验失败必须拒绝启动 runtime(运行时)."
 
 ## User Scenarios & Testing(用户场景和测试) *(mandatory(必填))*

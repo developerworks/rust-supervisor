@@ -5,7 +5,7 @@
 
 use crate::event::payload::{SupervisorEvent, What, Where};
 use crate::event::time::{CorrelationId, EventSequence, EventSequenceSource, EventTime, When};
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport};
 use crate::runtime::watchdog::RuntimeWatchdog;
 use crate::{control::handle::SupervisorHandle, runtime::message::RuntimeLoopMessage};
@@ -56,18 +56,22 @@ impl PausedTime {
     /// # Arguments
     ///
     /// - `generation`: Child generation for the event.
-    /// - `attempt`: Child attempt for the event.
+    /// - `child_start_count`: Child child_start_count for the event.
     ///
     /// # Returns
     ///
     /// Returns an [`EventTime`] value.
-    pub fn event_time(&self, generation: Generation, attempt: Attempt) -> EventTime {
+    pub fn event_time(
+        &self,
+        generation: Generation,
+        child_start_count: ChildStartCount,
+    ) -> EventTime {
         EventTime::deterministic(
             self.unix_nanos,
             self.monotonic_nanos,
             self.uptime_ms,
             generation,
-            attempt,
+            child_start_count,
         )
     }
 }
@@ -219,7 +223,7 @@ impl EventFixture {
         SupervisorEvent::new(
             When::new(
                 self.paused_time
-                    .event_time(Generation::initial(), Attempt::first()),
+                    .event_time(Generation::initial(), ChildStartCount::first()),
             ),
             location,
             what,
@@ -242,7 +246,7 @@ impl EventFixture {
         SupervisorEvent::new(
             When::new(
                 self.paused_time
-                    .event_time(Generation::initial(), Attempt::first()),
+                    .event_time(Generation::initial(), ChildStartCount::first()),
             ),
             Where::new(SupervisorPath::root()),
             what,
@@ -290,4 +294,99 @@ pub async fn runtime_control_plane_failed_handle() -> SupervisorHandle {
     let handle = SupervisorHandle::new(command_sender, event_sender, control_plane);
     let _report = handle.join().await.expect("failed runtime joins");
     handle
+}
+
+/// Creates a backoff policy with deterministic jitter for reproducible tests.
+///
+/// # Arguments
+///
+/// - `initial`: Initial backoff delay.
+/// - `max`: Maximum backoff delay cap.
+/// - `jitter_percent`: Jitter percentage (0-100).
+/// - `reset_after`: Duration after which restart counters reset.
+/// - `seed`: Fixed RNG seed for deterministic jitter output.
+///
+/// # Returns
+///
+/// Returns a [`BackoffPolicy`] configured with deterministic jitter mode.
+///
+/// # Examples
+///
+/// ```
+/// use std::time::Duration;
+/// use rust_supervisor::test_support::factory::deterministic_backoff_policy;
+///
+/// let policy = deterministic_backoff_policy(
+///     Duration::from_millis(10),
+///     Duration::from_millis(1000),
+///     50,
+///     Duration::from_secs(300),
+///     42,
+/// );
+/// // Same seed produces identical delays across test runs
+/// let delay1 = policy.delay_for_child_start_count(1);
+/// let delay2 = policy.delay_for_child_start_count(1);
+/// assert_eq!(delay1, delay2);
+/// ```
+pub fn deterministic_backoff_policy(
+    initial: std::time::Duration,
+    max: std::time::Duration,
+    jitter_percent: u8,
+    reset_after: std::time::Duration,
+    seed: u64,
+) -> crate::policy::backoff::BackoffPolicy {
+    crate::policy::backoff::BackoffPolicy::new(initial, max, jitter_percent, reset_after)
+        .with_deterministic_jitter(seed)
+}
+
+/// Creates a backoff policy with full jitter for thundering herd prevention tests.
+///
+/// # Arguments
+///
+/// - `initial`: Initial backoff delay.
+/// - `max`: Maximum backoff delay cap.
+/// - `seed`: Fixed RNG seed for deterministic full jitter output.
+///
+/// # Returns
+///
+/// Returns a [`BackoffPolicy`] configured with full jitter mode.
+pub fn full_jitter_backoff_policy(
+    initial: std::time::Duration,
+    max: std::time::Duration,
+    seed: u64,
+) -> crate::policy::backoff::BackoffPolicy {
+    let mut policy = crate::policy::backoff::BackoffPolicy::new(
+        initial,
+        max,
+        100,
+        std::time::Duration::from_secs(300),
+    );
+    policy.jitter_mode = crate::policy::backoff::JitterMode::FullJitter { seed };
+    policy
+}
+
+/// Creates a backoff policy with decorrelated jitter for correlation-breaking tests.
+///
+/// # Arguments
+///
+/// - `initial`: Initial backoff delay.
+/// - `max`: Maximum backoff delay cap.
+/// - `seed`: Fixed RNG seed for deterministic decorrelated jitter output.
+///
+/// # Returns
+///
+/// Returns a [`BackoffPolicy`] configured with decorrelated jitter mode.
+pub fn decorrelated_jitter_backoff_policy(
+    initial: std::time::Duration,
+    max: std::time::Duration,
+    seed: u64,
+) -> crate::policy::backoff::BackoffPolicy {
+    let mut policy = crate::policy::backoff::BackoffPolicy::new(
+        initial,
+        max,
+        100,
+        std::time::Duration::from_secs(300),
+    );
+    policy.jitter_mode = crate::policy::backoff::JitterMode::DecorrelatedJitter { seed };
+    policy
 }

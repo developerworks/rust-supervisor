@@ -1,25 +1,25 @@
 //! Task execution context.
 //!
-//! This module provides the per-attempt handles that a task uses to observe
+//! This module provides the per-child_start_count handles that a task uses to observe
 //! cancellation, emit heartbeats, and report readiness.
 
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
-use crate::readiness::signal::ReadySignal;
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
+use crate::readiness::signal::{ReadinessState, ReadySignal};
 use tokio::sync::watch;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
-/// Context passed to a task for a single attempt.
+/// Context passed to a task for a single child_start_count.
 #[derive(Debug, Clone)]
 pub struct TaskContext {
-    /// Stable child identifier for the task attempt.
+    /// Stable child identifier for the task child_start_count.
     pub child_id: ChildId,
     /// Full path of the child in the supervisor tree.
     pub path: SupervisorPath,
-    /// Generation for the runtime slot that owns this attempt.
+    /// Generation for the runtime slot that owns this child_start_count.
     pub generation: Generation,
-    /// Attempt number for the running task.
-    pub attempt: Attempt,
+    /// ChildStartCount number for the running task.
+    pub child_start_count: ChildStartCount,
     /// Token that tells the task when cancellation was requested.
     cancellation_token: CancellationToken,
     /// Sender used to report readiness.
@@ -29,14 +29,14 @@ pub struct TaskContext {
 }
 
 impl TaskContext {
-    /// Creates a task context for a child attempt.
+    /// Creates a task context for a child child_start_count.
     ///
     /// # Arguments
     ///
     /// - `child_id`: Stable child identifier.
     /// - `path`: Full supervisor tree path for this child.
     /// - `generation`: Runtime slot generation.
-    /// - `attempt`: Attempt number for this execution.
+    /// - `child_start_count`: ChildStartCount number for this execution.
     ///
     /// # Returns
     ///
@@ -49,7 +49,7 @@ impl TaskContext {
     ///     rust_supervisor::id::types::ChildId::new("worker"),
     ///     rust_supervisor::id::types::SupervisorPath::root().join("worker"),
     ///     rust_supervisor::id::types::Generation::initial(),
-    ///     rust_supervisor::id::types::Attempt::first(),
+    ///     rust_supervisor::id::types::ChildStartCount::first(),
     /// );
     /// assert!(!ctx.is_cancelled());
     /// ```
@@ -57,7 +57,7 @@ impl TaskContext {
         child_id: ChildId,
         path: SupervisorPath,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
     ) -> (Self, watch::Receiver<Option<Instant>>) {
         let (ready_signal, _ready_receiver) = ReadySignal::new();
         let (heartbeat_sender, heartbeat_receiver) = watch::channel(None);
@@ -66,7 +66,7 @@ impl TaskContext {
                 child_id,
                 path,
                 generation,
-                attempt,
+                child_start_count,
                 cancellation_token: CancellationToken::new(),
                 ready_signal,
                 heartbeat_sender,
@@ -82,7 +82,7 @@ impl TaskContext {
     /// - `child_id`: Stable child identifier.
     /// - `path`: Full supervisor tree path for this child.
     /// - `generation`: Runtime slot generation.
-    /// - `attempt`: Attempt number for this execution.
+    /// - `child_start_count`: ChildStartCount number for this execution.
     /// - `ready_signal`: Signal used to publish readiness.
     ///
     /// # Returns
@@ -92,14 +92,14 @@ impl TaskContext {
         child_id: ChildId,
         path: SupervisorPath,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
         ready_signal: ReadySignal,
     ) -> (Self, watch::Receiver<Option<Instant>>) {
         Self::with_ready_signal_and_cancellation_token(
             child_id,
             path,
             generation,
-            attempt,
+            child_start_count,
             ready_signal,
             CancellationToken::new(),
         )
@@ -112,7 +112,7 @@ impl TaskContext {
     /// - `child_id`: Stable child identifier.
     /// - `path`: Full supervisor tree path for this child.
     /// - `generation`: Runtime slot generation.
-    /// - `attempt`: Attempt number for this execution.
+    /// - `child_start_count`: ChildStartCount number for this execution.
     /// - `ready_signal`: Signal used to publish readiness.
     /// - `cancellation_token`: Token shared with runtime shutdown.
     ///
@@ -123,7 +123,7 @@ impl TaskContext {
         child_id: ChildId,
         path: SupervisorPath,
         generation: Generation,
-        attempt: Attempt,
+        child_start_count: ChildStartCount,
         ready_signal: ReadySignal,
         cancellation_token: CancellationToken,
     ) -> (Self, watch::Receiver<Option<Instant>>) {
@@ -133,7 +133,7 @@ impl TaskContext {
                 child_id,
                 path,
                 generation,
-                attempt,
+                child_start_count,
                 cancellation_token,
                 ready_signal,
                 heartbeat_sender,
@@ -155,6 +155,19 @@ impl TaskContext {
         self.ready_signal.mark_ready();
     }
 
+    /// Reports the current readiness state.
+    ///
+    /// # Arguments
+    ///
+    /// - `state`: Readiness state observed by runtime readers.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn set_readiness(&self, state: ReadinessState) {
+        self.ready_signal.set_readiness(state);
+    }
+
     /// Emits a heartbeat with the current monotonic time.
     ///
     /// # Arguments
@@ -168,7 +181,7 @@ impl TaskContext {
         let _ignored = self.heartbeat_sender.send(Some(Instant::now()));
     }
 
-    /// Requests cancellation for this task attempt.
+    /// Requests cancellation for this task child_start_count.
     ///
     /// # Arguments
     ///
@@ -216,7 +229,7 @@ impl TaskContext {
     /// # Returns
     ///
     /// Returns a receiver that observes readiness changes.
-    pub fn readiness_receiver(&self) -> watch::Receiver<bool> {
+    pub fn readiness_receiver(&self) -> watch::Receiver<ReadinessState> {
         self.ready_signal.subscribe()
     }
 }

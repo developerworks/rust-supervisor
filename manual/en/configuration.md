@@ -4,7 +4,7 @@ Language: [中文](../zh/configuration.html)
 
 ## Entry Point
 
-The configuration entry point is `rust_supervisor::config::loader::load_config_state`. It accepts only the YAML primary configuration file. The repository example path is `examples/config/supervisor.yaml`.
+The configuration entry point is `rust_supervisor::config::loader::load_config_from_yaml_file`. It accepts only the YAML primary configuration file. The repository example path is `examples/config/supervisor.yaml`.
 
 The current configuration shape contains `supervisor`, `policy`, `shutdown`, and `observability` groups. They map into `SupervisorRootConfig`, `PolicyConfig`, `ShutdownConfig`, and `ObservabilityConfig`.
 

@@ -144,7 +144,7 @@
 - [X] T056 [P] [US3] 在 `src/policy/meltdown.rs` 中实现 child-level fuse(子任务级熔断),supervisor-level fuse(监督器级熔断) 和计数器重置,覆盖 FR-013,FR-014 和 FR-015.
 - [X] T057 [P] [US3] 在 `src/child_runner/attempt.rs` 中实现任务结果,取消,超时,unhealthy(不健康) 和 panic(恐慌) 到 `TaskExit` 的分类,覆盖 FR-010 和 FR-011.
 - [X] T058 [P] [US3] 在 `src/tree/order.rs` 中实现 `OneForOne`,`OneForAll` 和 `RestForOne` restart scope(重启范围) 选择,覆盖 FR-007.
-- [X] T058A [P] [US3] 在 `src/spec/supervisor.rs`,`src/tree/order.rs`,`src/runtime/control_loop.rs`,`src/tree/tests/tree_test.rs`,`src/control/tests/control_test.rs` 和 `src/tests/supervisor_auto_restart_test.rs` 中实现 group strategy(分组策略),dynamic supervisor(动态监督器),escalation policy(升级策略),per-child override(子任务级覆盖),restart budget(重启预算) 和 strategy execution plan(策略执行计划),覆盖 FR-007,FR-023 和 FR-070.
+- [X] T058A [P] [US3] 在 `src/spec/supervisor.rs`,`src/tree/order.rs`,`src/runtime/control_loop.rs`,`src/tree/tests/tree_test.rs`,`src/control/tests/control_test.rs` 和 `src/tests/supervisor_auto_restart_test.rs` 中实现 group strategy(分组策略),dynamic supervisor(动态监督器),escalation policy(升级策略),per-child override(子任务级覆盖),restart limit(重启次数限制) 和 strategy execution plan(策略执行计划),覆盖 FR-007,FR-023 和 FR-070.
 - [X] T059 [US3] 在 `src/event/payload.rs` 中发送 `ChildPanicked`,`BackoffScheduled`,`ChildRestarting`,`ChildRestarted`,`ChildQuarantined` 和 `Meltdown` 事件,覆盖 FR-028 和 SC-002.
 - [X] T060 [US3] 在 `src/child_runner/runner.rs` 中更新 child restart loop(子任务重启循环),使它使用策略决定并保持 cognitive complexity(认知复杂度) 预算,覆盖 FR-060.
 
@@ -319,6 +319,7 @@
 - [X] T141 更新 `specs/001-create-supervisor-core/quickstart.md`,记录最终验证命令和通过条件,覆盖 FR-054 和 SC-022.
 - [X] T142 更新 `specs/001-create-supervisor-core/contracts/public-api.md`,`specs/001-create-supervisor-core/data-model.md` 和 `specs/001-create-supervisor-core/glossary.md`,确保代码,契约,数据模型和词汇表同步,覆盖 FR-054,FR-066,SC-022 和 SC-034.
 - [X] T143 在 `specs/001-create-supervisor-core/tasks.md` 中完成 task completion ledger(任务完成台账) 的最终证据记录,确认没有 pending task(待处理任务),in-progress task(进行中任务),失败检查或未记录完成证据,覆盖 FR-071 到 FR-076 和 SC-039 到 SC-044.
+- [X] T144 记录 **`speckit.sync.proposals`** Proposal P9 APPLIED: `glossary.md` Policy And State(策略与状态) 表与 Rust 类型表补齐 `ChildState` 与 `ChildRuntimeRecord`、`ManagedChildState`、`ChildControlResult`、`ChildRuntimeState` 的对照说明,交叉引用 `specs/004-3-child-runtime-state-control`,落账日期 2026-05-15.
 
 ---
 
@@ -355,7 +356,7 @@
 - WS6 Control And Shutdown(控制和关闭): T061-T081,T129.
 - WS7 Observability Diagnostics(可观测性和诊断): T082-T094,T130.
 - WS8 Docs Examples Release(文档示例和发布): T007,T008,T097-T099,T103-T110,T121-T123,T138-T142.
-- WS9 Quality Governance(质量治理): T006,T111-T120,T131-T137,T143.
+- WS9 Quality Governance(质量治理): T006,T111-T120,T131-T137,T143-T144.
 
 ### Cross-Workstream Handoffs(跨工作流交接)
 
@@ -367,7 +368,7 @@
 - T097-T099,T103-T110 由 WS8 Docs Examples Release(文档示例和发布) 拥有,WS2 Configuration(集中配置) 只提供配置加载契约.
 - T124-T130 由各自源码模块的 primary workstream(主工作流) 拥有,WS9 Quality Governance(质量治理) 只通过 T131 汇总 documentation ownership(文档所有权) 证据.
 - T121-T123,T138-T142 由 WS8 Docs Examples Release(文档示例和发布) 拥有,WS9 Quality Governance(质量治理) 只消费验证结果.
-- T131-T137,T143 由 WS9 Quality Governance(质量治理) 拥有,其它工作流只提供各自完成证据.
+- T131-T137,T143-T144 由 WS9 Quality Governance(质量治理) 拥有,其它工作流只提供各自完成证据.
 
 ### Parallel Opportunities(并行机会)
 
@@ -430,7 +431,7 @@ Task(任务): "T123 在 docs/zh/parallel-governance.md 和 docs/en/parallel-gove
 2. lead agent(主代理) 按 WS1-WS9 分派 subagent workstream(子代理工作流),每个 subagent(子代理) 只修改自己的 primary files(主文件).
 3. lead agent(主代理) 持续读取 task completion ledger(任务完成台账),调度可执行 pending task(待处理任务),不得在单个任务完成后停止等待人工继续.
 4. lead agent(主代理) 对每个 subagent output(子代理输出) 执行 clean review record(清洁审查记录) 或 correction record(纠偏记录).
-5. 所有任务完成后,运行 T132-T143 的最终验证和完成证据记录.
+5. 所有任务完成后,运行 T132-T144 的最终验证和完成证据记录.
 
 ---
 

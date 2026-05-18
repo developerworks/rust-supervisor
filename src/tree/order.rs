@@ -88,7 +88,7 @@ pub fn restart_execution_plan(
             strategy: override_strategy.strategy,
             scope: restart_scope(tree, override_strategy.strategy, failed_child),
             group: None,
-            restart_budget: override_strategy.restart_budget.or(spec.restart_budget),
+            restart_limit: override_strategy.restart_limit.or(spec.restart_limit),
             escalation_policy: override_strategy
                 .escalation_policy
                 .or(spec.escalation_policy),
@@ -107,7 +107,7 @@ pub fn restart_execution_plan(
                 failed_child,
             ),
             group: Some(group_strategy.group.clone()),
-            restart_budget: group_strategy.restart_budget.or(spec.restart_budget),
+            restart_limit: group_strategy.restart_limit.or(spec.restart_limit),
             escalation_policy: group_strategy.escalation_policy.or(spec.escalation_policy),
             dynamic_supervisor_enabled: spec.dynamic_supervisor_policy.enabled,
         };
@@ -118,7 +118,7 @@ pub fn restart_execution_plan(
         strategy: spec.strategy,
         scope: restart_scope(tree, spec.strategy, failed_child),
         group: None,
-        restart_budget: spec.restart_budget,
+        restart_limit: spec.restart_limit,
         escalation_policy: spec.escalation_policy,
         dynamic_supervisor_enabled: spec.dynamic_supervisor_policy.enabled,
     }
@@ -272,4 +272,74 @@ fn group_rest_for_one(nodes: &[&SupervisorTreeNode], failed_child: &ChildId) -> 
         .iter()
         .map(|node| node.child.id.clone())
         .collect()
+}
+
+/// Performs Kahn topological sort on a list of children based on their dependencies.
+///
+/// # Arguments
+///
+/// - `children`: List of child specifications to sort.
+///
+/// # Returns
+///
+/// Returns `Ok(Vec<ChildId>)` with the topological order on success.
+///
+/// # Errors
+///
+/// Returns `Err(Vec<ChildId>)` containing the cycle node identifiers when a
+/// dependency cycle is detected.
+pub fn kahn_sort(children: &[crate::spec::child::ChildSpec]) -> Result<Vec<ChildId>, Vec<ChildId>> {
+    use std::collections::{HashMap, HashSet, VecDeque};
+
+    let mut in_degree: HashMap<ChildId, usize> = HashMap::new();
+    let mut adjacency: HashMap<ChildId, Vec<ChildId>> = HashMap::new();
+    let mut all_ids: HashSet<ChildId> = HashSet::new();
+
+    // Build graph structures keyed by ChildId.
+    for child in children {
+        let id = child.id.clone();
+        all_ids.insert(id.clone());
+        in_degree.entry(id.clone()).or_insert(0);
+        adjacency.entry(id.clone()).or_default();
+
+        for dep in &child.dependencies {
+            all_ids.insert(dep.clone());
+            adjacency.entry(dep.clone()).or_default().push(id.clone());
+            *in_degree.entry(id.clone()).or_insert(0) += 1;
+        }
+    }
+
+    // Initialize queue with zero in-degree nodes.
+    let mut queue: VecDeque<ChildId> = VecDeque::new();
+    for id in &all_ids {
+        if *in_degree.get(id).unwrap_or(&0) == 0 {
+            queue.push_back(id.clone());
+        }
+    }
+
+    let mut sorted: Vec<ChildId> = Vec::with_capacity(all_ids.len());
+    while let Some(node) = queue.pop_front() {
+        sorted.push(node.clone());
+        if let Some(neighbors) = adjacency.remove(&node) {
+            for neighbor in neighbors {
+                if let Some(deg) = in_degree.get_mut(&neighbor) {
+                    *deg -= 1;
+                    if *deg == 0 {
+                        queue.push_back(neighbor);
+                    }
+                }
+            }
+        }
+    }
+
+    if sorted.len() == all_ids.len() {
+        Ok(sorted)
+    } else {
+        // Collect nodes still in the graph (cycle participants).
+        let cycle_nodes: Vec<ChildId> = all_ids
+            .into_iter()
+            .filter(|id| !sorted.contains(id))
+            .collect();
+        Err(cycle_nodes)
+    }
 }

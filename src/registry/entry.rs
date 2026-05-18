@@ -3,8 +3,8 @@
 //! This module owns the runtime record for a registered child and keeps that
 //! record independent from task execution.
 
-use crate::child_runner::attempt::TaskExit;
-use crate::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use crate::child_runner::run_exit::TaskExit;
+use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::spec::child::ChildSpec;
 
 /// Runtime status for a registered child.
@@ -35,8 +35,8 @@ pub struct ChildRuntime {
     pub status: ChildRuntimeStatus,
     /// Current generation value.
     pub generation: Generation,
-    /// Current attempt value.
-    pub attempt: Attempt,
+    /// Current child_start_count value.
+    pub child_start_count: ChildStartCount,
     /// Number of restarts that have occurred.
     pub restart_count: u64,
     /// Last known task exit.
@@ -80,7 +80,7 @@ impl ChildRuntime {
             spec,
             status: ChildRuntimeStatus::Registered,
             generation: Generation::initial(),
-            attempt: Attempt::first(),
+            child_start_count: ChildStartCount::first(),
             restart_count: 0,
             last_exit: None,
         }

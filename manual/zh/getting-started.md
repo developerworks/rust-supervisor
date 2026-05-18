@@ -14,17 +14,17 @@
 cargo run --example supervisor_quickstart
 ```
 
-该示例执行固定路径: `load_config_state` 读取 YAML(数据序列化格式), `ConfigState::to_supervisor_spec` 派生 `SupervisorSpec`(监督器规格), `Supervisor::start` 启动 runtime(运行时), `current_state` 查询当前状态, `shutdown_tree` 关闭整棵树.
+该示例执行固定路径: `load_config_from_yaml_file` 读取 YAML(数据序列化格式), `ConfigState::to_supervisor_spec` 派生 `SupervisorSpec`(监督器规格), `Supervisor::start` 启动 runtime(运行时), `current_state` 查询当前状态, `shutdown_tree` 关闭整棵树.
 
 ## 最小代码路径
 
 ```rust
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 use rust_supervisor::runtime::supervisor::Supervisor;
 
 #[tokio::main]
 async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
-    let state = load_config_state("examples/config/supervisor.yaml")?;
+    let state = load_config_from_yaml_file("examples/config/supervisor.yaml")?;
     let spec = state.to_supervisor_spec()?;
     let handle = Supervisor::start(spec).await?;
     let current = handle.current_state().await?;

@@ -5,7 +5,7 @@
 use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
 use rust_supervisor::event::payload::{PolicyDecision, SupervisorEvent, What, Where};
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
-use rust_supervisor::id::types::{Attempt, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::journal::ring::EventJournal;
 use rust_supervisor::state::supervisor::SupervisorState;
 use rust_supervisor::summary::builder::RunSummaryBuilder;
@@ -19,7 +19,7 @@ fn event(sequence: u64, what: What) -> SupervisorEvent {
             sequence as u128,
             0,
             Generation::initial(),
-            Attempt::first(),
+            ChildStartCount::first(),
         )),
         Where::new(SupervisorPath::root()),
         what,

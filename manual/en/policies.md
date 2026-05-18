@@ -8,7 +8,7 @@ Language: [中文](../zh/policies.html)
 
 `restart_scope` calculates the restart scope from `SupervisorTree`, the strategy, and the failed child identifier.
 
-`restart_execution_plan` combines the supervisor strategy, `GroupStrategy`, `ChildStrategyOverride`, `RestartBudget`, `EscalationPolicy`, and `DynamicSupervisorPolicy` into a `StrategyExecutionPlan`. Child overrides take precedence over group strategies, and group strategies take precedence over the supervisor-wide strategy.
+`restart_execution_plan` combines the supervisor strategy, `GroupStrategy`, `ChildStrategyOverride`, `RestartLimit`, `EscalationPolicy`, and `DynamicSupervisorPolicy` into a `StrategyExecutionPlan`. Child overrides take precedence over group strategies, and group strategies take precedence over the supervisor-wide strategy.
 
 The runtime control loop now receives child exits and applies the selected `StrategyExecutionPlan` automatically when policy returns a restart decision. Runtime lifecycle events use `restart_plan` so operators can see the selected strategy, group, and child scope.
 
@@ -16,9 +16,9 @@ The runtime control loop now receives child exits and applies the selected `Stra
 
 `GroupStrategy` uses child `tags` to define a smaller restart scope. A child can belong to at most one configured strategy group. `ChildStrategyOverride` applies a per-child strategy and governance override when one child needs stricter restart behavior than its group or supervisor.
 
-## Restart Budget And Escalation
+## Restart Limit And Escalation
 
-`RestartBudget` records the maximum restart count and the counting window selected for a plan. `EscalationPolicy` records the follow-up action when restart governance cannot remain local, including parent escalation, tree shutdown, or scope quarantine.
+`RestartLimit` records the maximum restart count and the counting window selected for a plan. `EscalationPolicy` records the follow-up action when restart governance cannot remain local, including parent escalation, tree shutdown, or scope quarantine.
 
 ## Dynamic Supervisor Policy
 

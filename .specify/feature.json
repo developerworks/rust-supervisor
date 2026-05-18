@@ -1,10 +1,14 @@
 {
-  "feature_directory": "specs/004-3-child-slot-control",
-  "active_feature_directory": "specs/004-3-child-slot-control",
+  "feature_directory": "specs/006-6-config-dynamic-children",
+  "active_feature_directory": "specs/006-6-config-dynamic-children",
   "feature_directories": [
-    "specs/004-1-runtime-lifecycle-guard",
-    "specs/004-2-real-shutdown-pipeline",
-    "specs/004-3-child-slot-control",
-    "specs/004-4-generation-fencing"
+    "specs/005-1-failure-policy-reliability",
+    "specs/005-2-work-role-defaults",
+    "specs/006-1-platform-docs-ipc-security",
+    "specs/006-2-release-supply-chain-gates",
+    "specs/006-3-lifecycle-shutdown-realism",
+    "specs/006-4-restart-policy-production",
+    "specs/006-5-typed-events-observability",
+    "specs/006-6-config-dynamic-children"
   ]
 }

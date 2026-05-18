@@ -1,7 +1,7 @@
 //! Demonstrates an operator control flow against a running supervisor.
 
 // Import the YAML configuration loader.
-use rust_supervisor::config::loader::load_config_state;
+use rust_supervisor::config::loader::load_config_from_yaml_file;
 // Import the command result type.
 use rust_supervisor::control::command::CommandResult;
 // Import child identifiers and supervisor paths.
@@ -18,7 +18,7 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 /// Runs the runtime control story example.
 async fn main() -> ExampleResult {
     // Load centralized YAML configuration.
-    let state = load_config_state("examples/config/supervisor.yaml")?;
+    let state = load_config_from_yaml_file("examples/config/supervisor.yaml")?;
     // Derive the supervisor specification from configuration.
     let spec = state.to_supervisor_spec()?;
     // Start the supervisor runtime from the specification.

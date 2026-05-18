@@ -3,13 +3,16 @@
 //! The handle owns the command sender side and exposes asynchronous control
 //! methods. It keeps command construction separate from runtime execution.
 
+use crate::child_runner::runner::ChildRunReport;
 use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
 use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
+use crate::observe::pipeline::{ObservabilityPipeline, TestRecorder};
 use crate::runtime::lifecycle::{RuntimeControlPlane, RuntimeExitReport, RuntimeHealthReport};
 use crate::runtime::message::{ControlPlaneMessage, RuntimeLoopMessage};
 use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 /// Cloneable handle used to control a running supervisor.
@@ -21,6 +24,8 @@ pub struct SupervisorHandle {
     event_sender: broadcast::Sender<String>,
     /// Runtime control plane lifecycle state.
     control_plane: RuntimeControlPlane,
+    /// Shared typed observability pipeline.
+    observability: Arc<Mutex<ObservabilityPipeline>>,
     /// Optional dashboard IPC runtime guard.
     dashboard_runtime: Option<Arc<DashboardIpcRuntimeGuard>>,
 }
@@ -41,10 +46,37 @@ impl SupervisorHandle {
         event_sender: broadcast::Sender<String>,
         control_plane: RuntimeControlPlane,
     ) -> Self {
+        Self::new_with_observability(
+            command_sender,
+            event_sender,
+            control_plane,
+            Arc::new(Mutex::new(ObservabilityPipeline::new(16, 16))),
+        )
+    }
+
+    /// Creates a runtime handle with a shared observability pipeline.
+    ///
+    /// # Arguments
+    ///
+    /// - `command_sender`: Sender used to submit runtime commands.
+    /// - `event_sender`: Sender used to subscribe to lifecycle event text.
+    /// - `control_plane`: Runtime control plane lifecycle state.
+    /// - `observability`: Shared typed observability pipeline.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`].
+    pub(crate) fn new_with_observability(
+        command_sender: mpsc::Sender<RuntimeLoopMessage>,
+        event_sender: broadcast::Sender<String>,
+        control_plane: RuntimeControlPlane,
+        observability: Arc<Mutex<ObservabilityPipeline>>,
+    ) -> Self {
         Self {
             command_sender,
             event_sender,
             control_plane,
+            observability,
             dashboard_runtime: None,
         }
     }
@@ -357,6 +389,53 @@ impl SupervisorHandle {
                 .send("runtime_control_loop_started:startup".to_owned());
         }
         receiver
+    }
+
+    /// Returns a copy of the typed observability test recorder.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the currently retained [`TestRecorder`] contents.
+    pub fn observability_recorder(&self) -> TestRecorder {
+        self.observability
+            .lock()
+            .map(|pipeline| pipeline.test_recorder.clone())
+            .unwrap_or_default()
+    }
+
+    /// Hidden integration-test hook that feeds a synthetic [`ChildRunReport`] through the mailbox.
+    ///
+    /// Production callers must not rely on this hook.
+    #[doc(hidden)]
+    pub async fn generation_fencing_replay_child_exit_for_test(
+        &self,
+        report: ChildRunReport,
+    ) -> Result<(), SupervisorError> {
+        if let Some(report_final) = self.control_plane.final_report() {
+            return Err(runtime_exit_error(&report_final));
+        }
+        if !self.control_plane.is_alive() {
+            return Err(SupervisorError::InvalidTransition {
+                message: format!(
+                    "runtime control loop is not alive: state={}",
+                    self.control_plane.health().state.as_str()
+                ),
+            });
+        }
+        self.command_sender
+            .send(RuntimeLoopMessage::ControlPlane(
+                ControlPlaneMessage::ReplayChildExitForTest {
+                    report: Box::new(report),
+                },
+            ))
+            .await
+            .map_err(|_| SupervisorError::InvalidTransition {
+                message: "runtime control loop is closed".to_owned(),
+            })
     }
 
     /// Sends one control command and waits for the result.

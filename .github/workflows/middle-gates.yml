@@ -1,0 +1,52 @@
+# Middle release gates — blocking checks for every release.
+# Failure blocks the release unless a valid ExemptionTicket is provided.
+
+name: Middle Gates
+
+on:
+  workflow_call:  # reusable by release workflow
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  middle-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Install cargo-semver-checks
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks
+
+      - name: Dependency audit (dependency_audit)
+        id: dependency_audit
+        run: cargo audit --deny warnings
+
+      - name: License check (license_check)
+        id: license_check
+        run: cargo deny check licenses
+
+      - name: Advisory check (advisory_check)
+        id: advisory_check
+        run: cargo deny check advisories
+
+      - name: Semver compatibility check (semver_checks)
+        id: semver_checks
+        run: cargo semver-checks
+
+      - name: MSRV verify (msrv_verify)
+        id: msrv_verify
+        run: bash scripts/verify-msrv.sh

@@ -15,9 +15,18 @@ fn exponential_backoff_caps_at_maximum() {
         Duration::from_secs(1),
     );
 
-    assert_eq!(policy.delay_for_attempt(1), Duration::from_millis(10));
-    assert_eq!(policy.delay_for_attempt(2), Duration::from_millis(20));
-    assert_eq!(policy.delay_for_attempt(3), Duration::from_millis(25));
+    assert_eq!(
+        policy.delay_for_child_start_count(1),
+        Duration::from_millis(10)
+    );
+    assert_eq!(
+        policy.delay_for_child_start_count(2),
+        Duration::from_millis(20)
+    );
+    assert_eq!(
+        policy.delay_for_child_start_count(3),
+        Duration::from_millis(25)
+    );
 }
 
 /// Verifies that stable runtime resets the backoff window.

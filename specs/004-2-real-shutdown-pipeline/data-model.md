@@ -44,7 +44,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 |-------------|------------|-------------------|
 | `child_id` | `ChildId` | 稳定 child(子任务) 标识. |
 | `path` | `SupervisorPath` | child(子任务) 在 supervisor tree(监督树) 中的路径. |
-| `generation` | `Generation` | 当前 runtime slot(运行时槽位) 的代际. |
+| `generation` | `Generation` | 当前 runtime state(运行时状态) 的代次. |
 | `attempt` | `Attempt` | 当前运行尝试编号. |
 | `cancellation_token` | `CancellationToken` | 运行时保存的取消令牌 clone(克隆). |
 | `abort_handle` | `AbortHandle` | 能中止真实 child future(子任务 future) 的句柄. |
@@ -68,7 +68,7 @@ Idle -> RequestStop -> GracefulDrain -> AbortStragglers -> Reconcile -> Complete
 |-------------|------------|-------------------|
 | `child_id` | `ChildId` | 结果所属 child(子任务). |
 | `path` | `SupervisorPath` | child(子任务) 路径. |
-| `generation` | `Generation` | 关闭时关联的代际. |
+| `generation` | `Generation` | 关闭时关联的代次. |
 | `attempt` | `Attempt` | 关闭时关联的尝试编号. |
 | `status` | `ChildShutdownStatus` | 最终关闭分类. |
 | `cancel_delivered` | `bool` | 是否发送了取消. |

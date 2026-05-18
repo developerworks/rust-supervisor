@@ -4,7 +4,7 @@
 
 ## 配置入口
 
-配置入口是 `rust_supervisor::config::loader::load_config_state`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.
+配置入口是 `rust_supervisor::config::loader::load_config_from_yaml_file`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.
 
 当前配置形状包含四组数据: `supervisor`, `policy`, `shutdown` 和 `observability`. 它们分别进入 `SupervisorRootConfig`(监督器根配置), `PolicyConfig`(策略配置), `ShutdownConfig`(关闭配置) 和 `ObservabilityConfig`(可观测性配置).
 

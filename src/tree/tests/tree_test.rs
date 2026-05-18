@@ -5,7 +5,7 @@
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::{
-    ChildStrategyOverride, EscalationPolicy, GroupStrategy, RestartBudget, SupervisionStrategy,
+    ChildStrategyOverride, EscalationPolicy, GroupStrategy, RestartLimit, SupervisionStrategy,
     SupervisorSpec,
 };
 use rust_supervisor::task::factory::{TaskResult, service_fn};
@@ -65,16 +65,16 @@ fn group_strategy_limits_restart_plan_to_group_members() {
     assert_eq!(plan.scope, vec![second.id, third.id]);
 }
 
-/// Verifies that child overrides win over group strategies.
+/// Verifies that a child override takes precedence over group strategy.
 #[test]
-fn child_override_wins_over_group_strategy_and_selects_budget() {
+fn child_override_wins_over_group_strategy_and_selects_limit() {
     let mut first = child("first");
     let second = child("second");
     first.tags.push("pipeline".to_owned());
-    let budget = RestartBudget::new(3, Duration::from_secs(10));
+    let limit = RestartLimit::new(3, Duration::from_secs(10));
     let mut override_strategy =
         ChildStrategyOverride::new(first.id.clone(), SupervisionStrategy::OneForAll);
-    override_strategy.restart_budget = Some(budget);
+    override_strategy.restart_limit = Some(limit);
     override_strategy.escalation_policy = Some(EscalationPolicy::ShutdownTree);
     let mut spec = SupervisorSpec::root(vec![first.clone(), second.clone()]);
     spec.group_strategies = vec![GroupStrategy::new(
@@ -89,7 +89,7 @@ fn child_override_wins_over_group_strategy_and_selects_budget() {
     assert_eq!(plan.group, None);
     assert_eq!(plan.strategy, SupervisionStrategy::OneForAll);
     assert_eq!(plan.scope, vec![first.id, second.id]);
-    assert_eq!(plan.restart_budget, Some(budget));
+    assert_eq!(plan.restart_limit, Some(limit));
     assert_eq!(plan.escalation_policy, Some(EscalationPolicy::ShutdownTree));
 }
 
@@ -140,11 +140,11 @@ fn validation_rejects_unknown_child_override() {
     assert!(error.to_string().contains("unknown child"));
 }
 
-/// Verifies that invalid restart budgets are rejected.
+/// Verifies that invalid restart limits are rejected.
 #[test]
-fn validation_rejects_invalid_restart_budget() {
+fn validation_rejects_invalid_restart_limit() {
     let mut spec = SupervisorSpec::root(vec![child("worker")]);
-    spec.restart_budget = Some(RestartBudget::new(0, Duration::from_secs(1)));
+    spec.restart_limit = Some(RestartLimit::new(0, Duration::from_secs(1)));
 
     let error = spec.validate().unwrap_err();
 

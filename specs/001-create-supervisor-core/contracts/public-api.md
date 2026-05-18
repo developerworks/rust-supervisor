@@ -187,7 +187,7 @@ pub trait TaskFactory: Send + Sync + 'static {
 - backoff policy default(退避策略默认值)
 - health policy default(健康策略默认值)
 - readiness policy default(就绪策略默认值)
-- shutdown budget(关闭预算)
+- shutdown limit(关闭预算)
 - observability option(可观测性选项)
 
 配置错误必须产生 `FatalConfig`(致命配置错误),并拒绝启动整棵树.模块内部不得保存可调配置默认值.
@@ -218,12 +218,12 @@ pub trait TaskFactory: Send + Sync + 'static {
 核心枚举如下:
 
 - `SupervisionStrategy`(监督策略): `OneForOne`(一对一),`OneForAll`(一对全部),`RestForOne`(从失败处开始)
-- `GroupStrategy`(分组策略): 使用 child tag(子任务标签) 限定策略范围,并可携带 group-level restart budget(分组级重启预算) 和 escalation policy(升级策略)
-- `ChildStrategyOverride`(子任务级覆盖): 对单个 child(子任务) 覆盖 strategy(策略),restart budget(重启预算) 和 escalation policy(升级策略)
-- `RestartBudget`(重启预算): `max_restarts`(最大重启次数) 和 `window`(统计窗口)
+- `GroupStrategy`(分组策略): 使用 child tag(子任务标签) 限定策略范围,并可携带 group-level restart limit(分组级重启次数限制) 和 escalation policy(升级策略)
+- `ChildStrategyOverride`(子任务级覆盖): 对单个 child(子任务) 覆盖 strategy(策略),restart limit(重启次数限制) 和 escalation policy(升级策略)
+- `RestartLimit`(重启次数限制): `max_restarts`(最大重启次数) 和 `window`(统计窗口)
 - `EscalationPolicy`(升级策略): `EscalateToParent`(升级到父级),`ShutdownTree`(关闭整棵树),`QuarantineScope`(隔离范围)
 - `DynamicSupervisorPolicy`(动态监督器策略): 控制 runtime add_child(运行时添加子任务) 的 `enabled`(启用开关) 和 `child_limit`(子任务上限)
-- `StrategyExecutionPlan`(策略执行计划): 合并 supervisor strategy(监督器策略),group strategy(分组策略),per-child override(子任务级覆盖),restart budget(重启预算) 和 escalation policy(升级策略) 后的单次运行计划
+- `StrategyExecutionPlan`(策略执行计划): 合并 supervisor strategy(监督器策略),group strategy(分组策略),per-child override(子任务级覆盖),restart limit(重启次数限制) 和 escalation policy(升级策略) 后的单次运行计划
 - `RestartPolicy`(重启策略): `Permanent`(永久),`Transient`(瞬时),`Temporary`(临时)
 - `RestartDecision`(重启决策): `DoNotRestart`(不重启),`RestartAfter`(延迟后重启),`Quarantine`(隔离),`EscalateToParent`(升级到父级),`ShutdownTree`(关闭整棵树)
 - `TaskFailureKind`(任务失败类别): `Recoverable`(可恢复),`FatalConfig`(致命配置错误),`FatalBug`(致命代码错误),`ExternalDependency`(外部依赖错误),`Timeout`(超时),`Panic`(恐慌),`Cancelled`(已取消)

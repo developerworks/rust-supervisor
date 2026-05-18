@@ -113,6 +113,7 @@
 - [X] T034 在 `specs/004-1-runtime-lifecycle-guard/quickstart.md` 中对照执行 `cargo test --test supervisor_control_test --test observability_smoke_test`.
 - [ ] T035 在 `specs/004-1-runtime-lifecycle-guard/quickstart.md` 中对照执行 `cargo test`.
 - [X] T036 在仓库根目录对照 `specs/004-1-runtime-lifecycle-guard/quickstart.md` 执行 `cargo fmt --check`.
+- [X] T037 按同步决议 **speckit.sync.proposals** 中 **Proposal P6** **APPLIED**, 把 **`specs/004-1-runtime-lifecycle-guard/spec.md`** 头部 **`Status(状态)`** 设为 **`Accepted(已接受)`**, 并写入 **`Updated(更新日期)`** **2026-05-15** 与漂移同步批次落账一致.
 
 ---
 

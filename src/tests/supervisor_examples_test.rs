@@ -37,7 +37,7 @@ fn demo_example_owns_dashboard_runtime_outside_core() {
     let bootstrap =
         fs::read_to_string(root.join("examples/demo/bootstrap.rs")).expect("read bootstrap");
 
-    assert!(runner.contains("load_config_state"));
+    assert!(runner.contains("load_config_from_yaml_file"));
     assert!(runner.contains("Supervisor::start_from_config_state"));
     assert!(runner.contains("state.ipc = None"));
     assert!(bootstrap.contains("start_demo_dashboard_runtime"));

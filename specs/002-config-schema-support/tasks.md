@@ -104,7 +104,7 @@
 
 - [X] T026 [US3] 在 `src/config/state.rs` 中增强 semantic validation(语义校验),确保正数约束,backoff(退避) 顺序,jitter ratio(抖动比例),shutdown budget(关闭预算) 和 capacity(容量) 的错误包含字段或 section(配置分区)。
 - [X] T027 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_state`,并在创建 channel(通道) 前调用 `ConfigState::to_supervisor_spec`。
-- [X] T028 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_file`,并复用 `crate::config::loader::load_config_state` 和 `Supervisor::start_from_config_state`。
+- [X] T028 [US3] 在 `src/runtime/supervisor.rs` 中实现 `Supervisor::start_from_config_file`,并复用 `crate::config::loader::load_config_from_yaml_file` 和 `Supervisor::start_from_config_state`。
 - [X] T029 [US3] 在 `src/config/loader.rs` 和 `src/config/yaml.rs` 中统一 syntax validation(语法校验),structural validation(结构校验) 和 semantic validation(语义校验) 的 `FatalConfig`(致命配置错误) 消息格式。
 
 **Checkpoint(检查点)**: User Story 3(用户故事三) 已经可用,非法配置无法进入运行时启动阶段。

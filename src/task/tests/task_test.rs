@@ -2,7 +2,8 @@
 //!
 //! These tests verify fresh task future construction and task context signals.
 
-use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
+use rust_supervisor::readiness::signal::ReadinessState;
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
 
@@ -18,14 +19,14 @@ async fn service_fn_builds_fresh_task_future() {
         ChildId::new("worker"),
         SupervisorPath::root().join("worker"),
         Generation::initial(),
-        Attempt::first(),
+        ChildStartCount::first(),
     );
     let ready = ctx.readiness_receiver();
 
     let result = TaskFactory::build(&service, ctx).await;
 
     assert_eq!(result, TaskResult::Succeeded);
-    assert!(*ready.borrow());
+    assert_eq!(*ready.borrow(), ReadinessState::Ready);
 }
 
 /// Verifies that task context exposes cancellation state.
@@ -35,7 +36,7 @@ fn task_context_exposes_cancellation_state() {
         ChildId::new("worker"),
         SupervisorPath::root().join("worker"),
         Generation::initial(),
-        Attempt::first(),
+        ChildStartCount::first(),
     );
 
     ctx.cancel();

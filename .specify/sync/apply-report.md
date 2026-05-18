@@ -1,41 +1,55 @@
-# Sync Apply Report(同步应用报告)
+# Sync Apply Report
 
-Applied(应用时间): 2026-05-15T01:30:16+08:00
-Based on(基于): `.specify/sync/proposals.json` (全部 `approved: true` 的 `P001`..`P007`)
+Applied: 2026-05-18T00:00:00Z
+Based on: proposals from 2026-05-18T00:00:00Z (auto-approve)
 
-## Changes Made(已做变更)
+## Summary
 
-### Specs Updated(已更新规格)
+| Category | Count |
+|----------|-------|
+| Specs Updated | 1 |
+| Proposals Applied | 6 |
+| Align Tasks Generated | 3 |
+| Not Applied | 1 (deferred) |
 
-None(无). 本轮无 BACKFILL, 且 **P007** 选择 **Option C** 明确要求**不**修改 `specs/001-create-supervisor-core/spec.md` 正文.
+---
 
-### New Specs Created(已创建新规格)
+## Changes Made
 
-None(无).
+### Specs Updated
 
-### Drift Workflow Artifacts(偏差工作流产物)
+| Spec | Section | Change Type | Proposal |
+|------|---------|-------------|----------|
+| 006-4-restart-policy-production/spec.md | Key Entities | Modified | #6 (GroupConfig/GroupDependencyEdge/SeverityDefaults) |
+| 006-4-restart-policy-production/spec.md | Key Entities | Modified | #7 (ChildSpec.severity/ChildSpec.group) |
+| 006-4-restart-policy-production/spec.md | Diagnostics | Modified | #5 (emit_policy_diagnostic) |
 
-- 新增 `.specify/sync/drift-supersession.md`, 落实 **P007 Option C** 的 superseded 索引, 供后续 `speckit.sync.analyze` 人工分流或脚本引用.
+### Implementation Tasks Generated
 
-### Implementation Tasks Generated(已生成实现任务)
+| Task ID | Requirement | Priority | Est. Effort | File |
+|---------|-------------|----------|-------------|------|
+| ALIGN-001 | SC-000 (策略事件发射) | P0 | medium | `.specify/sync/align-tasks.md` |
+| ALIGN-002 | FR-003 (CorrelationId) | P0 | small | `.specify/sync/align-tasks.md` |
+| ALIGN-003 | FR-001 (FairnessProbe typed event) | P1 | medium | `.specify/sync/align-tasks.md` |
 
-- 重写 `.specify/sync/align-tasks.md` **顶部**为 `2026-05-15` 批次: `P001`..`P006` 六条 ALIGN 对齐任务与 **M007** 元任务.
-- 保留 **2026-05-08** 历史 `A001`, `A002` 于 **Historical** 小节, 标题降级为 `###`, 避免双一级标题.
+### Not Applied
 
-### Proposal Status Updated(已更新提案状态)
+| Proposal | Reason |
+|----------|--------|
+| #4 (SC-003 事件/指标一致率) | 推迟到 006-5-typed-events-observability 切片 |
 
-- `P001`..`P007` 均已写入 `applied: true` 与 `applied_at` 于 `.specify/sync/proposals.json`.
+## Asset Inventory
 
-### Not Applied(未应用)
+| Asset | Path |
+|-------|------|
+| Backup (spec.md) | `.specify/sync/backups/spec.md.2026-05-18` |
+| Backfill changes | `specs/006-4-restart-policy-production/spec.md` |
+| Align tasks | `.specify/sync/align-tasks.md` |
 
-None(无). 所有已批准提案均已落盘为任务或 supersession 索引.
+## Next Steps
 
-## Next Steps(下一步)
-
-1. 按 `align-tasks.md` 中 **Task P001** 起顺序实现或再拆任务.
-2. 评审 `.specify/sync/drift-supersession.md`, 必要时补行以覆盖 `drift-report` 中其余 001 条目.
-3. 可选提交: `git add .specify/sync/ && git commit -m "sync: apply drift resolutions (align-tasks, supersession, proposals applied)"`.
-
-## Validation Evidence(验证证据)
-
-- `python3 -m json.tool` 或等效解析确认 `proposals.json` 与将写入的 `apply-report.json` 结构合法.
+1. **Implement ALIGN-001**: 修复 `stage_emit_typed_event` 发射策略事件
+2. **Implement ALIGN-002**: 修复 CorrelationId 传递 (1 行改动)
+3. **Implement ALIGN-003**: 新增 `What::FairnessProbeStarvation` typed event
+4. **Verify**: `cargo test` + `cargo clippy -- -D warnings`
+5. **Commit**: `git add specs/ .specify/sync/ && git commit`

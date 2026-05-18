@@ -84,10 +84,14 @@ fn main() {
         2,
         // Set the child restart window.
         Duration::from_secs(60),
-        // Set the supervisor failure limit.
+        // Set the group failure limit.
         5,
-        // Set the supervisor failure window.
+        // Set the group failure window.
         Duration::from_secs(60),
+        // Set the supervisor failure limit.
+        10,
+        // Set the supervisor failure window.
+        Duration::from_secs(120),
         // Set the stable reset window.
         Duration::from_secs(300),
         // Finish the meltdown policy construction.
@@ -96,18 +100,28 @@ fn main() {
     let mut tracker = MeltdownTracker::new(policy);
     // Capture the current monotonic instant.
     let now = Instant::now();
+    // Create a test child identifier for tracking.
+    let child_id = rust_supervisor::id::types::ChildId::new("example-child".to_string());
 
     // Iterate over restart offsets.
     for offset_ms in [0, 10, 20] {
-        // Record a child restart at the offset instant.
-        let outcome = tracker.record_child_restart(now + Duration::from_millis(offset_ms));
-        // Print the fuse state after the restart.
+        // Record a child restart at the offset instant and get outcome.
+        let outcome = tracker.record_child_restart_with_group(
+            // Reuse the same child identifier so the child fuse can count restarts.
+            child_id.clone(),
+            // Reuse the same group identifier so the group fuse can count failures.
+            Some("example-group".to_string()),
+            // Offset the instant to keep the example deterministic.
+            now + Duration::from_millis(offset_ms),
+            // Finish the scoped restart record call.
+        );
+        // Print the fuse state with failure count and outcome status.
         println!(
-            // Provide the output template.
+            // Format the restart offset, child failure count, and outcome.
             "restart_at_ms={offset_ms} child_failures={} outcome={outcome:?}",
-            // Include the current child failure count.
-            tracker.child_failure_count(),
-            // Finish printing the fuse state.
+            // Read the failure count for the tracked child.
+            tracker.child_failure_count(&child_id),
+            // Finish the fuse state print call.
         );
         // Finish the fuse loop.
     }

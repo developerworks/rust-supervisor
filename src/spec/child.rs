@@ -5,14 +5,18 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
+use crate::policy::role_defaults::{SeverityClass, SidecarConfig, WorkRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::task::factory::TaskFactory;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Kind of task represented by a child declaration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum TaskKind {
     /// Asynchronous worker that can be cancelled through its context.
     AsyncWorker,
@@ -22,8 +26,16 @@ pub enum TaskKind {
     Supervisor,
 }
 
+impl Default for TaskKind {
+    /// Returns the default task kind: [`AsyncWorker`](TaskKind::AsyncWorker).
+    fn default() -> Self {
+        Self::AsyncWorker
+    }
+}
+
 /// Importance of a child to its parent supervisor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum Criticality {
     /// The child is required for the supervisor to remain healthy.
     Critical,
@@ -31,8 +43,16 @@ pub enum Criticality {
     Optional,
 }
 
+impl Default for Criticality {
+    /// Returns the default criticality: [`Optional`](Criticality::Optional).
+    fn default() -> Self {
+        Self::Optional
+    }
+}
+
 /// Restart behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum RestartPolicy {
     /// Restart regardless of the exit result.
     Permanent,
@@ -42,8 +62,15 @@ pub enum RestartPolicy {
     Temporary,
 }
 
+impl Default for RestartPolicy {
+    /// Returns the default restart policy: [`Permanent`](RestartPolicy::Permanent).
+    fn default() -> Self {
+        Self::Permanent
+    }
+}
+
 /// Shutdown behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ShutdownPolicy {
     /// Graceful stop budget for cooperative shutdown.
     pub graceful_timeout: Duration,
@@ -81,7 +108,7 @@ impl ShutdownPolicy {
 }
 
 /// Health behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct HealthPolicy {
     /// Expected heartbeat interval.
     pub heartbeat_interval: Duration,
@@ -108,8 +135,104 @@ impl HealthPolicy {
     }
 }
 
+/// Health check configuration for a child declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct HealthCheckConfig {
+    /// Interval between health checks in seconds.
+    pub check_interval_secs: u64,
+    /// Timeout for each health check in seconds.
+    pub timeout_secs: u64,
+    /// Maximum retries before marking the child as unhealthy.
+    pub max_retries: u32,
+}
+
+impl Default for HealthCheckConfig {
+    /// Returns the default health check config: 10s interval, 5s timeout, 3 retries.
+    fn default() -> Self {
+        Self {
+            check_interval_secs: 10,
+            timeout_secs: 5,
+            max_retries: 3,
+        }
+    }
+}
+
+/// Readiness check configuration for a child declaration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ReadinessConfig {
+    /// Interval between readiness checks in seconds.
+    pub check_interval_secs: u64,
+    /// Timeout for each readiness check in seconds.
+    pub timeout_secs: u64,
+}
+
+impl Default for ReadinessConfig {
+    /// Returns the default readiness config: 5s interval, 3s timeout.
+    fn default() -> Self {
+        Self {
+            check_interval_secs: 5,
+            timeout_secs: 3,
+        }
+    }
+}
+
+/// Resource limits for a child process.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ResourceLimits {
+    /// Maximum memory in megabytes.
+    pub max_memory_mb: Option<u64>,
+    /// Maximum CPU usage as a percentage.
+    pub max_cpu_percent: Option<u8>,
+    /// Maximum number of open file descriptors.
+    pub max_file_descriptors: Option<u64>,
+}
+
+/// Command permissions granted to a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct CommandPermissions {
+    /// Whether the child may trigger supervisor shutdown.
+    pub allow_shutdown: bool,
+    /// Whether the child may request its own restart.
+    pub allow_restart: bool,
+    /// Signals the child is allowed to send.
+    pub allowed_signals: Vec<String>,
+}
+
+impl Default for CommandPermissions {
+    /// Returns the default command permissions: no shutdown, no restart, SIGTERM only.
+    fn default() -> Self {
+        Self {
+            allow_shutdown: false,
+            allow_restart: false,
+            allowed_signals: vec!["SIGTERM".to_string()],
+        }
+    }
+}
+
+/// Environment variable for a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct EnvVar {
+    /// Environment variable name.
+    pub name: String,
+    /// Plain-text value (mutually exclusive with secret_ref).
+    pub value: Option<String>,
+    /// Secret reference in `${SECRET_NAME}` format (mutually exclusive with value).
+    pub secret_ref: Option<String>,
+}
+
+/// Secret reference for a child.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct SecretRef {
+    /// Secret name used as an identifier.
+    pub name: String,
+    /// Key path within the vault.
+    pub key: String,
+    /// Whether the secret is required (vault offline treated as rejection when true).
+    pub required: bool,
+}
+
 /// Backoff behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BackoffPolicy {
     /// Initial delay before the first restart.
     pub initial_delay: Duration,
@@ -141,7 +264,7 @@ impl BackoffPolicy {
 }
 
 /// Declarative specification for a child task or nested supervisor.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ChildSpec {
     /// Stable child identifier.
     pub id: ChildId,
@@ -150,6 +273,8 @@ pub struct ChildSpec {
     /// Child task kind.
     pub kind: TaskKind,
     /// Optional factory for worker children.
+    #[serde(skip)]
+    #[schemars(skip)]
     pub factory: Option<Arc<dyn TaskFactory>>,
     /// Restart policy for this child.
     pub restart_policy: RestartPolicy,
@@ -167,6 +292,36 @@ pub struct ChildSpec {
     pub tags: Vec<String>,
     /// Criticality used by parent policy decisions.
     pub criticality: Criticality,
+    /// Optional role that selects default lifecycle policy semantics.
+    #[serde(default)]
+    pub work_role: Option<WorkRole>,
+    /// Optional sidecar binding used when the role is [`WorkRole::Sidecar`].
+    #[serde(default)]
+    pub sidecar_config: Option<SidecarConfig>,
+    /// Optional explicit severity classification that overrides the role default (US3).
+    #[serde(default)]
+    pub severity: Option<SeverityClass>,
+    /// Optional group name for group-level isolation and budget tracking (US2).
+    #[serde(default)]
+    pub group: Option<String>,
+    /// Optional health check configuration.
+    #[serde(default)]
+    pub health_check: Option<HealthCheckConfig>,
+    /// Optional readiness check configuration.
+    #[serde(default)]
+    pub readiness: Option<ReadinessConfig>,
+    /// Optional resource limits.
+    #[serde(default)]
+    pub resource_limits: Option<ResourceLimits>,
+    /// Command permissions granted to this child.
+    #[serde(default)]
+    pub command_permissions: CommandPermissions,
+    /// Environment variables for this child.
+    #[serde(default)]
+    pub environment: Vec<EnvVar>,
+    /// Secret references for this child.
+    #[serde(default)]
+    pub secrets: Vec<SecretRef>,
 }
 
 impl Debug for ChildSpec {
@@ -185,6 +340,16 @@ impl Debug for ChildSpec {
             .field("dependencies", &self.dependencies)
             .field("tags", &self.tags)
             .field("criticality", &self.criticality)
+            .field("work_role", &self.work_role)
+            .field("sidecar_config", &self.sidecar_config)
+            .field("severity", &self.severity)
+            .field("group", &self.group)
+            .field("health_check", &self.health_check)
+            .field("readiness", &self.readiness)
+            .field("resource_limits", &self.resource_limits)
+            .field("command_permissions", &self.command_permissions)
+            .field("environment", &self.environment)
+            .field("secrets", &self.secrets)
             .finish()
     }
 }
@@ -197,7 +362,7 @@ impl ChildSpec {
     /// - `id`: Stable child identifier.
     /// - `name`: Human-readable child name.
     /// - `kind`: Worker task kind.
-    /// - `factory`: Task factory used to build each attempt.
+    /// - `factory`: Task factory used to build each child_start_count.
     ///
     /// # Returns
     ///
@@ -240,6 +405,16 @@ impl ChildSpec {
             dependencies: Vec::new(),
             tags: Vec::new(),
             criticality: Criticality::Critical,
+            work_role: Some(WorkRole::Worker),
+            sidecar_config: None,
+            severity: None,
+            group: None,
+            health_check: None,
+            readiness: None,
+            resource_limits: None,
+            command_permissions: CommandPermissions::default(),
+            environment: Vec::new(),
+            secrets: Vec::new(),
         }
     }
 
@@ -257,7 +432,8 @@ impl ChildSpec {
         validate_non_empty(&self.name, "child name")?;
         validate_tags(&self.tags)?;
         validate_backoff(self.backoff_policy)?;
-        validate_factory(self.kind, self.factory.is_some())
+        validate_factory(self.kind, self.factory.is_some())?;
+        validate_sidecar_local(self)
     }
 }
 
@@ -338,6 +514,27 @@ fn validate_factory(kind: TaskKind, has_factory: bool) -> Result<(), SupervisorE
         (TaskKind::AsyncWorker | TaskKind::BlockingWorker, false) => Err(
             SupervisorError::fatal_config("worker child requires a task factory"),
         ),
+        _ => Ok(()),
+    }
+}
+
+/// Validates local sidecar fields without inspecting sibling children.
+///
+/// # Arguments
+///
+/// - `child`: Child specification to validate.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when the local sidecar declaration is coherent.
+fn validate_sidecar_local(child: &ChildSpec) -> Result<(), SupervisorError> {
+    match (child.work_role, child.sidecar_config.as_ref()) {
+        (Some(WorkRole::Sidecar), None) => Err(SupervisorError::fatal_config(
+            "sidecar work_role requires sidecar_config",
+        )),
+        (role, Some(_)) if role != Some(WorkRole::Sidecar) => Err(SupervisorError::fatal_config(
+            "sidecar_config requires sidecar work_role",
+        )),
         _ => Ok(()),
     }
 }

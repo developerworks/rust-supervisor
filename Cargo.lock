@@ -724,6 +724,7 @@ name = "rust-tokio-supervisor"
 version = "0.1.2"
 dependencies = [
  "confique",
+ "libc",
  "metrics",
  "rand",
  "rust-config-tree",

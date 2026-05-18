@@ -2,7 +2,7 @@
 //!
 //! These tests verify immediate and explicit readiness behavior.
 
-use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadySignal};
+use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadinessState, ReadySignal};
 
 /// Verifies that immediate readiness reports an immediate status.
 #[test]
@@ -18,5 +18,5 @@ fn ready_signal_publishes_explicit_readiness() {
 
     signal.mark_ready();
 
-    assert!(*receiver.borrow());
+    assert_eq!(*receiver.borrow(), ReadinessState::Ready);
 }

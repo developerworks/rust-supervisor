@@ -14,6 +14,10 @@ dashboard(看板) 功能由三个仓库共同完成. `rust-supervisor` 只负责
 - `rust-supervisor-relay`: relay(中继) 监听 registration socket(注册套接字), 保存 target registry(目标注册表), 对外提供 `wss://` dashboard session(看板会话), 校验 mTLS(双向传输层安全协议认证) 和 allowed IPC path prefix(允许的进程间通信路径前缀), 并把会话命令转发到 target process(目标进程).
 - `rust-supervisor-ui`: dashboard client(看板客户端) 通过 `wss://` 连接 relay(中继), 显示 target list(目标列表), topology(拓扑), state(状态), event stream(事件流), log tail(日志尾部) 和 command audit(命令审计).
 
+## Generation fencing(代次隔离) 投影
+
+IPC(进程间通信) 可见的子任务控制封装携带可空的 **`generation_fence`(代次隔离结果)** 载荷。运行时一旦登记 **`pending restart`(待重启)** 请求, **`DashboardChildRuntimeRecord`(仪表盘子任务运行状态记录)** 也会镜像 **`pending_restart`** 摘要字段。
+
 ## 本地演示流程
 
 1. 先启动 relay(中继). 它必须先监听 registration socket(注册套接字), target process(目标进程) 才能注册自己.

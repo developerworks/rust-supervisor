@@ -2,7 +2,7 @@
 //!
 //! These tests cover the identifier and declaration primitives used elsewhere.
 
-use rust_supervisor::id::types::{Attempt, ChildId, Generation, SupervisorPath};
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 
 /// Verifies stable identifier and path behavior.
@@ -13,7 +13,7 @@ fn identifiers_and_paths_are_stable() {
 
     assert_eq!(path.to_string(), "/worker");
     assert_eq!(path.parent().expect("parent").to_string(), "/");
-    assert_eq!(Attempt::first().next().value, 2);
+    assert_eq!(ChildStartCount::first().next().value, 2);
     assert_eq!(Generation::initial().next().value, 1);
 }
 

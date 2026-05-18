@@ -5,10 +5,13 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
+use crate::policy::budget::RestartBudgetConfig;
+use crate::policy::group::GroupDependencyEdge;
+use crate::policy::role_defaults::{SeverityClass, WorkRole, semantic_conflicts_for_child};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// Strategy used when a child exits and a restart scope is needed.
@@ -23,7 +26,8 @@ pub enum SupervisionStrategy {
 }
 
 /// Policy used when a restart scope cannot remain local.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum EscalationPolicy {
     /// Escalate the failure to the parent supervisor.
     EscalateToParent,
@@ -33,26 +37,26 @@ pub enum EscalationPolicy {
     QuarantineScope,
 }
 
-/// Restart budget attached to a supervisor, group, or child override.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RestartBudget {
-    /// Maximum restarts allowed within the window.
+/// Restart limit attached to supervisor, group, or child override settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RestartLimit {
+    /// Maximum allowed restart count inside the accounting window.
     pub max_restarts: u32,
-    /// Time window used to count restarts.
+    /// Accounting window used for restart counts.
     pub window: Duration,
 }
 
-impl RestartBudget {
-    /// Creates a restart budget.
+impl RestartLimit {
+    /// Creates a restart limit.
     ///
     /// # Arguments
     ///
-    /// - `max_restarts`: Maximum restart count allowed in the window.
-    /// - `window`: Duration used for the restart count window.
+    /// - `max_restarts`: Maximum allowed restart count inside the accounting window.
+    /// - `window`: Accounting window used for restart counts.
     ///
     /// # Returns
     ///
-    /// Returns a [`RestartBudget`] value.
+    /// Returns a [`RestartLimit`] value.
     pub fn new(max_restarts: u32, window: Duration) -> Self {
         Self {
             max_restarts,
@@ -68,8 +72,8 @@ pub struct GroupStrategy {
     pub group: String,
     /// Restart strategy applied inside the group.
     pub strategy: SupervisionStrategy,
-    /// Optional restart budget for this group.
-    pub restart_budget: Option<RestartBudget>,
+    /// Optional restart limit for this group.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this group.
     pub escalation_policy: Option<EscalationPolicy>,
 }
@@ -84,13 +88,54 @@ impl GroupStrategy {
     ///
     /// # Returns
     ///
-    /// Returns a [`GroupStrategy`] with no budget or escalation override.
+    /// Returns a [`GroupStrategy`] without restart limit or escalation override.
     pub fn new(group: impl Into<String>, strategy: SupervisionStrategy) -> Self {
         Self {
             group: group.into(),
             strategy,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
+        }
+    }
+}
+
+/// Group-level configuration for restart budget, dependency edges, and
+/// severity defaults used by US1/US2/US3 policy evaluation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupConfig {
+    /// Low-cardinality group name shared by member children.
+    pub name: String,
+    /// Child identifiers that belong to this group.
+    pub children: Vec<ChildId>,
+    /// Restart budget configuration applied to this group.
+    ///
+    /// When `None`, the supervisor-level default budget is inherited.
+    /// If the supervisor also has no default, [`RestartBudgetConfig::safe_default`]
+    /// is used as a fallback.
+    pub budget: Option<RestartBudgetConfig>,
+}
+
+impl GroupConfig {
+    /// Creates a group configuration.
+    ///
+    /// # Arguments
+    ///
+    /// - `name`: Group name.
+    /// - `children`: Child identifiers belonging to this group.
+    /// - `budget`: Restart budget configuration for the group (None = inherit).
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`GroupConfig`].
+    pub fn new(
+        name: impl Into<String>,
+        children: Vec<ChildId>,
+        budget: Option<RestartBudgetConfig>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            children,
+            budget,
         }
     }
 }
@@ -102,8 +147,8 @@ pub struct ChildStrategyOverride {
     pub child_id: ChildId,
     /// Restart strategy used when this child fails.
     pub strategy: SupervisionStrategy,
-    /// Optional restart budget for this child.
-    pub restart_budget: Option<RestartBudget>,
+    /// Optional restart limit for this child.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy for this child.
     pub escalation_policy: Option<EscalationPolicy>,
 }
@@ -123,7 +168,7 @@ impl ChildStrategyOverride {
         Self {
             child_id,
             strategy,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
         }
     }
@@ -199,12 +244,74 @@ pub struct StrategyExecutionPlan {
     pub scope: Vec<ChildId>,
     /// Optional group that constrained the scope.
     pub group: Option<String>,
-    /// Optional restart budget selected for the plan.
-    pub restart_budget: Option<RestartBudget>,
+    /// Optional restart limit selected by this execution plan.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional escalation policy selected for the plan.
     pub escalation_policy: Option<EscalationPolicy>,
     /// Whether dynamic supervisor additions are allowed.
     pub dynamic_supervisor_enabled: bool,
+}
+
+/// Backpressure strategy for slow event subscribers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum BackpressureStrategy {
+    /// Alert and block the producer when buffers fill up; never drop events.
+    AlertAndBlock,
+    /// Sample and discard events when buffers fill up; record the ratio in the audit trail.
+    SampleAndAudit,
+}
+
+/// Configuration for event subscriber backpressure.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct BackpressureConfig {
+    /// Backpressure strategy selection.
+    pub strategy: BackpressureStrategy,
+    /// Buffer occupancy soft threshold percentage (triggers warning alert).
+    #[serde(default = "default_warn_threshold")]
+    pub warn_threshold_pct: u8,
+    /// Buffer occupancy hard threshold percentage (triggers degradation).
+    #[serde(default = "default_critical_threshold")]
+    pub critical_threshold_pct: u8,
+    /// Sliding window duration in seconds for backpressure evaluation.
+    #[serde(default = "default_window_secs")]
+    pub window_secs: u64,
+    /// Capacity of the dedicated audit channel.
+    #[serde(default = "default_audit_capacity")]
+    pub audit_channel_capacity: usize,
+}
+
+/// Returns the default backpressure warning threshold (80%).
+fn default_warn_threshold() -> u8 {
+    80
+}
+
+/// Returns the default backpressure critical threshold (95%).
+fn default_critical_threshold() -> u8 {
+    95
+}
+
+/// Returns the default backpressure evaluation window in seconds (30).
+fn default_window_secs() -> u64 {
+    30
+}
+
+/// Returns the default audit channel capacity (1024).
+fn default_audit_capacity() -> usize {
+    1024
+}
+
+impl Default for BackpressureConfig {
+    /// Returns the default backpressure configuration with `AlertAndBlock` strategy.
+    fn default() -> Self {
+        Self {
+            strategy: BackpressureStrategy::AlertAndBlock,
+            warn_threshold_pct: default_warn_threshold(),
+            critical_threshold_pct: default_critical_threshold(),
+            window_secs: default_window_secs(),
+            audit_channel_capacity: default_audit_capacity(),
+        }
+    }
 }
 
 /// Declarative specification for one supervisor node.
@@ -228,12 +335,18 @@ pub struct SupervisorSpec {
     pub default_shutdown_policy: ShutdownPolicy,
     /// Maximum supervisor failures before parent escalation.
     pub supervisor_failure_limit: u32,
-    /// Optional supervisor-level restart budget.
-    pub restart_budget: Option<RestartBudget>,
+    /// Optional supervisor-level restart limit.
+    pub restart_limit: Option<RestartLimit>,
     /// Optional supervisor-level escalation policy.
     pub escalation_policy: Option<EscalationPolicy>,
     /// Group-level strategy overrides.
     pub group_strategies: Vec<GroupStrategy>,
+    /// Group-level configurations for restart budget, membership, and isolation.
+    pub group_configs: Vec<GroupConfig>,
+    /// Cross-group dependency edges for fault propagation.
+    pub group_dependencies: Vec<GroupDependencyEdge>,
+    /// Default severity class per work role for escalation bifurcation (US3).
+    pub severity_defaults: HashMap<WorkRole, SeverityClass>,
     /// Child-level strategy overrides.
     pub child_strategy_overrides: Vec<ChildStrategyOverride>,
     /// Runtime policy for dynamic child additions.
@@ -283,9 +396,12 @@ impl SupervisorSpec {
                 Duration::from_secs(1),
             ),
             supervisor_failure_limit: 1,
-            restart_budget: None,
+            restart_limit: None,
             escalation_policy: None,
             group_strategies: Vec::new(),
+            group_configs: Vec::new(),
+            group_dependencies: Vec::new(),
+            severity_defaults: HashMap::new(),
             child_strategy_overrides: Vec::new(),
             dynamic_supervisor_policy: DynamicSupervisorPolicy::unbounded(),
             control_channel_capacity: channel_capacity,
@@ -326,35 +442,62 @@ impl SupervisorSpec {
         for child in &self.children {
             child.validate()?;
         }
-        validate_restart_budget(self.restart_budget)?;
+        validate_restart_limit(self.restart_limit)?;
         validate_group_strategies(&self.group_strategies, &self.children)?;
         validate_child_strategy_overrides(self)?;
+        validate_work_roles(&self.children)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
+        validate_child_group_names(&self.children, &self.group_configs)?;
         Ok(())
     }
 }
 
-/// Validates an optional restart budget.
+/// Validates that every child referencing a group name actually points to an
+/// existing [`GroupConfig`]. Unknown group names are rejected at load time
+/// to prevent silent isolation failures due to typos.
+fn validate_child_group_names(
+    children: &[ChildSpec],
+    group_configs: &[GroupConfig],
+) -> Result<(), SupervisorError> {
+    let group_names: std::collections::HashSet<&str> =
+        group_configs.iter().map(|g| g.name.as_str()).collect();
+
+    for child in children {
+        if let Some(ref group_name) = child.group {
+            if !group_names.contains(group_name.as_str()) {
+                return Err(SupervisorError::fatal_config(format!(
+                    "child '{}' references unknown group '{}'; available groups: {:?}",
+                    child.id,
+                    group_name,
+                    group_names.iter().copied().collect::<Vec<_>>(),
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Validates an optional restart limit.
 ///
 /// # Arguments
 ///
-/// - `budget`: Optional restart budget to validate.
+/// - `limit`: Optional restart limit to validate.
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` when the budget is absent or valid.
-fn validate_restart_budget(budget: Option<RestartBudget>) -> Result<(), SupervisorError> {
-    let Some(budget) = budget else {
+/// Returns `Ok(())` when the limit is absent or valid.
+fn validate_restart_limit(limit: Option<RestartLimit>) -> Result<(), SupervisorError> {
+    let Some(limit) = limit else {
         return Ok(());
     };
-    if budget.max_restarts == 0 {
+    if limit.max_restarts == 0 {
         return Err(SupervisorError::fatal_config(
-            "restart budget max_restarts must be greater than zero",
+            "restart limit max_restarts must be greater than zero",
         ));
     }
-    if budget.window.is_zero() {
+    if limit.window.is_zero() {
         return Err(SupervisorError::fatal_config(
-            "restart budget window must be greater than zero",
+            "restart limit window must be greater than zero",
         ));
     }
     Ok(())
@@ -386,7 +529,7 @@ fn validate_group_strategies(
                 strategy.group
             )));
         }
-        validate_restart_budget(strategy.restart_budget)?;
+        validate_restart_limit(strategy.restart_limit)?;
     }
     validate_group_membership(strategies, children)?;
     Ok(())
@@ -466,9 +609,88 @@ fn validate_child_strategy_overrides(spec: &SupervisorSpec) -> Result<(), Superv
                 strategy.child_id
             )));
         }
-        validate_restart_budget(strategy.restart_budget)?;
+        validate_restart_limit(strategy.restart_limit)?;
     }
     Ok(())
+}
+
+/// Validates work role relationships that require sibling context.
+///
+/// # Arguments
+///
+/// - `children`: Children declared under one supervisor.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when sidecar bindings and semantic diagnostics are valid.
+fn validate_work_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
+    let child_ids = children
+        .iter()
+        .map(|child| child.id.clone())
+        .collect::<HashSet<_>>();
+
+    for child in children {
+        emit_role_conflict_warnings(child);
+        if child.work_role != Some(WorkRole::Sidecar) {
+            continue;
+        }
+
+        let sidecar_config = child.sidecar_config.as_ref().ok_or_else(|| {
+            SupervisorError::fatal_config(format!(
+                "sidecar child {} requires sidecar_config",
+                child.id
+            ))
+        })?;
+
+        if !child_ids.contains(&sidecar_config.primary_child_id) {
+            return Err(SupervisorError::fatal_config(format!(
+                "sidecar child {} references unknown primary_child_id {}",
+                child.id, sidecar_config.primary_child_id
+            )));
+        }
+
+        let primary_child = children
+            .iter()
+            .find(|candidate| candidate.id == sidecar_config.primary_child_id)
+            .ok_or_else(|| {
+                SupervisorError::fatal_config(format!(
+                    "sidecar child {} references unknown primary_child_id {}",
+                    child.id, sidecar_config.primary_child_id
+                ))
+            })?;
+
+        if primary_child.work_role == Some(WorkRole::Sidecar) {
+            return Err(SupervisorError::fatal_config(format!(
+                "sidecar child {} must not use another sidecar {} as primary_child_id",
+                child.id, sidecar_config.primary_child_id
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+/// Emits warning diagnostics for role semantic conflicts.
+///
+/// # Arguments
+///
+/// - `child`: Child specification being inspected.
+///
+/// # Returns
+///
+/// This function does not return a value.
+fn emit_role_conflict_warnings(child: &ChildSpec) {
+    for conflict in semantic_conflicts_for_child(child) {
+        tracing::warn!(
+            child_id = %conflict.child_id,
+            work_role = %conflict.work_role,
+            conflicting_field = %conflict.conflicting_field,
+            user_value = %conflict.user_value,
+            expected_semantic = %conflict.expected_semantic,
+            reason = %conflict.reason,
+            "work role semantic conflict"
+        );
+    }
 }
 
 /// Validates dynamic supervisor policy.
