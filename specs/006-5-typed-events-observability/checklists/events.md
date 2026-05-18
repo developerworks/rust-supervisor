@@ -82,9 +82,83 @@
 - [ ] CHK042 — Module ownership 要求"SupervisorEvent 的 schema 定义集中在 observe 模块名下维护". 当前是否已经有一个集中的事件 schema 定义文件 (如 `src/event/payload.rs` 或 `src/observe/schema.rs`) 被明确指定为 schema 权威来源? [Compliance, Spec §Module ownership]
 - [ ] CHK043 — 术语格式:"英文术语必须写成 `English(中文说明)`". 规格中使用了 `gap_alarm(字段名示例)` 和 `investigation_blocked(字段名示例)` 等标注"示例"的字段名. 这些"示例标注"是否符合术语格式要求, 还是需要在冻结字段名后更新? [Compliance, Spec §Chinese Writing]
 
+## Schema & Versioning(事件方案与版本化)
+
+- [ ] CHK044 — SupervisorEvent 的 schema 版本号格式 (SemVer? 单调递增整数? 日期戳?) 是否已在规格或契约中冻结? 不同版本之间如何区分和路由? [Clarity, Spec §FR-001]
+- [ ] CHK045 — 规格要求 "schema id 抬版本时必须附带人类可读迁移脚注段落". 该脚注的存放位置 (事件定义旁? 独立 MIGRATION.md? CHANGELOG 条目?) 和必需内容 (变更多少字段? 兼容性类别? 迁移指南?) 是否已规定? [Completeness, Spec §Edge Cases]
+- [ ] CHK046 — 当引入新 schema 版本时, 旧版本事件是否需要继续在 journal 中保留? 保留期限或容量策略是否与 002 切片的 `event_journal_capacity` 协调一致? [Consistency, Spec §FR-001 → specs/002]
+- [ ] CHK047 — 事件 schema 的权威注册中心在哪里? 是 Rust enum 定义 + serde 派生, 还是独立的 JSON Schema / protobuf / flatbuffers IDL? 不同的序列化框架影响字段字典的稳定策略. [Completeness, Spec §FR-002]
+- [ ] CHK048 — 如果采用 Rust enum 作为 schema 权威来源, 如何处理跨 crate 的事件类型引用? 是否需要在 `rust-tokio-supervisor` 中定义公共 event crate? [Gap, Architecture]
+
+## Serialization & Error Handling(序列化与错误处理)
+
+- [ ] CHK049 — SupervisorEvent 的序列化格式 (JSON? MessagePack? 自描述二进制?) 是否在规格中冻结? 不同出口 (journal/tracing/metrics/audit) 是否需要使用统一格式? [Clarity, Spec §FR-002]
+- [ ] CHK050 — 当事件序列化失败 (如字段格式非法、嵌套深度超限、序列化器 OOM) 时, 控制循环的默认行为 (panic? 跳过并告警? 重试?) 是否已明确定义? [Edge Case, Gap]
+- [ ] CHK051 — 序列化失败的审计记录是否包含原始事件的关键标识 (至少 child_id + event_variant), 使得追溯不因序列化失败而完全断裂? [Completeness, Gap]
+- [ ] CHK052 — 反序列化旧版本事件的兼容性策略: 当 journal 回放时遇到未知字段是静默忽略还是严格报错? 该行为是否在整个事件路径上一致? [Consistency, Spec §FR-001]
+
+## Backpressure Quantification(背压量化)
+
+- [ ] CHK053 — US3 的 "二者只能择其一" 选择是否已在配置 schema 中体现? 配置键名、可选枚举值、默认值是否已在 `config/default.toml` 或等效位置写明? [Completeness, Spec §US3]
+- [ ] CHK054 — 背压触发阈值是否已量化? (缓冲区占用百分比? 事件排队延迟毫秒数? 订阅者回调执行耗时?) 如果没有量化, "明显变慢" 无法客观判定. [Clarity, Spec §US3]
+- [ ] CHK055 — 当选择 "告警 + 顶住背压" 策略时, 告警的严重级别 (warn/error/critical) 和告警通道 (tracing event? metrics counter? health check degradation?) 是否已指定? [Completeness, Gap]
+- [ ] CHK056 — 当选择 "采样 + audit 记录" 策略时, 采样率的配置范围 (0.0–1.0? 固定步长?) 和动态调整策略 (是否支持自适应采样?) 是否已定义? [Clarity, Spec §US3]
+- [ ] CHK057 — 背压状态下的 "保护性降级停机分支" 是否明确写明了降级条件 (连续 N 次背压告警? 缓冲区溢出?), 降级范围 (单个 subscriber? 整个 event bus?), 以及恢复机制 (自动恢复还是需人工介入)? [Completeness, Spec §US3 Edge Case]
+
+## Correlation Tracking Completeness(关联追踪完备性)
+
+- [ ] CHK058 — US2 要求 correlation id 覆盖 spawn → ready → failure decision → restart attempt → shutdown 五段. 但控制循环的实际迁移弧可能多于五类 (如 health_check_passed, health_check_failed, paused, quarantined, budget_exhausted). 这些弧段是否也需纳入 correlation id 追踪? [Coverage, Spec §US2]
+- [ ] CHK059 — correlation id 在跨事件出口时的传播机制: 是显式嵌入每个事件的载荷字段, 还是通过 tracing span context / 指标标签隐式传递? 两种做法的语义一致性是否已评估? [Clarity, Spec §FR-003]
+- [ ] CHK060 — 当查询 API 收到不存在的 correlation id 时, 返回值类型是否已定义? 返回空数组 vs 抛出结构化错误 vs 返回带 `not_found` 标识的结果 — 哪种行为与 US2 的 "gap_alarm 级别可观测条目" 一致? [Clarity, Spec §US2]
+- [ ] CHK061 — 时间戳在跨阶段排序时的可靠性: 如果系统时钟在事件记录期间发生 NTP 跳变, 排序是否改用 monotonic clock? 规格是否显式要求使用单调时钟以避免排序混乱? [Ambiguity, Spec §US2]
+- [ ] CHK062 — 当多次重启产生的 correlation id 链条因日志轮转或 journal 容量限制而截断时, 查询 API 的返回是标记 "truncated" 还是静默返回部分结果? [Edge Case, Gap]
+
+## Event Bus & Channel Architecture(事件总线与通道架构)
+
+- [ ] CHK063 — 事件通道 (broadcast channel) 的容量上限是否已在配置或规格中定义? 容量耗尽时的策略 (阻塞生产者? 丢弃最旧事件? 溢出 panic?) 是否与 US3 的背压策略一致? [Consistency, Spec §NFR Gap]
+- [ ] CHK064 — 多个事件订阅者之间的故障隔离: 一个慢订阅者导致背压触发时, 其他正常订阅者是否也受影响? 规格是否要求提供 per-subscriber 独立缓冲区? [Coverage, Gap]
+- [ ] CHK065 — audit 通道的 "单独 channel" 在事件总线架构中如何实现? 是独立的 tokio::broadcast 实例, 还是同一 channel 的优先级队列? 该 channel 的容量和消费者线程模型是否已设计? [Completeness, Spec §Edge Cases]
+- [ ] CHK066 — 当 audit channel 本身成为瓶颈时, "禁止采样" 的承诺是否还能维持? 规格是否定义了 audit channel 的保护机制 (如独立线程、有界背压、健康检查)? [Edge Case, Spec §FR-002 vs §Edge Cases]
+
+## Performance & Resource Budgets(性能与资源预算)
+
+- [ ] CHK067 — 控制循环主路径上每个事件的生产-发射延迟的 p99 上限是否已量化? 如果没有预算, 无法判断引入结构化序列化是否引入不可接受的延迟. [NFR, Gap]
+- [ ] CHK068 — tracing 与 metrics 的标签基数硬上限是否已定义? 具体数值 (如每个 span ≤ 10 个标签, 每个标签键 ≤ 100 个唯一值) 和超限处理策略 (拒绝? 截断? 告警?) 是否已写入规格? [Clarity, Spec §Edge Cases]
+- [ ] CHK069 — 事件通道的内存预算: 在最大背压场景下, 未消费事件占用的内存上限是否已估算并在文档中声明? [NFR, Gap]
+- [ ] CHK070 — SC-002 的 "5 分钟" 是否已拆分为系统响应时间 (查询 API 延迟) 和人工操作时间 (检索和拼接)? 如果该指标用于 SLO, 需要明确哪一部分计入计时. [Measurability, Spec §SC-002]
+
+## Integration & Dependency Alignment(集成与依赖对齐)
+
+- [ ] CHK071 — 规格依赖 `specs/005-1-failure-policy-reliability/contracts/pipeline-and-events.md`. 该契约中 SupervisorEvent 的事件变体集合是否与本切片所需变体一一对应? 如果 005-1 缺少本切片需要的变体 (如 `budget_denied`, `generation_fenced`), 是本切片扩展契约还是需要 005-1 先补充? [Dependency, Spec §Dependency Note]
+- [ ] CHK072 — 002 切片的 `event_journal_capacity` 配置项是否与本切片的事件生产速率兼容? 在最大负载下 journal 满时的行为 (覆盖最旧 vs 停止写入) 是否与 US3 背压策略协调? [Consistency, Spec §FR-002 → specs/002]
+- [ ] CHK073 — 004-4 (generation fencing) 产生的 `generation_fenced` 事件是否应纳入 Supervisorevent 类型家族? 该事件的字段字典是否需要在本切片中统一定义? [Coverage, Dependency → specs/004-4]
+- [ ] CHK074 — 假设 "调用方负责装配 OpenTelemetry 导出栈" 是否已通过默认 no-op 实现验证? 当未配置导出栈时, 监督器是否仍能正常启动并输出结构化日志而不 panic? [Assumption, Spec §Assumptions]
+
+## Testability & Release Gate(可测试性与发布门禁)
+
+- [ ] CHK075 — US1 的 "穷尽覆盖" 测试: 是否需要一个权威的枚举清单列出所有 SupervisorEvent 变体, 并在 CI 中验证该清单未被遗漏? 如果枚举定义在 Rust 源码中, 测试如何保证 `#[non_exhaustive]` 声明不会导致漏测? [Measurability, Spec §US1]
+- [ ] CHK076 — SC-001 的 "95%" 度量: 分母 (迁移弧总数) 的权威来源是哪里? 是 Rust 枚举成员数量, 还是 spec 中的状态转移图? 不同来源可能导致不同的度量结果. [Measurability, Spec §SC-001]
+- [ ] CHK077 — SC-002 的 "97 条" 抽样方法: 是 CI 中自动随机抽样, 还是人工定期审计? 样本集是否来自生产环境的失败复盘记录? 如果 100 条样本中某类失败场景占比过高, 是否需要按类型分层以确保代表性? [Measurability, Spec §SC-002]
+- [ ] CHK078 — 发布门禁要求 "字段名不能停留在示例状态". 规格中标记为 `(字段名示例)` 的字段名是否有一份明确的冻结时间表或冻结条件? 发布前是否需要一个验收步骤检查所有示例字段名已被替换? [Completeness, Gap]
+- [ ] CHK079 — 事件 schema 的向后兼容性验证是否纳入 CI? 是否存在契约测试在 PR 合并前检测字段名更改或类型变更? [Gap, Release Gate]
+- [ ] CHK080 — 背压策略的配置是否纳入发布门禁的配置验证步骤? 是否要求每次发布时确认默认配置文件中背压策略字段存在且值合法? [Gap, Release Gate]
+
+## Configuration Management(配置管理)
+
+- [ ] CHK081 — 事件相关的全部配置项 (背压策略选择、阈值、采样率、audit channel 容量、标签基数上限) 是否已在配置 schema 中定义并有默认值? [Completeness, Gap]
+- [ ] CHK082 — 当配置变更 (如从 "告警" 切换到 "采样") 在运行时生效还是需要重启? 如果是运行时生效, 配置热加载的安全性验证是否已指定? [Clarity, Gap]
+- [ ] CHK083 — 不同环境 (开发/预发/生产) 的事件配置基线是否在规格或部署文档中给出推荐值? 背压阈值在不同环境是否需要差异化? [Completeness, Gap]
+
+## Observability Audit Trail(可观测性审计轨迹)
+
+- [ ] CHK084 — 采样事件时 audit 记录是否至少包含: 被采样事件数量、采样比例、采样触发原因、触发时间窗口? 这些字段是否已在规格中定义? [Completeness, Spec §US3]
+- [ ] CHK085 — 当背压导致保护性降级停机时, 停机原因的 audit 记录是否足够重建现场 (含触发订阅者标识、背压度量峰值、所选策略)? [Completeness, Gap]
+- [ ] CHK086 — 非采样事件 (高风险改写事件) 的 audit 记录是否包含 correlation id, 使得 audit 行可直接与 US2 的查询 API 结果关联? [Completeness, Spec §Edge Cases]
+
 ## Notes(说明)
 
 - 完成检查项后使用 `[x]` 标记.
 - 评论或发现可以直接写在相关检查项下.
 - 需要时链接相关资源或文档.
 - 检查项必须按顺序编号, 方便引用.
+- 追加部分从 CHK044 到 CHK086, 覆盖 Schema & Versioning, Serialization & Error Handling, Backpressure Quantification, Correlation Tracking Completeness, Event Bus & Channel Architecture, Performance & Resource Budgets, Integration & Dependency Alignment, Testability & Release Gate, Configuration Management, Observability Audit Trail 等维度.
