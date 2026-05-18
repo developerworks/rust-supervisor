@@ -1853,6 +1853,9 @@ impl RuntimeControlState {
                     .now_unix_nanos()
                     .saturating_add(self.shutdown.policy.graceful_timeout.as_nanos());
                 runtime_state.stop_deadline_at_unix_nanos = Some(deadline);
+                if cancel_delivered {
+                    runtime_state.stop_state = ChildStopState::CancelDelivered;
+                }
                 let target_generation = old_generation.next();
                 let requested_at = self.time_base.now_unix_nanos();
                 let pending = PendingRestart::new(
