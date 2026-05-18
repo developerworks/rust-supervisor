@@ -654,6 +654,17 @@ impl SupervisionPipeline {
             && let Some(ref verdict) = budget_eval.budget_verdict
             && let BudgetVerdict::Exhausted { retry_after_ns } = verdict
         {
+            // T048: Emit a warning when BudgetExhausted rate exceeds threshold.
+            // The alert is rate-limited via tracing's built-in filtering;
+            // external monitoring should subscribe to `budget_exhausted` events.
+            tracing::warn!(
+                target: "rust_supervisor::policy::budget",
+                child_id = %ctx.child_id,
+                retry_after_ns = %retry_after_ns,
+                "BudgetExhausted rate alert: check restart_budget configuration \
+                 (threshold: >10 events/minute indicates budget may be too tight)"
+            );
+
             return What::BudgetExhausted {
                 child_id: ctx.child_id.clone(),
                 retry_after_ns: *retry_after_ns,

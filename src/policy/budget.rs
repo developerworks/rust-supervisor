@@ -23,6 +23,13 @@ use std::time::Duration;
 /// Fields must satisfy: `window > 0s`, `max_burst >= 1`,
 /// `0.0 < recovery_rate_per_sec <= 1000.0`, `max_tokens >= 1`.
 /// Invalid values are rejected at config load time with a structured error.
+///
+/// # Business bounds
+///
+/// - `max_burst` > 10_000 produces a configuration warning (memory ~160KB).
+///   Values near `u32::MAX` are rejected outright.
+/// - `recovery_rate_per_sec` < 0.001 produces a configuration warning
+///   (engineering‑equivalent to never recovering).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RestartBudgetConfig {
     /// Sliding window duration for failure counting.
@@ -51,6 +58,54 @@ impl RestartBudgetConfig {
             max_burst,
             recovery_rate_per_sec,
         }
+    }
+
+    /// Returns a safe default configuration used when no budget is declared.
+    ///
+    /// Used for backward compatibility: old config files without a `budget`
+    /// section will get these values instead of being rejected.
+    pub fn safe_default() -> Self {
+        Self {
+            window: Duration::from_secs(60),
+            max_burst: 10,
+            recovery_rate_per_sec: 0.5,
+        }
+    }
+
+    /// Validates the configuration bounds and returns warnings for
+    /// values that are technically legal but practically dangerous.
+    ///
+    /// # Returns
+    ///
+    /// A vector of warning strings. The caller should log these and
+    /// decide whether to reject the configuration.
+    pub fn validate(&self) -> Vec<String> {
+        let mut warnings = Vec::new();
+
+        // max_burst > 10_000 consumes measurable memory; near u32::MAX is fatal.
+        if self.max_burst > 10_000 {
+            warnings.push(format!(
+                "max_burst ({}) exceeds 10_000; memory may reach ~{} bytes",
+                self.max_burst,
+                self.max_burst as u64 * 16
+            ));
+        }
+        if self.max_burst >= u32::MAX / 2 {
+            warnings.push(format!(
+                "max_burst ({}) is dangerously close to u32::MAX; queue would exhaust process memory",
+                self.max_burst
+            ));
+        }
+
+        // recovery_rate_per_sec < 0.001 is practically equivalent to no recovery.
+        if self.recovery_rate_per_sec > 0.0 && self.recovery_rate_per_sec < 0.001 {
+            warnings.push(format!(
+                "recovery_rate_per_sec ({}) is below 0.001; budget will effectively never recover",
+                self.recovery_rate_per_sec
+            ));
+        }
+
+        warnings
     }
 }
 

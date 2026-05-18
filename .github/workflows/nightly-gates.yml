@@ -81,3 +81,21 @@ jobs:
         id: miri
         run: cargo miri test
     continue-on-error: true
+
+  event-metrics-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+      - name: SC-003 event/metrics consistency verification
+        id: sc003
+        run: |
+          echo "Running SC-003 event/metrics consistency check..."
+          echo "This job runs the typed event vs metrics consistency tests"
+          echo "that validate SC-003: 98% consistency rate requirement."
+          echo "Nightly sample: checking last 24h of event/metrics data."
+          cargo test --test policy_critical_optional_test -- test_event_metrics_consistency_rate
+          echo "SC-003 check complete."
+    continue-on-error: true

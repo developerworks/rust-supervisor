@@ -10,6 +10,17 @@ policy:
   jitter_ratio: 0.10
   heartbeat_interval_ms: 1000
   stale_after_ms: 3000
+  # restart_budget:                          # 可选, 重启预算限流 (本切片新增)
+  #   window_secs: 60                        # 滑动窗口, 默认 60s
+  #   max_burst: 10                          # 窗口内最大突发故障次数, 默认 10
+  #   recovery_rate_per_sec: 0.5             # 每秒令牌恢复速率, 默认 0.5
+  # group_strategies:                        # 可选, 分组策略 (本切片新增)
+  #   - name: "group-a"
+  #     children: ["child-1", "child-2"]
+  #     budget:
+  #       window_secs: 120
+  #       max_burst: 20
+  #       recovery_rate_per_sec: 1.0
 shutdown:
   graceful_timeout_ms: 5000
   abort_wait_ms: 1000

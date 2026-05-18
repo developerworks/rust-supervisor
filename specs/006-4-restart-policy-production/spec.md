@@ -66,15 +66,15 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
   | 同 child 显式 severity 与 group 默认 severity 冲突 | child 级显式声明优先于 group 级默认值                   | 发射 `EscalationBifurcated` 携带 `tie_break_reason`    |
 
 - 当 meltdown(熔断) 与手动 quarantine(隔离) 并发触发时, 人工指令优先于自动熔断裁定, 审计流水记录 `operator_id`(操作者标识) 和配置版本戳.- 当 `FairnessProbe`(公平性探针) 或 `RestartBudgetTracker`(重启预算跟踪器) 内部状态损坏(计数器溢出, 时间戳倒流等)时, 系统发射 `degraded_mode`(降级模式) 事件并跳过受影响子系统的检查: budget 损坏时跳过预算限流(回退到仅 backoff 控制), fairness 损坏时跳过饥饿检测. 降级期间所有 child 仍受 meltdown(熔断) 和 backoff(退避) 保护.
-- `CorrelationId`(关联标识) 在故障首次进入评估管线时生成(即 `record failure window` 阶段), 跨 budget → meltdown → backoff → escalation 全阶段传递, 并在该次故障链路的所有事件发射完毕后退役. 跨子任务重启时 CorrelationId 不保持(每次故障链路独立).
-- 策略配置不支持运行时热更新(hot-reload). 修改 budget, group 依赖边或 severity 映射需重启监督器实例. 重启后令牌计数和熔断状态从配置初始值重新开始.- 当 optional child(可选子任务) 抖动失败时, backoff jitter(退避抖动) 参数必须打散重启节拍(随机系数范围 [0.5×base_delay, 1.5×base_delay]), 避免出现同步 thundering herd(惊群).
+- `CorrelationId`(关联标识) 在故障首次进入评估管线时生成(即 `record failure window` 阶段), 跨 budget → meltdown → backoff → escalation 全阶段传递, 并在该次故障链路的所有事件发射完毕后退役. 跨子任务重启时 CorrelationId 不保持(每次故障链路独立). CorrelationId 使用 UUID v4 生成, 碰撞概率可忽略(在 10_000 次/秒的故障注入速率下, 连续运行 100 年碰撞概率 < 10^-12). 多个 child 在同一纳秒触发故障时各自获得独立 CorrelationId, 不共享.
+- 策略配置不支持运行时热更新(hot-reload). 修改 budget, group 依赖边或 severity 映射需重启监督器实例. 重启后令牌计数和熔断状态从配置初始值重新开始. 从旧版(无 restart budget)升级到新版(含 restart budget)时, 旧版配置文件中缺失的 budget 字段在加载时使用内置安全默认值填充(`window=60s, max_burst=10, recovery_rate_per_sec=0.5`), 不拒绝启动.- 当 optional child(可选子任务) 抖动失败时, backoff jitter(退避抖动) 参数必须打散重启节拍(随机系数范围 [0.5×base_delay, 1.5×base_delay]), 避免出现同步 thundering herd(惊群).
 
 ## Requirements (需求) _(mandatory (必填))_
 
 ### Functional Requirements (功能需求)
 
-- **FR-001**: 系统必须把 restart budget(重启预算), meltdown fuse(熔断器), backoff jitter(退避抖动) 按 `budget → meltdown → backoff` 顺序接入 decide action(决定动作) 节拍之前同一评估管线里. 预算不足直接拒绝(不经过熔断与退避), 熔断后不计算退避. 预算耗尽后系统等待 `retry_after_ns` 到期自动重试, 不需人工干预. 在快速失败波形下实测 effective restart attempts per minute(每分钟有效重启尝试) 不得超过文档给出曲线上界的 105%. fairness(公平性) 探针记录在任意连续 10 秒窗口内, 其它就绪监督动作至少获得过调度机会的计数不低于文档阈值.
-- **FR-002**: group strategy(分组策略) 必须保证在未声明跨组 dependency edge(依赖边) 的前提下, 任一 group(分组) 自家熔断或预算耗尽不得把关停的连带后果甩到不相干的 group(分组) 头上. 受影响分组内已处于 running(运行中) 的 child(子任务) 继续运行不受影响, 仅阻止该分组内新重启请求. 一旦发生跨组可见影响, 必须产出指向依赖图节点的 structured diagnostics(结构化诊断) 载荷.
+- **FR-001**: 系统必须把 restart budget(重启预算), meltdown fuse(熔断器), backoff jitter(退避抖动) 按 `budget → meltdown → backoff` 顺序接入 decide action(决定动作) 节拍之前同一评估管线里. 预算不足直接拒绝(不经过熔断与退避), 熔断后不计算退避. 预算耗尽后系统等待 `retry_after_ns` 到期自动重试, 不需人工干预. 在快速失败波形下实测 effective restart attempts per minute(每分钟有效重启尝试) 不得超过文档给出曲线上界的 105%. fairness(公平性) 探针记录在任意连续 10 秒窗口内, 其它就绪监督动作至少获得过调度机会的计数不低于文档阈值. 生产环境中应配置监控告警: 当 `BudgetExhausted` 事件率超过 10 次/分钟时触发告警(表示预算过紧), 连续 5 分钟内此类事件率为 0 时自动解除告警.
+- **FR-002**: group strategy(分组策略) 必须保证在未声明跨组 dependency edge(依赖边) 的前提下, 任一 group(分组) 自家熔断或预算耗尽不得把关停的连带后果甩到不相干的 group(分组) 头上. 受影响分组内已处于 running(运行中) 的 child(子任务) 继续运行不受影响, 仅阻止该分组内新重启请求. 一旦发生跨组可见影响, 必须产出指向依赖图节点的 structured diagnostics(结构化诊断) 载荷. `ChildSpec.group` 引用的分组名必须在 `SupervisorSpec.group_configs` 中存在, 配置加载阶段校验不通过则拒绝启动, 不允许运行时兜底处理.
 - **FR-003**: critical child(关键子任务) 与 optional child(可选子任务) 的失败处置必须有配置文件里的分叉默认值. Critical(关键) 失败必须触发升级路径(发射 EscalationBifurcated 并上报告警), Optional(可选) 失败走降噪路径(发射事件但不触发告警升级), Standard(默认) 走标准策略路径(按 WorkRole 默认行为). 每一条分叉路径上的预算耗尽与升级裁决都必须 100% 写入 typed event(类型化事件) 与 metrics(指标) 两组管道, 并能被同一个 correlation id(关联标识) 串联. CorrelationId(关联标识) 在评估管线入口生成, 贯穿整个故障链路(budget → meltdown → backoff → escalation), 即使中间某阶段被跳过(如 budget 直接通过, 无 Exhausted 事件)也继续传递至后续阶段事件.
 
 ### Key Entities (关键实体) _(涉及数据时填写)_
@@ -102,7 +102,7 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
 
 - **Module ownership (模块所有权)**: 策略裁决代码只能落在 policy(策略目录) 与 observe(观测目录) 之间的契约边界内.
 - **Compatibility exports (兼容导出)**: None (无).
-- **Diagnostics (诊断)**: typed event(类型化事件) 先于自由文本 message(消息) 字段对外承诺稳定性. 当系统发射 `BudgetExhausted(预算耗尽)`, `GroupFuseTriggered(分组熔断触发)`, `EscalationBifurcated(升级分叉)` 三种 typed event 时, observability pipeline(观测流水线) 自动为每个事件生成 `PipelineStageDiagnostic(流水线阶段诊断)`, 包含事件序列号、CorrelationId(关联标识)、`budget_evaluation(预算评估)` 字段(携带预算耗尽退避时长/熔断传播来源/分叉严重程度). 诊断记录通过 `TestRecorder.pipeline_stage_diagnostics` 通道可消费.
+- **Diagnostics (诊断)**: typed event(类型化事件) 先于自由文本 message(消息) 字段对外承诺稳定性. 当系统发射 `BudgetExhausted(预算耗尽)`, `GroupFuseTriggered(分组熔断触发)`, `EscalationBifurcated(升级分叉)` 三种 typed event 时, observability pipeline(观测流水线) 自动为每个事件生成 `PipelineStageDiagnostic(流水线阶段诊断)`, 包含事件序列号、CorrelationId(关联标识)、`budget_evaluation(预算评估)` 字段(携带预算耗尽退避时长/熔断传播来源/分叉严重程度). `PipelineStageDiagnostic` 中通过 `evaluated: bool` 字段区分"阶段已执行但无事件产生"(`evaluated=true, event=none`)与"阶段因预算通过或熔断跳过"(`evaluated=false, skip_reason: Option<String>`). 诊断记录通过 `TestRecorder.pipeline_stage_diagnostics` 通道可消费.
 
 ### Chinese Writing (中文写作)
 
@@ -117,7 +117,7 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
 - **SC-000**: 所有策略决策路径(预算通过, 预算耗尽, 熔断触发, 升级分叉)均可被 typed event(类型化事件) 日志完整复现, 即任意时刻的监督器状态可从事件流中重建. (定性成功标准)
 - **SC-001**: 在 10_000(一万次) 瞬时失败波形下(每次故障间隔 ≤1ms, 单线程注入, 持续 60s 窗口), effective restart attempts per minute(每分钟有效重启尝试) 实测样本不得超过文档曲线包络上界的 105%(曲线公式见 contracts/restart-budget-api.md).
 - **SC-002**: 双分组对照实验中在未声明跨组依赖的前提下, 对照组 B 侧初始在线时长 24h, A 侧注入熔断触发故障(频率 1 次/s, 持续 24h). B 侧额外非计划停机时间相对 24h(二十四小时) 对照窗不得超过 5%.
-- **SC-003**: typed event(类型化事件) 与 metrics(指标) 针对同一 SupervisorDecision(监督器裁决) 键的一致率抽检样本不低于 98%. "同一键" 指 `(child_id, decision_type, correlation_id)` 三字段组合.
+- **SC-003**: typed event(类型化事件) 与 metrics(指标) 针对同一 SupervisorDecision(监督器裁决) 键的一致率抽检样本不低于 98%. "同一键" 指 `(child_id, decision_type, correlation_id)` 三字段组合. 该验证在发布前作为单次门禁执行; 生产环境中由夜间 CI 定时抽检最近 24 小时内的 event/metrics 样本, 持续不达标时阻塞下次发布.
 
 ## Assumptions (假设)
 
@@ -126,3 +126,4 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
 - 系统时钟为 monotonic clock(单调时钟), 不受 NTP(网络时间协议) 校时或闰秒影响, 预算令牌恢复和熔断倒计时的正确性依赖此假设.
 - 单进程内 group(分组) 数量上限为 64, 单个 group 内 child(子任务) 数量上限为 256.
 - 滑动窗口中故障时间戳队列内存上限由 `window` 与 `max_burst` 共同约束, 最坏情况内存占用不超过 `max_burst × sizeof(u128)`.
+- 全部分组同时触发熔断时, `MeltdownTracker` 的 `group_counters: HashMap<String, GroupCounter>` 在 64 个分组规模下扩容延迟在微秒级, 不影响控制循环主路径延迟 p99 < 100µs 的性能目标.

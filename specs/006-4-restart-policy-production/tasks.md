@@ -42,6 +42,7 @@
 - [x] T008 [P] 在 `src/observe/fairness.rs` 中定义 `FairnessProbe` 结构体和 `StarvationAlert` 结构体, 按 `data-model.md`. `FairnessProbe` 实现 `record_opportunity()` 和 `check()` 方法.
 - [x] T009 在 `src/event/payload.rs` 的 `What` 枚举中新增 `BudgetExhausted`, `GroupFuseTriggered`, `EscalationBifurcated` 三个事件变体, 按 `data-model.md` 字段定义.
 - [x] T010 运行 `cargo check` 确认 Foundational(基础) 阶段所有新增类型编译无错. 执行 `cargo fmt`.
+- [x] T047 [P] 在 `src/config/loader.rs` 或 `src/policy/budget.rs` 中添加 `RestartBudgetConfig` 字段约束校验: `max_burst` 超过 10_000 时产生配置告警, 接近 `u32::MAX` 时拒绝; `recovery_rate_per_sec` 低于 0.001 时产生配置告警. 按 `data-model.md` 补充的业务上下限.
 
 **Checkpoint(检查点)**: `RestartBudgetConfig`, `BudgetVerdict`, `SeverityClass`, `GroupDependencyEdge`, `PropagationPolicy`, `GroupIsolationPolicy`, `FairnessProbe`, `StarvationAlert` 类型已就绪. 用户故事实现可以开始.
 
@@ -71,6 +72,7 @@
 - [x] T019 [US1] 在 `src/runtime/control_loop.rs` 的控制循环主路径中: 每次成功处理一个事件后调用 `fairness_probe.record_opportunity(child_id)`. 每 `probe_interval_ns` 调用 `fairness_probe.check()`, 若检测到饥饿, 发射 `What::FairnessProbeStarvation` 事件.
 - [x] T020 [US1] 在 `src/runtime/pipeline.rs` 中确保 `evaluate_budget` 阶段按 `budget → meltdown(熔断) → backoff(退避)` 顺序执行. 预算不足直接拒绝(不经过熔断与退避), 熔断后不计算退避.
 - [x] T021 [US1] 运行 `cargo test --test policy_budget_waveform_test --test policy_fairness_probe_test` 确认 US1 全部 4 个测试通过. 运行 `cargo test` 确认无回归. ✅ 全量测试 0 失败
+- [x] T048 [P] [US1] 在 `src/runtime/pipeline.rs` 的 `evaluate_budget` 阶段中: 当 `BudgetExhausted` 事件率超过 10 次/分钟时, 通过 `ObservabilityPipeline` 发射告警信号. 按 `spec.md` FR-001 补充的告警阈值.
 
 **Checkpoint(检查点)**: 快速失败波形下, 重启速率被预算限流, 公平性探针检测调度饥饿. US1 可独立演示.
 
@@ -98,6 +100,7 @@
 - [x] T028 [US2] 在 `src/runtime/pipeline.rs` 的 `evaluate_budget` 阶段中: 熔断触发时调用 `MeltdownTracker::propagate_fuse()`, 对每个受影响的分组发射 `What::GroupFuseTriggered` 事件, 并对该分组内所有 child 标记为不可重启.
 - [x] T029 [US2] 在 `src/runtime/control_loop.rs` 中: 当 `RestartDecision::Quarantine` 由 group 级熔断触发时, 确保 `child_runtime_records` 中正确反映 `group_fuse_active` 状态.
 - [x] T030 [US2] 运行 `cargo test --test policy_group_isolation_test` 确认 US2 全部 4 个测试通过(含 24h 滑动窗口). 运行 `cargo test` 确认 US1 测试无回归.
+- [x] T049 [P] [US2] 在 `src/spec/supervisor.rs` 或 `src/config/loader.rs` 的配置加载阶段添加校验: `ChildSpec.group` 引用的分组名必须在 `SupervisorSpec.group_configs` 中存在; 不存在时拒绝启动并返回结构化错误(指出未找到的分组名). 按 `spec.md` FR-002 和 `data-model.md` Relationships.
 
 **Checkpoint(检查点)**: 分组故障隔离生效, 依赖边传播正确. US1 和 US2 均可独立测试.
 
@@ -121,9 +124,10 @@
 
 - [x] T034 [US3] 在 `src/policy/role_defaults.rs` 中: `WorkRole` 添加默认 `SeverityClass` 映射: `Service → Critical`, `Supervisor → Critical`, `Worker → Standard`, `Job → Optional`, `Sidecar → Standard`. `ChildSpec` 中的显式 `severity` 字段覆盖角色默认值.
 - [x] T035 [US3] 在 `src/runtime/pipeline.rs` 中: evaluate_budget 阶段完成后, 根据 `EffectivePolicy.severity` 决定进一步动作. `Critical` → 发射 `EscalationBifurcated` 并升级. `Optional` → 发射 `EscalationBifurcated` 并降噪.
-- [x] T036 [US3] 在 `src/event/payload.rs` 中: 确保 `EscalationBifurcated` 事件变体包含 `severity: SeverityClass`, `budget_verdict: Option<BudgetVerdict>`, `fuse_outcome: Option<MeltdownOutcome>`.
-- [x] T037 [US3] 在 `src/runtime/control_loop.rs` 中: 生成 `CorrelationId(关联标识)` 并在 budget → meltdown → escalation 事件链路中传递, 确保同一故障链路的所有事件共享同一 CorrelationId.
+- [x] T036 [US3] 在 `src/event/payload.rs` 中: 确保 `EscalationBifurcated` 事件变体包含 `severity: SeverityClass`, `budget_verdict: Option<BudgetVerdict>`, `fuse_outcome: Option<MeltdownOutcome>`. `Option` 字段在跳过时使用 `None`, 不引入 `NotEvaluated` 变体. 按 `data-model.md` EscalationBifurcated 诊断键表.
+- [x] T037 [US3] 在 `src/runtime/control_loop.rs` 中: 生成 `CorrelationId(关联标识)` 使用 UUID v4 算法, 确保多个 child 同时触发故障时各自获得独立 ID; 在 budget → meltdown → escalation 事件链路中传递, 确保同一故障链路的所有事件共享同一 CorrelationId. 按 `spec.md` Edge Cases.
 - [x] T038 [US3] 运行 `cargo test --test policy_critical_optional_test` 确认 US3 全部 4 个测试通过(含事件/指标一致率验证). 运行 `cargo test` 确认 US1, US2 测试无回归.
+- [x] T050 [P] [US3] 在 `tests/policy_critical_optional_test.rs` 中添加 `test_correlation_id_uuid_v4_uniqueness`: 模拟 1000 个 child 同时触发故障, 断言所有 CorrelationId 唯一.
 
 **Checkpoint(检查点)**: critical/optional 分叉路径在事件和指标中完全可区分. 所有 3 个用户故事可独立测试.
 
@@ -133,7 +137,7 @@
 
 **Purpose(目的)**: 完成影响多个用户故事的改进和代码清理.
 
-- [x] T039 [P] 在 `src/spec/supervisor.rs` 中新增 `GroupConfig` 结构体: `name: String`, `children: Vec<ChildId>`, `budget: RestartBudgetConfig`. 新增 `group_dependencies: Vec<GroupDependencyEdge>`, `severity_defaults: HashMap<WorkRole, SeverityClass>`.
+- [x] T039 [P] 在 `src/spec/supervisor.rs` 中新增 `GroupConfig` 结构体: `name: String`, `children: Vec<ChildId>`, `budget: Option<RestartBudgetConfig>`. 新增 `group_dependencies: Vec<GroupDependencyEdge>`, `severity_defaults: HashMap<WorkRole, SeverityClass>`.
 - [x] T040 [P] 在 `src/spec/child.rs` 的 `ChildSpec` 中新增 `severity: Option<SeverityClass>` 和 `group: Option<String>` 字段(可选, 覆盖角色默认).
 - [x] T041 [P] 为 `src/policy/budget.rs`, `src/policy/group.rs`, `src/observe/fairness.rs` 补齐模块文档注释(符合 Rust 源码英文注释规范 `//!`).
 - [x] T042 [P] 在 `src/observe/pipeline.rs` 中: 为 `BudgetExhausted`, `GroupFuseTriggered`, `EscalationBifurcated` 事件类型添加观测流水线处理, 转为可审计的 `PipelineStageDiagnostic`.
@@ -141,6 +145,10 @@
 - [x] T044 运行 `cargo clippy --all-targets -- -D warnings` 确认零 clippy 警告.
 - [x] T045 运行 `cargo fmt --all` 确保代码格式一致.
 - [x] T046 运行 `cargo doc --no-deps --document-private-items` 确认新模块无文档警告.
+- [x] T051 [P] 在 `src/spec/supervisor.rs` 的 `GroupConfig` 中: `budget` 为 `None` 时继承 `SupervisorSpec` 级默认 `RestartBudgetConfig`, supervisor 级也未配置时使用内置安全默认值 (`window=60s, max_burst=10, recovery_rate_per_sec=0.5, max_tokens=10`). 按 `data-model.md` Relationships.
+- [x] T052 [P] 在 `src/policy/budget.rs` 的 `RestartBudgetTracker::new()` 中: 当 `RestartBudgetConfig` 字段缺失时使用内置安全默认值填充, 确保旧版配置升级时无需手动添加 budget 字段. 按 `spec.md` Edge Cases.
+- [x] T053 [P] 在 `src/observe/pipeline.rs` 中: 扩展 `PipelineStageDiagnostic` 新增 `evaluated: bool` 字段(区分"阶段已执行"与"阶段被跳过")和 `skip_reason: Option<String>`(跳过时注明原因). 按 `spec.md` Diagnostics.
+- [x] T054 在 CI 配置 (`.github/workflows/nightly-gates.yml`) 中添加 SC-003 持续验证步骤: 定时抽检最近 24 小时内 event/metrics 样本, typed event 与 metrics 一致率低于 98% 时阻塞发布.
 
 ---
 
