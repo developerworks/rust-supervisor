@@ -242,6 +242,21 @@ impl Display for PolicySource {
     }
 }
 
+/// Severity classification for failure escalation bifurcation.
+///
+/// Ordering: Critical > Standard > Optional (highest to lowest severity).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+pub enum SeverityClass {
+    /// Optional: failure follows noise-reduction path (no alert upgrade).
+    Optional,
+    /// Standard: follows the default WorkRole behavior.
+    Standard,
+    /// Critical: failure must trigger escalation path.
+    Critical,
+}
+
 /// Effective policy selected for one child.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EffectivePolicy {
@@ -255,6 +270,10 @@ pub struct EffectivePolicy {
     pub used_fallback: bool,
     /// Fields explicitly overridden by the user.
     pub overridden_fields: Vec<String>,
+    /// Severity classification for escalation bifurcation.
+    pub severity: SeverityClass,
+    /// Group name for group isolation (None = not grouped).
+    pub group_name: Option<String>,
 }
 
 impl EffectivePolicy {
@@ -278,12 +297,26 @@ impl EffectivePolicy {
         } else {
             PolicySource::UserOverride
         };
+        let severity = Self::default_severity(work_role);
         Self {
             work_role,
             policy_pack: RoleDefaultPolicy::for_role(work_role),
             source,
             used_fallback,
             overridden_fields,
+            severity,
+            group_name: None,
+        }
+    }
+
+    /// Returns the default [`SeverityClass`] for a given [`WorkRole`].
+    fn default_severity(role: WorkRole) -> SeverityClass {
+        match role {
+            WorkRole::Service => SeverityClass::Critical,
+            WorkRole::Supervisor => SeverityClass::Critical,
+            WorkRole::Worker => SeverityClass::Standard,
+            WorkRole::Job => SeverityClass::Optional,
+            WorkRole::Sidecar => SeverityClass::Standard,
         }
     }
 

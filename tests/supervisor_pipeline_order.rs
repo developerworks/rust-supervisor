@@ -12,6 +12,7 @@ use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::observe::pipeline::{
     ObservabilityPipeline, PipelineStage, PipelineStageDiagnostic,
 };
+use rust_supervisor::policy::budget::RestartBudgetConfig;
 use rust_supervisor::policy::decision::{PolicyFailureKind, TaskExit};
 use rust_supervisor::policy::failure_window::{FailureWindow, FailureWindowConfig, WindowMode};
 use rust_supervisor::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
@@ -41,7 +42,14 @@ fn create_test_pipeline() -> SupervisionPipeline {
     };
     let failure_window = FailureWindow::new(failure_config);
 
-    SupervisionPipeline::new(100, 10, meltdown_tracker, failure_window)
+    SupervisionPipeline::new(
+        100,
+        10,
+        meltdown_tracker,
+        failure_window,
+        RestartBudgetConfig::new(Duration::from_secs(60), 10, 0.5),
+        vec![],
+    )
 }
 
 /// Creates a minimal supervisor spec for testing

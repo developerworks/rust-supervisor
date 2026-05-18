@@ -103,10 +103,42 @@ pub struct MeltdownTracker {
     child_failures: HashMap<ChildId, VecDeque<Instant>>,
     /// Per-group failure timestamps retained inside the group window.
     group_failures: HashMap<String, VecDeque<Instant>>,
+    /// Per-group fuse activation state for group isolation.
+    group_counters: HashMap<String, GroupCounter>,
     /// Supervisor failure timestamps retained inside the supervisor window.
     supervisor_failures: VecDeque<Instant>,
     /// Latest failure timestamp used for stable-window cleanup.
     last_failure: Option<Instant>,
+}
+
+/// Group-level failure counter and fuse activation state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroupCounter {
+    /// Failure timestamps within the current window.
+    pub failures: VecDeque<Instant>,
+    /// Whether the group fuse is currently active.
+    pub fuse_active: bool,
+}
+
+impl GroupCounter {
+    /// Creates an empty group counter.
+    pub fn new() -> Self {
+        Self {
+            failures: VecDeque::new(),
+            fuse_active: false,
+        }
+    }
+}
+
+impl Default for GroupCounter {
+    /// Creates a default empty group counter.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`GroupCounter`] with empty failures and inactive fuse.
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MeltdownTracker {
@@ -124,6 +156,7 @@ impl MeltdownTracker {
             policy,
             child_failures: HashMap::new(),
             group_failures: HashMap::new(),
+            group_counters: HashMap::new(),
             supervisor_failures: VecDeque::new(),
             last_failure: None,
         }
@@ -289,6 +322,62 @@ impl MeltdownTracker {
     /// Returns the number of group failures inside the current window.
     pub fn group_failure_count(&self, group_id: &str) -> usize {
         self.group_failures.get(group_id).map_or(0, |q| q.len())
+    }
+
+    /// Records a failure against a specific group for isolation tracking.
+    ///
+    /// # Arguments
+    ///
+    /// - `group_name`: Group that experienced a failure.
+    /// - `now`: Current monotonic time.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated [`MeltdownOutcome`] scoped to the group.
+    pub fn track_group_failure(&mut self, group_name: &str, now: Instant) -> MeltdownOutcome {
+        let counter = self
+            .group_counters
+            .entry(group_name.to_string())
+            .or_default();
+        counter.failures.push_back(now);
+        // Prune expired entries
+        prune_window(&mut counter.failures, now, self.policy.group_window);
+        let count = counter.failures.len();
+        if count >= self.policy.group_max_failures as usize {
+            counter.fuse_active = true;
+            MeltdownOutcome::GroupFuse
+        } else {
+            MeltdownOutcome::Continue
+        }
+    }
+
+    /// Checks whether a group fuse is currently active.
+    pub fn group_fuse_active(&self, group_name: &str) -> bool {
+        self.group_counters
+            .get(group_name)
+            .is_some_and(|c| c.fuse_active)
+    }
+
+    /// Propagates a fuse to dependent groups.
+    ///
+    /// Returns the list of group names that are now also affected.
+    pub fn propagate_fuse(
+        &mut self,
+        failed_group: &str,
+        affected_groups: &[String],
+    ) -> Vec<String> {
+        let mut newly_affected = Vec::new();
+        for group in affected_groups {
+            if group == failed_group {
+                continue;
+            }
+            let counter = self.group_counters.entry(group.clone()).or_default();
+            if !counter.fuse_active {
+                counter.fuse_active = true;
+                newly_affected.push(group.clone());
+            }
+        }
+        newly_affected
     }
 
     /// Removes expired counter entries for all scopes.

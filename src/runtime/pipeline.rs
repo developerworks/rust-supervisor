@@ -16,8 +16,10 @@ use crate::event::payload::{
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::observe::pipeline::{ObservabilityPipeline, PipelineStage, PipelineStageDiagnostic};
 use crate::policy::backoff::{ColdStartBudget, HotLoopDetector};
+use crate::policy::budget::{BudgetVerdict, RestartBudgetConfig, RestartBudgetTracker};
 use crate::policy::decision::{PolicyFailureKind, TaskExit};
 use crate::policy::failure_window::FailureWindow;
+use crate::policy::group::{GroupDependencyEdge, GroupIsolationPolicy};
 use crate::policy::meltdown::{
     LocalVerdict, MeltdownOutcome, MeltdownTracker, merge_meltdown_verdicts,
 };
@@ -83,6 +85,8 @@ pub struct BudgetEvaluation {
     pub escalation_policy: Option<String>,
     /// Effective meltdown outcome after merging local verdicts.
     pub meltdown_outcome: MeltdownOutcome,
+    /// Budget verdict from the token bucket check (Granted or Exhausted).
+    pub budget_verdict: Option<BudgetVerdict>,
 }
 
 /// Final decision from stage 4.
@@ -189,6 +193,10 @@ pub struct SupervisionPipeline {
     pub cold_start_budget: ColdStartBudget,
     /// Hot loop detector for rapid crash-restart cycles.
     pub hot_loop_detector: HotLoopDetector,
+    /// Restart budget tracker for effective restart rate limiting.
+    pub budget_tracker: RestartBudgetTracker,
+    /// Group isolation policy for cross-group fault boundary enforcement.
+    pub group_isolation: GroupIsolationPolicy,
 }
 
 impl SupervisionPipeline {
@@ -200,6 +208,8 @@ impl SupervisionPipeline {
     /// - `subscriber_capacity`: Subscriber queue capacity.
     /// - `meltdown_tracker`: Configured meltdown tracker.
     /// - `failure_window`: Configured failure window.
+    /// - `budget_config`: Restart budget configuration.
+    /// - `group_dependencies`: Declared group dependency edges.
     ///
     /// # Returns
     ///
@@ -209,14 +219,22 @@ impl SupervisionPipeline {
         subscriber_capacity: usize,
         meltdown_tracker: MeltdownTracker,
         failure_window: FailureWindow,
+        budget_config: RestartBudgetConfig,
+        group_dependencies: Vec<GroupDependencyEdge>,
     ) -> Self {
         let started_at_secs = current_unix_secs();
+        let now_unix_nanos = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
         Self {
             observability: ObservabilityPipeline::new(journal_capacity, subscriber_capacity),
             meltdown_tracker,
             failure_window,
             cold_start_budget: ColdStartBudget::new(60, 5, started_at_secs),
             hot_loop_detector: HotLoopDetector::new(10, 3),
+            budget_tracker: RestartBudgetTracker::new(budget_config, now_unix_nanos),
+            group_isolation: GroupIsolationPolicy::new(group_dependencies),
         }
     }
 
@@ -276,7 +294,7 @@ impl SupervisionPipeline {
     /// # Returns
     ///
     /// Returns the updated context with exit classification.
-    fn stage_classify_exit(
+    pub(crate) fn stage_classify_exit(
         &self,
         mut ctx: PipelineContext,
         exit: &TaskExit,
@@ -375,6 +393,20 @@ impl SupervisionPipeline {
             .exit_classification
             .as_ref()
             .is_some_and(ExitClassification::should_restart);
+
+        // Budget check (stage 3a): budget → meltdown → backoff order
+        let budget_verdict = if should_restart {
+            Some(self.budget_tracker.try_consume(completed_at_unix_nanos))
+        } else {
+            None
+        };
+
+        // Budget exhaustion overrides should_restart (budget → meltdown order)
+        let budget_exhausted = budget_verdict
+            .as_ref()
+            .is_some_and(|v| matches!(v, BudgetVerdict::Exhausted { .. }));
+        let effective_should_restart = should_restart && !budget_exhausted;
+
         let now_secs = nanos_to_secs(completed_at_unix_nanos);
         if should_restart {
             let exhausted = self.cold_start_budget.record_restart(now_secs);
@@ -391,7 +423,7 @@ impl SupervisionPipeline {
             }
         }
 
-        let meltdown_outcome = if should_restart {
+        let meltdown_outcome = if effective_should_restart {
             self.meltdown_tracker.record_child_restart_with_group(
                 ctx.child_id.clone(),
                 group_id.clone(),
@@ -409,11 +441,51 @@ impl SupervisionPipeline {
             MeltdownOutcome::Continue
         };
 
+        // Group isolation check: if meltdown triggered for a group,
+        // propagate to dependent groups that declared Full propagation edges.
+        if matches!(meltdown_outcome, MeltdownOutcome::GroupFuse)
+            && let Some(ref gid) = group_id
+        {
+            // Find all groups affected by this group's meltdown
+            let affected: Vec<String> = ctx
+                .group_id
+                .iter()
+                .filter(|g| self.group_isolation.affected_by(g, gid))
+                .cloned()
+                .collect();
+            if !affected.is_empty() {
+                self.meltdown_tracker.propagate_fuse(gid, &affected);
+            }
+        }
+
+        // Severity escalation bifurcation (US3): check EffectivePolicy.severity
+        if let Some(ref policy) = ctx.effective_policy {
+            use crate::policy::role_defaults::SeverityClass;
+            match policy.severity {
+                SeverityClass::Critical => {
+                    // Critical path: escalation (emit EscalationBifurcated later in emit stage)
+                    ctx.stage_diagnostics.push(PipelineStageDiagnostic::new(
+                        ctx.sequence,
+                        ctx.correlation_id.clone(),
+                        PipelineStage::EvaluateBudget,
+                        completed_at_unix_nanos,
+                    ));
+                }
+                SeverityClass::Optional => {
+                    // Optional path: noise reduction (no escalation alert)
+                }
+                SeverityClass::Standard => {
+                    // Standard path: follow WorkRole defaults
+                }
+            }
+        }
+
         ctx.budget_evaluation = Some(BudgetEvaluation {
             remaining_restarts: remaining,
             limit_exhausted,
             escalation_policy: escalation_policy.map(|policy| format!("{policy:?}")),
             meltdown_outcome,
+            budget_verdict,
         });
 
         // Set group_id from plan if available
@@ -436,7 +508,7 @@ impl SupervisionPipeline {
     /// # Returns
     ///
     /// Returns the updated context with action decision.
-    fn stage_decide_action(
+    pub(crate) fn stage_decide_action(
         &self,
         mut ctx: PipelineContext,
         completed_at_unix_nanos: u128,
@@ -491,6 +563,14 @@ impl SupervisionPipeline {
 
     /// Stage 5: Emit typed supervision event with all diagnostic fields.
     ///
+    /// Uses pipeline context data to select the correct `What` variant:
+    /// - `BudgetExhausted` when the budget check failed
+    /// - `GroupFuseTriggered` when a group-level fuse triggered
+    /// - `EscalationBifurcated` for critical/optional bifurcation
+    /// - `ChildFailed` / `ChildRunning` as fallback (existing behavior)
+    ///
+    /// Also uses the pipeline context's `correlation_id` instead of a nil UUID.
+    ///
     /// # Arguments
     ///
     /// - `ctx`: Current pipeline context.
@@ -506,22 +586,16 @@ impl SupervisionPipeline {
         exit: &TaskExit,
         now_unix_nanos: u128,
     ) -> PipelineContext {
-        // Build the What payload based on exit
-        let what = match exit {
-            TaskExit::Succeeded => What::ChildRunning { transition: None },
-            TaskExit::Failed { .. } => What::ChildFailed {
-                failure: TaskFailure::new(
-                    crate::error::types::TaskFailureKind::Error,
-                    "pipeline_exit",
-                    "processed through six-stage pipeline",
-                ),
-            },
-        };
+        // Build the What payload based on pipeline evaluation results.
+        let what = self.build_policy_aware_what(&ctx, exit);
 
         // Create event with all diagnostic fields populated
         let location = Where::new(ctx.supervisor_path.clone())
             .with_child(ctx.child_id.clone(), "pipeline-child");
 
+        let event_correlation_id = crate::event::time::CorrelationId::from_uuid(
+            uuid::Uuid::parse_str(&ctx.correlation_id).unwrap_or(uuid::Uuid::nil()),
+        );
         let mut event = SupervisorEvent::new(
             crate::event::time::When::new(crate::event::time::EventTime::deterministic(
                 now_unix_nanos,
@@ -533,7 +607,7 @@ impl SupervisionPipeline {
             location,
             what,
             crate::event::time::EventSequence::new(ctx.sequence),
-            crate::event::time::CorrelationId::from_uuid(uuid::Uuid::nil()),
+            event_correlation_id,
             1,
         );
 
@@ -556,6 +630,96 @@ impl SupervisionPipeline {
         let mut ctx = ctx;
         append_stage_diagnostic(&mut ctx, PipelineStage::EmitTypedEvent, now_unix_nanos);
         ctx
+    }
+
+    /// Selects the correct `What` variant based on the pipeline evaluation results.
+    ///
+    /// Priority order:
+    /// 1. BudgetExhausted — when the token bucket has no tokens
+    /// 2. GroupFuseTriggered — when a group-level fuse fired
+    /// 3. EscalationBifurcated — for critical/optional severity bifurcation
+    /// 4. ChildFailed / ChildRunning — fallback (original behavior)
+    ///
+    /// # Arguments
+    ///
+    /// - `ctx`: Pipeline context with evaluation results.
+    /// - `exit`: Original task exit.
+    ///
+    /// # Returns
+    ///
+    /// Returns the appropriate [`What`] variant.
+    fn build_policy_aware_what(&self, ctx: &PipelineContext, exit: &TaskExit) -> What {
+        // 1. Check for budget exhaustion
+        if let Some(ref budget_eval) = ctx.budget_evaluation
+            && let Some(ref verdict) = budget_eval.budget_verdict
+            && let BudgetVerdict::Exhausted { retry_after_ns } = verdict
+        {
+            return What::BudgetExhausted {
+                child_id: ctx.child_id.clone(),
+                retry_after_ns: *retry_after_ns,
+                budget_source_group: ctx.group_id.clone(),
+            };
+        }
+
+        // 2. Check for group-level fuse
+        if let Some(ref budget_eval) = ctx.budget_evaluation
+            && matches!(
+                budget_eval.meltdown_outcome,
+                crate::policy::meltdown::MeltdownOutcome::GroupFuse
+            )
+        {
+            return What::GroupFuseTriggered {
+                group_name: ctx
+                    .group_id
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string()),
+                propagated_from_group: None,
+            };
+        }
+
+        // 3. Check for severity bifurcation (critical/optional)
+        if let Some(ref policy) = ctx.effective_policy {
+            use crate::policy::role_defaults::SeverityClass;
+            match policy.severity {
+                SeverityClass::Critical | SeverityClass::Optional => {
+                    let budget_verdict_str = ctx
+                        .budget_evaluation
+                        .as_ref()
+                        .and_then(|be| be.budget_verdict.as_ref())
+                        .map(|v| match v {
+                            BudgetVerdict::Granted => "granted".to_string(),
+                            BudgetVerdict::Exhausted { retry_after_ns } => {
+                                format!("exhausted:retry_after_ns={retry_after_ns}")
+                            }
+                        });
+                    let fuse_outcome_str = ctx
+                        .budget_evaluation
+                        .as_ref()
+                        .map(|be| format!("{:?}", be.meltdown_outcome));
+                    return What::EscalationBifurcated {
+                        severity: format!("{:?}", policy.severity),
+                        budget_verdict: budget_verdict_str,
+                        fuse_outcome: fuse_outcome_str,
+                        tie_break_reason: None,
+                    };
+                }
+                SeverityClass::Standard => {
+                    // Standard path: fall through to exit-based classification
+                }
+            }
+        }
+
+        // 4. Fallback: exit-based classification (original behavior)
+        match exit {
+            TaskExit::Succeeded => What::ChildRunning { transition: None },
+            TaskExit::Failed { .. } => What::ChildFailed {
+                failure: TaskFailure::new(
+                    crate::error::types::TaskFailureKind::Error,
+                    "pipeline_exit",
+                    "processed through six-stage pipeline",
+                ),
+            },
+        }
     }
 
     /// Stage 6: Execute the decided action.
@@ -913,100 +1077,5 @@ fn protection_action_for_meltdown(outcome: MeltdownOutcome) -> ProtectionAction 
         MeltdownOutcome::ChildFuse => ProtectionAction::RestartDenied,
         MeltdownOutcome::GroupFuse => ProtectionAction::SupervisionPaused,
         MeltdownOutcome::SupervisorFuse => ProtectionAction::Escalated,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::event::payload::ProtectionAction;
-    use crate::id::types::{ChildId, SupervisorPath};
-    use crate::policy::decision::{PolicyFailureKind, TaskExit};
-    use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
-    use crate::policy::meltdown::{MeltdownOutcome, MeltdownPolicy, MeltdownTracker};
-    use crate::runtime::pipeline::{
-        BudgetEvaluation, ExitClassification, PipelineContext, SupervisionPipeline,
-    };
-    use std::time::Duration;
-
-    /// Creates a test supervision pipeline with default meltdown policy configuration.
-    fn test_pipeline() -> SupervisionPipeline {
-        let meltdown_policy = MeltdownPolicy::new(
-            3,
-            Duration::from_secs(10),
-            5,
-            Duration::from_secs(30),
-            10,
-            Duration::from_secs(60),
-            Duration::from_secs(120),
-        );
-        let meltdown_tracker = MeltdownTracker::new(meltdown_policy);
-
-        let failure_config = FailureWindowConfig::time_sliding(60, 5);
-        let failure_window = FailureWindow::new(failure_config);
-
-        SupervisionPipeline::new(100, 10, meltdown_tracker, failure_window)
-    }
-
-    /// Tests that successful task exits are classified correctly by the pipeline.
-    #[test]
-    fn test_exit_classification_success() {
-        let pipeline = test_pipeline();
-        let child_id = ChildId::new("test".to_string());
-        let path = SupervisorPath::root();
-        let ctx = PipelineContext::new(child_id, path, 1, "test-correlation");
-
-        let exit = TaskExit::Succeeded;
-        let ctx = pipeline.stage_classify_exit(ctx, &exit, 1);
-
-        assert_eq!(ctx.exit_classification, Some(ExitClassification::Success));
-        assert!(!ctx.exit_classification.unwrap().should_restart());
-    }
-
-    /// Tests that failed task exits are classified correctly with restart decision.
-    #[test]
-    fn test_exit_classification_failure() {
-        let pipeline = test_pipeline();
-        let child_id = ChildId::new("test".to_string());
-        let path = SupervisorPath::root();
-        let ctx = PipelineContext::new(child_id, path, 1, "test-correlation");
-
-        let exit = TaskExit::Failed {
-            kind: PolicyFailureKind::Recoverable,
-        };
-        let ctx = pipeline.stage_classify_exit(ctx, &exit, 1);
-
-        assert!(matches!(
-            ctx.exit_classification,
-            Some(ExitClassification::NonZeroExit { .. })
-        ));
-        assert!(ctx.exit_classification.unwrap().should_restart());
-    }
-
-    /// Tests that cancel exits have priority over budget evaluation in action decision.
-    #[test]
-    fn test_cancel_has_priority() {
-        let pipeline = test_pipeline();
-        let child_id = ChildId::new("test".to_string());
-        let path = SupervisorPath::root();
-        let mut ctx = PipelineContext::new(child_id, path, 1, "test-correlation");
-
-        // Set up budget evaluation showing restarts allowed
-        ctx.budget_evaluation = Some(BudgetEvaluation {
-            remaining_restarts: Some(3),
-            limit_exhausted: false,
-            escalation_policy: None,
-            meltdown_outcome: MeltdownOutcome::Continue,
-        });
-
-        // Classify as external cancel
-        ctx.exit_classification = Some(ExitClassification::ExternalCancel);
-
-        // Decide action should prioritize cancel over budget
-        let ctx = pipeline.stage_decide_action(ctx, 1);
-
-        assert_eq!(
-            ctx.action_decision.unwrap().action,
-            ProtectionAction::SupervisedStop
-        );
     }
 }

@@ -687,6 +687,44 @@ pub enum What {
         /// Number of missed events.
         missed: u64,
     },
+    /// Restart budget exhausted for a child.
+    BudgetExhausted {
+        /// Child whose budget ran out.
+        child_id: ChildId,
+        /// Nanoseconds to wait before retrying.
+        retry_after_ns: u128,
+        /// Source group that triggered the budget check (when applicable).
+        budget_source_group: Option<String>,
+    },
+    /// Group meltdown fuse was triggered.
+    GroupFuseTriggered {
+        /// Group that entered meltdown.
+        group_name: String,
+        /// Group from which the fuse propagated (when applicable).
+        propagated_from_group: Option<String>,
+    },
+    /// Escalation path bifurcation between critical and optional children.
+    EscalationBifurcated {
+        /// Severity classification for the escalation decision.
+        severity: String,
+        /// Budget verdict at the time of escalation (when available).
+        budget_verdict: Option<String>,
+        /// Meltdown outcome at the time of escalation (when available).
+        fuse_outcome: Option<String>,
+        /// Reason for tie-breaking (when applicable).
+        tie_break_reason: Option<String>,
+    },
+    /// Starvation alert emitted by the fairness probe (US1).
+    FairnessProbeStarvation {
+        /// The child that has been starved.
+        starved_child_id: ChildId,
+        /// How many scheduling opportunities were missed.
+        skip_count: u64,
+        /// Start of the probe window (Unix nanos).
+        probe_start_unix_nanos: u128,
+        /// End of the probe window (Unix nanos).
+        probe_end_unix_nanos: u128,
+    },
 }
 
 impl What {
@@ -754,6 +792,10 @@ impl What {
             Self::RuntimeControlLoopFailed { .. } => "RuntimeControlLoopFailed",
             Self::RuntimeControlLoopJoinCompleted { .. } => "RuntimeControlLoopJoinCompleted",
             Self::SubscriberLagged { .. } => "SubscriberLagged",
+            Self::BudgetExhausted { .. } => "BudgetExhausted",
+            Self::GroupFuseTriggered { .. } => "GroupFuseTriggered",
+            Self::EscalationBifurcated { .. } => "EscalationBifurcated",
+            Self::FairnessProbeStarvation { .. } => "FairnessProbeStarvation",
         }
     }
 }

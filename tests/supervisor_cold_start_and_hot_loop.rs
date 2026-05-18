@@ -6,6 +6,7 @@
 use rust_supervisor::event::payload::{ColdStartReason, HotLoopReason, ProtectionAction};
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::policy::backoff::{ColdStartBudget, HotLoopDetector};
+use rust_supervisor::policy::budget::RestartBudgetConfig;
 use rust_supervisor::policy::decision::{PolicyFailureKind, TaskExit};
 use rust_supervisor::policy::failure_window::{FailureWindow, FailureWindowConfig};
 use rust_supervisor::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
@@ -27,7 +28,14 @@ fn create_pipeline() -> SupervisionPipeline {
     );
     let meltdown_tracker = MeltdownTracker::new(meltdown_policy);
     let failure_window = FailureWindow::new(FailureWindowConfig::time_sliding(60, 100));
-    SupervisionPipeline::new(100, 10, meltdown_tracker, failure_window)
+    SupervisionPipeline::new(
+        100,
+        10,
+        meltdown_tracker,
+        failure_window,
+        RestartBudgetConfig::new(Duration::from_secs(60), 10, 0.5),
+        vec![],
+    )
 }
 
 /// Runs one recoverable failure through the production pipeline.
