@@ -53,7 +53,7 @@ impl Default for CommandId {
 pub struct CommandMeta {
     /// Command identifier used for audit correlation.
     pub command_id: CommandId,
-    /// Actor that requested the command.
+    /// Caller that requested the command.
     pub requested_by: String,
     /// Human-readable command reason.
     pub reason: String,
@@ -64,7 +64,7 @@ impl CommandMeta {
     ///
     /// # Arguments
     ///
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns

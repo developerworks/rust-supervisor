@@ -162,23 +162,13 @@ impl MeltdownTracker {
         }
     }
 
-    #[deprecated(
-        since = "0.1.3",
-        note = "Use record_child_restart_with_group for per-scope isolation"
-    )]
-    /// Records a child restart failure (legacy API, aggregates across all scopes).
+    /// Records a child restart failure.
     ///
-    /// # Arguments
-    ///
-    /// - `now`: Current monotonic time supplied by the runtime or test.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`MeltdownOutcome`] for the updated counters.
+    /// Delegates to [`record_child_restart_with_group`] with a default scope.
+    #[allow(dead_code)]
     pub fn record_child_restart(&mut self, now: Instant) -> MeltdownOutcome {
-        // Legacy behavior: use a synthetic child/group to maintain backward compatibility
-        let synthetic_child = ChildId::new("_legacy".to_string());
-        self.record_child_restart_with_group(synthetic_child, Some("_legacy".to_string()), now)
+        let synthetic_child = ChildId::new("_default".to_string());
+        self.record_child_restart_with_group(synthetic_child, None, now)
     }
 
     /// Records a child restart failure with explicit group assignment (FR-002).

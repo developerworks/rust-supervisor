@@ -1671,7 +1671,7 @@ impl RuntimeControlState {
             };
             self.emit_pending_event(pending);
 
-            // Keep text-based log for backward compatibility.
+            // Text-based log for audit trail.
             let _ignored = event_sender.send(format!(
                 "fairness_starvation:{}:skip_count={}:window_start={}:window_end={}",
                 alert.starved_child_id,
@@ -2611,7 +2611,7 @@ impl RuntimeControlState {
     }
 
     // ------------------------------------------------------------------
-    // Slot-based lifecycle operations (migration from child_runtime_states)
+    // Slot-based lifecycle operations (slot-based replacement for child_runtime_states)
     // ------------------------------------------------------------------
 
     /// Executes a shutdown on all slots using the real cancellation+join

@@ -61,9 +61,6 @@ impl RestartBudgetConfig {
     }
 
     /// Returns a safe default configuration used when no budget is declared.
-    ///
-    /// Used for backward compatibility: old config files without a `budget`
-    /// section will get these values instead of being rejected.
     pub fn safe_default() -> Self {
         Self {
             window: Duration::from_secs(60),

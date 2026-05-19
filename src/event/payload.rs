@@ -345,7 +345,7 @@ impl PolicyDecision {
 pub struct CommandAudit {
     /// Stable command identifier.
     pub command_id: String,
-    /// Actor that requested the command.
+    /// Caller that requested the command.
     pub requested_by: String,
     /// Operator-provided reason.
     pub reason: String,
@@ -649,7 +649,7 @@ pub enum What {
         command: String,
         /// Control command identifier.
         command_id: String,
-        /// Actor that requested the command.
+        /// Caller that requested the command.
         requested_by: String,
         /// Operator-provided reason.
         reason: String,
@@ -704,7 +704,7 @@ pub enum What {
     RuntimeControlLoopShutdownRequested {
         /// Stable command identifier.
         command_id: String,
-        /// Actor that requested shutdown.
+        /// Caller that requested shutdown.
         requested_by: String,
         /// Operator-provided reason.
         reason: String,
@@ -733,7 +733,7 @@ pub enum What {
     RuntimeControlLoopJoinCompleted {
         /// Stable command identifier.
         command_id: String,
-        /// Actor that requested join.
+        /// Caller that requested join.
         requested_by: String,
         /// Final state label.
         state: String,
@@ -821,7 +821,7 @@ pub enum What {
     Paused {
         /// Pause reason.
         reason: String,
-        /// Actor that initiated the pause.
+        /// Caller that initiated the pause.
         paused_by: String,
     },
     /// Supervision resumed for a child or group.

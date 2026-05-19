@@ -396,16 +396,7 @@ impl ChildSlot {
         self.registry_identity_anchor_for_spawn_attempt = None;
     }
 
-    /// Clears the active instance without recording an exit (migration
-    /// compatibility with [`ChildRuntimeState::clear_instance`]).
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// This function does not return a value.
+    /// Clears the active instance without recording an exit.
     pub fn clear_instance(&mut self) {
         self.generation = None;
         self.attempt = None;
@@ -566,19 +557,7 @@ impl ChildSlot {
         self.restart_limit.clone()
     }
 
-    /// Refreshes the restart limit tracker and updates the state (migration
-    /// compatibility).
-    ///
-    /// # Arguments
-    ///
-    /// - `window`: Restart accounting window.
-    /// - `limit`: Restart limit inside the window.
-    /// - `count_failure`: Whether the current exit counts as a failure.
-    /// - `time_base`: Runtime time base.
-    ///
-    /// # Returns
-    ///
-    /// Returns the updated [`RestartLimitState`].
+    /// Refreshes the restart limit tracker and updates the state.
     pub fn refresh_restart_limit(
         &mut self,
         window: Duration,
@@ -593,16 +572,7 @@ impl ChildSlot {
         self.update_restart_limit(window, limit, used, time_base)
     }
 
-    /// Builds a public runtime state record (migration compatibility with
-    /// [`ChildRuntimeState::to_record`]).
-    ///
-    /// # Arguments
-    ///
-    /// - `liveness`: Liveness state observed by the caller.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`ChildRuntimeRecord`].
+    /// Builds a public runtime state record.
     pub fn to_record(&self, liveness: ChildLivenessState) -> ChildRuntimeRecord {
         // Data model: status is None when there is no active attempt.
         let status = if self.attempt.is_some() {

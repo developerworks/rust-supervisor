@@ -11,10 +11,10 @@ use std::os::unix::fs::FileTypeExt;
 use std::os::unix::net::UnixStream as StdUnixStream;
 
 // ---------------------------------------------------------------------------
-// Peer identity snapshot
+// Peer identity record
 // ---------------------------------------------------------------------------
 
-/// Snapshot of peer identity taken from a connected Unix socket.
+/// Record of peer identity taken from a connected Unix socket.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PeerIdentity {
     /// Process identifier of the peer.
@@ -148,7 +148,7 @@ fn extract_peer_identity_macos(stream: &StdUnixStream) -> Result<PeerIdentity, D
 ///
 /// # Arguments
 ///
-/// - `peer`: Extracted peer identity snapshot.
+/// - `peer`: Extracted peer identity record.
 /// - `config`: Peer identity verification configuration.
 ///
 /// # Returns

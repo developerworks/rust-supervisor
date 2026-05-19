@@ -104,8 +104,80 @@ impl SupervisorHandle {
     ///
     /// - `target`: Supervisor path that should receive the child.
     /// - `child_manifest`: Child manifest text supplied by the caller.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
+    ///
+    /// # Child Manifest Example
+    ///
+    /// The runtime expects a YAML child declaration. The smallest useful
+    /// manifest names the child and selects a task kind:
+    ///
+    /// ```yaml
+    /// name: worker
+    /// kind: async_worker
+    /// ```
+    ///
+    /// Optional fields can be added when the child needs dependencies,
+    /// lifecycle policy, resource limits, command permissions, environment
+    /// variables, or secret references:
+    ///
+    /// ```yaml
+    /// name: worker
+    /// kind: async_worker
+    /// criticality: optional
+    /// restart_policy: transient
+    /// dependencies:
+    ///   - cache
+    /// health_check:
+    ///   check_interval_secs: 10
+    ///   timeout_secs: 5
+    ///   max_retries: 3
+    /// readiness:
+    ///   check_interval_secs: 5
+    ///   timeout_secs: 3
+    /// resource_limits:
+    ///   max_memory_mb: 256
+    ///   max_cpu_percent: 80
+    ///   max_file_descriptors: 1024
+    /// command_permissions:
+    ///   allow_shutdown: false
+    ///   allow_restart: true
+    ///   allowed_signals:
+    ///     - SIGTERM
+    /// environment:
+    ///   - name: WORKER_MODE
+    ///     value: queue
+    ///   - name: API_TOKEN
+    ///     secret_ref: ${API_TOKEN}
+    /// secrets:
+    ///   - name: API_TOKEN
+    ///     key: workers/api_token
+    ///     required: true
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn add_child_example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    /// use rust_supervisor::control::command::CommandResult;
+    /// use rust_supervisor::id::types::SupervisorPath;
+    /// use rust_supervisor::runtime::supervisor::Supervisor;
+    /// use rust_supervisor::spec::supervisor::SupervisorSpec;
+    ///
+    /// let handle = Supervisor::start(SupervisorSpec::root(Vec::new())).await?;
+    /// let result = handle
+    ///     .add_child(
+    ///         SupervisorPath::root(),
+    ///         "name: worker\nkind: async_worker\n",
+    ///         "operator",
+    ///         "attach worker during runtime update",
+    ///     )
+    ///     .await?;
+    ///
+    /// assert!(matches!(result, CommandResult::ChildAdded { .. }));
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Returns
     ///
@@ -130,7 +202,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns
@@ -153,7 +225,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns
@@ -176,7 +248,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns
@@ -199,7 +271,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns
@@ -222,7 +294,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     ///
     /// # Returns
@@ -244,7 +316,7 @@ impl SupervisorHandle {
     ///
     /// # Arguments
     ///
-    /// - `requested_by`: Actor that requested shutdown.
+    /// - `requested_by`: Caller that requested shutdown.
     /// - `reason`: Human-readable shutdown reason.
     ///
     /// # Returns
@@ -327,7 +399,7 @@ impl SupervisorHandle {
     ///
     /// # Arguments
     ///
-    /// - `requested_by`: Actor that requested shutdown.
+    /// - `requested_by`: Caller that requested shutdown.
     /// - `reason`: Human-readable shutdown reason.
     ///
     /// # Returns
@@ -487,7 +559,7 @@ impl SupervisorHandle {
     /// # Arguments
     ///
     /// - `child_id`: Target child identifier.
-    /// - `requested_by`: Actor that requested the command.
+    /// - `requested_by`: Caller that requested the command.
     /// - `reason`: Human-readable command reason.
     /// - `builder`: Command builder for the child operation.
     ///
