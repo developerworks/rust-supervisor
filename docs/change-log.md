@@ -1,8 +1,36 @@
 # 文档变更记录 (Documentation Change Log)
 
-> 最后更新: 2026-05-18
+> 最后更新: 2026-05-19
 
 本文档追踪 `docs/` 目录及关联文档的结构化变更, 与 `CHANGELOG.md` (代码变更) 互补.
+
+## 2026-05-19
+
+### 新增
+
+- `tests/chaos/`: 混沌测试套件 (11 个故障波形场景, 对应 006-7 切片)
+  - `child_panic_storm`, `child_block_forever`, `child_ignore_cancel`
+  - `rapid_failure_10k`, `slow_event_subscriber`, `command_channel_full`
+  - `ipc_connection_storm`, `socket_path_contention`, `relay_crash_loop`
+  - `clock_step_backward`, `runtime_starvation_probe`
+- `tests/chaos/verdict.rs`: JSON 判决书 schema 和校验测试
+- `tests/chaos/fixtures/`: FixtureChildSpawner, FixtureEventThrottle, FixtureIpcStress (+RateLimiter, ClientClassification), FixtureClockController, FixtureRuntimeProbe
+- `tests/soak/`: 24h 浸泡测试框架 (MetricsCollector, SteadyTrafficGenerator, SoakReport, SoakRuntime)
+- `tests/chaos_suite.rs`: 混沌套件入口 (cargo test --test chaos_suite)
+- `tests/soak_suite.rs`: 浸泡测试入口 (cargo test --test soak_suite)
+- `manual/*/operations-runbook.md`: 运维手册 (4 个 P1 场景, 含期望 metrics 和升级路径)
+- `scripts/check-tarball-content.sh`: tarball 内容校验脚本
+- `scripts/validate-release-matrix.sh`: 放行矩阵校验 + CSV->HTML 转换
+- `specs/006-7-chaos-soak-reliability/`: 完整规格工件 (plan, research, data-model, contracts, tasks)
+- `specs/006-8-product-bundle-runbooks/`: 完整规格工件 (plan, research, data-model, contracts, tasks)
+
+### 变更
+
+- `Cargo.toml`: 新增 chaos_suite 和 soak_suite 测试目标
+- `manual/*/getting-started.md`: 增加步数上限 (Step 1-5 of 5) 和健康自检 JSON schema 引用
+- `manual/*/configuration.md`: 增加密钥占位符 (`${SECRET_NAME}`) 和升级章节
+- `artifacts/quality-gate-outcome.csv`: 新增 chaos-test, soak-24h 闸门行
+- `.specify/feature.json`: 已补充 006-7, 006-8 切片路径
 
 ## 2026-05-18
 

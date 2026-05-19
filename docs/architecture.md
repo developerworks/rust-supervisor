@@ -1,6 +1,6 @@
 # 系统架构 (System Architecture)
 
-> 最后更新: 2026-05-18 | 对应版本: 0.1.2
+> 最后更新: 2026-05-19 | 对应版本: 0.1.2
 
 ## 一、架构总览
 
@@ -266,7 +266,75 @@ Phase 4: reconcile (状态对账)
 - **禁止内联单元测试**: 测试文件放在 `src/<module>/tests/*_test.rs` 或 `src/tests/*_test.rs`
 - **禁止兼容导出**: 无旧接口别名、迁移层或废弃门面
 
-## 四、关键架构决策
+## 四、测试架构
+
+### 4.1 混沌测试
+
+混沌测试位于 `tests/chaos/` 目录, 通过 11 个独立故障波形验证监督器韧性。所有代码仅通过 `[dev-dependencies]` 引用, 不修改 `src/` 生产代码。
+
+```text
+tests/chaos/
+├── mod.rs              # ChaosScenario 枚举 (11 变体)
+├── verdict.rs          # JSON 判决书序列化 + schema 校验
+├── scenarios/          # 11 个故障波形
+│   ├── child_panic_storm.rs       # 子任务反复 panic
+│   ├── child_block_forever.rs     # 子任务永久阻塞
+│   ├── child_ignore_cancel.rs     # 忽略取消
+│   ├── rapid_failure_10k.rs       # 万次快速失败
+│   ├── slow_event_subscriber.rs   # 慢事件订阅者
+│   ├── command_channel_full.rs    # 命令通道塞满
+│   ├── ipc_connection_storm.rs    # IPC 连接风暴
+│   ├── socket_path_contention.rs  # 套接字路径冲突
+│   ├── relay_crash_loop.rs        # 中继崩溃循环
+│   ├── clock_step_backward.rs     # 时钟回拨
+│   └── runtime_starvation_probe.rs # 运行时饥饿
+├── fixtures/           # 测试夹具
+│   ├── child_spawner.rs           # 可控 child spawn (panic/block/ignore-cancel)
+│   ├── event_throttle.rs          # 事件限速夹具
+│   ├── ipc_stress.rs              # IPC 连接风暴夹具 + RateLimiter + ClientClassification
+│   ├── clock_controller.rs        # 时钟回拨夹具 (monotonic clock 断言)
+│   └── runtime_probe.rs           # 运行时饥饿探针
+└── chaos_suite.rs      # CI 入口 (cargo test --test chaos_suite)
+```
+
+执行方式: `cargo test --test chaos_suite -- --include-ignored`
+输出格式: 每条场景输出 JSON 判决书 (含 scenario_id, semver, passed, thresholds, duration).
+
+### 4.2 浸泡测试
+
+浸泡测试位于 `tests/soak/`, 执行 24h 长稳验证，默认仅通过 `#[ignore]` 测试标记运行。
+
+```text
+tests/soak/
+├── mod.rs              # SoakRuntime (统筹浸泡生命周期)
+├── metrics_collector.rs # 指标采集 (p99 latency / RSS / FD count / event gap)
+├── report.rs           # SoakReport Markdown 生成
+└── fixtures/
+    └── steady_traffic.rs # 1000 req/s 稳态流量生成器
+```
+
+SoakReport 阈值:
+
+| 指标                     | 阈值 (p99 / 上限) |
+| ------------------------ | ----------------- |
+| `p99_latency_ms`         | < 50ms            |
+| `rss_growth_mb_per_hour` | < 5 MB/h          |
+| `fd_count_drift`         | < 10              |
+| `event_gap_total`        | ≤ discard_budget  |
+| `shutdown_success_ratio` | ≥ 0.99            |
+
+### 4.3 放行矩阵与校验脚本
+
+```text
+scripts/
+├── check-tarball-content.sh    # 检查 MVP tarball 内容合规
+└── validate-release-matrix.sh  # 校验放行矩阵 CSV 格式 + 生成 HTML 表格
+```
+
+放行矩阵文件: `artifacts/quality-gate-outcome.csv`
+包含闸门: unit-test, integration-test, property-test, fuzz-test, loom-test, chaos-test, soak-24h, dep-audit, sbom, dry-run.
+
+## 五、关键架构决策
 
 ### 4.1 为什么使用 Tokio 原语而非 actor 框架
 
@@ -315,7 +383,7 @@ pub mod ipc;
 
 核心监督能力在所有 Rust 支持平台上可编译。Unix 平台额外提供 dashboard IPC(进程间通信) 能力。
 
-## 五、配置结构
+## 六、配置结构
 
 ```yaml
 supervisor:
@@ -355,7 +423,7 @@ ipc: # 可选,仅 Unix
     registration_heartbeat_interval_seconds: 15
 ```
 
-## 六、可观测性架构
+## 七、可观测性架构
 
 ```text
 生命周期事实
@@ -396,7 +464,7 @@ ipc: # 可选,仅 Unix
             └── final decision
 ```
 
-## 七、IPC 安全控制点
+## 八、IPC 安全控制点
 
 看板 IPC 配置了 9 项安全控制点 (C1-C9):
 
@@ -412,7 +480,7 @@ ipc: # 可选,仅 Unix
 | C8   | command idempotency key    | 命令幂等键                      |
 | C9   | external command allowlist | 外部命令白名单                  |
 
-## 八、聚合仓库架构
+## 九、聚合仓库架构
 
 完整产品由三个独立仓库组成:
 
@@ -422,7 +490,7 @@ ipc: # 可选,仅 Unix
 | rust-supervisor-relay | `~/rust-supervisor-relay` | 中继进程         | Rust + Tokio + TLS          |
 | rust-supervisor-ui    | `~/rust-supervisor-ui`    | 浏览器看板       | Vue + shadcn-vue + Tailwind |
 
-## 九、相关文档
+## 十、相关文档
 
 - [产品路线图](product-roadmap.md)
 - [质量门禁 - 英文](en/quality-gates.md)

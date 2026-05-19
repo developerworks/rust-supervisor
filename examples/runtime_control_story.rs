@@ -34,8 +34,8 @@ async fn main() -> ExampleResult {
         .add_child(
             // Target the root supervisor.
             SupervisorPath::root(),
-            // Provide the child manifest text.
-            "id=market_feed kind=AsyncWorker readiness=Explicit",
+            // Provide the child manifest as YAML.
+            "name: market_feed\nkind: async_worker\n",
             // Provide the requesting actor.
             "operator",
             // Provide the audit reason.

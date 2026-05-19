@@ -7,8 +7,8 @@
 - `change-log.md`: documentation change log.
 - `context-map.md`: project context map — code, docs, specs, tests, CI/CD overview.
 - `environment.md`: development environment setup, toolchain, dependencies, and CI/CD configuration.
-- `operations.md`: operations guide — deployment, health checks, incident response runbooks, performance tuning.
-- `product-roadmap.md`: product roadmap, milestone planning, and feature slice status.
+  | `operations.md`: operations guide — deployment, health checks, incident response runbooks, chaos/soak test execution, release matrix validation, performance tuning.
+  | `product-roadmap.md`: product roadmap, milestone planning, and feature slice status (006-1 to 006-8 completed).
 - `quality-gates.md`: quality gates and release readiness checks.
 - `security.md`: security documentation — IPC control points C1-C9, supply chain security, audit trail.
 - `parallel-governance.md`: parallel implementation governance and documentation ownership.

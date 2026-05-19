@@ -1,6 +1,6 @@
 # 安全说明 (Security Documentation)
 
-> 最后更新: 2026-05-18 | 对应版本: 0.1.2
+> 最后更新: 2026-05-19 | 对应版本: 0.1.2
 
 ## 一、概述
 
@@ -157,7 +157,17 @@ ipc:
 | 配置不支持热更新   | 修改安全配置需重启 supervisor                 | 使用配置管理工具自动化重启                            |
 | 无内置 mTLS        | target 侧不处理 mTLS                          | mTLS 由 relay 侧管理, 参考 rust-supervisor-relay 文档 |
 
-## 八、相关文档
+## 八、混沌测试安全约束
+
+混沌测试套件遵循以下安全约束，确保不会影响生产环境安全:
+
+- **不修改生产代码**: 所有混沌场景代码位于 `tests/chaos/`，仅通过 `[dev-dependencies]` 引用，`cargo build --release` 不包含混沌代码。
+- **进程级隔离**: 混沌 harness 仅通过测试夹具注入故障，不允许修改默认发布二进制行为。宪章要求"混沌 harness 只允许通过测试夹具注入故障"。
+- **panic 隔离**: 子任务 panic 通过 `std::panic::catch_unwind` 捕获。控制循环已配置 `std::panic::set_hook` 记录结构化错误并继续执行，不会因子任务 panic 而终止。Spec 中"panic"指 Rust 语言级 panic；进程级崩溃使用"crash"表述。
+- **时间隔离**: 时钟回拨场景仅模拟 wall clock 回退，不修改系统 `CLOCK_MONOTONIC`。滑动窗口和熔断器使用 `std::time::Instant` (monotonic clock)，不受 wall clock 回退影响。
+- **网络隔离**: IPC 连接风暴场景使用独立临时 socket 路径，不影响生产 IPC 端点。
+
+## 九、相关文档
 
 - [IPC 安全控制点契约](../specs/006-1-platform-docs-ipc-security/contracts/ipc-control-points.md)
 - [平台支持矩阵](architecture.md#45-平台编译隔离)

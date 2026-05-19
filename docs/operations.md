@@ -1,6 +1,6 @@
 # 运行维护 (Operations Guide)
 
-> 最后更新: 2026-05-18 | 对应版本: 0.1.2
+> 最后更新: 2026-05-19 | 对应版本: 0.1.2
 
 ## 一、概述
 
@@ -213,14 +213,65 @@ handle.quarantine_child("child-1", "operator", "restart storm").await?;
 | IPC 不可达 | socket 文件缺失          | 检查进程存活            | 重启 supervisor 进程  | 4.4 节   |
 | 预算耗尽   | `BudgetExhausted` 事件   | 可选: 调整 budget 配置  | 等待 recovery 窗口    | 4.1 节   |
 
-## 五、备份与恢复
+## 五、混沌与浸泡测试执行
 
-- 运行时配置: 通过 YAML 文件版本控制管理, 不依赖运行时备份
-- 事件日志: `EventJournal` 是内存环形缓冲区, 进程重启后丢失
-- 审计记录: 默认内存存储, 如需持久化配置 `audit_persistence=file`
-- 状态恢复: 所有 child 在 supervisor 重启后按 `SupervisorSpec` 重新声明和启动
+### 5.1 混沌测试
 
-## 六、性能调优
+混沌套件通过独立测试二进制运行，不会影响常规 `cargo test`。
+
+```bash
+# 运行全部 11 个混沌场景
+cargo test --test chaos_suite -- --include-ignored
+
+# 运行单个场景
+cargo test --test chaos_suite -- --include-ignored child_panic_storm
+
+# 查看 JSON 判决书 (stdout)
+cargo test --test chaos_suite -- --include-ignored --nocapture | grep '^{'
+```
+
+每个场景输出 JSON 判决书到 stdout，CI 通过 `jq -e '.passed == true'` 逐条判定。
+
+### 5.2 浸泡测试
+
+浸泡测试标记为 `#[ignore]`，避免常规 CI 触发。
+
+```bash
+# 24h 浸泡 (CI nightly 专用)
+cargo test --test soak_suite -- --ignored
+
+# 缩短版验证 (开发环境)
+SOAK_DURATION_MINUTES=5 cargo test --test soak_suite -- --ignored --nocapture
+```
+
+浸泡报告写入 `artifacts/validation/soak-{timestamp}.md`，包含 p99 latency, RSS, FD count, event gap, shutdown success ratio 五类阈值对照表。
+
+### 5.3 放行矩阵验证
+
+每次发布前需要验证 tarball 内容和放行矩阵格式。
+
+```bash
+# tarball 内容合规检查
+bash scripts/check-tarball-content.sh
+
+# 放行矩阵格式检查 + HTML 生成
+bash scripts/validate-release-matrix.sh
+```
+
+### 5.4 值守手册
+
+运维手册位于 `manual/en/operations-runbook.md` 和 `manual/zh/operations-runbook.md`，覆盖以下 P1 场景:
+
+- P1-001: 监督器进程崩溃
+- P1-002: 子任务崩溃循环
+- P1-003: Dashboard IPC 断开
+- P1-004: 运行时饥饿
+
+每个步骤均标注期望 metrics 字段取值和预计耗时。
+
+## 六、备份与恢复
+
+## 七、性能调优
 
 ### 6.1 关键配置
 
@@ -238,7 +289,7 @@ handle.quarantine_child("child-1", "operator", "restart storm").await?;
 - 完整 `evaluate_budget` 阶段: p99 < 100µs
 - 不影响控制循环主路径延迟
 
-## 七、相关文档
+## 八、相关文档
 
 - [配置模板](../examples/config/supervisor.template.yaml)
 - [架构 - 数据流](architecture.md#二核心数据流)

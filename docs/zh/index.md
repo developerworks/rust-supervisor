@@ -7,8 +7,8 @@
 - `change-log.md`: 文档变更记录.
 - `context-map.md`: 上下文地图 — 代码, 文档, 规格, 测试, CI/CD 全景概览.
 - `environment.md`: 环境说明 — 开发环境搭建, 工具链, 依赖和 CI/CD 配置.
-- `operations.md`: 运维指南 — 部署, 健康检查, 故障处理剧本, 性能调优.
-- `product-roadmap.md`: 产品路线图, 里程碑规划和功能切片状态.
+  | `operations.md`: 运维指南 — 部署, 健康检查, 故障处理剧本, 混沌/浸泡测试执行, 放行矩阵验证, 性能调优.
+  | `product-roadmap.md`: 产品路线图, 里程碑规划和功能切片状态 (006-1 至 006-8 已完成).
 - `quality-gates.md`: quality gate(质量门禁) 和发布检查.
 - `security.md`: 安全说明 — IPC 控制点 C1-C9, 供应链安全, 审计追踪.
 - `parallel-governance.md`: parallel governance(并行治理) 和 Worker D 文档所有权.

@@ -1,6 +1,6 @@
 # 上下文地图 (Context Map)
 
-> 最后更新: 2026-05-18 | 对应版本: 0.1.2
+> 最后更新: 2026-05-19 | 对应版本: 0.1.2
 
 ## 一、项目生态总览
 
@@ -79,22 +79,24 @@ examples/     → 示例 (supervisor_quickstart, demo, restart_policy_lab 等)
 
 ## 三、文档上下文地图
 
-| 文档          | 路径                             | 读者             | 主要覆盖                  |
-| ------------- | -------------------------------- | ---------------- | ------------------------- |
-| 产品路线图    | `docs/product-roadmap.md`        | 产品经理、贡献者 | 切片状态、版本计划        |
-| 系统架构      | `docs/architecture.md`           | 开发者、架构师   | 模块图、数据流、架构决策  |
-| 环境说明      | `docs/environment.md`            | 开发者           | 依赖、工具链、CI/CD       |
-| 安全说明      | `docs/security.md`               | 安全官、运维     | IPC 安全、供应链、审计    |
-| 运维指南      | `docs/operations.md`             | SRE、值班人员    | 部署、巡检、故障处理      |
-| 上下文地图    | `docs/context-map.md`            | 新加入开发者     | 全景概览、关联关系        |
-| 变更记录      | `docs/change-log.md`             | 所有人           | 文档变更追踪              |
-| 技术决策      | `docs/adr/`                      | 架构师、开发者   | 12 条 ADR                 |
-| 质量门禁 (EN) | `docs/en/quality-gates.md`       | 发布经理         | shallow/middle/deep gates |
-| 质量门禁 (ZH) | `docs/zh/quality-gates.md`       | 发布经理         | 同上 (中文)               |
-| 并行治理 (EN) | `docs/en/parallel-governance.md` | 贡献者           | 并行工作流                |
-| 并行治理 (ZH) | `docs/zh/parallel-governance.md` | 贡献者           | 同上 (中文)               |
-| 英文手册      | `manual/en/`                     | 用户             | 使用教程、概念说明        |
-| 中文手册      | `manual/zh/`                     | 用户             | 同上 (中文)               |
+| 文档          | 路径                              | 读者             | 主要覆盖                                              |
+| ------------- | --------------------------------- | ---------------- | ----------------------------------------------------- |
+| 产品路线图    | `docs/product-roadmap.md`         | 产品经理、贡献者 | 切片状态、版本计划                                    |
+| 系统架构      | `docs/architecture.md`            | 开发者、架构师   | 模块图、数据流、架构决策                              |
+| 环境说明      | `docs/environment.md`             | 开发者           | 依赖、工具链、CI/CD                                   |
+| 安全说明      | `docs/security.md`                | 安全官、运维     | IPC 安全、供应链、审计                                |
+| 运维指南      | `docs/operations.md`              | SRE、值班人员    | 部署、巡检、故障处理, 混沌/浸泡测试执行, 放行矩阵验证 |
+| 运维手册 (EN) | `manual/en/operations-runbook.md` | 值班工程师       | 4 个 P1 事故剧本, 含期望 metrics 和升级路径           |
+| 运维手册 (ZH) | `manual/zh/operations-runbook.md` | 值班工程师       | 同上 (中文)                                           |
+| 上下文地图    | `docs/context-map.md`             | 新加入开发者     | 全景概览、关联关系                                    |
+| 变更记录      | `docs/change-log.md`              | 所有人           | 文档变更追踪                                          |
+| 技术决策      | `docs/adr/`                       | 架构师、开发者   | 12 条 ADR                                             |
+| 质量门禁 (EN) | `docs/en/quality-gates.md`        | 发布经理         | shallow/middle/deep gates                             |
+| 质量门禁 (ZH) | `docs/zh/quality-gates.md`        | 发布经理         | 同上 (中文)                                           |
+| 并行治理 (EN) | `docs/en/parallel-governance.md`  | 贡献者           | 并行工作流                                            |
+| 并行治理 (ZH) | `docs/zh/parallel-governance.md`  | 贡献者           | 同上 (中文)                                           |
+| 英文手册      | `manual/en/`                      | 用户             | 使用教程、概念说明                                    |
+| 中文手册      | `manual/zh/`                      | 用户             | 同上 (中文)                                           |
 
 ## 四、规格 (Spec) 上下文地图
 
@@ -112,11 +114,11 @@ specs/
 ├── 006-1-platform-docs-ipc-security/   [实现中] 平台边界与 IPC 安全
 ├── 006-2-release-supply-chain-gates/   [实现中] 发布门禁与供应链
 ├── 006-3-lifecycle-shutdown-realism/   [实现中] 真实生命周期关闭
-├── 006-4-restart-policy-production/    [计划中] 生产级重启策略
-├── 006-5-typed-events-observability/   [草稿]   类型化事件
-├── 006-6-config-dynamic-children/      [草稿]   配置与动态子任务
-├── 006-7-chaos-soak-reliability/       [草稿]   混沌与浸泡测试
-└── 006-8-product-bundle-runbooks/      [草稿]   生产包与运维手册
+| 006-4-restart-policy-production/    [已实现] 生产级重启策略
+| 006-5-typed-events-observability/   [已实现] 类型化事件
+| 006-6-config-dynamic-children/      [已实现] 配置与动态子任务
+| 006-7-chaos-soak-reliability/       [已实现] 混沌与浸泡测试
+└── 006-8-product-bundle-runbooks/      [已实现] 生产包与运维手册
 ```
 
 ### 依赖关系
@@ -143,16 +145,20 @@ specs/
 
 ## 五、测试上下文地图
 
-| 测试目录     | 类型          | 关键文件                                                                                                     |
-| ------------ | ------------- | ------------------------------------------------------------------------------------------------------------ |
-| `src/tests/` | 集成/契约测试 | `source_layout_test.rs`, `module_boundary_test.rs`, `naming_contract_test.rs`, `supervisor_start_test.rs` 等 |
-| `tests/`     | 端到端测试    | `concurrent_restart_test.rs`, `lifecycle_integration.rs`, `ipc_security_integration.rs` 等                   |
+| 测试目录       | 类型          | 关键文件                                                                                                     |
+| -------------- | ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/tests/`   | 集成/契约测试 | `source_layout_test.rs`, `module_boundary_test.rs`, `naming_contract_test.rs`, `supervisor_start_test.rs` 等 |
+| `tests/`       | 端到端测试    | `concurrent_restart_test.rs`, `lifecycle_integration.rs`, `ipc_security_integration.rs` 等                   |
+| `tests/chaos/` | 混沌测试      | 11 个故障波形场景, 通过 chaos_suite 入口调用, 输出 JSON 判决书                                               |
+| `tests/soak/`  | 浸泡测试      | 24h 长稳测试框架, MetricsCollector + SoakReport, soak_suite 入口                                             |
+| `tests/chaos/` | 混沌测试      | 11 个故障波形场景 (child_panic_storm 等), 通过 chaos_suite 入口调用                                          |
+| `tests/soak/`  | 浸泡测试      | 24h 长稳测试框架, MetricsCollector + SoakReport, soak_suite 入口                                             |
 
 CI 三层质量门禁:
 
 - **Shallow gates** (每次 PR): fmt, check, clippy, test, doc, publish_dry_run
 - **Middle gates** (发布前): dependency_audit, license_check, advisory_check, semver_checks, msrv_verify
-- **Deep gates** (夜间): coverage, mutation_testing, fuzzing, loom, miri
+- **Deep gates** (夜间): coverage, mutation_testing, fuzzing, loom, miri, chaos-test, soak-24h
 
 ## 六、CI/CD 上下文地图
 
