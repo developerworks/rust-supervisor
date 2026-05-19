@@ -1,4 +1,4 @@
-//! Concurrent restart throttle gates for preventing thundering herd.
+//! Concurrent restart throttle gates for preventing restart storm.
 //!
 //! This module implements instance-global and group-level concurrent restart
 //! limits to prevent resource contention during mass failure scenarios.

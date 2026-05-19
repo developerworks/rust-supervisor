@@ -25,11 +25,11 @@ pub enum ChildRuntimeStatus {
 /// Runtime state owned by the registry for one child.
 #[derive(Debug, Clone)]
 pub struct ChildRuntime {
-    /// Stable child identifier.
+    /// Child task identifier.
     pub id: ChildId,
-    /// Full child path.
+    /// Full child task path.
     pub path: SupervisorPath,
-    /// Child declaration copied from the supervisor specification.
+    /// Child task declaration copied from the supervisor specification.
     pub spec: ChildSpec,
     /// Current runtime status.
     pub status: ChildRuntimeStatus,

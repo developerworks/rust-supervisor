@@ -67,7 +67,7 @@ impl ChildRunner {
     ///
     /// # Arguments
     ///
-    /// - `runtime`: Runtime record for the child child_start_count.
+    /// - `runtime`: Runtime record for the child task.
     ///
     /// # Returns
     ///
@@ -77,11 +77,11 @@ impl ChildRunner {
         wait_for_report(&mut completion_receiver).await
     }
 
-    /// Spawns one child child_start_count and returns cancellation and abort handles.
+    /// Spawns one child task and returns cancellation and abort handles.
     ///
     /// # Arguments
     ///
-    /// - `runtime`: Runtime record for the child child_start_count.
+    /// - `runtime`: Runtime record for the child task.
     ///
     /// # Returns
     ///
