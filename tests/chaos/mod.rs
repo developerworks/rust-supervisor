@@ -15,6 +15,7 @@ use crate::chaos::verdict::ScenarioVerdict;
 ///
 /// Each variant maps to one file in `scenarios/` with a corresponding
 /// `run()` function that returns a `ScenarioVerdict`.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChaosScenario {
     /// Child tasks panic repeatedly within 60s (1ms delay).
@@ -41,6 +42,7 @@ pub enum ChaosScenario {
     RuntimeStarvationProbe,
 }
 
+#[allow(dead_code)]
 impl ChaosScenario {
     /// Returns the snake_case scenario identifier string.
     pub const fn scenario_id(&self) -> &'static str {

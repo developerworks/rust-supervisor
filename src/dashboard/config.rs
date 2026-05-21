@@ -4,10 +4,11 @@
 //! semantic checks that are specific to opening a local IPC endpoint.
 
 use crate::config::configurable::{DashboardIpcBindMode, DashboardIpcConfig};
+use crate::config::ipc_security::IpcSecurityConfig;
 use crate::dashboard::error::DashboardError;
 
 /// Validated target-side dashboard IPC configuration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValidatedDashboardIpcConfig {
     /// Target process identifier exposed to the relay.
     pub target_id: String,
@@ -19,6 +20,8 @@ pub struct ValidatedDashboardIpcConfig {
     pub bind_mode: DashboardIpcBindMode,
     /// Optional dynamic registration settings.
     pub registration: Option<ValidatedDashboardRegistrationConfig>,
+    /// Optional IPC security pipeline configuration.
+    pub security_config: Option<IpcSecurityConfig>,
 }
 
 /// Validated dynamic registration configuration.
@@ -65,6 +68,7 @@ pub fn validate_dashboard_ipc_config(
         ));
     }
     let registration = validate_registration(config, &target_id)?;
+    let security_config = config.security_config.clone();
     Ok(Some(ValidatedDashboardIpcConfig {
         target_id,
         path,
@@ -74,6 +78,7 @@ pub fn validate_dashboard_ipc_config(
             .unwrap_or_else(|| "0600".to_owned()),
         bind_mode: config.bind_mode.unwrap_or(DashboardIpcBindMode::CreateNew),
         registration,
+        security_config,
     }))
 }
 

@@ -4,6 +4,7 @@
 //! deserialization support and secure-by-default values. All control points
 //! are independently configurable via YAML.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Holds all nine control-point sub-configs. Each sub-config is independently
 /// gated by its own `enabled` flag so that partial adoption is possible.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct IpcSecurityConfig {
     /// C1-C2: Peer identity verification settings.
     #[serde(default)]
@@ -76,7 +77,7 @@ impl Default for IpcSecurityConfig {
 /// (this process) is the only allowed owner by definition.
 /// C2: peer credentials verification — connecting process must match
 /// configured identity expectations.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PeerIdentityConfig {
     /// Whether peer credential checks are enabled. Default: true.
     #[serde(default = "default_true")]
@@ -121,7 +122,7 @@ impl Default for PeerIdentityConfig {
 /// Write commands (restart, shutdown, etc.) require authorized peer identity.
 /// Read commands (hello, state) are always allowed when peer identity passes
 /// C1-C2.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AuthorizationConfig {
     /// Whether authorization checks are enabled. Default: true.
     #[serde(default = "default_true")]
@@ -176,7 +177,7 @@ fn default_root_only() -> Vec<u32> {
 ///
 /// Uses a sliding window of seen request identifiers with a TTL (time-to-live).
 /// A request_id appearing twice within the window is rejected.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ReplayProtectionConfig {
     /// Whether replay protection is enabled. Default: true.
     #[serde(default = "default_true")]
@@ -220,7 +221,7 @@ fn default_60() -> u64 {
 ///
 /// Rejects requests whose body byte length exceeds the configured maximum.
 /// Checked before JSON deserialization to prevent memory-bomb attacks.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct RequestSizeLimitConfig {
     /// Whether size limit is enforced. Default: true.
     #[serde(default = "default_true")]
@@ -253,7 +254,7 @@ fn default_65536() -> usize {
 /// Rate limit configuration.
 ///
 /// Uses token bucket algorithm per connection.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct RateLimitConfig {
     /// Whether rate limiting is enabled. Default: true.
     #[serde(default = "default_true")]
@@ -292,7 +293,7 @@ fn default_20() -> u32 {
 // ---------------------------------------------------------------------------
 
 /// Audit persistence configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AuditConfig {
     /// Whether audit logging is enabled. Default: true.
     #[serde(default = "default_true")]
@@ -355,7 +356,7 @@ fn default_1000() -> usize {
 /// Uses the same request_id from C4 replay protection.
 /// If a command with a seen request_id is replayed, return the cached
 /// result instead of re-executing.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct IdempotencyConfig {
     /// Whether idempotency is enforced. Default: true.
     #[serde(default = "default_true")]
@@ -389,7 +390,7 @@ impl Default for IdempotencyConfig {
 ///
 /// Only absolute paths listed here are eligible for execution via
 /// control-plane extension points. Default: empty (deny all).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AllowlistConfig {
     /// Whether allowlist enforcement is enabled. Default: true.
     #[serde(default = "default_true")]

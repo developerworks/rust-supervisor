@@ -39,6 +39,7 @@ fn dashboard_config(
             lease_seconds: Some(30),
             registration_heartbeat_interval_seconds: Some(15),
         }),
+        security_config: None,
     };
     validate_dashboard_ipc_config(Some(&config))
         .expect("config should validate")

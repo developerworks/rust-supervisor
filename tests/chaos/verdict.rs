@@ -168,10 +168,11 @@ fn validate_verdict_json(json_str: &str) -> Result<(), String> {
     }
 
     // error must be string or null if present.
-    if let Some(err) = obj.get("error") {
-        if !err.is_string() && !err.is_null() {
-            return Err("error must be a string or null".into());
-        }
+    if let Some(err) = obj.get("error")
+        && !err.is_string()
+        && !err.is_null()
+    {
+        return Err("error must be a string or null".into());
     }
 
     Ok(())

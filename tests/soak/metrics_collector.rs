@@ -5,12 +5,14 @@
 //! compilation handles Linux vs macOS RSS API differences.
 
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// A single metrics snapshot.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct MetricsSnapshot {
     /// Timestamp relative to soak start.
+    #[allow(dead_code)]
     pub elapsed_secs: u64,
     /// p99 emit latency in milliseconds (1s sliding window).
     pub p99_latency_ms: f64,
@@ -19,6 +21,7 @@ pub struct MetricsSnapshot {
     /// Open file descriptor count.
     pub fd_count: u64,
     /// Event gap total (journal entries vs emit count difference).
+    #[allow(dead_code)]
     pub event_gap_total: u64,
 }
 
@@ -56,6 +59,7 @@ impl MetricsCollector {
     }
 
     /// Records a latency sample (called every control loop emit).
+    #[allow(dead_code)]
     pub fn record_latency(&mut self, latency_ms: f64) {
         self.latency_window.push_back(latency_ms);
         // Keep only the last 1000 samples (~1s at 1000 req/s).
@@ -72,6 +76,7 @@ impl MetricsCollector {
         let p99 = self.compute_p99();
 
         // Collect RSS every 60s.
+        #[allow(clippy::manual_is_multiple_of)]
         let rss = if elapsed % 60 == 0 && elapsed != self.last_rss_collection.elapsed().as_secs() {
             self.last_rss_collection = Instant::now();
             Some(Self::read_rss_mb())
@@ -80,6 +85,7 @@ impl MetricsCollector {
         };
 
         // Collect FD count every 60s.
+        #[allow(clippy::manual_is_multiple_of)]
         let fd = if elapsed % 60 == 0 && elapsed != self.last_fd_collection.elapsed().as_secs() {
             self.last_fd_collection = Instant::now();
             Some(Self::read_fd_count())

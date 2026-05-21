@@ -62,6 +62,7 @@ impl FixtureRuntimeProbe {
     ///
     /// Uses `tokio::runtime::Handle::current().metrics()` if available.
     /// Falls back to checking wall-clock iteration progress.
+    #[allow(unexpected_cfgs)]
     pub fn poll_count_stalled(&self) -> StarvationProbeResult {
         #[cfg(tokio_unstable)]
         {

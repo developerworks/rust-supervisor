@@ -198,6 +198,10 @@ impl IpcSecurityPipeline {
 
     /// Writes an audit record after dispatch (C7).
     ///
+    /// Returns `Ok(())` on success or `Err(DashboardError)` when the audit
+    /// backend is unwritable. The caller should fail closed for high-risk
+    /// commands.
+    ///
     /// # Arguments
     ///
     /// - `method`: IPC method name.
@@ -205,6 +209,11 @@ impl IpcSecurityPipeline {
     /// - `allowed`: Whether the request was allowed.
     /// - `denial_error`: The denial error if denied.
     /// - `denial_control_point`: Which control point denied (C1-C9 or "dispatch").
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when the audit record was written, or
+    /// `Err(DashboardError)` when the backend is unwritable.
     pub fn write_audit(
         &mut self,
         method: &str,
@@ -212,9 +221,9 @@ impl IpcSecurityPipeline {
         allowed: bool,
         denial_error: Option<&DashboardError>,
         denial_control_point: &str,
-    ) {
+    ) -> Result<(), DashboardError> {
         if !self.config.audit.enabled {
-            return;
+            return Ok(());
         }
         let hash = format!("uid:{}:pid:{}", peer_identity.uid, peer_identity.pid);
         let now = std::time::SystemTime::now()
@@ -235,13 +244,15 @@ impl IpcSecurityPipeline {
                 Some(denial_control_point.to_string())
             },
         };
-        if let Err(_err) = self.audit.write(&record) {
+        self.audit.write(&record).map_err(|err| {
             let count = audit::alerts::increment_failure_count();
             tracing::error!(
                 target: "rust_supervisor::ipc::security::audit",
                 failure_count = count,
+                ?err,
                 "audit write failed"
             );
-        }
+            err
+        })
     }
 }

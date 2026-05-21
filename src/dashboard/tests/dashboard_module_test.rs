@@ -22,6 +22,7 @@ fn dashboard_registration_payload_uses_validated_target_identity() {
             lease_seconds: Some(30),
             registration_heartbeat_interval_seconds: Some(15),
         }),
+        security_config: None,
     };
 
     let validated = validate_dashboard_ipc_config(Some(&config))
@@ -50,6 +51,7 @@ fn dashboard_validation_accepts_absolute_socket_paths() {
         permissions: None,
         bind_mode: None,
         registration: None,
+        security_config: None,
     };
 
     let result = validate_dashboard_ipc_config(Some(&config));

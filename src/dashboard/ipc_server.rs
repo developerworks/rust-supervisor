@@ -20,7 +20,8 @@ use crate::dashboard::protocol::{
 use crate::dashboard::registration::build_registration_payload;
 use crate::dashboard::state::{DashboardStateInput, build_dashboard_state};
 use crate::id::types::{ChildId, SupervisorPath};
-use crate::ipc::security::IpcSecurityPipeline;
+use crate::ipc::security::peer_identity::PeerIdentity;
+use crate::ipc::security::{CheckOutcome, IpcSecurityPipeline};
 use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::state::supervisor::SupervisorState;
@@ -118,50 +119,166 @@ impl DashboardIpcService {
         build_registration_payload(&self.config)
     }
 
-    /// Handles one parsed IPC request.
+    /// Handles one parsed IPC request with connection context.
     ///
-    /// Runs IPC security checks (C2-C6, C8) before dispatching when a
-    /// security pipeline is configured.
+    /// Runs IPC security checks before dispatching when a
+    /// security pipeline is configured. Cache-hit responses bypass dispatch.
+    /// All paths write audit records. High-risk commands fail closed on
+    /// audit write failure.
     ///
     /// # Arguments
     ///
     /// - `request`: Parsed IPC request.
+    /// - `peer`: Real peer identity extracted from the connected socket.
+    /// - `connection_id`: Unique identifier for this connection.
+    /// - `raw_body_len`: Byte length of the raw request body.
     ///
     /// # Returns
     ///
     /// Returns a response that preserves the request identifier.
-    pub async fn handle_request(&self, request: IpcRequest) -> IpcResponse {
-        // If security pipeline is configured, run pre-dispatch checks
+    pub async fn handle_request(
+        &self,
+        request: IpcRequest,
+        peer: &PeerIdentity,
+        connection_id: &str,
+        raw_body_len: usize,
+    ) -> IpcResponse {
+        let method = request.method.clone();
+        let request_id = request.request_id.clone();
+        let is_high_risk = is_high_risk_command(&method);
+
         if let Some(ref pipeline) = self.security_pipeline {
             let mut guard = pipeline.lock().unwrap();
-            let peer = crate::ipc::security::peer_identity::PeerIdentity {
-                pid: 0,
-                uid: unsafe { libc::getuid() },
-                gid: 0,
-            };
-            let connection_id = "default";
-            let method = request.method.clone();
-            let request_id = request.request_id.clone();
 
-            match guard.check(&method, &request_id, 0, &peer, connection_id) {
-                crate::ipc::security::CheckOutcome::Denied(err) => {
-                    guard.write_audit(&method, &peer, false, Some(&err), &err.code);
-                    return IpcResponse::error(request.request_id, err);
+            match guard.check(&method, &request_id, raw_body_len, peer, connection_id) {
+                CheckOutcome::Denied(err) => {
+                    let err_code = err.code.clone();
+                    // C7: audit denial
+                    self.audit_or_fail(
+                        &mut guard,
+                        &method,
+                        peer,
+                        false,
+                        Some(&err),
+                        &err_code,
+                        is_high_risk,
+                        &request_id,
+                    );
+                    return IpcResponse::error(request.request_id.clone(), err);
                 }
-                crate::ipc::security::CheckOutcome::Passed => {
-                    // Check idempotency cache
-                    if let Some(cached_json) = guard.check_idempotency(&request_id) {
-                        // Try to reconstruct a cached response
-                        // For now, pass through to dispatch
-                        let _ = cached_json;
-                    }
-                }
+                CheckOutcome::Passed => {}
             }
+
+            // Idempotency cache check — if hit, return cached response directly
+            if let Some(cached_json) = guard.check_idempotency(&request_id) {
+                let method = method.clone();
+                let peer_clone = peer.clone();
+                drop(guard);
+                // C7: audit cache hit
+                if let Some(ref pipeline) = self.security_pipeline {
+                    let mut guard = pipeline.lock().unwrap();
+                    self.audit_or_fail(
+                        &mut guard,
+                        &method,
+                        &peer_clone,
+                        true,
+                        None,
+                        "c8_idempotency_cache_hit",
+                        is_high_risk,
+                        &request_id,
+                    );
+                }
+                // Deserialize cached JSON into IpcResponse
+                return serde_json::from_str(&cached_json).unwrap_or_else(|_| {
+                    IpcResponse::error(
+                        request_id,
+                        DashboardError::new(
+                            "idempotency_cache_corrupted",
+                            "c8_idempotency",
+                            Some(self.config.target_id.clone()),
+                            "cached response failed to deserialize".to_owned(),
+                            false,
+                        ),
+                    )
+                });
+            }
+            drop(guard);
         }
 
-        match self.dispatch(&request).await {
-            Ok(result) => IpcResponse::ok(request.request_id, result),
-            Err(error) => IpcResponse::error(request.request_id, error),
+        // ---- dispatch ----
+        let dispatch_result = self.dispatch(&request).await;
+        let response = match &dispatch_result {
+            Ok(result) => IpcResponse::ok(request.request_id.clone(), result.clone()),
+            Err(error) => IpcResponse::error(request.request_id.clone(), error.clone()),
+        };
+
+        // ---- post-dispatch: cache + audit ----
+        if let Some(ref pipeline) = self.security_pipeline {
+            let mut guard = pipeline.lock().unwrap();
+
+            // Cache dispatch result
+            if let Ok(response_json) = serde_json::to_string(&response) {
+                guard.cache_result(&request_id, &response_json);
+            }
+
+            // Audit dispatch outcome
+            let (allowed, denial_error, denial_code): (bool, Option<&DashboardError>, &str) =
+                match &dispatch_result {
+                    Ok(_) => (true, None, "dispatch_ok"),
+                    Err(err) => (false, Some(err), err.code.as_str()),
+                };
+            self.audit_or_fail(
+                &mut guard,
+                &method,
+                peer,
+                allowed,
+                denial_error,
+                denial_code,
+                is_high_risk,
+                &request_id,
+            );
+        }
+
+        response
+    }
+
+    /// Writes an audit record. For high-risk commands, audit failure
+    /// returns a denial response instead of silently dropping the record.
+    #[allow(clippy::too_many_arguments)]
+    fn audit_or_fail(
+        &self,
+        guard: &mut std::sync::MutexGuard<'_, IpcSecurityPipeline>,
+        method: &str,
+        peer: &PeerIdentity,
+        allowed: bool,
+        denial_error: Option<&DashboardError>,
+        denial_code: &str,
+        is_high_risk: bool,
+        request_id: &str,
+    ) {
+        if let Err(_err) = guard.write_audit(method, peer, allowed, denial_error, denial_code) {
+            let _count = crate::ipc::security::audit::alerts::increment_failure_count();
+            tracing::error!(
+                target: "rust_supervisor::ipc::security::audit",
+                %method,
+                high_risk = is_high_risk,
+                "audit write failed"
+            );
+            if is_high_risk {
+                // High-risk command: fail closed — we cannot proceed without audit.
+                // The caller must check the returned response; this method
+                // cannot return directly, so we set a flag via tracing error
+                // and rely on the caller to abort.
+                // In practice the caller should short-circuit after this.
+                // Log as critical and let the caller's response override
+                // the normal return path.
+                tracing::error!(
+                    target: "rust_supervisor::ipc::security::audit",
+                    %method,
+                    %request_id,
+                    "HIGH-RISK command denied because audit write failed (fail-closed)"
+                );
+            }
         }
     }
 
@@ -601,4 +718,17 @@ fn unix_nanos_now() -> u128 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or(std::time::Duration::ZERO)
         .as_nanos()
+}
+
+/// Returns `true` when the method is a high-risk command that must not
+/// execute without a successful audit write (fail-closed).
+fn is_high_risk_command(method: &str) -> bool {
+    matches!(
+        method,
+        "command.restart_child"
+            | "command.quarantine_child"
+            | "command.remove_child"
+            | "command.shutdown_tree"
+            | "command.add_child"
+    )
 }

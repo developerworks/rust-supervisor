@@ -8,6 +8,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+use crate::{
+    config::ipc_security::IpcSecurityConfig,
+    spec::{child_declaration::ChildDeclaration, supervisor::SupervisionStrategy},
+};
+
 /// Configuration file shape loaded from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SupervisorConfig {
@@ -27,7 +32,7 @@ pub struct SupervisorConfig {
     pub ipc: Option<DashboardIpcConfig>,
     /// Child declarations loaded from YAML children array.
     #[serde(default)]
-    pub children: Vec<crate::spec::child_declaration::ChildDeclaration>,
+    pub children: Vec<ChildDeclaration>,
 }
 
 impl rust_config_tree::ConfigSchema for SupervisorConfig {
@@ -51,7 +56,7 @@ impl rust_config_tree::ConfigSchema for SupervisorConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SupervisorRootConfig {
     /// Restart scope strategy for child failures.
-    pub strategy: crate::spec::supervisor::SupervisionStrategy,
+    pub strategy: SupervisionStrategy,
 }
 
 /// Restart, backoff, and fuse configuration.
@@ -98,7 +103,7 @@ pub struct ObservabilityConfig {
 }
 
 /// Optional target-side dashboard IPC configuration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct DashboardIpcConfig {
     /// Whether the target process opens the local IPC endpoint.
     pub enabled: bool,
@@ -112,6 +117,9 @@ pub struct DashboardIpcConfig {
     pub bind_mode: Option<DashboardIpcBindMode>,
     /// Dynamic registration settings used after IPC is ready.
     pub registration: Option<DashboardRegistrationConfig>,
+    /// Optional IPC security pipeline configuration (C1-C9).
+    #[serde(default)]
+    pub security_config: Option<IpcSecurityConfig>,
 }
 
 /// Socket bind behavior for target-side dashboard IPC.

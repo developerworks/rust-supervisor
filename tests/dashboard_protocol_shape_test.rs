@@ -250,26 +250,37 @@ async fn target_ipc_rejects_command_for_different_target_id() {
         permissions: "0600".to_owned(),
         bind_mode: rust_supervisor::config::configurable::DashboardIpcBindMode::CreateNew,
         registration: None,
+        security_config: None,
     };
     let spec = SupervisorSpec::root(Vec::new());
     let state = declared_state_from_spec(&spec);
+    let peer = rust_supervisor::ipc::security::peer_identity::PeerIdentity {
+        pid: 100,
+        uid: 1000,
+        gid: 100,
+    };
     let service = DashboardIpcService::new(config, spec, state, EventJournal::new(16));
 
     let response = service
-        .handle_request(IpcRequest {
-            request_id: "r4".to_owned(),
-            method: "command.pause_child".to_owned(),
-            params: serde_json::json!({
-                "command_id": "cmd-1",
-                "target_id": "orders-worker-b",
-                "command": "pause_child",
-                "target": {"child_path": "/root/payment_loop"},
-                "reason": "operator supplied reason",
-                "requested_by": "operator@example.test",
-                "confirmed": false,
-                "requested_at_unix_nanos": 1
-            }),
-        })
+        .handle_request(
+            IpcRequest {
+                request_id: "r4".to_owned(),
+                method: "command.pause_child".to_owned(),
+                params: serde_json::json!({
+                    "command_id": "cmd-1",
+                    "target_id": "orders-worker-b",
+                    "command": "pause_child",
+                    "target": {"child_path": "/root/payment_loop"},
+                    "reason": "operator supplied reason",
+                    "requested_by": "operator@example.test",
+                    "confirmed": false,
+                    "requested_at_unix_nanos": 1
+                }),
+            },
+            &peer,
+            "test-conn-1",
+            128,
+        )
         .await;
 
     let error = response.error.expect("target mismatch should fail");

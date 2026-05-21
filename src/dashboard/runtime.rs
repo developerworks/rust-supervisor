@@ -10,14 +10,24 @@ use crate::dashboard::ipc_server::{DashboardIpcService, bind_dashboard_listener}
 use crate::dashboard::protocol::{IpcResponse, parse_request_line, response_to_line};
 use crate::dashboard::registration::run_registration_heartbeat;
 use crate::dashboard::state::declared_state_from_spec;
+use crate::ipc::security::IpcSecurityPipeline;
+use crate::ipc::security::peer_identity::{PeerIdentity, extract_peer_identity};
 use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
 use std::fmt;
+use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use std::sync::atomic::{AtomicU64, Ordering};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::task::{JoinHandle, JoinSet};
+
+/// Default maximum frame size for bounded frame reader: 1 MiB.
+const DEFAULT_MAX_FRAME_BYTES: usize = 1_048_576;
+
+/// Per-process connection counter for unique connection_id generation.
+static CONNECTION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Guard that owns dashboard IPC background tasks and socket cleanup.
 pub struct DashboardIpcRuntimeGuard {
@@ -90,6 +100,9 @@ pub fn start_dashboard_ipc_runtime(
 }
 
 /// Builds the service used by all socket connections.
+///
+/// When `config.security_config` is present, an IPC security pipeline is
+/// constructed and wired into the service via `with_security_pipeline`.
 fn dashboard_service(
     config: ValidatedDashboardIpcConfig,
     spec: SupervisorSpec,
@@ -97,7 +110,13 @@ fn dashboard_service(
 ) -> Arc<DashboardIpcService> {
     let state = declared_state_from_spec(&spec);
     let journal = EventJournal::new(spec.event_channel_capacity);
-    Arc::new(DashboardIpcService::new(config, spec, state, journal).with_handle(handle))
+    let mut service =
+        DashboardIpcService::new(config.clone(), spec, state, journal).with_handle(handle);
+    if let Some(security_config) = config.security_config {
+        let pipeline = IpcSecurityPipeline::new(security_config);
+        service = service.with_security_pipeline(pipeline);
+    }
+    Arc::new(service)
 }
 
 /// Starts the dynamic registration heartbeat when registration is enabled.
@@ -149,48 +168,171 @@ async fn run_accept_loop(
     }
 }
 
-/// Handles one newline-delimited JSON IPC connection.
+/// Handles one IPC connection with bounded frame reading, real peer
+/// credential extraction, and per-connection unique identifier.
 async fn handle_connection(
     stream: UnixStream,
     service: Arc<DashboardIpcService>,
     target_id: String,
 ) -> Result<(), DashboardError> {
-    let mut reader = BufReader::new(stream);
+    // ---- extract real peer credential before wrapping into tokio ----
+    let std_stream = stream.into_std().map_err(|error| {
+        io_error(
+            "ipc_into_std_failed",
+            "ipc_connect",
+            Some(target_id.clone()),
+            error,
+        )
+    })?;
+    let peer = extract_peer_identity(&std_stream)?;
+    let raw_fd = std_stream.as_raw_fd();
+    let connection_id = format!(
+        "conn-{raw_fd}-{}",
+        CONNECTION_COUNTER.fetch_add(1, Ordering::Relaxed)
+    );
+    let stream = UnixStream::from_std(std_stream).map_err(|error| {
+        io_error(
+            "ipc_from_std_failed",
+            "ipc_connect",
+            Some(target_id.clone()),
+            error,
+        )
+    })?;
+
+    let mut reader = BoundedFrameReader::new(stream, DEFAULT_MAX_FRAME_BYTES);
     loop {
-        let mut line = String::new();
-        let bytes = reader.read_line(&mut line).await.map_err(|error| {
-            io_error(
-                "ipc_read_failed",
-                "ipc_read",
-                Some(target_id.clone()),
-                error,
-            )
-        })?;
-        if bytes == 0 {
-            return Ok(());
+        match reader.read_frame().await {
+            Ok(Some(raw_frame)) => {
+                let raw_body_len = raw_frame.len();
+                let response =
+                    response_for_line(&service, &raw_frame, &peer, &connection_id, raw_body_len)
+                        .await;
+                write_response(&mut reader, &response, &target_id).await?;
+            }
+            Ok(None) => {
+                // EOF — peer closed connection gracefully
+                return Ok(());
+            }
+            Err(error) => {
+                return Err(error);
+            }
         }
-        let response = response_for_line(&service, line.trim_end()).await;
-        write_response(&mut reader, &response, &target_id).await?;
     }
 }
 
-/// Converts one request line into a response.
-async fn response_for_line(service: &DashboardIpcService, line: &str) -> IpcResponse {
+/// Bounded frame reader that limits each frame to `max_bytes` before
+/// allocating the target buffer.
+struct BoundedFrameReader {
+    /// Inner tokio stream.
+    stream: UnixStream,
+    /// Maximum frame size in bytes.
+    max_bytes: usize,
+    /// Read buffer reused across frames.
+    buf: Vec<u8>,
+}
+
+impl BoundedFrameReader {
+    /// Creates a new bounded frame reader.
+    fn new(stream: UnixStream, max_bytes: usize) -> Self {
+        Self {
+            stream,
+            max_bytes,
+            buf: Vec::with_capacity(max_bytes.min(4096)),
+        }
+    }
+
+    /// Reads one newline-delimited frame.
+    ///
+    /// Returns `Ok(Some(frame))` for a complete frame, `Ok(None)` for EOF
+    /// before any data, or `Err` when the frame exceeds `max_bytes` or a
+    /// read error occurs.
+    async fn read_frame(&mut self) -> Result<Option<String>, DashboardError> {
+        self.buf.clear();
+        loop {
+            let mut byte = [0u8; 1];
+            match self.stream.read_exact(&mut byte).await {
+                Ok(_bytes_read) => {
+                    if byte[0] == b'\n' {
+                        let frame = String::from_utf8(self.buf.clone()).map_err(|_| {
+                            DashboardError::new(
+                                "invalid_utf8",
+                                "ipc_read",
+                                None,
+                                "frame is not valid UTF-8".to_owned(),
+                                false,
+                            )
+                        })?;
+                        return Ok(Some(frame));
+                    }
+                    self.buf.push(byte[0]);
+                    if self.buf.len() > self.max_bytes {
+                        return Err(DashboardError::new(
+                            "frame_too_large",
+                            "ipc_read",
+                            None,
+                            format!("frame exceeded maximum size of {} bytes", self.max_bytes),
+                            false,
+                        ));
+                    }
+                }
+                Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    if self.buf.is_empty() {
+                        return Ok(None);
+                    }
+                    return Err(DashboardError::new(
+                        "incomplete_frame",
+                        "ipc_read",
+                        None,
+                        "connection closed before newline delimiter".to_owned(),
+                        false,
+                    ));
+                }
+                Err(err) => {
+                    return Err(io_error("ipc_read_failed", "ipc_read", None, err));
+                }
+            }
+        }
+    }
+
+    /// Returns a mutable reference to the inner stream for writing.
+    fn stream_mut(&mut self) -> &mut UnixStream {
+        &mut self.stream
+    }
+}
+
+impl std::os::unix::io::AsRawFd for BoundedFrameReader {
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.stream.as_raw_fd()
+    }
+}
+
+/// Converts one request line into a response, passing connection context.
+async fn response_for_line(
+    service: &DashboardIpcService,
+    line: &str,
+    peer: &PeerIdentity,
+    connection_id: &str,
+    raw_body_len: usize,
+) -> IpcResponse {
     match parse_request_line(line) {
-        Ok(request) => service.handle_request(request).await,
+        Ok(request) => {
+            service
+                .handle_request(request, peer, connection_id, raw_body_len)
+                .await
+        }
         Err(error) => IpcResponse::error("invalid-request", error),
     }
 }
 
 /// Writes one response line to the socket.
 async fn write_response(
-    reader: &mut BufReader<UnixStream>,
+    reader: &mut BoundedFrameReader,
     response: &IpcResponse,
     target_id: &str,
 ) -> Result<(), DashboardError> {
     let line = response_to_line(response)?;
     reader
-        .get_mut()
+        .stream_mut()
         .write_all(line.as_bytes())
         .await
         .map_err(|error| {

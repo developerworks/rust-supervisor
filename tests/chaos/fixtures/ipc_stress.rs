@@ -9,7 +9,6 @@
 
 use std::time::{Duration, Instant};
 
-
 /// Configuration for IPC stress generation.
 #[derive(Debug, Clone)]
 pub struct FixtureIpcStress {
@@ -69,12 +68,12 @@ impl FixtureIpcStress {
     /// Generates a payload based on the current mode.
     pub fn generate_payload(&self) -> Vec<u8> {
         match self.payload_mode {
-            PayloadMode::Legitimate => {
-                r#"{"target_id":"dashboard","version":"1.0"}"#.into()
-            }
+            PayloadMode::Legitimate => r#"{"target_id":"dashboard","version":"1.0"}"#.into(),
             PayloadMode::Junk => {
                 // Random-looking junk that is not valid JSON or missing target_id.
-                let junk: String = (0..64).map(|_| (rand::random::<u8>() % 95 + 32) as char).collect();
+                let junk: String = (0..64)
+                    .map(|_| (rand::random::<u8>() % 95 + 32) as char)
+                    .collect();
                 junk.into_bytes()
             }
         }
@@ -113,6 +112,7 @@ impl Default for RateLimiter {
 
 impl RateLimiter {
     /// Creates a new rate limiter.
+    #[allow(dead_code)]
     pub fn new(token_capacity: u32, refill_rate: f64) -> Self {
         Self {
             window_duration: Duration::from_secs(1),
@@ -124,11 +124,12 @@ impl RateLimiter {
     }
 
     /// Refills tokens based on elapsed time.
+    #[allow(dead_code)]
     pub fn refill(&mut self) {
         let elapsed = self.last_refill.elapsed().as_secs_f64();
         if elapsed > 0.0 {
-            self.tokens = (self.tokens + elapsed * self.refill_rate)
-                .min(self.token_capacity as f64);
+            self.tokens =
+                (self.tokens + elapsed * self.refill_rate).min(self.token_capacity as f64);
             self.last_refill = Instant::now();
         }
     }
@@ -137,6 +138,7 @@ impl RateLimiter {
     ///
     /// Full implementation with `ResourceExhausted` error support
     /// is added in T029 (US3).
+    #[allow(dead_code)]
     pub fn try_acquire(&mut self) -> bool {
         self.refill();
         if self.tokens >= 1.0 {
@@ -172,9 +174,6 @@ impl ClientClassification {
         let Ok(parsed) = serde_json::from_slice::<serde_json::Value>(&self.payload) else {
             return false;
         };
-        match parsed.get("target_id") {
-            Some(serde_json::Value::String(_)) => true,
-            _ => false,
-        }
+        matches!(parsed.get("target_id"), Some(serde_json::Value::String(_)))
     }
 }
