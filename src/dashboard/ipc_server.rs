@@ -465,6 +465,18 @@ pub fn bind_dashboard_listener(
     config: &ValidatedDashboardIpcConfig,
 ) -> Result<UnixListener, DashboardError> {
     prepare_socket_path(config)?;
+    // Ensure the parent directory exists before binding.
+    if let Some(parent) = config.path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| {
+            DashboardError::new(
+                "ipc_parent_dir_creation_failed",
+                "ipc_bind",
+                Some(config.target_id.clone()),
+                format!("failed to create IPC parent directory: {error}"),
+                false,
+            )
+        })?;
+    }
     UnixListener::bind(&config.path).map_err(|error| {
         DashboardError::new(
             "ipc_bind_failed",

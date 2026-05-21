@@ -20,12 +20,12 @@ observability:
 ipc:
   enabled: true
   target_id: payments-worker-a
-  path: /run/rust-supervisor/payments-worker-a.sock
+  path: /tmp/rust-supervisor-demo/payments-worker-a.sock
   permissions: "0600"
-  bind_mode: create_new
+  bind_mode: replace_stale
   registration:
     enabled: true
-    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    relay_registration_path: /tmp/rust-supervisor-demo/dashboard-relay-registration.sock
     display_name: "payments worker a"
     lease_seconds: 30
     registration_heartbeat_interval_seconds: 15

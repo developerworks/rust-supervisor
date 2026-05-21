@@ -31,12 +31,12 @@ observability:
 ipc:
   enabled: false
   target_id: example-target
-  path: /run/rust-supervisor/example-target.sock
+  path: /tmp/rust-supervisor-demo/example-target.sock
   permissions: "0600"
-  bind_mode: create_new
+  bind_mode: replace_stale
   registration:
     enabled: false
-    relay_registration_path: /run/rust-supervisor/dashboard-relay-registration.sock
+    relay_registration_path: /tmp/rust-supervisor-demo/dashboard-relay-registration.sock
     display_name: "example target"
     lease_seconds: 30
     registration_heartbeat_interval_seconds: 15
