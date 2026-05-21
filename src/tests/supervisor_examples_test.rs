@@ -25,6 +25,7 @@ fn example_suite_contains_learning_programs() {
         "backpressure_demo.rs",
         "health_readiness_demo.rs",
         "shutdown_pipeline_demo.rs",
+        "service/main.rs",
     ] {
         let text = fs::read_to_string(root.join("examples").join(example)).expect("read example");
         assert!(text.contains("rust_supervisor::"));

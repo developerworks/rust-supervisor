@@ -8,19 +8,26 @@ Language: [中文](../zh/runtime-control.html)
 
 ## Control Commands
 
-- `add_child`: accept a dynamic child manifest when `DynamicSupervisorPolicy` allows another child.
-- `remove_child`: mark the target child runtime state record as `Removed`, deliver cancellation to the active attempt, and remove the runtime state record after the attempt exits.
-- `restart_child`: request a restart for the target child.
-- `pause_child`: mark the target child runtime state record as `Paused`, deliver cancellation to the active attempt, and pause automatic restarts.
-- `resume_child`: resume governance for the target child.
-- `quarantine_child`: mark the target child runtime state record as `Quarantined`, deliver cancellation to the active attempt, and block automatic restarts.
-- `shutdown_tree`: shut down the whole supervisor tree.
-- `current_state`: return the current `SupervisorState` and expose each child runtime fact through `CurrentState.child_runtime_records`.
-- `subscribe_events`: subscribe to lifecycle events.
-- `is_alive`: quickly check whether the runtime control loop can still accept ordinary control commands.
-- `health`: return `RuntimeHealthReport`, including control-plane state, start time, latest observation time, and final failure reason.
-- `join`: wait until the runtime control plane reaches a final state and repeatedly return the same `RuntimeExitReport`.
-- `shutdown`: shut down only the runtime control plane. It does not replace `shutdown_tree`.
+These are `ControlCommand` enum variants sent through the command channel:
+
+- `add_child` — accept a dynamic child manifest when `DynamicSupervisorPolicy` allows another child.
+- `remove_child` — mark the target child runtime state record as `Removed`, deliver cancellation to the active attempt, and remove the runtime state record after the attempt exits.
+- `restart_child` — request a restart for the target child.
+- `pause_child` — mark the target child runtime state record as `Paused`, deliver cancellation to the active attempt, and pause automatic restarts.
+- `resume_child` — resume governance for the target child.
+- `quarantine_child` — mark the target child runtime state record as `Quarantined`, deliver cancellation to the active attempt, and block automatic restarts.
+- `shutdown_tree` — shut down the whole supervisor tree.
+- `current_state` — return the current `SupervisorState` and expose each child runtime fact through `CurrentState.child_runtime_records`.
+
+## Handle Methods
+
+These are methods on `SupervisorHandle` that do not go through `ControlCommand`:
+
+- `subscribe_events` — subscribe to lifecycle events via a `broadcast::Receiver`.
+- `is_alive` — quickly check whether the runtime control loop can still accept ordinary control commands.
+- `health` — return `RuntimeHealthReport`, including `alive`, control-plane `state`, `started_at_unix_nanos`, `last_observed_at_unix_nanos`, `failure`, and `exit_report`.
+- `join` — wait until the runtime control plane reaches a final state and repeatedly return the same `RuntimeExitReport`.
+- `shutdown` — shut down only the runtime control plane. It does not replace `shutdown_tree`.
 
 ## Child Runtime State Control
 
@@ -54,6 +61,8 @@ See the full contract in [`child-runtime-state-control.md`](../../specs/004-3-ch
 - `liveness`: current `ChildLivenessState`, including last heartbeat time, heartbeat stale flag, and readiness.
 - `idempotent`: whether this command reused an already existing target state.
 - `failure`: current control failure. It is `None` when no failure exists.
+- `generation_fence`: optional `GenerationFenceOutcome` used by restart control commands.
+- `admission_conflict`: optional `AdmissionConflict` detail when a concurrent request is rejected.
 
 ## `ChildRuntimeRecord` Fields
 
@@ -67,12 +76,14 @@ See the full contract in [`child-runtime-state-control.md`](../../specs/004-3-ch
 - `restart_limit`: current `RestartLimitState`.
 - `stop_state`: current `ChildStopState`.
 - `failure`: most recent `ChildControlFailure`. When `stop_state` is `Failed`, this must be `Some`.
+- `generation_fence_phase`: current `GenerationFencePhase` for dashboard projection.
+- `pending_restart`: optional `PendingRestartSummary` for queued restarts behind a generation fence.
 
 ## Idempotent Behavior
 
 Repeated control commands should not create unrecoverable errors. Pausing an already paused child returns the current state. Quarantining an already quarantined child returns the current state. Shutting down an already completed tree returns the existing shutdown result.
 
-`join` caches the final `RuntimeExitReport` from the control loop. Repeated calls to `join` on the same handle return the same result every time and do not consume the underlying `JoinHandle` again.
+`join` caches the final `RuntimeExitReport` from the control loop. Repeated calls to `join` on the same handle return the same result every time and do not consume the underlying exit receiver again.
 
 `shutdown` only asks the runtime control loop to exit normally. If the control plane has already completed or failed, another `shutdown` call directly returns the existing final report. `shutdown_tree` remains responsible for child task and full supervisor tree shutdown semantics.
 
@@ -80,7 +91,7 @@ Repeated control commands should not create unrecoverable errors. Pausing an alr
 
 `is_alive` is a low-cost state check. It returns `true` when the control plane is alive. It returns `false` when the control plane is starting, shutting down, completed, or failed.
 
-`health` returns structured state. After an abnormal control-plane exit, `health` can still read the failed state, failure phase, reason, panic flag, and recoverable flag. Ordinary control commands after the control plane has ended return `SupervisorError` with the same exit reason.
+`health` returns structured state. After an abnormal control-plane exit, `health` can still read: `alive`, `state`, `started_at_unix_nanos`, `last_observed_at_unix_nanos`, `failure` (with phase, reason, panic flag, recoverable flag), and `exit_report`. Ordinary control commands after the control plane has ended return `SupervisorError` with the same exit reason.
 
 ## Dynamic Additions
 
@@ -88,6 +99,6 @@ Dynamic additions are governed before the manifest is accepted. The runtime reje
 
 ## Audit Data
 
-Each control command carries `requested_by`, `reason`, `target_path`, `accepted_at`, and `command_id`. These fields support audit events and incident review.
+Each control command carries `CommandMeta` with `command_id`, `requested_by`, and `reason`. These fields must be non-empty text. `SupervisorHandle` rejects empty values before the command enters the channel, and the runtime control loop validates them again before execution. This preserves traceable audit sources for manual operations, dashboard IPC forwarding, and internal control calls.
 
-`requested_by` and `reason` must be non-empty text. `SupervisorHandle` rejects empty values before the command enters the channel, and the runtime control loop validates them again before execution. This preserves traceable audit sources for manual operations, dashboard IPC forwarding, and internal control calls.
+The event payload `CommandAudit` additionally records `target_path` and `accepted_at_unix_nanos` for audit events and incident review.

@@ -4,9 +4,41 @@
 
 ## 声明模型
 
-`SupervisorSpec`(监督器规格) 描述一个 supervisor(监督器)节点. 它包含 `path`, `strategy`, `children`, `config_version`, 默认重启策略, 默认退避策略, 默认健康策略, 默认关闭策略, supervisor-level fuse(监督器级熔断)限制, `restart_limit`(重启次数限制), `escalation_policy`(升级策略), `group_strategies`(分组策略集合), `child_strategy_overrides`(子任务级覆盖集合) 和 `dynamic_supervisor_policy`(动态监督器策略).
+`SupervisorSpec`(监督器规格) 描述一个 supervisor(监督器)节点. 它包含:
 
-`ChildSpec`(子任务规格) 描述一个 child(子任务). 它包含 `id`, `name`, `kind`, `factory`, `restart_policy`, `shutdown_policy`, `health_policy`, `readiness_policy`, `backoff_policy`, `dependencies`, `tags` 和 `criticality`.
+- `path` — 监督器稳定路径
+- `strategy` — 重启范围策略 (`OneForOne`, `OneForAll`, `RestForOne`)
+- `children` — 声明顺序的子任务规格集合
+- `config_version` — 生成此规格的配置版本
+- `default_restart_policy`, `default_backoff_policy`, `default_health_policy`, `default_shutdown_policy` — 子任务不覆盖时继承的策略
+- `supervisor_failure_limit` — 监督器失败上限, 超限后升级到父级
+- `restart_limit` — 可选的监督器级重启限制
+- `escalation_policy` — 可选的监督器级升级策略
+- `group_strategies` — 分组级策略覆盖
+- `group_configs` — 分组级重启预算, 成员资格和隔离配置
+- `group_dependencies` — 故障传播的跨分组依赖边
+- `severity_defaults` — 每个工作角色的默认严重等级, 用于升级分叉
+- `child_strategy_overrides` — 逐子任务策略和治理覆盖
+- `dynamic_supervisor_policy` — 运行时 add_child 接受策略
+- `control_channel_capacity` — mpsc 命令通道容量
+- `event_channel_capacity` — broadcast 事件通道容量
+
+`ChildSpec`(子任务规格) 描述一个 child(子任务). 它包含:
+
+- `id`, `name`, `kind` — 稳定标识和任务类型
+- `factory` — 可选的 `Arc<dyn TaskFactory>`(任务工厂), 用于工作子任务
+- `restart_policy`, `shutdown_policy`, `health_policy`, `readiness_policy`, `backoff_policy` — 逐子任务策略覆盖
+- `dependencies` — 必须在当前子任务之前就绪的子任务标识
+- `tags` — 低基数分组标签
+- `criticality` — `Critical`(关键) 或 `Optional`(可选)
+- `work_role` — 可选的 `WorkRole`(工作角色), 用于选择默认生命周期策略语义
+- `sidecar_config` — 可选的边车绑定(角色为 `Sidecar` 时必须)
+- `severity` — 可选的显式严重等级覆盖
+- `group` — 可选的分组名称, 用于分组级隔离和预算跟踪
+- `health_check`, `readiness` — 可选的健康检查/就绪检查配置
+- `resource_limits` — 可选的资源限制
+- `command_permissions` — 授予此子任务的命令权限
+- `environment`, `secrets` — 环境变量和密钥引用
 
 ## 树构建
 

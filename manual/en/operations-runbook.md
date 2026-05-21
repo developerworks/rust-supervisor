@@ -44,7 +44,7 @@ Language: [中文](../zh/operations-runbook.html)
 | 1    | Check IPC socket path existence: `ls -la /tmp/supervisor.sock`             | Socket file present with correct permissions                               | 1min               |
 | 2    | Check relay process: `pgrep -x relay`                                      | Process running                                                            | 1min               |
 | 3    | Restart relay: `kill -TERM <relay_pid>` and wait for auto-restart          | Supervisor auto-restarts relay; `dashboard_link == "connected"` within 10s | 3min               |
-| 4    | If still disconnected, restart dashboard IPC: `handle.restart_dashboard()` | `health.dashboard_link == "connected"`                                     | 2min               |
+| 4    | If still disconnected, restart the supervisor process (dashboard IPC lifecycle is tied to the supervisor process) | `health.dashboard_link == "connected"`                                     | 2min               |
 
 **Escalation**: If IPC socket path contention (error contains `field_path="ipc.path"`), check deployment guide socket path configuration.
 **Total estimated duration**: 7min.

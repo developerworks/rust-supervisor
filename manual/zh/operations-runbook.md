@@ -39,12 +39,12 @@
 
 **症状**: `health.dashboard_link == "disconnected"`; dashboard(看板) UI(用户界面) 无数据.
 
-| 步骤 | 操作                                                         | 期望指标                                                             | 预计耗时 |
-| ---- | ------------------------------------------------------------ | -------------------------------------------------------------------- | -------- |
-| 1    | 检查 IPC socket(套接字) 路径: `ls -la /tmp/supervisor.sock`  | socket(套接字) 文件存在且权限正确                                    | 1min     |
-| 2    | 检查 relay(中继) 进程: `pgrep -x relay`                      | 进程在运行                                                           | 1min     |
-| 3    | 重启 relay: `kill -TERM <relay_pid>` 等待自动重启            | Supervisor 自动拉起 relay; `dashboard_link == "connected"` 在 10s 内 | 3min     |
-| 4    | 如仍然断开, 重启 dashboard IPC: `handle.restart_dashboard()` | `health.dashboard_link == "connected"`                               | 2min     |
+| 步骤 | 操作                                                                            | 期望指标                                                             | 预计耗时 |
+| ---- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------- |
+| 1    | 检查 IPC socket(套接字) 路径: `ls -la /tmp/supervisor.sock`                     | socket(套接字) 文件存在且权限正确                                    | 1min     |
+| 2    | 检查 relay(中继) 进程: `pgrep -x relay`                                         | 进程在运行                                                           | 1min     |
+| 3    | 重启 relay: `kill -TERM <relay_pid>` 等待自动重启                               | Supervisor 自动拉起 relay; `dashboard_link == "connected"` 在 10s 内 | 3min     |
+| 4    | 如仍然断开, 重启 supervisor 进程 (dashboard IPC 生命周期与 supervisor 进程绑定) | `health.dashboard_link == "connected"`                               | 2min     |
 
 **升级路径**: 如果 IPC socket 路径冲突(错误包含 `field_path="ipc.path"`), 检查 deployment guide(部署指南) 的 socket path 配置.
 **总预计耗时**: 7min.

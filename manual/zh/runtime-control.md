@@ -8,19 +8,26 @@
 
 ## 控制命令
 
-- `add_child`: 当 `DynamicSupervisorPolicy`(动态监督器策略) 允许新增 child(子任务) 时, 接受 dynamic child manifest(动态子任务清单文本).
-- `remove_child`: 把目标 child(子任务) 的运行状态记录标记为 `Removed(已移除)`, 向活动 attempt(尝试) 发送 cancel(取消), 并在 attempt(尝试) 退出后移除运行状态记录.
-- `restart_child`: 请求目标 child(子任务)重启.
-- `pause_child`: 把目标 child(子任务) 的运行状态记录标记为 `Paused(已暂停)`, 向活动 attempt(尝试) 发送 cancel(取消), 并暂停自动重启.
-- `resume_child`: 恢复目标 child(子任务)治理.
-- `quarantine_child`: 把目标 child(子任务) 的运行状态记录标记为 `Quarantined(已隔离)`, 向活动 attempt(尝试) 发送 cancel(取消), 并阻止自动重启.
-- `shutdown_tree`: 关闭整棵监督树.
-- `current_state`: 返回当前 `SupervisorState`(监督器状态), 并在 `CurrentState.child_runtime_records(当前状态子任务运行状态记录集合)` 中暴露每个 child(子任务) 的运行状态事实.
-- `subscribe_events`: 订阅生命周期事件.
-- `is_alive`: 快速判断 runtime control loop(运行时控制循环) 是否仍可接收普通控制命令.
-- `health`: 返回 `RuntimeHealthReport`(运行时健康报告), 包含控制面状态, 启动时间, 最近观测时间和最终失败原因.
-- `join`: 等待 runtime control plane(运行时控制面)进入最终态, 并重复返回同一个 `RuntimeExitReport`(运行时退出报告).
-- `shutdown`: 只关闭 runtime control plane(运行时控制面), 不替代 `shutdown_tree`(监督树关闭).
+以下是通过命令通道发送的 `ControlCommand`(控制命令)枚举变体:
+
+- `add_child` — 当 `DynamicSupervisorPolicy`(动态监督器策略) 允许新增 child(子任务) 时, 接受 dynamic child manifest(动态子任务清单文本).
+- `remove_child` — 把目标 child(子任务) 的运行状态记录标记为 `Removed(已移除)`, 向活动 attempt(尝试) 发送 cancel(取消), 并在 attempt(尝试) 退出后移除运行状态记录.
+- `restart_child` — 请求目标 child(子任务)重启.
+- `pause_child` — 把目标 child(子任务) 的运行状态记录标记为 `Paused(已暂停)`, 向活动 attempt(尝试) 发送 cancel(取消), 并暂停自动重启.
+- `resume_child` — 恢复目标 child(子任务)治理.
+- `quarantine_child` — 把目标 child(子任务) 的运行状态记录标记为 `Quarantined(已隔离)`, 向活动 attempt(尝试) 发送 cancel(取消), 并阻止自动重启.
+- `shutdown_tree` — 关闭整棵监督树.
+- `current_state` — 返回当前 `SupervisorState`(监督器状态), 并在 `CurrentState.child_runtime_records(当前状态子任务运行状态记录集合)` 中暴露每个 child(子任务) 的运行状态事实.
+
+## 句柄方法
+
+以下是不经过 `ControlCommand`(控制命令)的 `SupervisorHandle`(监督器句柄)方法:
+
+- `subscribe_events` — 通过 `broadcast::Receiver`(广播接收器)订阅生命周期事件.
+- `is_alive` — 快速判断 runtime control loop(运行时控制循环) 是否仍可接收普通控制命令.
+- `health` — 返回 `RuntimeHealthReport`(运行时健康报告), 包含 `alive`(是否存活), `state`(控制面状态), `started_at_unix_nanos`(启动时间), `last_observed_at_unix_nanos`(最近观测时间), `failure`(失败原因) 和 `exit_report`(退出报告).
+- `join` — 等待 runtime control plane(运行时控制面)进入最终态, 并重复返回同一个 `RuntimeExitReport`(运行时退出报告).
+- `shutdown` — 只关闭 runtime control plane(运行时控制面), 不替代 `shutdown_tree`(监督树关闭).
 
 ## 子任务运行状态控制
 
@@ -54,6 +61,8 @@
 - `liveness(存活状态)`: 当前 `ChildLivenessState(子任务存活状态)`, 包含最后心跳时间, 心跳是否陈旧和 readiness(就绪状态).
 - `idempotent(幂等)`: 本次命令是否复用了已经存在的目标状态.
 - `failure(失败原因)`: 当前控制失败原因. 没有失败时为 `None(无值)`.
+- `generation_fence(代次围栏)`: 可选的 `GenerationFenceOutcome`(代次围栏结果), 由重启控制命令使用.
+- `admission_conflict(准入冲突)`: 可选的 `AdmissionConflict`(准入冲突)细节, 当并发请求被拒绝时提供.
 
 ## `ChildRuntimeRecord(子任务运行状态记录)` 字段
 
@@ -67,12 +76,14 @@
 - `restart_limit(重启次数限制)`: 当前 `RestartLimitState(重启次数限制状态)`.
 - `stop_state(停止状态)`: 当前 `ChildStopState(子任务停止状态)`.
 - `failure(失败原因)`: 最近一次 `ChildControlFailure(子任务控制失败原因)`. 当 `stop_state(停止状态)` 为 `Failed(停止失败)` 时必须为 `Some(有值)`.
+- `generation_fence_phase(代次围栏阶段)`: 当前 `GenerationFencePhase`(代次围栏阶段), 用于仪表盘投影.
+- `pending_restart(待重启)`: 可选的 `PendingRestartSummary`(待重启摘要), 用于代次围栏后排队的重启.
 
 ## 幂等语义
 
 重复控制命令不应该制造不可恢复错误. 已暂停的 child(子任务)再次暂停时返回当前状态. 已隔离的 child(子任务)再次隔离时返回当前状态. 已完成 shutdown(关闭)后再次关闭时返回已有关闭结果.
 
-`join`(等待结束) 会缓存控制循环的最终 `RuntimeExitReport`(运行时退出报告). 同一个 handle(句柄) 重复调用 `join`(等待结束) 时, 每次都返回相同结果, 不会再次消费底层 `JoinHandle`(任务句柄).
+`join`(等待结束) 会缓存控制循环的最终 `RuntimeExitReport`(运行时退出报告). 同一个 handle(句柄) 重复调用 `join`(等待结束) 时, 每次都返回相同结果, 不会再次消费底层退出接收器.
 
 `shutdown`(关闭) 只请求 runtime control loop(运行时控制循环) 正常退出. 如果控制面已经 completed(已完成) 或 failed(失败), 再次调用 `shutdown`(关闭) 会直接返回已有最终报告. `shutdown_tree`(监督树关闭) 仍然负责 child task(子任务)和整棵监督树的关闭语义.
 
@@ -80,7 +91,7 @@
 
 `is_alive`(是否存活) 是低成本状态判断. 当控制面处于 alive(存活) 时, 它返回 `true`. 当控制面处于 starting(启动中), shutting_down(正在关闭), completed(已完成) 或 failed(失败) 时, 它返回 `false`.
 
-`health`(健康报告) 返回结构化状态. 控制面异常退出后, `health`(健康报告) 仍然可以读取 failed(失败)状态, failure phase(失败阶段), reason(原因), panic(恐慌)标记和 recoverable(可恢复)标记. 普通控制命令在控制面结束后会返回包含同一退出原因的 `SupervisorError`(监督器错误).
+`health`(健康报告) 返回结构化状态. 控制面异常退出后, `health`(健康报告) 仍然可以读取: `alive`(是否存活), `state`(状态), `started_at_unix_nanos`(启动时间), `last_observed_at_unix_nanos`(最近观测时间), `failure`(失败原因, 包含 phase(阶段), reason(原因), panic(恐慌)标记, recoverable(可恢复)标记) 和 `exit_report`(退出报告). 普通控制命令在控制面结束后会返回包含同一退出原因的 `SupervisorError`(监督器错误).
 
 ## 动态添加
 
@@ -88,6 +99,6 @@
 
 ## 审计数据
 
-每个控制命令都带有 `requested_by`(请求者), `reason`(原因), `target_path`(目标路径), `accepted_at`(接受时间)和 `command_id`(命令标识). 这些字段用于 audit event(审计事件)和问题追踪.
+每个控制命令都带有 `CommandMeta`(命令元数据), 包含 `command_id`(命令标识), `requested_by`(请求者) 和 `reason`(原因). 这些字段必须是非空文本. `SupervisorHandle`(监督器句柄) 会在命令进入 channel(通道) 前拒绝空值, runtime control loop(运行时控制循环) 也会在执行命令前再次校验. 这样做可以保证人工操作, dashboard IPC(看板进程间通信) 转发和内部控制调用都留下可追踪的审计来源.
 
-`requested_by`(请求者) 和 `reason`(原因) 必须提供非空文本. `SupervisorHandle`(监督器句柄) 会在命令进入 channel(通道) 前拒绝空值, runtime control loop(运行时控制循环) 也会在执行命令前再次校验. 这样做可以保证人工操作, dashboard IPC(看板进程间通信) 转发和内部控制调用都留下可追踪的审计来源.
+事件负载 `CommandAudit`(命令审计)额外记录 `target_path`(目标路径) 和 `accepted_at_unix_nanos`(接受时间) 用于审计事件和问题追踪.

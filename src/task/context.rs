@@ -12,9 +12,9 @@ use tokio_util::sync::CancellationToken;
 /// Context passed to a task for a single child_start_count.
 #[derive(Debug, Clone)]
 pub struct TaskContext {
-    /// Stable child identifier for the task child_start_count.
+    /// Child task identifier
     pub child_id: ChildId,
-    /// Full path of the child in the supervisor tree.
+    /// Full path of the child task in the supervisor tree.
     pub path: SupervisorPath,
     /// Generation for the runtime slot that owns this child_start_count.
     pub generation: Generation,
@@ -29,7 +29,7 @@ pub struct TaskContext {
 }
 
 impl TaskContext {
-    /// Creates a task context for a child child_start_count.
+    /// Creates a context for a child task.
     ///
     /// # Arguments
     ///

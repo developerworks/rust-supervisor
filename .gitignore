@@ -13,3 +13,4 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+/config

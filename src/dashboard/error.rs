@@ -12,7 +12,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Error)]
 #[error("{code} at {stage}: {message}")]
 pub struct DashboardError {
-    /// Stable machine-readable error code.
+    /// Machine-readable error code.
     pub code: String,
     /// Processing stage that produced the error.
     pub stage: String,
@@ -118,10 +118,10 @@ impl DashboardError {
     }
 
     // ------------------------------------------------------------------
-    // IPC security error constructors (C1-C9)
+    // IPC security error constructors
     // ------------------------------------------------------------------
 
-    /// Creates a socket owner mismatch error (C1).
+    /// Creates a socket owner mismatch error.
     pub fn ipc_socket_owner_mismatch(message: impl Into<String>) -> Self {
         Self::new(
             "ipc_socket_owner_mismatch",
@@ -132,7 +132,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a peer credential uid mismatch error (C2).
+    /// Creates a peer credential uid mismatch error.
     pub fn peer_cred_uid_mismatch(expected: u32, got: u32) -> Self {
         Self::new(
             "peer_cred_uid_mismatch",
@@ -143,7 +143,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a peer credential gid not allowed error (C2).
+    /// Creates a peer credential gid not allowed error.
     pub fn peer_cred_gid_not_allowed(gid: u32) -> Self {
         Self::new(
             "peer_cred_gid_not_allowed",
@@ -154,7 +154,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a peer credential pid not allowed error (C2).
+    /// Creates a peer credential pid not allowed error.
     pub fn peer_cred_pid_not_allowed(pid: u32) -> Self {
         Self::new(
             "peer_cred_pid_not_allowed",
@@ -165,7 +165,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a peer credential unavailable error (C2).
+    /// Creates a peer credential unavailable error.
     pub fn peer_cred_unavailable(message: impl Into<String>) -> Self {
         Self::new(
             "peer_cred_unavailable",
@@ -176,7 +176,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates an authorization denied error (C3).
+    /// Creates an authorization denied error.
     pub fn authz_denied(method: impl Into<String>) -> Self {
         Self::new(
             "authz_denied",
@@ -187,7 +187,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates an authorization not configured error (C3).
+    /// Creates an authorization not configured error.
     pub fn authz_not_configured() -> Self {
         Self::new(
             "authz_not_configured",
@@ -198,7 +198,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a replay detected error (C4).
+    /// Creates a replay detected error.
     pub fn replay_detected(request_id: impl Into<String>) -> Self {
         Self::new(
             "replay_detected",
@@ -209,7 +209,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a request too large error (C5).
+    /// Creates a request too large error.
     pub fn request_too_large(actual: usize, max_bytes: usize) -> Self {
         Self::new(
             "request_too_large",
@@ -220,7 +220,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates a rate limit exceeded error (C6).
+    /// Creates a rate limit exceeded error.
     pub fn rate_limit_exceeded() -> Self {
         Self::new(
             "rate_limit_exceeded",
@@ -231,12 +231,12 @@ impl DashboardError {
         )
     }
 
-    /// Creates an audit write failed error (C7).
+    /// Creates an audit write failed error.
     pub fn audit_write_failed(message: impl Into<String>) -> Self {
         Self::new("audit_write_failed", "audit", None, message, false)
     }
 
-    /// Creates an audit queue full error (C7).
+    /// Creates an audit queue full error.
     pub fn audit_queue_full() -> Self {
         Self::new(
             "audit_queue_full",
@@ -247,7 +247,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates an allowlist denied error (C9).
+    /// Creates an allowlist denied error.
     pub fn allowlist_denied(path: impl Into<String>) -> Self {
         Self::new(
             "allowlist_denied",
@@ -258,7 +258,7 @@ impl DashboardError {
         )
     }
 
-    /// Creates an allowlist empty error (C9).
+    /// Creates an allowlist empty error.
     pub fn allowlist_empty() -> Self {
         Self::new(
             "allowlist_empty",

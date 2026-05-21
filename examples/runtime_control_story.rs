@@ -13,9 +13,9 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 
 // Use the Tokio runtime for the asynchronous example.
-#[tokio::main]
 // Return typed supervisor errors from the example.
-/// Runs the runtime control story example.
+// Runs the runtime control story example.
+#[tokio::main]
 async fn main() -> ExampleResult {
     // Load centralized YAML configuration.
     let state = load_config_from_yaml_file("examples/config/supervisor.yaml")?;

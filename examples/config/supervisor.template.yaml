@@ -1,42 +1,97 @@
+# Configuration file shape loaded from YAML.
+
+# Additional configuration files included by `rust-config-tree`.
+#
+# Default value: []
+#include: []
+
+# Optional target-side dashboard IPC configuration.
+#ipc:
+
+# Child declarations loaded from YAML children array.
+#
+# Default value: []
+#children: []
+
+# Root supervisor declaration values.
 supervisor:
-  strategy: OneForAll
+  # Restart scope strategy for child failures.
+  #
+  # Required! This value must be specified.
+  #strategy:
+
+# Runtime policy values.
 policy:
-  child_restart_limit: 10
-  child_restart_window_ms: 60000
-  supervisor_failure_limit: 30
-  supervisor_failure_window_ms: 60000
-  initial_backoff_ms: 100
-  max_backoff_ms: 5000
-  jitter_ratio: 0.10
-  heartbeat_interval_ms: 1000
-  stale_after_ms: 3000
-  # restart_budget:                          # 可选, 重启预算限流 (本切片新增)
-  #   window_secs: 60                        # 滑动窗口, 默认 60s
-  #   max_burst: 10                          # 窗口内最大突发故障次数, 默认 10
-  #   recovery_rate_per_sec: 0.5             # 每秒令牌恢复速率, 默认 0.5
-  # group_strategies:                        # 可选, 分组策略 (本切片新增)
-  #   - name: "group-a"
-  #     children: ["child-1", "child-2"]
-  #     budget:
-  #       window_secs: 120
-  #       max_burst: 20
-  #       recovery_rate_per_sec: 1.0
+  # Maximum child restarts within the child restart window.
+  #
+  # Required! This value must be specified.
+  #child_restart_limit:
+
+  # Child restart window in milliseconds.
+  #
+  # Required! This value must be specified.
+  #child_restart_window_ms:
+
+  # Maximum supervisor failures within the supervisor failure window.
+  #
+  # Required! This value must be specified.
+  #supervisor_failure_limit:
+
+  # Supervisor failure window in milliseconds.
+  #
+  # Required! This value must be specified.
+  #supervisor_failure_window_ms:
+
+  # Initial backoff in milliseconds.
+  #
+  # Required! This value must be specified.
+  #initial_backoff_ms:
+
+  # Maximum backoff in milliseconds.
+  #
+  # Required! This value must be specified.
+  #max_backoff_ms:
+
+  # Jitter ratio expressed as a fraction between zero and one.
+  #
+  # Required! This value must be specified.
+  #jitter_ratio:
+
+  # Heartbeat interval in milliseconds.
+  #
+  # Required! This value must be specified.
+  #heartbeat_interval_ms:
+
+  # Stale heartbeat threshold in milliseconds.
+  #
+  # Required! This value must be specified.
+  #stale_after_ms:
+
+# Shutdown budget values.
 shutdown:
-  graceful_timeout_ms: 5000
-  abort_wait_ms: 1000
+  # Graceful drain timeout in milliseconds.
+  #
+  # Required! This value must be specified.
+  #graceful_timeout_ms:
+
+  # Abort wait timeout in milliseconds.
+  #
+  # Required! This value must be specified.
+  #abort_wait_ms:
+
+# Observability switches and capacities.
 observability:
-  event_journal_capacity: 256
-  metrics_enabled: true
-  audit_enabled: true
-ipc:
-  enabled: false
-  target_id: example-target
-  path: /tmp/rust-supervisor-demo/example-target.sock
-  permissions: "0600"
-  bind_mode: replace_stale
-  registration:
-    enabled: false
-    relay_registration_path: /tmp/rust-supervisor-demo/dashboard-relay-registration.sock
-    display_name: "example target"
-    lease_seconds: 30
-    registration_heartbeat_interval_seconds: 15
+  # Event journal capacity.
+  #
+  # Required! This value must be specified.
+  #event_journal_capacity:
+
+  # Whether metrics recording is enabled.
+  #
+  # Required! This value must be specified.
+  #metrics_enabled:
+
+  # Whether command audit recording is enabled.
+  #
+  # Required! This value must be specified.
+  #audit_enabled:

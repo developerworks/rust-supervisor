@@ -16,6 +16,11 @@ use crate::{
 /// Configuration file shape loaded from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SupervisorConfig {
+    /// Additional configuration files included by `rust-config-tree`.
+    #[config(default = [])]
+    #[serde(default)]
+    pub include: Vec<PathBuf>,
+
     /// Root supervisor declaration values.
     #[config(nested)]
     pub supervisor: SupervisorRootConfig,
@@ -31,6 +36,7 @@ pub struct SupervisorConfig {
     /// Optional target-side dashboard IPC configuration.
     pub ipc: Option<DashboardIpcConfig>,
     /// Child declarations loaded from YAML children array.
+    #[config(default = [])]
     #[serde(default)]
     pub children: Vec<ChildDeclaration>,
 }
@@ -44,11 +50,9 @@ impl rust_config_tree::ConfigSchema for SupervisorConfig {
     ///
     /// # Returns
     ///
-    /// Returns an empty list because official supervisor templates stay in one
-    /// root YAML file unless crate users wrap this type in their own project.
+    /// Returns include paths declared by this configuration layer.
     fn include_paths(layer: &<Self as Config>::Layer) -> Vec<PathBuf> {
-        let _ = layer;
-        Vec::new()
+        layer.include.clone().unwrap_or_default()
     }
 }
 

@@ -705,9 +705,9 @@ dependencies = [
 
 [[package]]
 name = "rust-config-tree"
-version = "0.1.9"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80e3898de3acb1d03261e5bfd6c08948239ec6f536f7ff2402c8f615d71676c0"
+checksum = "1942c8c7f032f73858e2fe7a0a5069797fe13be91208195c76dbee90fff31d76"
 dependencies = [
  "clap",
  "clap_complete",
@@ -716,6 +716,7 @@ dependencies = [
  "figment",
  "schemars",
  "serde_json",
+ "serde_yaml",
  "tracing",
 ]
 
@@ -723,6 +724,7 @@ dependencies = [
 name = "rust-tokio-supervisor"
 version = "0.1.2"
 dependencies = [
+ "clap",
  "confique",
  "libc",
  "metrics",

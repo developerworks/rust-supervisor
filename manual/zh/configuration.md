@@ -6,7 +6,17 @@
 
 配置入口是 `rust_supervisor::config::loader::load_config_from_yaml_file`. 它只接受 YAML(数据序列化格式)主配置文件, 示例路径是 `examples/config/supervisor.yaml`.
 
-当前配置形状包含四组数据: `supervisor`, `policy`, `shutdown` 和 `observability`. 它们分别进入 `SupervisorRootConfig`(监督器根配置), `PolicyConfig`(策略配置), `ShutdownConfig`(关闭配置) 和 `ObservabilityConfig`(可观测性配置).
+配置结构体 `SupervisorConfig`(监督器配置)包含以下顶层组:
+
+| 组 | 类型 | 描述 |
+|---|---|---|
+| `include` | `Vec<PathBuf>` | `rust-config-tree`(集中配置树) 包含的附加配置文件 |
+| `supervisor` | `SupervisorRootConfig` | 根监督器策略 |
+| `policy` | `PolicyConfig` | 重启, 退避, 心跳和熔断限制 |
+| `shutdown` | `ShutdownConfig` | 优雅关闭超时和强制终止等待预算 |
+| `observability` | `ObservabilityConfig` | 事件日志容量和指标/审计开关 |
+| `ipc` | `Option<DashboardIpcConfig>` | 可选的 dashboard IPC(看板进程间通信) socket(仅 Unix) |
+| `children` | `Vec<ChildDeclaration>` | 声明式子任务规格 |
 
 ## 配置状态
 
@@ -18,7 +28,7 @@
 
 ## 模板边界
 
-官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它默认保持单个 YAML(数据序列化格式) 文件, 并覆盖 `supervisor`, `policy`, `shutdown` 和 `observability`.
+官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它覆盖 `supervisor`, `policy`, `shutdown`, `observability`, `ipc` 和 `children` (后两个默认注释掉).
 
 本 crate(包) 不会在公开配置结构体, 官方 schema(结构模式) 或官方 template(模板) 中添加 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
 
@@ -26,6 +36,7 @@
 
 配置加载失败会返回 `SupervisorError::FatalConfig`. 这些情况会拒绝启动:
 
+顶层检查:
 - 配置文件不是 YAML(数据序列化格式).
 - 文件无法读取.
 - YAML(数据序列化格式)无法解析成 `SupervisorConfig`.
@@ -33,6 +44,21 @@
 - 数值为零.
 - 初始退避大于最大退避.
 - jitter(抖动)比例不在零到一之间.
+
+子任务声明检查:
+- Child ID(子任务标识)和 name(名称)不能为空.
+- tags(标签)不能为空.
+- `kind: Supervisor` 的子任务不能有 factory(工厂); `kind: AsyncWorker` 或 `kind: BlockingWorker` 必须有 factory(工厂).
+- Sidecar(辅助进程)工作角色需要 `sidecar_config`, 反之亦然.
+- 依赖循环会被拒绝.
+- `child_strategy_overrides` 引用的 group(分组)名称必须在 `group_strategies` 中存在.
+
+IPC(进程间通信)检查(当 `ipc.enabled = true` 时):
+- `target_id` 不能为空.
+- `path` 是必填字段且必须是绝对路径.
+- 注册 `relay_registration_path` 是必填字段且必须是绝对路径.
+- `lease_seconds` 必须大于零.
+- `heartbeat_interval_seconds` 必须为正且小于 `lease_seconds`.
 
 `Supervisor::start_from_config_file` 会在创建 runtime channel(运行时通道) 或派生 control loop(控制循环) 之前拒绝非法配置.
 
@@ -58,6 +84,18 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
+ipc:
+  enabled: true
+  target_id: payments-worker-a
+  path: /tmp/rust-supervisor-demo/payments-worker-a.sock
+  permissions: "0600"
+  bind_mode: replace_stale
+  registration:
+    enabled: true
+    relay_registration_path: /tmp/rust-supervisor-demo/dashboard-relay-registration.sock
+    display_name: "payments worker a"
+    lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15
 ```
 
 ## 密钥占位符
@@ -67,11 +105,14 @@ observability:
 
 ```yaml
 ipc:
-  tls_cert_path: "${IPC_TLS_CERT}"
-  tls_key_path: "${IPC_TLS_KEY}"
+  security_config:
+    peer_identity:
+      allowed_uids: [ "${SUPERVISOR_UID}" ]
 ```
 
 supervisor(监督器) 本身不解析运行时占位符; 替换必须在配置加载前完成(例如通过 `envsubst` 或部署流水线).
+
+TLS(传输层安全协议)由 relay(中继)层(`rust-supervisor-relay`)通过 `wss://` 处理. supervisor(监督器)目标进程只暴露本地 Unix domain socket(Unix 域套接字), 不终结 TLS(传输层安全协议).
 
 ## 升级
 

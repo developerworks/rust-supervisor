@@ -39,7 +39,7 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 
 ## Step 4 of 5: Result
 
-The example validates the integration path. It is not a business task template. Application workers should live inside the `ChildSpec` and `TaskFactory` boundaries instead of being started as unmanaged background tasks.
+The example validates the integration path. It is not a business task template. Application workers should live inside `ChildSpec` and `TaskFactory` boundaries instead of being started as unmanaged background tasks.
 
 ## Step 5 of 5: Health Self-Check
 
@@ -59,3 +59,122 @@ Expected output (example):
 ```
 
 If `status` is not `"ready"`, check the operations runbook for troubleshooting steps.
+
+---
+
+## Entry Points
+
+The `Supervisor` struct in `src/runtime/supervisor.rs:36-83` provides 3 entry methods:
+
+| Method | Input | When to Use |
+|---|---|---|
+| `Supervisor::start(spec)` | `SupervisorSpec` (built programmatically) | You already have a spec object |
+| `Supervisor::start_from_config_state(state)` | `ConfigState` (validated config) | You loaded config via the loader |
+| `Supervisor::start_from_config_file(path)` | YAML file path | Direct launch from a file |
+
+All 3 converge on the private `start_with_policy()` (`src/runtime/supervisor.rs:95-126`), which:
+
+1. Calls `spec.validate()` to verify all child declarations
+2. Creates an mpsc command channel and a broadcast event channel
+3. Creates `RuntimeControlPlane` and `ObservabilityPipeline`
+4. Builds `RuntimeControlState`
+5. Spawns the control loop via `tokio::spawn(run_control_loop(...))`
+6. Starts `RuntimeWatchdog` to monitor control loop health
+7. Returns `SupervisorHandle` for commands (restart, shutdown, etc.) and event subscriptions
+
+### Usage Examples
+
+#### From YAML file via ConfigState — `start_from_config_state`
+
+Full example: [`examples/supervisor_quickstart.rs`](../../examples/supervisor_quickstart.rs). Config: [`examples/config/supervisor.yaml`](../../examples/config/supervisor.yaml).
+
+```rust
+use rust_supervisor::config::loader::load_config_from_yaml_file;
+use rust_supervisor::runtime::supervisor::Supervisor;
+
+#[tokio::main]
+async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    let state = load_config_from_yaml_file("examples/config/supervisor.yaml")?;
+    let handle = Supervisor::start_from_config_state(state).await?;
+    handle.shutdown_tree("operator", "quickstart complete").await?;
+    Ok(())
+}
+```
+
+`load_config_from_yaml_file` returns a `ConfigState`. Its `to_supervisor_spec()` is called internally by `start_from_config_state`.
+
+#### Direct from YAML file path — `start_from_config_file`
+
+One-step shortcut that calls `load_config_from_yaml_file` internally:
+
+```rust
+use rust_supervisor::runtime::supervisor::Supervisor;
+
+#[tokio::main]
+async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    let handle = Supervisor::start_from_config_file("examples/config/supervisor.yaml").await?;
+    handle.shutdown_tree("operator", "done").await?;
+    Ok(())
+}
+```
+
+#### Programmatic spec — `start`
+
+Full example: [`examples/supervisor_tree_story.rs`](../../examples/supervisor_tree_story.rs).
+
+```rust
+use std::sync::Arc;
+use rust_supervisor::id::types::ChildId;
+use rust_supervisor::runtime::supervisor::Supervisor;
+use rust_supervisor::spec::child::{ChildSpec, TaskKind};
+use rust_supervisor::spec::supervisor::SupervisorSpec;
+use rust_supervisor::task::factory::{TaskResult, service_fn};
+
+#[tokio::main]
+async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    let factory = service_fn(|ctx| async move {
+        ctx.heartbeat();
+        ctx.mark_ready();
+        println!("child running at path={}", ctx.path);
+        TaskResult::Succeeded
+    });
+
+    let child = ChildSpec::worker(
+        ChildId::new("demo-worker"),
+        "Demo Worker",
+        TaskKind::AsyncWorker,
+        Arc::new(factory),
+    );
+
+    let spec = SupervisorSpec::root(vec![child]);
+    let handle = Supervisor::start(spec).await?;
+
+    let state = handle.current_state().await?;
+    println!("{state:#?}");
+    handle.shutdown_tree("operator", "demo complete").await?;
+    Ok(())
+}
+```
+
+`ChildSpec::worker()` automatically sets `work_role = Some(WorkRole::Worker)`, equivalent to `work_role: worker` in YAML.
+
+## WorkRole Behavior
+
+The 5 `WorkRole` variants dispatch to different default lifecycle policies via `RoleDefaultPolicy::for_role()`:
+
+| Dimension | Service | Worker | Job | Sidecar | Supervisor |
+|---|---|---|---|---|---|
+| **On success** | `Restart` | `Stop` | `Stop` | `Restart` | `Restart` |
+| **On timeout** | `RestartWithBackoff` | `RestartWithBackoff` | `StopAndEscalate` | `RestartWithBackoff` | `RestartWithBackoff` |
+| **Max restarts** | 10 | 3 | 1 | 5 | 3 |
+| **Default severity** | `Critical` | `Standard` | `Optional` | `Standard` | `Critical` |
+
+The per-role defaults are defined by 5 constructors in `src/policy/role_defaults.rs:418-464`:
+
+- **Service**: long-running daemon, restart on success, 10 retries, Critical severity — expected to stay online forever.
+- **Worker**: background task, stop on success, 3 retries, Standard severity — stops when done.
+- **Job**: one-shot task, stop on success, timeout escalates immediately (no retry), 1 retry, Optional severity — runs once then exits.
+- **Sidecar**: auxiliary process, same staying behavior as Service but lower restart budget (5), requires a `SidecarConfig` binding to a primary.
+- **Supervisor**: nested supervision tree, same staying behavior as Service, 3 retries, Critical severity.
+
+When `work_role` is `None`, `EffectivePolicy::merge()` falls back to `WorkRole::Worker` with a warning. `semantic_conflicts_for_child()` detects role violations (e.g., Job with permanent restart policy).

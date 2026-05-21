@@ -44,6 +44,7 @@ use crate::shutdown::report::{
 };
 use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use crate::spec::child::{ChildSpec, RestartPolicy as ChildRestartPolicy};
+use crate::spec::child_declaration::{ChildDeclaration, validate_child_declaration};
 use crate::spec::supervisor::{RestartLimit, SupervisorSpec};
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::{restart_execution_plan, shutdown_order, startup_order};
@@ -283,7 +284,7 @@ impl RuntimeControlState {
                 }
 
                 // Parse manifest as ChildDeclaration.
-                let declaration: crate::spec::child_declaration::ChildDeclaration =
+                let declaration: ChildDeclaration =
                     serde_yaml::from_str(&child_manifest).map_err(|e| {
                         SupervisorError::fatal_config(format!(
                             "Failed to parse child manifest: {e}"
@@ -296,11 +297,7 @@ impl RuntimeControlState {
                 let mut new_names = all_names.clone();
                 new_names.insert(declaration.name.clone());
 
-                crate::spec::child_declaration::validate_child_declaration(
-                    &declaration,
-                    &all_names,
-                )
-                .map_err(|e| {
+                validate_child_declaration(&declaration, &all_names).map_err(|e| {
                     SupervisorError::fatal_config(format!(
                         "Child validation failed at {}: {}",
                         e.field_path, e.reason

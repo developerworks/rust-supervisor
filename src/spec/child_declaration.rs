@@ -7,8 +7,9 @@
 
 use crate::id::types::ChildId;
 use crate::spec::child::{
-    ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig, ReadinessConfig,
-    ResourceLimits, RestartPolicy, SecretRef, TaskKind,
+    BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
+    HealthPolicy, ReadinessConfig, ResourceLimits, RestartPolicy, SecretRef, ShutdownPolicy,
+    TaskKind,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -192,11 +193,11 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
 
         // Map health_check to health_policy.
         let health_policy = match &decl.health_check {
-            Some(hc) => crate::spec::child::HealthPolicy::new(
+            Some(hc) => HealthPolicy::new(
                 std::time::Duration::from_secs(hc.check_interval_secs),
                 std::time::Duration::from_secs(hc.timeout_secs),
             ),
-            None => crate::spec::child::HealthPolicy::new(
+            None => HealthPolicy::new(
                 std::time::Duration::from_secs(10),
                 std::time::Duration::from_secs(5),
             ),
@@ -213,13 +214,13 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             kind,
             factory: None,
             restart_policy,
-            shutdown_policy: crate::spec::child::ShutdownPolicy::new(
+            shutdown_policy: ShutdownPolicy::new(
                 std::time::Duration::from_secs(5),
                 std::time::Duration::from_secs(1),
             ),
             health_policy,
             readiness_policy,
-            backoff_policy: crate::spec::child::BackoffPolicy::new(
+            backoff_policy: BackoffPolicy::new(
                 std::time::Duration::from_millis(10),
                 std::time::Duration::from_secs(1),
                 0.0,

@@ -18,17 +18,20 @@ async fn main() -> ExampleResult {
     // Derive the supervisor specification from configuration.
     let spec = state.to_supervisor_spec()?;
     // Start the supervisor runtime from the specification.
-    let handle = Supervisor::start(spec).await?;
+    let supervisor_handle = Supervisor::start(spec).await?;
     // Query the current runtime state.
-    let current = handle.current_state().await?;
+    let current = supervisor_handle.current_state().await?;
     // Print the current state for the learner.
     println!("{current:#?}");
     // Use the runtime handle for the shutdown request.
-    handle
+    supervisor_handle
         // Request tree shutdown with audit metadata.
         .shutdown_tree("operator", "quickstart complete")
         // Wait for the shutdown command result.
         .await?;
+
+    let current = supervisor_handle.current_state().await?;
+    println!("{current:#?}");
     // Finish the example successfully.
     Ok(())
     // End the quickstart example.
