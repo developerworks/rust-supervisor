@@ -175,7 +175,7 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 ## Examples
 
 ```bash
-cargo run --example demo -- --config examples/config/supervisor.yaml
+cargo run --example dashboard -- --config examples/config/supervisor.yaml
 cargo run --example supervisor_quickstart
 cargo run --example config_tree_supervisor
 cargo run --example restart_policy_lab
@@ -187,7 +187,7 @@ cargo run --example policy_failure_matrix
 cargo run --example diagnostic_replay
 ```
 
-`cargo run --example demo -- --config examples/config/supervisor.yaml` is the three-end supervisor demo. It starts the library-only supervisor runtime from the same configuration file, then starts the demo-only dashboard IPC service and registration heartbeat inside `examples/demo`. This entry point is not the production binary for the crate, and it does not write demo state into the core `src` modules.
+`cargo run --example dashboard -- --config examples/config/supervisor.yaml` is the three-end supervisor demo. It starts the library-only supervisor runtime from the same configuration file, then starts the demo-only dashboard IPC service and registration heartbeat inside `examples/dashboard`. This entry point is not the production binary for the crate, and it does not write demo state into the core `src` modules.
 
 ## Manuals
 

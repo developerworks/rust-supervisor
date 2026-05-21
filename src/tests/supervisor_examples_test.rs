@@ -26,6 +26,10 @@ fn example_suite_contains_learning_programs() {
         "health_readiness_demo.rs",
         "shutdown_pipeline_demo.rs",
         "service/main.rs",
+        "worker/main.rs",
+        "job/main.rs",
+        "sidecar/main.rs",
+        "supervisor/main.rs",
     ] {
         let text = fs::read_to_string(root.join("examples").join(example)).expect("read example");
         assert!(text.contains("rust_supervisor::"));
@@ -38,11 +42,12 @@ fn example_suite_contains_learning_programs() {
 #[test]
 fn demo_example_owns_dashboard_runtime_outside_core() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let demo = root.join("examples/demo/main.rs");
+    let demo = root.join("examples/dashboard/main.rs");
     let text = fs::read_to_string(&demo).expect("read demo example");
-    let runner = fs::read_to_string(root.join("examples/demo/runner.rs")).expect("read runner");
+    let runner =
+        fs::read_to_string(root.join("examples/dashboard/runner.rs")).expect("read runner");
     let bootstrap =
-        fs::read_to_string(root.join("examples/demo/bootstrap.rs")).expect("read bootstrap");
+        fs::read_to_string(root.join("examples/dashboard/bootstrap.rs")).expect("read bootstrap");
 
     assert!(runner.contains("load_config_from_yaml_file"));
     assert!(runner.contains("Supervisor::start_from_config_state"));
@@ -51,11 +56,13 @@ fn demo_example_owns_dashboard_runtime_outside_core() {
     assert!(!text.contains("Supervisor::start_from_config_file"));
     assert!(!runner.contains("Supervisor::start_from_config_file"));
     assert!(!runner.contains("to_supervisor_spec"));
-    assert!(!root.join("src/bin").exists());
+    assert!(!root.join("src/bin/demo.rs").exists());
+    assert!(!root.join("src/bin/dashboard.rs").exists());
 
     let readme = fs::read_to_string(root.join("README.md")).expect("read README");
     assert!(
-        readme.contains("cargo run --example demo -- --config examples/config/supervisor.yaml")
+        readme
+            .contains("cargo run --example dashboard -- --config examples/config/supervisor.yaml")
     );
 }
 
@@ -63,7 +70,7 @@ fn demo_example_owns_dashboard_runtime_outside_core() {
 #[test]
 fn demo_example_uses_modular_runtime_files() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let demo_root = root.join("examples/demo");
+    let demo_root = root.join("examples/dashboard");
     let main = fs::read_to_string(demo_root.join("main.rs")).expect("read demo main");
 
     for module in [
@@ -94,7 +101,7 @@ fn demo_example_uses_modular_runtime_files() {
 fn demo_example_scenario_covers_ui_surface() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let scenario =
-        fs::read_to_string(root.join("examples/demo/scenario.rs")).expect("read scenario");
+        fs::read_to_string(root.join("examples/dashboard/scenario.rs")).expect("read scenario");
 
     for child in [
         "duplicate_guard",
