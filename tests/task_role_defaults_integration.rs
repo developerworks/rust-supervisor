@@ -1,6 +1,6 @@
-//! Acceptance tests for work role default policy behavior.
+//! Acceptance tests for task role default policy behavior.
 //!
-//! These tests verify that role defaults affect pipeline decisions, sidecar
+//! These tests verify that task role defaults affect pipeline decisions, sidecar
 //! bindings are validated with sibling context, and emitted events carry
 //! effective policy attribution.
 
@@ -11,9 +11,9 @@ use rust_supervisor::policy::budget::RestartBudgetConfig;
 use rust_supervisor::policy::decision::{PolicyFailureKind, TaskExit};
 use rust_supervisor::policy::failure_window::{FailureWindow, FailureWindowConfig};
 use rust_supervisor::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
-use rust_supervisor::policy::role_defaults::{
+use rust_supervisor::policy::task_role_defaults::{
     EffectivePolicy, OnFailureAction, OnSuccessAction, PolicySource, RoleDefaultPolicy,
-    SidecarConfig, WorkRole, semantic_conflicts_for_child,
+    SidecarConfig, TaskRole, semantic_conflicts_for_child,
 };
 use rust_supervisor::runtime::pipeline::{PipelineContext, SupervisionPipeline};
 use rust_supervisor::spec::child::{ChildSpec, RestartPolicy, TaskKind};
@@ -25,8 +25,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
-/// Creates a test child with the requested work role.
-fn child_with_role(id: &str, role: WorkRole) -> ChildSpec {
+/// Creates a test child with the requested task role.
+fn child_with_role(id: &str, role: TaskRole) -> ChildSpec {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     let mut child = ChildSpec::worker(
         ChildId::new(id),
@@ -34,7 +34,7 @@ fn child_with_role(id: &str, role: WorkRole) -> ChildSpec {
         TaskKind::AsyncWorker,
         Arc::new(factory),
     );
-    child.work_role = Some(role);
+    child.task_role = Some(role);
     child
 }
 
@@ -62,7 +62,7 @@ fn create_pipeline() -> SupervisionPipeline {
 }
 
 /// Runs a successful exit through the production pipeline with a role policy.
-fn run_success_with_role(role: WorkRole) -> PipelineContext {
+fn run_success_with_role(role: TaskRole) -> PipelineContext {
     let mut pipeline = create_pipeline();
     let child = child_with_role("role-child", role);
     let spec = SupervisorSpec::root(vec![child.clone()]);
@@ -75,7 +75,7 @@ fn run_success_with_role(role: WorkRole) -> PipelineContext {
 
 #[test]
 fn job_success_exit_does_not_request_restart() {
-    let ctx = run_success_with_role(WorkRole::Job);
+    let ctx = run_success_with_role(TaskRole::Job);
     let decision = ctx.action_decision.expect("action decision");
 
     assert_eq!(decision.action, ProtectionAction::SupervisedStop);
@@ -84,7 +84,7 @@ fn job_success_exit_does_not_request_restart() {
 
 #[test]
 fn service_success_exit_allows_restart() {
-    let ctx = run_success_with_role(WorkRole::Service);
+    let ctx = run_success_with_role(TaskRole::Service);
     let decision = ctx.action_decision.expect("action decision");
 
     assert_eq!(decision.action, ProtectionAction::RestartAllowed);
@@ -93,7 +93,7 @@ fn service_success_exit_allows_restart() {
 
 #[test]
 fn worker_failure_default_uses_bounded_retry() {
-    let pack = RoleDefaultPolicy::for_role(WorkRole::Worker);
+    let pack = RoleDefaultPolicy::for_role(TaskRole::Worker);
 
     assert_eq!(pack.on_failure_exit, OnFailureAction::RestartWithBackoff);
     assert!(pack.default_restart_limit.is_some());
@@ -102,7 +102,7 @@ fn worker_failure_default_uses_bounded_retry() {
 #[test]
 fn worker_default_restart_limit_feeds_budget_evaluation() {
     let mut pipeline = create_pipeline();
-    let child = child_with_role("worker-budget", WorkRole::Worker);
+    let child = child_with_role("worker-budget", TaskRole::Worker);
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
     let mut final_ctx = None;
@@ -140,8 +140,8 @@ fn worker_default_restart_limit_feeds_budget_evaluation() {
 
 #[test]
 fn sidecar_failure_default_restarts_only_sidecar_scope() {
-    let primary = child_with_role("primary-service", WorkRole::Service);
-    let mut sidecar = child_with_role("metrics-sidecar", WorkRole::Sidecar);
+    let primary = child_with_role("primary-service", TaskRole::Service);
+    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
     sidecar.sidecar_config = Some(SidecarConfig::new(primary.id.clone(), false));
     let spec = SupervisorSpec::root(vec![primary, sidecar.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
@@ -150,14 +150,14 @@ fn sidecar_failure_default_restarts_only_sidecar_scope() {
 
     assert_eq!(plan.scope, vec![sidecar.id]);
     assert_eq!(
-        RoleDefaultPolicy::for_role(WorkRole::Sidecar).on_failure_exit,
+        RoleDefaultPolicy::for_role(TaskRole::Sidecar).on_failure_exit,
         OnFailureAction::RestartWithBackoff
     );
 }
 
 #[test]
 fn supervisor_role_default_uses_outer_unit_restart_budget() {
-    let pack = RoleDefaultPolicy::for_role(WorkRole::Supervisor);
+    let pack = RoleDefaultPolicy::for_role(TaskRole::Supervisor);
 
     assert_eq!(pack.on_success_exit, OnSuccessAction::Restart);
     assert!(pack.default_restart_limit.is_some());
@@ -167,44 +167,44 @@ fn supervisor_role_default_uses_outer_unit_restart_budget() {
 fn missing_role_uses_worker_fallback_attribution() {
     let policy = EffectivePolicy::merge(None, Vec::new());
 
-    assert_eq!(policy.work_role, WorkRole::Worker);
+    assert_eq!(policy.task_role, TaskRole::Worker);
     assert_eq!(policy.source, PolicySource::FallbackDefault);
     assert!(policy.used_fallback);
 }
 
 #[test]
 fn child_spec_deserialization_defaults_role_fields() {
-    let child = child_with_role("serde-child", WorkRole::Worker);
+    let child = child_with_role("serde-child", TaskRole::Worker);
     let mut value = serde_json::to_value(child).expect("serialize child spec");
     let object = value.as_object_mut().expect("child spec object");
-    object.remove("work_role");
+    object.remove("task_role");
     object.remove("sidecar_config");
 
     let decoded: ChildSpec = serde_json::from_value(value).expect("deserialize child spec");
 
-    assert_eq!(decoded.work_role, None);
+    assert_eq!(decoded.task_role, None);
     assert_eq!(decoded.sidecar_config, None);
 }
 
 #[test]
-fn unknown_work_role_is_rejected_by_deserialization() {
-    let child = child_with_role("unknown-role-child", WorkRole::Worker);
+fn unknown_task_role_is_rejected_by_deserialization() {
+    let child = child_with_role("unknown-role-child", TaskRole::Worker);
     let mut value = serde_json::to_value(child).expect("serialize child spec");
     let object = value.as_object_mut().expect("child spec object");
     object.insert(
-        "work_role".to_string(),
+        "task_role".to_string(),
         serde_json::Value::String("unknown_role".to_string()),
     );
 
     let error = serde_json::from_value::<ChildSpec>(value)
-        .expect_err("unknown work_role should be rejected");
+        .expect_err("unknown task_role should be rejected");
 
     assert!(error.to_string().contains("unknown variant"));
 }
 
 #[test]
 fn sidecar_missing_config_is_rejected() {
-    let sidecar = child_with_role("metrics-sidecar", WorkRole::Sidecar);
+    let sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
     let spec = SupervisorSpec::root(vec![sidecar]);
 
     let error = spec
@@ -216,7 +216,7 @@ fn sidecar_missing_config_is_rejected() {
 
 #[test]
 fn sidecar_unknown_primary_is_rejected() {
-    let mut sidecar = child_with_role("metrics-sidecar", WorkRole::Sidecar);
+    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
     sidecar.sidecar_config = Some(SidecarConfig::new(ChildId::new("missing-primary"), true));
     let spec = SupervisorSpec::root(vec![sidecar]);
 
@@ -229,11 +229,11 @@ fn sidecar_unknown_primary_is_rejected() {
 
 #[test]
 fn sidecar_chain_is_rejected() {
-    let mut first = child_with_role("first-sidecar", WorkRole::Sidecar);
+    let mut first = child_with_role("first-sidecar", TaskRole::Sidecar);
     first.sidecar_config = Some(SidecarConfig::new(ChildId::new("primary"), true));
-    let mut second = child_with_role("second-sidecar", WorkRole::Sidecar);
+    let mut second = child_with_role("second-sidecar", TaskRole::Sidecar);
     second.sidecar_config = Some(SidecarConfig::new(ChildId::new("first-sidecar"), true));
-    let primary = child_with_role("primary", WorkRole::Service);
+    let primary = child_with_role("primary", TaskRole::Service);
     let spec = SupervisorSpec::root(vec![primary, first, second]);
 
     let error = spec
@@ -245,7 +245,7 @@ fn sidecar_chain_is_rejected() {
 
 #[test]
 fn job_permanent_restart_conflict_is_reported() {
-    let mut child = child_with_role("job-child", WorkRole::Job);
+    let mut child = child_with_role("job-child", TaskRole::Job);
     child.restart_policy = RestartPolicy::Permanent;
 
     let conflicts = semantic_conflicts_for_child(&child);
@@ -257,7 +257,7 @@ fn job_permanent_restart_conflict_is_reported() {
 #[test]
 fn emitted_pipeline_event_carries_policy_attribution() {
     let mut pipeline = create_pipeline();
-    let child = child_with_role("service-child", WorkRole::Service);
+    let child = child_with_role("service-child", TaskRole::Service);
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
     let mut ctx = PipelineContext::new(child.id.clone(), SupervisorPath::root(), 1, "role-event");
@@ -271,7 +271,7 @@ fn emitted_pipeline_event_carries_policy_attribution() {
         .events
         .last()
         .expect("pipeline event");
-    assert_eq!(event.work_role, Some(WorkRole::Service));
+    assert_eq!(event.task_role, Some(TaskRole::Service));
     assert_eq!(
         event.effective_policy_source,
         Some(PolicySource::RoleDefault)
@@ -296,11 +296,11 @@ fn supervisor_event_fields_exist_for_policy_source() {
         1,
     );
 
-    event.work_role = Some(WorkRole::Worker);
+    event.task_role = Some(TaskRole::Worker);
     event.used_fallback_default = true;
     event.effective_policy_source = Some(PolicySource::FallbackDefault);
 
-    assert_eq!(event.work_role, Some(WorkRole::Worker));
+    assert_eq!(event.task_role, Some(TaskRole::Worker));
     assert_eq!(
         event.effective_policy_source,
         Some(PolicySource::FallbackDefault)

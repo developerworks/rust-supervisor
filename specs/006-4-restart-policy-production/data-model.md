@@ -188,10 +188,10 @@ SupervisorSpec
        ├─ children: Vec<ChildId>
        └─ budget: Option<RestartBudgetConfig>   (可选, 未声明时继承 SupervisorSpec 级默认预算)
   └─ group_dependencies: Vec<GroupDependencyEdge>
-  └─ severity_defaults: HashMap<WorkRole, SeverityClass>
+  └─ severity_defaults: HashMap<TaskRole, SeverityClass>
 
 ChildSpec
-  ├─ role: WorkRole
+  ├─ role: TaskRole
   ├─ severity: Option<SeverityClass>     (覆盖角色默认值)
   └─ group: Option<String>               (所属分组)
 ```

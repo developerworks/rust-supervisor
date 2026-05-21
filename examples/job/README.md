@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-This example shows a one-shot `WorkRole::Job` child. A job role is intended for finite work that should finish and then stay stopped.
+This example shows a one-shot `TaskRole::Job` child. A job role is intended for finite work that should finish and then stay stopped.
 
 Run it with:
 
@@ -20,5 +20,5 @@ cargo run --package rust-tokio-supervisor --example job
 ## File Layout
 
 - `main.rs`: wires the supervisor, event subscription, state snapshots, and cleanup shutdown.
-- `job_task.rs`: declares the `WorkRole::Job` child and the one-shot job body.
+- `job_task.rs`: declares the `TaskRole::Job` child and the one-shot job body.
 - `observation.rs`: prints job facts, runtime events, current state records, and shutdown outcomes.

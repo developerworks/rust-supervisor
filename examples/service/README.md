@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-This example shows a supervised `WorkRole::Service` child. A service role is a long-running task that should stay online, report readiness, emit heartbeats, and stop cooperatively when the supervisor shuts down.
+This example shows a supervised `TaskRole::Service` child. A service role is a long-running task that should stay online, report readiness, emit heartbeats, and stop cooperatively when the supervisor shuts down.
 
 Run it with:
 
@@ -22,7 +22,7 @@ The process keeps running until you press `Ctrl+C`. The signal is treated as the
 ## File Layout
 
 - `main.rs`: wires the supervisor, event subscriptions, state snapshots, and shutdown command.
-- `service_task.rs`: declares the `WorkRole::Service` child and the async service body.
+- `service_task.rs`: declares the `TaskRole::Service` child and the async service body.
 - `observation.rs`: prints service facts, runtime events, current state records, and shutdown outcomes.
 
 ## Expected Output Shape

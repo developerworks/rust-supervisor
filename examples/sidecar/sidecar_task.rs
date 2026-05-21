@@ -2,8 +2,8 @@
 
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
-// Import role defaults and sidecar configuration.
-use rust_supervisor::policy::role_defaults::{SidecarConfig, WorkRole};
+// Import task role defaults and sidecar configuration.
+use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
 // Import task context values.
@@ -74,7 +74,7 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Chi
         Arc::new(factory),
     );
     // Classify the primary as a long-running service.
-    child.work_role = Some(WorkRole::Service);
+    child.task_role = Some(TaskRole::Service);
     // Keep the primary in the critical path.
     child.criticality = Criticality::Critical;
     // Add stable diagnostic tags.
@@ -94,7 +94,7 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Chi
 ///
 /// # Returns
 ///
-/// Returns a [`ChildSpec`] whose `work_role` is [`WorkRole::Sidecar`].
+/// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Sidecar`].
 pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
     // Build a task factory from the sidecar function.
     let factory = service_fn(move |ctx: TaskContext| {
@@ -115,7 +115,7 @@ pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
         Arc::new(factory),
     );
     // Classify the task as a sidecar.
-    child.work_role = Some(WorkRole::Sidecar);
+    child.task_role = Some(TaskRole::Sidecar);
     // Attach the sidecar to the primary service.
     child.sidecar_config = Some(SidecarConfig::new(primary_child_id(), true));
     // Require the primary service before the sidecar starts.

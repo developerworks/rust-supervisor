@@ -3,7 +3,7 @@
   "active_feature_directory": "specs/006-8-product-bundle-runbooks",
   "feature_directories": [
     "specs/005-1-failure-policy-reliability",
-    "specs/005-2-work-role-defaults",
+    "specs/005-2-task-role-defaults",
     "specs/006-1-platform-docs-ipc-security",
     "specs/006-2-release-supply-chain-gates",
     "specs/006-3-lifecycle-shutdown-realism",

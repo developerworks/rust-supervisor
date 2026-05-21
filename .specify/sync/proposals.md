@@ -185,7 +185,7 @@ let mut event = SupervisorEvent::new(
 **Direction**: BACKFILL (Code → Spec)
 
 **Current State**:
-- Code does: 在 `src/spec/supervisor.rs` 中新增了 `GroupConfig` 结构体 (`name: String`, `children: Vec<ChildId>`, `budget: RestartBudgetConfig`), 同时在 `SupervisorSpec` 中新增了 `group_dependencies: Vec<GroupDependencyEdge>` 和 `severity_defaults: HashMap<WorkRole, SeverityClass>` 字段
+- Code does: 在 `src/spec/supervisor.rs` 中新增了 `GroupConfig` 结构体 (`name: String`, `children: Vec<ChildId>`, `budget: RestartBudgetConfig`), 同时在 `SupervisorSpec` 中新增了 `group_dependencies: Vec<GroupDependencyEdge>` 和 `severity_defaults: HashMap<TaskRole, SeverityClass>` 字段
 - Spec does: Key Entities 节未列出 GroupConfig
 
 **Proposed Resolution**:
@@ -194,7 +194,7 @@ let mut event = SupervisorEvent::new(
 
 > GroupConfig(分组配置): 定义分组名称、成员子任务列表、独立重启预算配置的结构体. 由 SupervisorSpec.group_configs 持有.
 > GroupDependencyEdge(分组依赖边): 声明跨组故障传播关系的配置切片, 由 SupervisorSpec.group_dependencies 持有.
-> SeverityDefaults(严重程度默认值): 按 WorkRole 映射默认 SeverityClass 的配置表, 由 SupervisorSpec.severity_defaults 持有.
+> SeverityDefaults(严重程度默认值): 按 TaskRole 映射默认 SeverityClass 的配置表, 由 SupervisorSpec.severity_defaults 持有.
 
 **Rationale**: 代码已实现且通过编译 (T039), 属于有意的架构扩展。
 
@@ -217,7 +217,7 @@ let mut event = SupervisorEvent::new(
 
 在 `spec.md` 的 Key Entities 节补充:
 
-> ChildSpec.severity(子任务显式严重程度): 可选字段, 覆盖 WorkRole 默认的 SeverityClass 映射. 当同时存在 group 级默认值时, child 级显式值优先 (见 tie-break 规则表第 4 行).
+> ChildSpec.severity(子任务显式严重程度): 可选字段, 覆盖 TaskRole 默认的 SeverityClass 映射. 当同时存在 group 级默认值时, child 级显式值优先 (见 tie-break 规则表第 4 行).
 > ChildSpec.group(子任务所属分组): 可选字段, 将 child 分配到命名分组, 用于 group-level budget 和熔断隔离.
 
 **Rationale**: 代码已实现且通过编译 (T040), 属于有意的设计演进。

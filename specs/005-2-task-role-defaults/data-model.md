@@ -1,20 +1,20 @@
-# Data Model(数据模型): 工作角色与默认策略包
+# Data Model(数据模型): 任务角色与默认策略包
 
-本文定义 **005-2 Work Role Defaults**(工作角色默认值) 功能涉及的核心数据结构、枚举类型与字段义务。所有结构必须实现 **`serde`(序列化)** 的 **`Serialize`** 与 **`Deserialize`** trait(特性), 以及 **`schemars`** 的 **`JsonSchema`** trait 以便生成配置 schema(模式)。
+本文定义 **005-2 Task Role Defaults**(任务角色默认值) 功能涉及的核心数据结构、枚举类型与字段义务。所有结构必须实现 **`serde`(序列化)** 的 **`Serialize`** 与 **`Deserialize`** trait(特性), 以及 **`schemars`** 的 **`JsonSchema`** trait 以便生成配置 schema(模式)。
 
-## 1. WorkRole(工作任务角色) 枚举
+## 1. TaskRole(任务角色) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
-/// Work role classification for supervised children.
+/// Task role classification for supervised children.
 ///
 /// Each role binds to a distinct `RoleDefaultPolicy` that defines
 /// default supervision behavior across success, failure, manual stop,
 /// timeout, and budget exhaustion scenarios.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum WorkRole {
+pub enum TaskRole {
     /// Long-running service that should stay online.
     Service,
     /// Background worker with bounded retry semantics.
@@ -37,11 +37,11 @@ pub enum WorkRole {
 **Validation Rules(验证规则)**:
 
 - 未知角色字符串在反序列化时必须返回错误, 不得静默回落到某个默认值
-- 配置加载阶段若 **`ChildSpec.work_role`** 为 **`None`**, 系统内部使用 **`WorkRole::Worker`** 作为保守兜底, 但必须在诊断日志中标注
+- 配置加载阶段若 **`ChildSpec.task_role`** 为 **`None`**, 系统内部使用 **`TaskRole::Worker`** 作为保守兜底, 但必须在诊断日志中标注
 
 ## 2. SidecarConfig(边车配置) 结构
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Configuration for sidecar attachment to a primary service.
@@ -62,13 +62,13 @@ pub struct SidecarConfig {
 
 **Validation Rules(验证规则)**:
 
-- 若 **`WorkRole`** 为 **`Sidecar`** 但未提供 **`sidecar_config`**, 配置加载阶段拒绝并报错
+- 若 **`TaskRole`** 为 **`Sidecar`** 但未提供 **`sidecar_config`**, 配置加载阶段拒绝并报错
 - **`primary_child_id`** 指向的子任务本身不能是 **`Sidecar`** 角色 (禁止链式边车)
 - **`primary_child_id`** 指向的子任务必须在当前监督树中存在
 
 ## 3. OnSuccessAction(成功退出动作) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Action taken when a child exits successfully.
@@ -94,7 +94,7 @@ pub enum OnSuccessAction {
 
 ## 4. OnFailureAction(失败退出动作) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Action taken when a child exits with failure.
@@ -120,7 +120,7 @@ pub enum OnFailureAction {
 
 ## 5. OnManualStopAction(人工停止动作) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Action taken when a child receives an explicit stop request.
@@ -140,7 +140,7 @@ pub enum OnManualStopAction {
 
 ## 6. OnTimeoutAction(超时动作) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Action taken when a child exceeds its execution timeout.
@@ -164,7 +164,7 @@ pub enum OnTimeoutAction {
 
 ## 7. OnBudgetExhaustedAction(预算耗尽动作) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
 /// Action taken when restart budget is exhausted.
@@ -188,10 +188,10 @@ pub enum OnBudgetExhaustedAction {
 
 ## 8. RoleDefaultPolicy(角色默认策略包) 结构
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
-/// Default policy bundle bound to a specific work role.
+/// Default policy bundle bound to a specific task role.
 ///
 /// This structure defines the baseline supervision behavior for each
 /// role. Explicit child policy fields take precedence over these defaults.
@@ -241,20 +241,20 @@ fn default_success_exit_codes() -> Vec<i32> {
 
 ## 9. 五类角色的默认策略查找
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 当前实现不公开按角色命名的策略常量。原因是 **`RoleDefaultPolicy`** 包含 **`Vec`** 字段, 不能用 `const` 完整表达默认值。对外稳定入口是 **`RoleDefaultPolicy::for_role()`**, 它返回由私有默认构造函数生成的完整策略包。
 
 ```rust
 impl RoleDefaultPolicy {
-    /// Returns the default policy pack for a work role.
-    pub fn for_role(role: WorkRole) -> Self {
+    /// Returns the default policy pack for a task role.
+    pub fn for_role(role: TaskRole) -> Self {
         match role {
-            WorkRole::Service => service_default(),
-            WorkRole::Worker => worker_default(),
-            WorkRole::Job => job_default(),
-            WorkRole::Sidecar => sidecar_default(),
-            WorkRole::Supervisor => supervisor_default(),
+            TaskRole::Service => service_default(),
+            TaskRole::Worker => worker_default(),
+            TaskRole::Job => job_default(),
+            TaskRole::Sidecar => sidecar_default(),
+            TaskRole::Supervisor => supervisor_default(),
         }
     }
 }
@@ -270,14 +270,14 @@ impl RoleDefaultPolicy {
 
 ## 10. PolicySource(策略来源) 枚举
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
-/// Source of the effective policy after merging role defaults and user overrides.
+/// Source of the effective policy after merging task role defaults and user overrides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PolicySource {
-    /// Effective policy comes entirely from role defaults.
+    /// Effective policy comes entirely from task role defaults.
     RoleDefault,
     /// Effective policy includes user overrides.
     UserOverride,
@@ -290,14 +290,14 @@ pub enum PolicySource {
 
 ## 11. EffectivePolicy(生效策略) 结构
 
-**Location(位置)**: `src/policy/role_defaults.rs`
+**Location(位置)**: `src/policy/task_role_defaults.rs`
 
 ```rust
-/// Merged policy after combining role defaults with user overrides.
+/// Merged policy after combining task role defaults with user overrides.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct EffectivePolicy {
-    /// The work role that contributed the base defaults.
-    pub work_role: WorkRole,
+    /// The task role that contributed the base defaults.
+    pub task_role: TaskRole,
     /// The merged policy pack.
     pub policy_pack: RoleDefaultPolicy,
     /// Source of the effective policy.
@@ -311,7 +311,7 @@ pub struct EffectivePolicy {
 
 **Field Obligations(字段义务)**:
 
-- **`work_role`**: 原始声明的角色 (若缺失则为 **`WorkRole::Worker`**)
+- **`task_role`**: 原始声明的角色 (若缺失则为 **`TaskRole::Worker`**)
 - **`policy_pack`**: 合并后的最终策略包
 - **`source`**: 策略来源枚举
 - **`used_fallback`**: 是否使用了兜底默认 (角色缺失时为 `true`; 未知角色值在配置解析阶段拒绝)
@@ -321,19 +321,19 @@ pub struct EffectivePolicy {
 
 ```rust
 impl EffectivePolicy {
-    /// Merges role defaults with known user override markers.
+    /// Merges task role defaults with known user override markers.
     ///
     /// # Arguments
     ///
-    /// - `role`: Declared work role (or None for fallback).
+    /// - `role`: Declared task role (or None for fallback).
     /// - `overridden_fields`: Fields explicitly set by the user.
     ///
     /// # Returns
     ///
     /// Returns an `EffectivePolicy` with merged fields and source attribution.
-    pub fn merge(role: Option<WorkRole>, overridden_fields: Vec<String>) -> Self {
+    pub fn merge(role: Option<TaskRole>, overridden_fields: Vec<String>) -> Self {
         let used_fallback = role.is_none();
-        let work_role = role.unwrap_or(WorkRole::Worker);
+        let task_role = role.unwrap_or(TaskRole::Worker);
         let source = if used_fallback {
             PolicySource::FallbackDefault
         } else if overridden_fields.is_empty() {
@@ -342,8 +342,8 @@ impl EffectivePolicy {
             PolicySource::UserOverride
         };
         Self {
-            work_role,
-            policy_pack: RoleDefaultPolicy::for_role(work_role),
+            task_role,
+            policy_pack: RoleDefaultPolicy::for_role(task_role),
             source,
             used_fallback,
             overridden_fields,
@@ -364,13 +364,13 @@ impl EffectivePolicy {
 pub struct ChildSpec {
     // ... existing fields ...
 
-    /// Optional work role classification.
+    /// Optional task role classification.
     ///
     /// If None, the system falls back to Worker role with diagnostic logging.
     #[serde(default)]
-    pub work_role: Option<WorkRole>,
+    pub task_role: Option<TaskRole>,
 
-    /// Optional sidecar configuration (required if work_role is Sidecar).
+    /// Optional sidecar configuration (required if task_role is Sidecar).
     #[serde(default)]
     pub sidecar_config: Option<SidecarConfig>,
 
@@ -380,8 +380,8 @@ pub struct ChildSpec {
 
 **Validation Rules(验证规则)**:
 
-- 若 **`work_role`** 为 **`Some(WorkRole::Sidecar)`** 且 **`sidecar_config`** 为 **`None`**, 配置加载阶段拒绝并报错
-- 若 **`sidecar_config`** 存在但 **`work_role`** 不是 **`Sidecar`**, 配置加载阶段拒绝并报错
+- 若 **`task_role`** 为 **`Some(TaskRole::Sidecar)`** 且 **`sidecar_config`** 为 **`None`**, 配置加载阶段拒绝并报错
+- 若 **`sidecar_config`** 存在但 **`task_role`** 不是 **`Sidecar`**, 配置加载阶段拒绝并报错
 
 ## 13. TypedSupervisionEvent 扩展字段
 
@@ -395,9 +395,9 @@ pub struct ChildSpec {
 pub struct TypedSupervisionEvent {
     // ... existing fields ...
 
-    /// Work role of the child that triggered this event.
+    /// Task role of the child that triggered this event.
     #[serde(default)]
-    pub work_role: Option<WorkRole>,
+    pub task_role: Option<TaskRole>,
 
     /// Whether fallback default was used for this child.
     #[serde(default)]
@@ -418,7 +418,7 @@ pub struct TypedSupervisionEvent {
 ```
 Configuration Loading (配置加载)
     ↓
-ChildSpec.work_role 解析
+ChildSpec.task_role 解析
     ↓
 ┌─────────────────────────────┐
 │ Role Missing?               │
@@ -451,7 +451,7 @@ Runtime Control Loop (运行时控制循环)
 │ execute action              │
 └─────────────────────────────┘
     ↓
-TypedSupervisionEvent 写入 (含 work_role, used_fallback, policy_source)
+TypedSupervisionEvent 写入 (含 task_role, used_fallback, policy_source)
     ↓
 Observability Pipeline (可观察性管道)
     ↓

@@ -22,7 +22,7 @@
 - [x] CHK006 — "effective restart attempts per minute(每分钟有效重启尝试) 不得超过文档给出曲线上界的 105%" — 这里的"文档"是指 YAML 配置文件, 代码常量, 还是独立的设计文档? [Ambiguity, Spec §SC-001] ✅ contracts/restart-budget-api.md 已提供预算曲线计算公式与示例
 - [x] CHK007 — `PropagationPolicy` 枚举中 `EscalateOnly(仅升级)` 与 `Full(完全传播)` 两种传播级别对受影响分组内 child(子任务) 的可观察行为差异是否写明? [Ambiguity, Spec §FR-002] ✅ data-model.md 已补充详细注释: EscalateOnly不影响child调度, Full全组child标记不可重启
 - [x] CHK008 — "预算计数快照"(`RestartBudgetSnapshot`) 在 typed event(类型化事件) 载荷中的字段名和类型是否已经冻结为契约? [Clarity, Spec §Key Entities] ✅ data-model.md 新增 RestartBudgetSnapshot 实体(5字段)并归入 Key Entities
-- [x] CHK009 — `SeverityClass` 中 `Standard(默认)` 与 `Optional(可选)` 在 failure behavior(失败行为) 上的区别是否写明? [Ambiguity, Spec §FR-003] ✅ spec.md FR-003: Critical升级, Optional降噪, Standard按WorkRole默认
+- [x] CHK009 — `SeverityClass` 中 `Standard(默认)` 与 `Optional(可选)` 在 failure behavior(失败行为) 上的区别是否写明? [Ambiguity, Spec §FR-003] ✅ spec.md FR-003: Critical升级, Optional降噪, Standard按TaskRole默认
 
 ## Requirement Consistency(需求一致性)
 
@@ -92,7 +92,7 @@ _本段由 `/speckit-checklist 验证规格` 命令追加. 聚焦规格自身的
 
 ### Dependency Validation(依赖校验)
 
-- [x] CHK037 — 规格声明强依赖 005-1(failure-policy-reliability) 和 005-2(work-role-defaults). 这两个依赖功能的 spec.md 中是否已定义了本切片所需的接口契约 (如 PolicyEngine 的 decide() 方法签名的稳定承诺)? [Dependency, Spec §Dependency Note] ✅ Dependency Note 已补充接口契约: 接入005-1六阶段管线的 evaluate_budget, 通过 role_defaults.rs 映射对接005-2 WorkRole
+- [x] CHK037 — 规格声明强依赖 005-1(failure-policy-reliability) 和 005-2(task-role-defaults). 这两个依赖功能的 spec.md 中是否已定义了本切片所需的接口契约 (如 PolicyEngine 的 decide() 方法签名的稳定承诺)? [Dependency, Spec §Dependency Note] ✅ Dependency Note 已补充接口契约: 接入005-1六阶段管线的 evaluate_budget, 通过 task_role_defaults.rs 映射对接005-2 TaskRole
 
 ---
 
@@ -149,7 +149,7 @@ _本段由 `/speckit-checklist` 命令基于 Strict(严格 release gate) 级别�
 
 _本段由 `/speckit-checklist` 命令基于 Deep(深入发布门禁) 级别追加. 聚焦配置校验边界, 默认值完备性和跨文档一致性._
 
-- [x] CHK059 — `SeverityClass` 的 WorkRole 默认映射是否覆盖了所有 WorkRole 枚举值? 如果有 WorkRole 未被映射, 系统是使用 `Standard` 作为兜底还是拒绝启动? [Completeness, Spec §FR-003 → data-model.md] ✅ spec.md FR-003 已列出全部 5 种 WorkRole 映射: Service→Critical, Supervisor→Critical, Worker→Standard, Job→Optional, Sidecar→Standard, 无遗漏
+- [x] CHK059 — `SeverityClass` 的 TaskRole 默认映射是否覆盖了所有 TaskRole 枚举值? 如果有 TaskRole 未被映射, 系统是使用 `Standard` 作为兜底还是拒绝启动? [Completeness, Spec §FR-003 → data-model.md] ✅ spec.md FR-003 已列出全部 5 种 TaskRole 映射: Service→Critical, Supervisor→Critical, Worker→Standard, Job→Optional, Sidecar→Standard, 无遗漏
 - [x] CHK060 — `RestartBudgetConfig` 的字段约束 (如 `window > 0s`, `max_burst >= 1`, `0.0 < recovery_rate_per_sec <= 1000.0`) 是否在规格中以单独表格列出, 还是分散在 data-model.md 的实体字段注释中? 发布门禁需要一份集中的配置校验规则表. [Consistency, Spec §Key Entities vs data-model.md] ✅ data-model.md 在实体表格后以独立段落集中列出字段约束, 非法值以结构化错误拒绝
 - [x] CHK061 — `GroupConfig` 中的 `budget: RestartBudgetConfig` 是每个 group 独立配置还是引用全局默认值? 如果某个 group 未显式声明 budget, 是使用 supervisor 级默认值还是禁止启动? [Gap, Spec §Key Entities → plan.md §Project Structure] ✅ data-model.md Relationships: `budget` 为可选字段, 未声明时继承 SupervisorSpec 级默认预算; supervisor 级也未配置时使用内置安全默认值(window=60s, max_burst=10, recovery_rate_per_sec=0.5)
 - [x] CHK062 — `ChildSpec.group` 引用的分组名如果在 `SupervisorSpec.group_configs` 中不存在, 系统是在配置加载阶段拒绝启动还是在运行时按无分组处理? [Edge Case, Spec §FR-002] ✅ spec.md FR-002 + data-model.md Relationships: 配置加载阶段校验并拒绝启动, 不允许运行时兜底处理

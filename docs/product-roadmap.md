@@ -42,7 +42,7 @@
 | 切片  | 功能                                    | 状态   | 依赖       | 说明                                                                          |
 | ----- | --------------------------------------- | ------ | ---------- | ----------------------------------------------------------------------------- |
 | 005-1 | Failure Policy Pipeline(失败策略流水线) | 实现中 | 001        | MeltdownTracker 三作用域，BackoffPolicy 全抖动/去相关抖动/并发闸门/冷启动预算 |
-| 005-2 | Work Role Defaults(工作角色默认值)      | 实现中 | 001, 005-1 | 五种工作角色(service/worker/job/sidecar/supervisor) 默认策略                  |
+| 005-2 | Task Role Defaults(任务角色默认值)      | 实现中 | 001, 005-1 | 五种任务角色(service/worker/job/sidecar/supervisor) 默认策略                  |
 
 ### 序列四：生产就绪 (Production Readiness)
 
@@ -93,7 +93,7 @@
 **目标**: 完成序列三和序列四（005-1 至 006-4），交付生产级策略引擎。
 
 - [ ] 005-1: Failure Policy Pipeline — MeltdownTracker 三作用域、BackoffPolicy 增强
-- [ ] 005-2: Work Role Defaults — 五种角色默认策略
+- [ ] 005-2: Task Role Defaults — 五种角色默认策略
 - [ ] 006-1: Platform & IPC Security — 9 项 IPC 控制点、平台支持矩阵
 - [ ] 006-2: Release & Supply Chain — 发布门禁脚本、供应链证明
 - [ ] 006-3: Lifecycle Shutdown Realism — ChildSlot、取消令牌实操

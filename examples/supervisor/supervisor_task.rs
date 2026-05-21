@@ -2,8 +2,8 @@
 
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
-// Import supervisor role defaults.
-use rust_supervisor::policy::role_defaults::WorkRole;
+// Import supervisor task role defaults.
+use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
 // Import task context values.
@@ -49,7 +49,7 @@ pub enum SupervisorEvent {
 ///
 /// # Returns
 ///
-/// Returns a [`ChildSpec`] whose `work_role` is [`WorkRole::Supervisor`].
+/// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Supervisor`].
 pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> ChildSpec {
     // Build a task factory from the supervisor role function.
     let factory = service_fn(move |ctx: TaskContext| {
@@ -58,7 +58,7 @@ pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> 
         // Run one supervisor role attempt.
         async move { run_supervisor_role_unit(ctx, events).await }
     });
-    // Build a runnable child that is classified by WorkRole::Supervisor.
+    // Build a runnable child that is classified by TaskRole::Supervisor.
     let mut child = ChildSpec::worker(
         // Set the stable child identifier.
         ChildId::new("nested-supervisor-unit"),
@@ -70,7 +70,7 @@ pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> 
         Arc::new(factory),
     );
     // Classify the task as a supervisor role unit.
-    child.work_role = Some(WorkRole::Supervisor);
+    child.task_role = Some(TaskRole::Supervisor);
     // Keep the supervisor role unit in the critical path.
     child.criticality = Criticality::Critical;
     // Add stable diagnostic tags.

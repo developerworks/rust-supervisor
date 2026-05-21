@@ -19,7 +19,11 @@ pub fn run() -> ScenarioVerdict {
 
     let elapsed = start.elapsed();
     verdict
-        .with_threshold("structured_error", if error_structured { 1.0 } else { 0.0 }, 1.0)
+        .with_threshold(
+            "structured_error",
+            if error_structured { 1.0 } else { 0.0 },
+            1.0,
+        )
         .with_threshold("panic_free", 0.0, 0.0)
         .with_duration(elapsed.as_nanos())
 }

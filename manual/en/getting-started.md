@@ -156,11 +156,11 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 }
 ```
 
-`ChildSpec::worker()` automatically sets `work_role = Some(WorkRole::Worker)`, equivalent to `work_role: worker` in YAML.
+`ChildSpec::worker()` automatically sets `task_role = Some(TaskRole::Worker)`, equivalent to `task_role: worker` in YAML.
 
-## WorkRole Behavior
+## TaskRole Behavior
 
-The 5 `WorkRole` variants dispatch to different default lifecycle policies via `RoleDefaultPolicy::for_role()`:
+The 5 `TaskRole` variants dispatch to different default lifecycle policies via `RoleDefaultPolicy::for_role()`:
 
 | Dimension | Service | Worker | Job | Sidecar | Supervisor |
 |---|---|---|---|---|---|
@@ -169,7 +169,7 @@ The 5 `WorkRole` variants dispatch to different default lifecycle policies via `
 | **Max restarts** | 10 | 3 | 1 | 5 | 3 |
 | **Default severity** | `Critical` | `Standard` | `Optional` | `Standard` | `Critical` |
 
-The per-role defaults are defined by 5 constructors in `src/policy/role_defaults.rs:418-464`:
+The per-task role defaults are defined by 5 constructors in `src/policy/task_role_defaults.rs:418-464`:
 
 - **Service**: long-running daemon, restart on success, 10 retries, Critical severity — expected to stay online forever.
 - **Worker**: background task, stop on success, 3 retries, Standard severity — stops when done.
@@ -177,4 +177,4 @@ The per-role defaults are defined by 5 constructors in `src/policy/role_defaults
 - **Sidecar**: auxiliary process, same staying behavior as Service but lower restart budget (5), requires a `SidecarConfig` binding to a primary.
 - **Supervisor**: nested supervision tree, same staying behavior as Service, 3 retries, Critical severity.
 
-When `work_role` is `None`, `EffectivePolicy::merge()` falls back to `WorkRole::Worker` with a warning. `semantic_conflicts_for_child()` detects role violations (e.g., Job with permanent restart policy).
+When `task_role` is `None`, `EffectivePolicy::merge()` falls back to `TaskRole::Worker` with a warning. `semantic_conflicts_for_child()` detects role violations (e.g., Job with permanent restart policy).

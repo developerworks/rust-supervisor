@@ -1,4 +1,4 @@
-//! Work role defaults for supervised children.
+//! Task role defaults for supervised children.
 //!
 //! This module owns role classification, default policy bundles, effective
 //! policy attribution, and semantic conflict diagnostics.
@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
 
-/// Work role classification for supervised children.
+/// Task role classification for supervised children.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum WorkRole {
+pub enum TaskRole {
     /// Long-running service that should stay online.
     Service,
     /// Background worker with bounded retry semantics.
@@ -27,7 +27,7 @@ pub enum WorkRole {
     Supervisor,
 }
 
-impl WorkRole {
+impl TaskRole {
     /// Returns a stable low-cardinality role label.
     ///
     /// # Arguments
@@ -48,7 +48,7 @@ impl WorkRole {
     }
 }
 
-impl Display for WorkRole {
+impl Display for TaskRole {
     /// Formats the role as a stable label.
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(self.as_str())
@@ -138,7 +138,7 @@ pub enum OnBudgetExhaustedAction {
     Quarantine,
 }
 
-/// Default policy bundle bound to a specific work role.
+/// Default policy bundle bound to a specific task role.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct RoleDefaultPolicy {
     /// Action on successful exit.
@@ -198,22 +198,22 @@ impl From<RoleDefaultPolicyDifferences> for RoleDefaultPolicy {
 }
 
 impl RoleDefaultPolicy {
-    /// Returns the default policy pack for a work role.
+    /// Returns the default policy pack for a task role.
     ///
     /// # Arguments
     ///
-    /// - `role`: Work role used to select defaults.
+    /// - `role`: Task role used to select defaults.
     ///
     /// # Returns
     ///
     /// Returns a role-specific [`RoleDefaultPolicy`].
-    pub fn for_role(role: WorkRole) -> Self {
+    pub fn for_role(role: TaskRole) -> Self {
         match role {
-            WorkRole::Service => service_default(),
-            WorkRole::Worker => worker_default(),
-            WorkRole::Job => job_default(),
-            WorkRole::Sidecar => sidecar_default(),
-            WorkRole::Supervisor => supervisor_default(),
+            TaskRole::Service => service_default(),
+            TaskRole::Worker => worker_default(),
+            TaskRole::Job => job_default(),
+            TaskRole::Sidecar => sidecar_default(),
+            TaskRole::Supervisor => supervisor_default(),
         }
     }
 }
@@ -251,7 +251,7 @@ impl Display for PolicySource {
 pub enum SeverityClass {
     /// Optional: failure follows noise-reduction path (no alert upgrade).
     Optional,
-    /// Standard: follows the default WorkRole behavior.
+    /// Standard: follows the default TaskRole behavior.
     Standard,
     /// Critical: failure must trigger escalation path.
     Critical,
@@ -260,8 +260,8 @@ pub enum SeverityClass {
 /// Effective policy selected for one child.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct EffectivePolicy {
-    /// Effective work role after fallback handling.
-    pub work_role: WorkRole,
+    /// Effective task role after fallback handling.
+    pub task_role: TaskRole,
     /// Policy pack selected for the effective role.
     pub policy_pack: RoleDefaultPolicy,
     /// Source of the effective policy.
@@ -277,19 +277,19 @@ pub struct EffectivePolicy {
 }
 
 impl EffectivePolicy {
-    /// Merges role defaults with known user override markers.
+    /// Merges task role defaults with known user override markers.
     ///
     /// # Arguments
     ///
-    /// - `role`: Optional declared work role.
+    /// - `role`: Optional declared task role.
     /// - `overridden_fields`: Fields explicitly set by the user.
     ///
     /// # Returns
     ///
     /// Returns an [`EffectivePolicy`] with fallback attribution.
-    pub fn merge(role: Option<WorkRole>, overridden_fields: Vec<String>) -> Self {
+    pub fn merge(role: Option<TaskRole>, overridden_fields: Vec<String>) -> Self {
         let used_fallback = role.is_none();
-        let work_role = role.unwrap_or(WorkRole::Worker);
+        let task_role = role.unwrap_or(TaskRole::Worker);
         let source = if used_fallback {
             PolicySource::FallbackDefault
         } else if overridden_fields.is_empty() {
@@ -297,10 +297,10 @@ impl EffectivePolicy {
         } else {
             PolicySource::UserOverride
         };
-        let severity = Self::default_severity(work_role);
+        let severity = Self::default_severity(task_role);
         Self {
-            work_role,
-            policy_pack: RoleDefaultPolicy::for_role(work_role),
+            task_role,
+            policy_pack: RoleDefaultPolicy::for_role(task_role),
             source,
             used_fallback,
             overridden_fields,
@@ -309,14 +309,14 @@ impl EffectivePolicy {
         }
     }
 
-    /// Returns the default [`SeverityClass`] for a given [`WorkRole`].
-    fn default_severity(role: WorkRole) -> SeverityClass {
+    /// Returns the default [`SeverityClass`] for a given [`TaskRole`].
+    fn default_severity(role: TaskRole) -> SeverityClass {
         match role {
-            WorkRole::Service => SeverityClass::Critical,
-            WorkRole::Supervisor => SeverityClass::Critical,
-            WorkRole::Worker => SeverityClass::Standard,
-            WorkRole::Job => SeverityClass::Optional,
-            WorkRole::Sidecar => SeverityClass::Standard,
+            TaskRole::Service => SeverityClass::Critical,
+            TaskRole::Supervisor => SeverityClass::Critical,
+            TaskRole::Worker => SeverityClass::Standard,
+            TaskRole::Job => SeverityClass::Optional,
+            TaskRole::Sidecar => SeverityClass::Standard,
         }
     }
 
@@ -334,14 +334,14 @@ impl EffectivePolicy {
         if child.restart_policy != RestartPolicy::Transient {
             overridden.push("restart_policy".to_string());
         }
-        let effective_policy = Self::merge(child.work_role, overridden);
-        if child.work_role.is_none() {
+        let effective_policy = Self::merge(child.task_role, overridden);
+        if child.task_role.is_none() {
             tracing::warn!(
                 child_id = %child.id,
-                work_role = %effective_policy.work_role,
+                task_role = %effective_policy.task_role,
                 used_fallback_default = effective_policy.used_fallback,
                 effective_policy_source = %effective_policy.source,
-                "work role missing, falling back to worker default"
+                "task role missing, falling back to worker default"
             );
         }
         effective_policy
@@ -353,8 +353,8 @@ impl EffectivePolicy {
 pub struct RoleSemanticConflict {
     /// Child that owns the conflict.
     pub child_id: ChildId,
-    /// Declared work role.
-    pub work_role: WorkRole,
+    /// Declared task role.
+    pub task_role: TaskRole,
     /// Conflicting field name.
     pub conflicting_field: String,
     /// User-provided value.
@@ -378,10 +378,10 @@ pub fn semantic_conflicts_for_child(
     child: &crate::spec::child::ChildSpec,
 ) -> Vec<RoleSemanticConflict> {
     let mut conflicts = Vec::new();
-    if child.work_role == Some(WorkRole::Job) && child.restart_policy == RestartPolicy::Permanent {
+    if child.task_role == Some(TaskRole::Job) && child.restart_policy == RestartPolicy::Permanent {
         conflicts.push(RoleSemanticConflict {
             child_id: child.id.clone(),
-            work_role: WorkRole::Job,
+            task_role: TaskRole::Job,
             conflicting_field: "restart_policy".to_string(),
             user_value: "permanent".to_string(),
             expected_semantic: "job success should stop".to_string(),
@@ -404,17 +404,17 @@ fn default_success_exit_codes() -> Vec<i32> {
     vec![0]
 }
 
-/// Returns a bounded restart limit used by role defaults.
+/// Returns a bounded restart limit used by task role defaults.
 fn bounded_restart_limit(max_restarts: u32) -> RestartLimit {
     RestartLimit::new(max_restarts, Duration::from_secs(60))
 }
 
-/// Returns a default backoff policy used by role defaults.
+/// Returns a default backoff policy used by task role defaults.
 fn default_backoff_policy() -> BackoffPolicy {
     BackoffPolicy::new(Duration::from_millis(50), Duration::from_secs(5), 0.2)
 }
 
-/// Returns service role defaults.
+/// Returns service task role defaults.
 fn service_default() -> RoleDefaultPolicy {
     RoleDefaultPolicyDifferences {
         on_success_exit: OnSuccessAction::Restart,
@@ -424,7 +424,7 @@ fn service_default() -> RoleDefaultPolicy {
     .into()
 }
 
-/// Returns worker role defaults.
+/// Returns worker task role defaults.
 fn worker_default() -> RoleDefaultPolicy {
     RoleDefaultPolicyDifferences {
         on_success_exit: OnSuccessAction::Stop,
@@ -434,7 +434,7 @@ fn worker_default() -> RoleDefaultPolicy {
     .into()
 }
 
-/// Returns job role defaults.
+/// Returns job task role defaults.
 fn job_default() -> RoleDefaultPolicy {
     RoleDefaultPolicyDifferences {
         on_success_exit: OnSuccessAction::Stop,
@@ -444,7 +444,7 @@ fn job_default() -> RoleDefaultPolicy {
     .into()
 }
 
-/// Returns sidecar role defaults.
+/// Returns sidecar task role defaults.
 fn sidecar_default() -> RoleDefaultPolicy {
     RoleDefaultPolicyDifferences {
         on_success_exit: OnSuccessAction::Restart,
@@ -454,7 +454,7 @@ fn sidecar_default() -> RoleDefaultPolicy {
     .into()
 }
 
-/// Returns nested supervisor role defaults.
+/// Returns nested supervisor task role defaults.
 fn supervisor_default() -> RoleDefaultPolicy {
     RoleDefaultPolicyDifferences {
         on_success_exit: OnSuccessAction::Restart,

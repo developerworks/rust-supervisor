@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-This example shows a `WorkRole::Sidecar` child attached to a primary `WorkRole::Service` child. A sidecar role is an auxiliary process that runs beside a primary service and should stop with the supervisor tree.
+This example shows a `TaskRole::Sidecar` child attached to a primary `TaskRole::Service` child. A sidecar role is an auxiliary process that runs beside a primary service and should stop with the supervisor tree.
 
 Run it with:
 
@@ -14,8 +14,8 @@ The process keeps running until you press `Ctrl+C`.
 
 ## What It Shows
 
-- Primary service: `api-service` is declared as `WorkRole::Service`.
-- Sidecar binding: `metrics-sidecar` is declared as `WorkRole::Sidecar` and uses `SidecarConfig`.
+- Primary service: `api-service` is declared as `TaskRole::Service`.
+- Sidecar binding: `metrics-sidecar` is declared as `TaskRole::Sidecar` and uses `SidecarConfig`.
 - Running: both children print one business tick per second.
 - Stop: after `Ctrl+C`, both children receive cancellation and stop through `shutdown_tree`.
 

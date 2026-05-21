@@ -17,7 +17,7 @@
 - `group_strategies` — 分组级策略覆盖
 - `group_configs` — 分组级重启预算, 成员资格和隔离配置
 - `group_dependencies` — 故障传播的跨分组依赖边
-- `severity_defaults` — 每个工作角色的默认严重等级, 用于升级分叉
+- `severity_defaults` — 每个任务角色的默认严重等级, 用于升级分叉
 - `child_strategy_overrides` — 逐子任务策略和治理覆盖
 - `dynamic_supervisor_policy` — 运行时 add_child 接受策略
 - `control_channel_capacity` — mpsc 命令通道容量
@@ -31,7 +31,7 @@
 - `dependencies` — 必须在当前子任务之前就绪的子任务标识
 - `tags` — 低基数分组标签
 - `criticality` — `Critical`(关键) 或 `Optional`(可选)
-- `work_role` — 可选的 `WorkRole`(工作角色), 用于选择默认生命周期策略语义
+- `task_role` — 可选的 `TaskRole`(任务角色), 用于选择默认生命周期策略语义
 - `sidecar_config` — 可选的边车绑定(角色为 `Sidecar` 时必须)
 - `severity` — 可选的显式严重等级覆盖
 - `group` — 可选的分组名称, 用于分组级隔离和预算跟踪

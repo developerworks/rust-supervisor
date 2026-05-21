@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-这个示例展示一个被 supervisor(监督器) 管理的 `WorkRole::Service`(工作角色: 常驻服务) 子任务. Service(常驻服务) 角色表示长期在线的任务, 它应该完成初始化, 报告 readiness(就绪状态), 发出 heartbeat(心跳), 并在 supervisor(监督器) 关闭时协作停止.
+这个示例展示一个被 supervisor(监督器) 管理的 `TaskRole::Service`(任务角色: 常驻服务) 子任务. Service(常驻服务) 角色表示长期在线的任务, 它应该完成初始化, 报告 readiness(就绪状态), 发出 heartbeat(心跳), 并在 supervisor(监督器) 关闭时协作停止.
 
 运行命令:
 
@@ -22,7 +22,7 @@ cargo run --package rust-tokio-supervisor --example service
 ## 文件结构
 
 - `main.rs`: 组合 supervisor(监督器), event subscription(事件订阅), state snapshot(状态快照) 和 shutdown command(关闭命令).
-- `service_task.rs`: 声明 `WorkRole::Service`(工作角色: 常驻服务) 子任务, 并实现 async service body(异步服务主体).
+- `service_task.rs`: 声明 `TaskRole::Service`(任务角色: 常驻服务) 子任务, 并实现 async service body(异步服务主体).
 - `observation.rs`: 输出 service fact(服务事实), runtime event(运行时事件), current state record(当前状态记录) 和 shutdown outcome(关闭结果).
 
 ## 预期输出形态

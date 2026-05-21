@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-这个示例展示一个挂在 primary service(主服务) 旁边的 `WorkRole::Sidecar`(工作角色: 边车) 子任务. Sidecar(边车) 角色表示辅助进程, 它和主服务一起运行, 并在 supervisor tree(监督树) 关闭时一起停止.
+这个示例展示一个挂在 primary service(主服务) 旁边的 `TaskRole::Sidecar`(任务角色: 边车) 子任务. Sidecar(边车) 角色表示辅助进程, 它和主服务一起运行, 并在 supervisor tree(监督树) 关闭时一起停止.
 
 运行命令:
 
@@ -14,8 +14,8 @@ cargo run --package rust-tokio-supervisor --example sidecar
 
 ## 示例展示内容
 
-- 主服务: `api-service` 声明为 `WorkRole::Service`(工作角色: 常驻服务).
-- 边车绑定: `metrics-sidecar` 声明为 `WorkRole::Sidecar`(工作角色: 边车), 并使用 `SidecarConfig`(边车配置).
+- 主服务: `api-service` 声明为 `TaskRole::Service`(任务角色: 常驻服务).
+- 边车绑定: `metrics-sidecar` 声明为 `TaskRole::Sidecar`(任务角色: 边车), 并使用 `SidecarConfig`(边车配置).
 - 运行: 两个子任务每秒输出一次 business tick(业务周期).
 - 停止: 按下 `Ctrl+C` 后, 两个子任务都会收到 cancellation(取消信号), 并通过 `shutdown_tree`(关闭监督树) 停止.
 

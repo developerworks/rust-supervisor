@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-这个示例展示一个一次性 `WorkRole::Job`(工作角色: 一次性任务) 子任务. Job(一次性任务) 角色适合有限工作, 工作完成后应该停止.
+这个示例展示一个一次性 `TaskRole::Job`(任务角色: 一次性任务) 子任务. Job(一次性任务) 角色适合有限工作, 工作完成后应该停止.
 
 运行命令:
 
@@ -20,5 +20,5 @@ cargo run --package rust-tokio-supervisor --example job
 ## 文件结构
 
 - `main.rs`: 组合 supervisor(监督器), event subscription(事件订阅), state snapshot(状态快照) 和 cleanup shutdown(清理关闭).
-- `job_task.rs`: 声明 `WorkRole::Job`(工作角色: 一次性任务) 子任务, 并实现 one-shot job body(一次性任务主体).
+- `job_task.rs`: 声明 `TaskRole::Job`(任务角色: 一次性任务) 子任务, 并实现 one-shot job body(一次性任务主体).
 - `observation.rs`: 输出 job fact(一次性任务事实), runtime event(运行时事件), current state record(当前状态记录) 和 shutdown outcome(关闭结果).

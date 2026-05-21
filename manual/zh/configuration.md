@@ -49,7 +49,7 @@
 - Child ID(子任务标识)和 name(名称)不能为空.
 - tags(标签)不能为空.
 - `kind: Supervisor` 的子任务不能有 factory(工厂); `kind: AsyncWorker` 或 `kind: BlockingWorker` 必须有 factory(工厂).
-- Sidecar(辅助进程)工作角色需要 `sidecar_config`, 反之亦然.
+- Sidecar(辅助进程)任务角色需要 `sidecar_config`, 反之亦然.
 - 依赖循环会被拒绝.
 - `child_strategy_overrides` 引用的 group(分组)名称必须在 `group_strategies` 中存在.
 

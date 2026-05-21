@@ -1,4 +1,4 @@
-//! Demonstrates the five WorkRole profiles and their effect on restart policy
+//! Demonstrates the five TaskRole profiles and their effect on restart policy
 //! decisions and escalation paths.
 //!
 //! Each role (Service / Worker / Job / Sidecar / Supervisor) carries built-in
@@ -7,23 +7,23 @@
 //! resulting default pack so learners can see how role classification drives
 //! policy selection.
 
-use rust_supervisor::policy::role_defaults::{
+use rust_supervisor::policy::task_role_defaults::{
     EffectivePolicy, OnFailureAction, OnManualStopAction, OnSuccessAction, PolicySource,
-    RoleDefaultPolicy, WorkRole,
+    RoleDefaultPolicy, TaskRole,
 };
 
-/// Runs the work role demonstration.
+/// Runs the task role demonstration.
 fn main() {
-    println!("=== WorkRole Defaults Demo ===");
+    println!("=== TaskRole Defaults Demo ===");
     println!();
 
-    // Iterate over every defined work role.
+    // Iterate over every defined task role.
     for role in [
-        WorkRole::Service,
-        WorkRole::Worker,
-        WorkRole::Job,
-        WorkRole::Sidecar,
-        WorkRole::Supervisor,
+        TaskRole::Service,
+        TaskRole::Worker,
+        TaskRole::Job,
+        TaskRole::Sidecar,
+        TaskRole::Supervisor,
     ] {
         // Resolve the default policy pack for this role.
         let pack = RoleDefaultPolicy::for_role(role);
@@ -59,16 +59,16 @@ fn main() {
     println!();
 
     for role in [
-        WorkRole::Service,
-        WorkRole::Worker,
-        WorkRole::Job,
-        WorkRole::Sidecar,
-        WorkRole::Supervisor,
+        TaskRole::Service,
+        TaskRole::Worker,
+        TaskRole::Job,
+        TaskRole::Sidecar,
+        TaskRole::Supervisor,
     ] {
         let effective = EffectivePolicy::merge(Some(role), vec![]);
         println!(
             "role={:12} source={:16} severity={:?} used_fallback={}",
-            effective.work_role.as_str(),
+            effective.task_role.as_str(),
             label_source(effective.source),
             effective.severity,
             effective.used_fallback,
@@ -81,7 +81,7 @@ fn main() {
     println!();
 
     let fallback = EffectivePolicy::merge(None, vec![]);
-    println!("work_role  = {}", fallback.work_role.as_str());
+    println!("task_role  = {}", fallback.task_role.as_str());
     println!("source     = {}", label_source(fallback.source));
     println!("used_fallback = {}", fallback.used_fallback);
     println!(

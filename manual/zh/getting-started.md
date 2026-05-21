@@ -144,11 +144,11 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 }
 ```
 
-`ChildSpec::worker()` 自动设 `work_role = Some(WorkRole::Worker)`,等价于 YAML 中的 `work_role: worker`.
+`ChildSpec::worker()` 自动设 `task_role = Some(TaskRole::Worker)`,等价于 YAML 中的 `task_role: worker`.
 
-## WorkRole(工作角色) 行为差异
+## TaskRole(任务角色) 行为差异
 
-5 个 `WorkRole` 变体通过 `RoleDefaultPolicy::for_role()` 映射到 3 个差异维度,产生完全不同的默认生命周期行为:
+5 个 `TaskRole` 变体通过 `RoleDefaultPolicy::for_role()` 映射到 3 个差异维度,产生完全不同的默认生命周期行为:
 
 | 维度                 | Service                    | Worker                     | Job                           | Sidecar                    | Supervisor                 |
 | -------------------- | -------------------------- | -------------------------- | ----------------------------- | -------------------------- | -------------------------- |
@@ -157,7 +157,7 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 | **默认最大重启次数** | 10                         | 3                          | 1                             | 5                          | 3                          |
 | **默认严重等级**     | `Critical`                 | `Standard`                 | `Optional`                    | `Standard`                 | `Critical`                 |
 
-具体差异来自 `src/policy/role_defaults.rs` 中的 5 个构造器:
+具体差异来自 `src/policy/task_role_defaults.rs` 中的 5 个构造器:
 
 | Role           | Description                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -167,4 +167,4 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 | **Sidecar**    | 辅助进程,同 Service 的常驻行为但重启预算更低(5 次),且必须绑定 `SidecarConfig` 指定主服务(见 `SidecarConfig` 结构体) |
 | **Supervisor** | 嵌套监管树,同 Service 的常驻行为,重启预算 3 次,严重等级 Critical                                                    |
 
-`EffectivePolicy::merge()` 在 `work_role` 为 `None` 时会回退到 `WorkRole::Worker` 并记录警告. `semantic_conflicts_for_child()` 则检测角色语义冲突(如 Job 搭配永久重启策略会报错).
+`EffectivePolicy::merge()` 在 `task_role` 为 `None` 时会回退到 `TaskRole::Worker` 并记录警告. `semantic_conflicts_for_child()` 则检测角色语义冲突(如 Job 搭配永久重启策略会报错).

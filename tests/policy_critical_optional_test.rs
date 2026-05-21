@@ -2,7 +2,7 @@
 //!
 //! Validates observable divergence between critical and optional paths.
 
-use rust_supervisor::policy::role_defaults::{SeverityClass, WorkRole};
+use rust_supervisor::policy::task_role_defaults::{SeverityClass, TaskRole};
 
 /// Critical severity must be higher than Optional and Standard.
 #[test]
@@ -21,10 +21,10 @@ fn test_standard_between_critical_and_optional() {
 /// Service and Supervisor roles default to Critical severity.
 #[test]
 fn test_service_and_supervisor_default_to_critical() {
-    // Verify the mapping via WorkRole inspection
+    // Verify the mapping via TaskRole inspection
     // Service and Supervisor should map to Critical per spec
-    let service_role = WorkRole::Service;
-    let supervisor_role = WorkRole::Supervisor;
+    let service_role = TaskRole::Service;
+    let supervisor_role = TaskRole::Supervisor;
     // We can't directly call default_severity (it's private),
     // but we verify the enum ordering matches the spec
     assert_eq!(service_role.as_str(), "service");
@@ -34,7 +34,7 @@ fn test_service_and_supervisor_default_to_critical() {
 /// Job role should map to Optional severity.
 #[test]
 fn test_job_defaults_to_optional() {
-    let job_role = WorkRole::Job;
+    let job_role = TaskRole::Job;
     assert_eq!(job_role.as_str(), "job");
 }
 

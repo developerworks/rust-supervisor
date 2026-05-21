@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-这个示例展示一个有界 `WorkRole::Worker`(工作角色: 后台任务) 子任务. Worker(后台任务) 角色表示完成一段有限后台工作后可以停止的任务.
+这个示例展示一个有界 `TaskRole::Worker`(任务角色: 后台任务) 子任务. Worker(后台任务) 角色表示完成一段有限后台工作后可以停止的任务.
 
 运行命令:
 
@@ -20,5 +20,5 @@ cargo run --package rust-tokio-supervisor --example worker
 ## 文件结构
 
 - `main.rs`: 组合 supervisor(监督器), event subscription(事件订阅), state snapshot(状态快照) 和 cleanup shutdown(清理关闭).
-- `worker_task.rs`: 声明 `WorkRole::Worker`(工作角色: 后台任务) 子任务, 并实现有界 worker body(后台任务主体).
+- `worker_task.rs`: 声明 `TaskRole::Worker`(任务角色: 后台任务) 子任务, 并实现有界 worker body(后台任务主体).
 - `observation.rs`: 输出 worker fact(后台任务事实), runtime event(运行时事件), current state record(当前状态记录) 和 shutdown outcome(关闭结果).

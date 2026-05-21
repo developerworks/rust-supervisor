@@ -5,7 +5,7 @@
 
 use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
-use crate::policy::role_defaults::{SeverityClass, SidecarConfig, WorkRole};
+use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::task::factory::TaskFactory;
 use schemars::JsonSchema;
@@ -294,8 +294,8 @@ pub struct ChildSpec {
     pub criticality: Criticality,
     /// Optional role that selects default lifecycle policy semantics.
     #[serde(default)]
-    pub work_role: Option<WorkRole>,
-    /// Optional sidecar binding used when the role is [`WorkRole::Sidecar`].
+    pub task_role: Option<TaskRole>,
+    /// Optional sidecar binding used when the role is [`TaskRole::Sidecar`].
     #[serde(default)]
     pub sidecar_config: Option<SidecarConfig>,
     /// Optional explicit severity classification that overrides the role default (US3).
@@ -340,7 +340,7 @@ impl Debug for ChildSpec {
             .field("dependencies", &self.dependencies)
             .field("tags", &self.tags)
             .field("criticality", &self.criticality)
-            .field("work_role", &self.work_role)
+            .field("task_role", &self.task_role)
             .field("sidecar_config", &self.sidecar_config)
             .field("severity", &self.severity)
             .field("group", &self.group)
@@ -405,7 +405,7 @@ impl ChildSpec {
             dependencies: Vec::new(),
             tags: Vec::new(),
             criticality: Criticality::Critical,
-            work_role: Some(WorkRole::Worker),
+            task_role: Some(TaskRole::Worker),
             sidecar_config: None,
             severity: None,
             group: None,
@@ -528,12 +528,12 @@ fn validate_factory(kind: TaskKind, has_factory: bool) -> Result<(), SupervisorE
 ///
 /// Returns `Ok(())` when the local sidecar declaration is coherent.
 fn validate_sidecar_local(child: &ChildSpec) -> Result<(), SupervisorError> {
-    match (child.work_role, child.sidecar_config.as_ref()) {
-        (Some(WorkRole::Sidecar), None) => Err(SupervisorError::fatal_config(
-            "sidecar work_role requires sidecar_config",
+    match (child.task_role, child.sidecar_config.as_ref()) {
+        (Some(TaskRole::Sidecar), None) => Err(SupervisorError::fatal_config(
+            "sidecar task_role requires sidecar_config",
         )),
-        (role, Some(_)) if role != Some(WorkRole::Sidecar) => Err(SupervisorError::fatal_config(
-            "sidecar_config requires sidecar work_role",
+        (role, Some(_)) if role != Some(TaskRole::Sidecar) => Err(SupervisorError::fatal_config(
+            "sidecar_config requires sidecar task_role",
         )),
         _ => Ok(()),
     }

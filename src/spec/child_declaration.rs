@@ -228,7 +228,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             dependencies,
             tags: Vec::new(),
             criticality,
-            work_role: None,
+            task_role: None,
             sidecar_config: None,
             severity: None,
             group: None,

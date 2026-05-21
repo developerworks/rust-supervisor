@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_panic_storm scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new().expect("tokio runtime").enter();
+    let _guard = tokio::runtime::Runtime::new()
+        .expect("tokio runtime")
+        .enter();
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_panic_storm");
 

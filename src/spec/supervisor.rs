@@ -7,7 +7,7 @@ use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::policy::budget::RestartBudgetConfig;
 use crate::policy::group::GroupDependencyEdge;
-use crate::policy::role_defaults::{SeverityClass, WorkRole, semantic_conflicts_for_child};
+use crate::policy::task_role_defaults::{SeverityClass, TaskRole, semantic_conflicts_for_child};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -345,8 +345,8 @@ pub struct SupervisorSpec {
     pub group_configs: Vec<GroupConfig>,
     /// Cross-group dependency edges for fault propagation.
     pub group_dependencies: Vec<GroupDependencyEdge>,
-    /// Default severity class per work role for escalation bifurcation (US3).
-    pub severity_defaults: HashMap<WorkRole, SeverityClass>,
+    /// Default severity class per task role for escalation bifurcation (US3).
+    pub severity_defaults: HashMap<TaskRole, SeverityClass>,
     /// Child-level strategy overrides.
     pub child_strategy_overrides: Vec<ChildStrategyOverride>,
     /// Runtime policy for dynamic child additions.
@@ -445,7 +445,7 @@ impl SupervisorSpec {
         validate_restart_limit(self.restart_limit)?;
         validate_group_strategies(&self.group_strategies, &self.children)?;
         validate_child_strategy_overrides(self)?;
-        validate_work_roles(&self.children)?;
+        validate_task_roles(&self.children)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
         validate_child_group_names(&self.children, &self.group_configs)?;
         Ok(())
@@ -614,7 +614,7 @@ fn validate_child_strategy_overrides(spec: &SupervisorSpec) -> Result<(), Superv
     Ok(())
 }
 
-/// Validates work role relationships that require sibling context.
+/// Validates task role relationships that require sibling context.
 ///
 /// # Arguments
 ///
@@ -623,7 +623,7 @@ fn validate_child_strategy_overrides(spec: &SupervisorSpec) -> Result<(), Superv
 /// # Returns
 ///
 /// Returns `Ok(())` when sidecar bindings and semantic diagnostics are valid.
-fn validate_work_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
+fn validate_task_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
     let child_ids = children
         .iter()
         .map(|child| child.id.clone())
@@ -631,7 +631,7 @@ fn validate_work_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
 
     for child in children {
         emit_role_conflict_warnings(child);
-        if child.work_role != Some(WorkRole::Sidecar) {
+        if child.task_role != Some(TaskRole::Sidecar) {
             continue;
         }
 
@@ -659,7 +659,7 @@ fn validate_work_roles(children: &[ChildSpec]) -> Result<(), SupervisorError> {
                 ))
             })?;
 
-        if primary_child.work_role == Some(WorkRole::Sidecar) {
+        if primary_child.task_role == Some(TaskRole::Sidecar) {
             return Err(SupervisorError::fatal_config(format!(
                 "sidecar child {} must not use another sidecar {} as primary_child_id",
                 child.id, sidecar_config.primary_child_id
@@ -683,12 +683,12 @@ fn emit_role_conflict_warnings(child: &ChildSpec) {
     for conflict in semantic_conflicts_for_child(child) {
         tracing::warn!(
             child_id = %conflict.child_id,
-            work_role = %conflict.work_role,
+            task_role = %conflict.task_role,
             conflicting_field = %conflict.conflicting_field,
             user_value = %conflict.user_value,
             expected_semantic = %conflict.expected_semantic,
             reason = %conflict.reason,
-            "work role semantic conflict"
+            "task role semantic conflict"
         );
     }
 }

@@ -1,7 +1,7 @@
 # Implementation Plan(实现计划): `005-1` Failure Policy Pipeline(失败策略流水线) and Production Backoff(生产级退避)
 
 **Branch(分支)**: `004-runtime-semantics` | **Date(日期)**: 2026-05-16 | **Primary Spec(主规格)**: `specs/005-1-failure-policy-reliability/spec.md`
-**Companion Spec(伴随规格)**: `specs/005-2-work-role-defaults/spec.md` (**Role defaults**(角色默认), **`evaluate budget`(评估预算)** 一致条款)
+**Companion Spec(伴随规格)**: `specs/005-2-task-role-defaults/spec.md` (**Task role defaults**(角色默认), **`evaluate budget`(评估预算)** 一致条款)
 
 ## Summary(摘要)
 
@@ -63,7 +63,7 @@ specs/005-1-failure-policy-reliability/
 ├── contracts/
 │   └── pipeline-and-events.md
 └── tasks.md                          # /speckit-tasks 生成
-specs/005-2-work-role-defaults/
+specs/005-2-task-role-defaults/
 └── spec.md                           # 角色默认, 验收一致 evaluate budget
 ```
 

@@ -20,7 +20,7 @@
 
 ## Dependency Note(依赖说明)
 
-本切片写清失败时要走的统一流水线, 多层熔断计数如何累计, 以及线上退避如何生效. **`job`(一次性作业) 若套用 `Permanent`(永久重启), 将与 "契约定义的成功退出出现后监督侧不应再自动拉起新一轮" 这一预期相冲突**, 这一点在 `specs/005-2-work-role-defaults/spec.md` 里用角色默认策略和验收场景单独说明; 本切片只要求流水线在执行过程中**读取并真正使用** **`restart_execution_plan`(重启执行计划)** 里已经有的 **`restart limit`(重启次数限制)** 与 **`escalation policy`(升级策略)** 字段, 并把熔断判定结果以及与限额和是否重启有关的结论写入可订阅或可导出的 **`TypedSupervisionEvent`(类型化监督事件)**.
+本切片写清失败时要走的统一流水线, 多层熔断计数如何累计, 以及线上退避如何生效. **`job`(一次性作业) 若套用 `Permanent`(永久重启), 将与 "契约定义的成功退出出现后监督侧不应再自动拉起新一轮" 这一预期相冲突**, 这一点在 `specs/005-2-task-role-defaults/spec.md` 里用角色默认策略和验收场景单独说明; 本切片只要求流水线在执行过程中**读取并真正使用** **`restart_execution_plan`(重启执行计划)** 里已经有的 **`restart limit`(重启次数限制)** 与 **`escalation policy`(升级策略)** 字段, 并把熔断判定结果以及与限额和是否重启有关的结论写入可订阅或可导出的 **`TypedSupervisionEvent`(类型化监督事件)**.
 
 ## Clarifications
 

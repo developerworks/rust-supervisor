@@ -140,7 +140,7 @@
 - [x] T044 [P] 在 `src/runtime/child_slot.rs` 中为 `ChildSlot` 实现 `Serialize` 和 `Deserialize`(通过 serde derive), 使状态视图 JSON(JavaScript 对象表示法) 可对账打印, 按 `data-model.md` 字段定义.
 - [x] T045 [P] 为 `src/runtime/child_slot.rs`, `src/runtime/admission.rs`, `src/runtime/shutdown.rs` 补齐模块文档注释(符合 Rust 源码英文注释规范 `//!`).
 - [x] T046 [P] 更新 `src/control/command.rs` 移除 `ManagedChildState` 枚举。`dashboard/model.rs` 中 `From<ManagedChildState>` 改为 `From<ChildControlOperation>`；`managed_child_state_from_operation()` 函数已删除；`tests/dashboard_protocol_shape_test.rs` 已适配。
-- [x] T047 运行 `cargo test` 全量测试套件(含 `supervisor_*`, `dashboard_*`, `ipc_*`, `work_role_*`), 确保所有现有测试无回归.
+- [x] T047 运行 `cargo test` 全量测试套件(含 `supervisor_*`, `dashboard_*`, `ipc_*`, `task_role_*`), 确保所有现有测试无回归.
 - [x] T048 运行 `cargo clippy --all-targets` — 新代码无 clippy 警告；预存警告不在本切片范围。
 - [x] T049 运行 `cargo fmt --all` 确保代码格式一致.
 - [x] T050 运行 `cargo doc --no-deps --document-private-items` — 新文件（child_slot, admission, shutdown, running_instance_id）无警告；11 个预存警告不在本切片范围。

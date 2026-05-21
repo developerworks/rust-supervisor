@@ -13,8 +13,8 @@
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::shutdown::coordinator::ShutdownCoordinator;
 use rust_supervisor::shutdown::report::{
-    ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus,
-    ResourceReconcileStatus, ShutdownPipelineReport, ShutdownReconcileReport,
+    ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ResourceReconcileStatus,
+    ShutdownPipelineReport, ShutdownReconcileReport,
 };
 use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use std::time::Duration;
@@ -38,8 +38,7 @@ fn main() {
     println!("  abort_wait       = {:?}", policy.abort_wait);
     println!(
         "  interpretation: wait {:?} for cooperative stop, then {:?} for abort",
-        policy.graceful_timeout,
-        policy.abort_wait,
+        policy.graceful_timeout, policy.abort_wait,
     );
 
     // --- Shutdown Phases ---
@@ -93,11 +92,7 @@ fn main() {
     println!("--- ShutdownCoordinator ---");
     println!();
 
-    let coord_policy = ShutdownPolicy::new(
-        Duration::from_secs(5),
-        Duration::from_secs(1),
-        true,
-    );
+    let coord_policy = ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1), true);
     let mut coordinator = ShutdownCoordinator::new(coord_policy);
 
     let cause = ShutdownCause::new("operator", "scheduled maintenance");
@@ -113,10 +108,7 @@ fn main() {
     );
 
     // Idempotent shutdown request (same cause).
-    let result2 = coordinator.request_stop(ShutdownCause::new(
-        "operator",
-        "scheduled maintenance",
-    ));
+    let result2 = coordinator.request_stop(ShutdownCause::new("operator", "scheduled maintenance"));
     println!(
         "  idempotent request: phase={:?} idempotent={}",
         result2.phase, result2.idempotent
@@ -184,12 +176,18 @@ fn main() {
     };
 
     println!("  registry_status       = {:?}", reconcile.registry_status);
-    println!("  runtime_handle_status = {:?}", reconcile.runtime_handle_status);
+    println!(
+        "  runtime_handle_status = {:?}",
+        reconcile.runtime_handle_status
+    );
     println!("  journal_status        = {:?}", reconcile.journal_status);
     println!("  metrics_status        = {:?}", reconcile.metrics_status);
     println!("  socket_status         = {:?}", reconcile.socket_status);
     println!("  orphan_slots          = {:?}", reconcile.orphan_slots);
-    println!("  total_slots_checked   = {}", reconcile.total_slots_checked);
+    println!(
+        "  total_slots_checked   = {}",
+        reconcile.total_slots_checked
+    );
     println!("  verified_clean        = {}", reconcile.verified_clean);
 
     // --- Full Pipeline Report ---
@@ -207,20 +205,14 @@ fn main() {
         idempotent: false,
     };
 
-    println!(
-        "  cause.requested_by = {}",
-        report.cause.requested_by
-    );
+    println!("  cause.requested_by = {}", report.cause.requested_by);
     println!("  cause.reason       = {}", report.cause.reason);
     println!(
         "  duration_ms        = {}ms",
         report.completed_at_unix_nanos - report.started_at_unix_nanos
     );
     println!("  final_phase        = {:?}", report.phase);
-    println!(
-        "  child_outcomes     = {}",
-        report.outcomes.len()
-    );
+    println!("  child_outcomes     = {}", report.outcomes.len());
 
     println!();
     println!("=== Summary ===");

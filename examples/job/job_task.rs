@@ -2,8 +2,8 @@
 
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
-// Import job role defaults.
-use rust_supervisor::policy::role_defaults::WorkRole;
+// Import job task role defaults.
+use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
 // Import task context values.
@@ -45,7 +45,7 @@ pub enum JobEvent {
 ///
 /// # Returns
 ///
-/// Returns a [`ChildSpec`] whose `work_role` is [`WorkRole::Job`].
+/// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Job`].
 pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> ChildSpec {
     // Build a task factory from the job function.
     let factory = service_fn(move |ctx: TaskContext| {
@@ -66,7 +66,7 @@ pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> ChildSpec {
         Arc::new(factory),
     );
     // Classify the task as a one-shot job.
-    child.work_role = Some(WorkRole::Job);
+    child.task_role = Some(TaskRole::Job);
     // Mark the job as optional in parent health policy.
     child.criticality = Criticality::Optional;
     // Add stable diagnostic tags.

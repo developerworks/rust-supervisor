@@ -2,8 +2,8 @@
 
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
-// Import worker role defaults.
-use rust_supervisor::policy::role_defaults::WorkRole;
+// Import worker task role defaults.
+use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
 // Import task context values.
@@ -47,7 +47,7 @@ pub enum WorkerEvent {
 ///
 /// # Returns
 ///
-/// Returns a [`ChildSpec`] whose `work_role` is [`WorkRole::Worker`].
+/// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Worker`].
 pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> ChildSpec {
     // Build a task factory from the worker function.
     let factory = service_fn(move |ctx: TaskContext| {
@@ -68,7 +68,7 @@ pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> ChildSpec {
         Arc::new(factory),
     );
     // Classify the task as a bounded worker.
-    child.work_role = Some(WorkRole::Worker);
+    child.task_role = Some(TaskRole::Worker);
     // Keep the worker in the critical path for this example.
     child.criticality = Criticality::Critical;
     // Add stable diagnostic tags.

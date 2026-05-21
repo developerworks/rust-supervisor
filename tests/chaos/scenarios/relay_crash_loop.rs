@@ -19,6 +19,10 @@ pub fn run() -> ScenarioVerdict {
     let elapsed = start.elapsed();
     verdict
         .with_threshold("restarts_completed", restart_count as f64, 5.0)
-        .with_threshold("alignment_timeout", if alignment_ok { 0.0 } else { 1.0 }, 0.0)
+        .with_threshold(
+            "alignment_timeout",
+            if alignment_ok { 0.0 } else { 1.0 },
+            0.0,
+        )
         .with_duration(elapsed.as_nanos())
 }

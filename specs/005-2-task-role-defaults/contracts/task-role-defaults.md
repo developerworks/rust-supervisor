@@ -1,12 +1,12 @@
 # Contract(契约): 角色默认行为映射与配置覆盖优先级
 
-本文定义 **005-2 Work Role Defaults**(工作角色默认值) 的对外稳定契约, 包括角色到默认行为的映射规则、配置覆盖优先级、冲突检测策略以及与 **005-1** 失败流水线的集成点。本契约在 Phase 1(设计阶段) 冻结, 后续实现不得偏离。
+本文定义 **005-2 Task Role Defaults**(任务角色默认值) 的对外稳定契约, 包括角色到默认行为的映射规则、配置覆盖优先级、冲突检测策略以及与 **005-1** 失败流水线的集成点。本契约在 Phase 1(设计阶段) 冻结, 后续实现不得偏离。
 
 ## 1. 角色到默认行为的映射表
 
-下表为五类 **`WorkRole`(工作任务角色)** 在五种退出场景下的默认监督动作。此为对外公开的行为对照表, 验收测试必须逐项核对。
+下表为五类 **`TaskRole`(任务角色)** 在五种退出场景下的默认监督动作。此为对外公开的行为对照表, 验收测试必须逐项核对。
 
-| WorkRole(工作任务角色)     | Success Exit(成功退出)         | Failure Exit(失败退出)                          | Manual Stop(人工停止) | Timeout(超时)                  | Budget Exhausted(预算耗尽)             |
+| TaskRole(任务角色)     | Success Exit(成功退出)         | Failure Exit(失败退出)                          | Manual Stop(人工停止) | Timeout(超时)                  | Budget Exhausted(预算耗尽)             |
 | -------------------------- | ------------------------------ | ----------------------------------------------- | --------------------- | ------------------------------ | -------------------------------------- |
 | **Service**(常驻服务)      | Restart(重启) - 保持在线       | RestartWithBackoff(带退避重启)                  | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级)            |
 | **Worker**(工作任务)       | Stop(停止) - 任务完成          | RestartWithBackoff(带退避重启) - 限次数         | StopForever(永久停止) | RestartWithBackoff(带退避重启) | StopAndEscalate(停止并升级)            |
@@ -50,31 +50,33 @@ Priority Level 3 (Lowest)  - 全局保守兜底默认 (Worker 角色)
 # 示例 1: 无显式覆写, 完全使用角色默认
 children:
   - id: my-job
-    work_role: job
+    task_role: job
     command: ["echo", "hello"]
-    # on_success_exit → Stop (来自 JOB_DEFAULT)
-    # on_failure_exit → RestartWithBackoff (来自 JOB_DEFAULT)
+    # on_success_exit → Stop (来自 RoleDefaultPolicy::for_role(Job))
+    # on_failure_exit → RestartWithBackoff (来自 RoleDefaultPolicy::for_role(Job))
 
 # 示例 2: 部分覆写
 children:
   - id: my-service
-    work_role: service
+    task_role: service
     command: ["my-server"]
     restart_policy:
       max_restarts: 5  # 用户覆写重启次数
       window_secs: 60
-    # on_success_exit → Restart (来自 SERVICE_DEFAULT, 未覆写)
-    # on_failure_exit → RestartWithBackoff (来自 SERVICE_DEFAULT, 未覆写)
+    # on_success_exit → Restart (来自 RoleDefaultPolicy::for_role(Service), 未覆写)
+    # on_failure_exit → RestartWithBackoff (来自 RoleDefaultPolicy::for_role(Service), 未覆写)
     # restart_limit.max_restarts → 5 (用户覆写)
 
 # 示例 3: 角色缺失, 回落到 Worker 默认
 children:
   - id: unknown-role-task
     command: ["my-worker"]
-    # work_role 缺失 → 内部使用 Worker + 诊断日志标注
-    # on_success_exit → Stop (来自 WORKER_DEFAULT)
-    # on_failure_exit → RestartWithBackoff (来自 WORKER_DEFAULT)
+    # task_role 缺失 → 内部使用 Worker + 诊断日志标注
+    # on_success_exit → Stop (来自 RoleDefaultPolicy::for_role(Worker))
+    # on_failure_exit → RestartWithBackoff (来自 RoleDefaultPolicy::for_role(Worker))
 ```
+
+**Rule MERGE-005**: 未提供 **`task_role`** 时, 系统内部回落到 **`Worker`** 角色默认并输出 **`WARN`** 诊断; 提供了未知 **`task_role`** 字符串时, 系统必须在配置解析或加载阶段拒绝并返回可读错误。
 
 ## 3. 冲突检测与警告策略
 
@@ -86,19 +88,19 @@ children:
 
 **Conflict CONF-003**: 用户为 **`Sidecar`** 角色声明 **`sidecar_config`** 但 **`primary_child_id`** 指向的子任务本身也是 **`Sidecar`** (链式边车)。
 
-**Conflict CONF-004**: 用户显式指定 **`work_role`** 为 **`Sidecar`** 但未提供 **`sidecar_config`**。
+**Conflict CONF-004**: 用户显式指定 **`task_role`** 为 **`Sidecar`** 但未提供 **`sidecar_config`**。
 
 ### 3.2 处理策略
 
-**当前版本严格度**: **Warning**(警告) - 输出醒目的警告日志并标注冲突点, 但仍允许加载配置以便渐进迁移。
+**当前版本严格度**: 语义覆写冲突采用 **Warning**(警告), 结构绑定冲突采用 **Reject**(拒绝加载). **`Job + Permanent`** 属于语义覆写冲突, 输出醒目的警告日志并标注冲突点, 但仍允许加载配置以便渐进迁移. **`Sidecar`** 缺失配置, 引用不存在的主任务, 或引用另一个 **`Sidecar`** 作为主任务, 属于结构绑定冲突, 必须在加载阶段拒绝.
 
-**演进路径**: 当前版本采用警告模式,后续可通过配置开关 `strict_role_semantics: bool` 升级为拒绝加载。计划在 v0.x 版本中逐步过渡到默认拒绝模式,届时冲突配置将导致加载失败并返回错误。
+**演进路径**: 当前版本对语义覆写采用警告模式, 后续可通过配置开关 `strict_role_semantics: bool` 升级为拒绝加载. 计划在 v0.x 版本中逐步过渡到默认拒绝模式, 届时语义冲突配置将导致加载失败并返回错误.
 
 **警告日志格式**:
 
 ```
-WARN supervisor::policy::role_defaults: Semantic conflict detected for child '{child_id}'
-  - Declared role: {work_role}
+WARN supervisor::policy::task_role_defaults: Semantic conflict detected for child '{child_id}'
+  - Declared role: {task_role}
   - Conflicting override: {field_name} = {user_value}
   - Role default expects: {expected_semantic}
   - Impact: Behavior may contradict role semantics; consider removing the override or changing the role.
@@ -113,7 +115,7 @@ WARN supervisor::policy::role_defaults: Semantic conflict detected for child '{c
 所有警告必须包含以下字段以便排查:
 
 - **`child_id`**: 冲突子任务的标识
-- **`work_role`**: 声明的角色
+- **`task_role`**: 声明的角色
 - **`conflicting_field`**: 冲突的字段名
 - **`user_value`**: 用户指定的值
 - **`expected_semantic`**: 角色默认期望的语义
@@ -127,11 +129,11 @@ WARN supervisor::policy::role_defaults: Semantic conflict detected for child '{c
 ```yaml
 children:
   - id: primary-service
-    work_role: service
+    task_role: service
     command: ["my-server"]
 
   - id: logging-sidecar
-    work_role: sidecar
+    task_role: sidecar
     command: ["fluentd"]
     sidecar_config:
       primary_child_id: primary-service # 必须引用存在的子任务 ID
@@ -140,7 +142,7 @@ children:
 
 ### 4.2 验证规则
 
-**Rule SIDE-001**: 若 **`work_role`** 为 **`Sidecar`**, **`sidecar_config`** 必须存在且非空。
+**Rule SIDE-001**: 若 **`task_role`** 为 **`Sidecar`**, **`sidecar_config`** 必须存在且非空。
 
 **Rule SIDE-002**: **`sidecar_config.primary_child_id`** 必须引用同一监督树内存在的子任务标识。
 
@@ -172,10 +174,8 @@ children:
 ```rust
 // Pseudo-code (伪代码)
 fn prepare_effective_policy(child_spec: &ChildSpec) -> EffectivePolicy {
-    let role = child_spec.work_role.unwrap_or(WorkRole::Worker); // Fallback to Worker
-    let role_defaults = RoleDefaultPolicy::for_role(role);
-    let user_overrides = extract_user_overrides(child_spec);
-    EffectivePolicy::merge(Some(role), Some(user_overrides))
+    // Unknown role strings are rejected before ChildSpec is built.
+    EffectivePolicy::for_child(child_spec)
 }
 ```
 
@@ -185,15 +185,15 @@ fn prepare_effective_policy(child_spec: &ChildSpec) -> EffectivePolicy {
 // Pseudo-code (伪代码)
 fn decide_action(
     effective_policy: &EffectivePolicy,
-    exit_status: ExitStatus,
+    exit_classification: ExitClassification,
     meltdown_state: &MeltdownState,
 ) -> Decision {
-    match exit_status {
-        ExitStatus::Success(code) if effective_policy.policy_pack.success_exit_codes.contains(&code) => {
+    match exit_classification {
+        ExitClassification::Success => {
             // Use on_success_exit from effective policy
             map_to_decision(effective_policy.policy_pack.on_success_exit)
         }
-        ExitStatus::Failure(_) => {
+        ExitClassification::NonZeroExit { .. } | ExitClassification::Crash { .. } => {
             // Use on_failure_exit from effective policy
             // Check restart limit and backoff from effective policy
             map_to_decision_with_backoff(
@@ -202,11 +202,11 @@ fn decide_action(
                 effective_policy.policy_pack.default_backoff_policy,
             )
         }
-        ExitStatus::ManualStop => {
+        ExitClassification::ManualStop | ExitClassification::ExternalCancel => {
             // Manual stop always takes precedence
             map_to_decision(effective_policy.policy_pack.on_manual_stop)
         }
-        ExitStatus::Timeout => {
+        ExitClassification::Timeout => {
             // Use on_timeout from effective policy
             map_to_decision(effective_policy.policy_pack.on_timeout)
         }
@@ -227,7 +227,7 @@ fn execute_action(
 
     // Write structured event with role attribution
     let event = TypedSupervisionEvent {
-        work_role: Some(effective_policy.work_role),
+        task_role: Some(effective_policy.task_role),
         used_fallback_default: effective_policy.used_fallback,
         effective_policy_source: Some(effective_policy.source),
         // ... other fields ...
@@ -250,11 +250,11 @@ fn execute_action(
 
 ### 6.1 退出码判定
 
-**Rule SUCCESS-001**: 默认情况下, 退出码 `0` 视为成功退出。
+**Rule SUCCESS-001**: 当前版本的成功退出由 **`TaskResult::Succeeded`(任务成功结果)** 或等价成功事实进入 **`ExitClassification::Success`(成功退出分类)** 表达。
 
-**Rule SUCCESS-002**: 用户可在 **`ChildSpec`** 中通过 **`success_exit_codes`** 字段覆盖默认列表 (例如 `[0, 1]` 表示退出码 0 和 1 都视为成功)。
+**Rule SUCCESS-002**: 当前版本不提供 **`ChildSpec.success_exit_codes`** 用户覆写字段, 也不承诺从原始进程退出码重新判定成功. 需要原始退出码覆写时, 必须由后续切片先把退出码事实接入 **`TaskExit`** 或等价运行时退出模型。
 
-**Rule SUCCESS-003**: **`RoleDefaultPolicy`** 中的 **`success_exit_codes`** 字段默认为 `[0]`, 用户覆写优先级更高。
+**Rule SUCCESS-003**: **`RoleDefaultPolicy`** 中的 **`success_exit_codes`** 字段是本切片的内部策略数据, 默认为 `[0]`, 当前不作为对外配置覆写入口。
 
 ### 6.2 健康检查判定 (可选增强)
 
@@ -275,8 +275,8 @@ fn execute_action(
 pub struct TypedSupervisionEvent {
     // ... existing fields ...
 
-    /// Work role of the child that triggered this event.
-    pub work_role: Option<WorkRole>,
+    /// Task role of the child that triggered this event.
+    pub task_role: Option<TaskRole>,
 
     /// Whether fallback default was used for this child.
     pub used_fallback_default: bool,
@@ -290,7 +290,7 @@ pub struct TypedSupervisionEvent {
 
 ### 7.2 日志级别要求
 
-**Rule LOG-001**: 角色解析与默认策略选择必须在 **INFO** 级别日志中可见 (至少在每个子任务启动时输出一条)。
+**Rule LOG-001**: 角色解析与默认策略选择必须在类型化事件字段中可见. 当前版本至少通过 **`task_role`**, **`used_fallback_default`** 和 **`effective_policy_source`** 字段对外呈现。
 
 **Rule LOG-002**: 冲突警告必须在 **WARN** 级别日志中输出, 包含完整的冲突上下文。
 
@@ -299,12 +299,12 @@ pub struct TypedSupervisionEvent {
 ### 7.3 示例日志输出
 
 ```
-INFO supervisor::policy::role_defaults: Resolved work role for child 'my-job'
-  - work_role: Job
+INFO supervisor::policy::task_role_defaults: Resolved task role for child 'my-job'
+  - task_role: Job
   - effective_policy_source: RoleDefault
   - used_fallback_default: false
 
-WARN supervisor::policy::role_defaults: Semantic conflict detected for child 'risky-job'
+WARN supervisor::policy::task_role_defaults: Semantic conflict detected for child 'risky-job'
   - Declared role: Job
   - Conflicting override: restart_policy = Permanent
   - Role default expects: on_success_exit = Stop
@@ -312,7 +312,7 @@ WARN supervisor::policy::role_defaults: Semantic conflict detected for child 'ri
   - used_fallback_default: false
   - effective_policy_source: UserOverride
 
-WARN supervisor::policy::role_defaults: Work role missing for child 'unknown-task', falling back to Worker default
+WARN supervisor::policy::task_role_defaults: Task role missing for child 'unknown-task', falling back to Worker default
   - used_fallback_default: true
   - effective_policy_source: FallbackDefault
 ```
@@ -321,15 +321,17 @@ WARN supervisor::policy::role_defaults: Work role missing for child 'unknown-tas
 
 ### 8.1 现有配置兼容性
 
-**Rule COMPAT-001**: 现有不包含 **`work_role`** 字段的配置文件必须能正常加载, 系统内部回落到 **`Worker`** 角色并输出诊断日志。
+**Rule COMPAT-001**: 现有不包含 **`task_role`** 字段的配置文件必须能正常加载, 系统内部回落到 **`Worker`** 角色并输出诊断日志。
 
 **Rule COMPAT-002**: 现有不包含 **`sidecar_config`** 的 **`Sidecar`** 角色声明在配置加载阶段拒绝并报错 (此为破坏性变更, 需在迁移文档中说明)。
 
+**Rule COMPAT-003**: 包含未知 **`task_role`** 字符串的配置不是兼容输入, 必须在配置解析或加载阶段拒绝, 以防拼写错误被静默解释成其它角色。
+
 ### 8.2 API 兼容性
 
-**Rule API-001**: 新增的 **`WorkRole`**, **`RoleDefaultPolicy`**, **`EffectivePolicy`** 等结构不得引入 **compatibility exports**(兼容导出), 所有公共 API 必须通过最小集合暴露。
+**Rule API-001**: 新增的 **`TaskRole`**, **`RoleDefaultPolicy`**, **`EffectivePolicy`** 等结构不得引入 **compatibility exports**(兼容导出), 所有公共 API 必须通过最小集合暴露。
 
-**Rule API-002**: **`ChildSpec`** 新增的 **`work_role`** 与 **`sidecar_config`** 字段必须标记为 **`#[serde(default)]`** 以确保反序列化兼容性。
+**Rule API-002**: **`ChildSpec`** 新增的 **`task_role`** 与 **`sidecar_config`** 字段必须标记为 **`#[serde(default)]`** 以确保反序列化兼容性。
 
 ## 9. 验收测试契约
 
@@ -357,7 +359,7 @@ WARN supervisor::policy::role_defaults: Work role missing for child 'unknown-tas
 
 ### 9.3 诊断可观察性验收
 
-**Test CONTRACT-010**: 验证所有 **`TypedSupervisionEvent`** 包含 **`work_role`**, **`used_fallback_default`**, **`effective_policy_source`** 字段。
+**Test CONTRACT-010**: 验证所有 **`TypedSupervisionEvent`** 包含 **`task_role`**, **`used_fallback_default`**, **`effective_policy_source`** 字段。
 
 **Test CONTRACT-011**: 验证角色缺失时系统在 **WARN** 级别日志中标注已启用兜底默认。
 

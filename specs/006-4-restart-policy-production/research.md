@@ -73,17 +73,17 @@
 **Decision(决定)**: 在 `EffectivePolicy` 中增加 `severity` 字段, 在事件发射链路中注入 `SeverityClass` 标签.
 
 **Rationale(理由)**:
-- 已有 `WorkRole` 角色分类, 但角色不等同于严重程度
+- 已有 `TaskRole` 角色分类, 但角色不等同于严重程度
 - 同一 `Service` 角色内部可以有 critical 和 optional 实例
-- `SeverityClass` 独立于 `WorkRole`, 由配置声明
+- `SeverityClass` 独立于 `TaskRole`, 由配置声明
 - 事件发射时自动附加 `severity_class` 标签, metrics 打点时自动附加对应维度
 
 **Alternatives considered(考虑过的替代方案)**:
-- 复用 `WorkRole` 做严重程度判断: 被拒绝, 混淆了两个正交维度
+- 复用 `TaskRole` 做严重程度判断: 被拒绝, 混淆了两个正交维度
 - 在事件 payload 中硬编码: 被拒绝, 不利于后期新增分类
 
 **Implementation(实现)**:
-- 在 `src/policy/role_defaults.rs` 或 `src/spec/child.rs` 中新增 `SeverityClass` 枚举
+- 在 `src/policy/task_role_defaults.rs` 或 `src/spec/child.rs` 中新增 `SeverityClass` 枚举
 - 枚举值: `Critical`(关键), `Optional`(可选), `Standard`(默认)
 - `EffectivePolicy` 新增 `severity: SeverityClass` 字段
 - `What` 事件枚举中新增 `EscalationBifurcated` 变体, 携带 `severity: SeverityClass`

@@ -23,7 +23,7 @@ use crate::policy::group::{GroupDependencyEdge, GroupIsolationPolicy};
 use crate::policy::meltdown::{
     LocalVerdict, MeltdownOutcome, MeltdownTracker, merge_meltdown_verdicts,
 };
-use crate::policy::role_defaults::{
+use crate::policy::task_role_defaults::{
     EffectivePolicy, OnBudgetExhaustedAction, OnFailureAction, OnSuccessAction, OnTimeoutAction,
 };
 use crate::spec::supervisor::{EscalationPolicy, RestartLimit, SupervisorSpec};
@@ -460,7 +460,7 @@ impl SupervisionPipeline {
 
         // Severity escalation bifurcation (US3): check EffectivePolicy.severity
         if let Some(ref policy) = ctx.effective_policy {
-            use crate::policy::role_defaults::SeverityClass;
+            use crate::policy::task_role_defaults::SeverityClass;
             match policy.severity {
                 SeverityClass::Critical => {
                     // Critical path: escalation (emit EscalationBifurcated later in emit stage)
@@ -475,7 +475,7 @@ impl SupervisionPipeline {
                     // Optional path: noise reduction (no escalation alert)
                 }
                 SeverityClass::Standard => {
-                    // Standard path: follow WorkRole defaults
+                    // Standard path: follow TaskTask role defaults
                 }
             }
         }
@@ -619,7 +619,7 @@ impl SupervisionPipeline {
         event.scopes_triggered = ctx.scopes_triggered.clone();
         event.lead_scope = ctx.lead_scope;
         if let Some(effective_policy) = ctx.effective_policy.as_ref() {
-            event.work_role = Some(effective_policy.work_role);
+            event.task_role = Some(effective_policy.task_role);
             event.used_fallback_default = effective_policy.used_fallback;
             event.effective_policy_source = Some(effective_policy.source);
         }
@@ -690,7 +690,7 @@ impl SupervisionPipeline {
 
         // 3. Check for severity bifurcation (critical/optional)
         if let Some(ref policy) = ctx.effective_policy {
-            use crate::policy::role_defaults::SeverityClass;
+            use crate::policy::task_role_defaults::SeverityClass;
             match policy.severity {
                 SeverityClass::Critical | SeverityClass::Optional => {
                     let budget_verdict_str = ctx

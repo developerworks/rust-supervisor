@@ -26,8 +26,16 @@ fn chaos_suite() {
     }
 
     let summary = ScenarioVerdict::new("__suite_summary__")
-        .with_threshold("scenarios_total", verdicts.len() as f64, verdicts.len() as f64)
-        .with_threshold("scenarios_passed", verdicts.iter().filter(|v| v.passed).count() as f64, verdicts.len() as f64);
+        .with_threshold(
+            "scenarios_total",
+            verdicts.len() as f64,
+            verdicts.len() as f64,
+        )
+        .with_threshold(
+            "scenarios_passed",
+            verdicts.iter().filter(|v| v.passed).count() as f64,
+            verdicts.len() as f64,
+        );
     write_verdict(&summary);
 
     assert!(all_passed, "One or more chaos scenarios failed");

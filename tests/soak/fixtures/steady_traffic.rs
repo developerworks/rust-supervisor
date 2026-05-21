@@ -3,8 +3,8 @@
 //! Generates a constant workload of 1000 req/s by injecting simulated
 //! child events or commands into the supervisor.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 /// Generates steady traffic for soak testing.

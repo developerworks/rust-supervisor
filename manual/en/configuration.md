@@ -49,7 +49,7 @@ Child declaration checks:
 - Child ID and name must be non-empty.
 - Tags must be non-empty.
 - A child with `kind: Supervisor` must not have a factory; a child with `kind: AsyncWorker` or `kind: BlockingWorker` must have one.
-- Sidecar work role requires `sidecar_config`, and vice versa.
+- Sidecar task role requires `sidecar_config`, and vice versa.
 - Dependency cycles are rejected.
 - Group names referenced by `child_strategy_overrides` must exist in `group_strategies`.
 

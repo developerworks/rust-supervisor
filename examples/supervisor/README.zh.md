@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-这个示例展示一个声明为 `WorkRole::Supervisor`(工作角色: 监督器) 的可运行子任务. 它把 nested supervisor unit(嵌套监督器单元) 建模为一个长期运行的受监督任务, 用来展示初始化, 持续运行, 协作停止和观测输出.
+这个示例展示一个声明为 `TaskRole::Supervisor`(任务角色: 监督器) 的可运行子任务. 它把 nested supervisor unit(嵌套监督器单元) 建模为一个长期运行的受监督任务, 用来展示初始化, 持续运行, 协作停止和观测输出.
 
 运行命令:
 
@@ -22,5 +22,5 @@ cargo run --package rust-tokio-supervisor --example supervisor
 ## 文件结构
 
 - `main.rs`: 组合 supervisor(监督器), event subscription(事件订阅), state snapshot(状态快照) 和 shutdown command(关闭命令).
-- `supervisor_task.rs`: 声明 `WorkRole::Supervisor`(工作角色: 监督器) 角色单元, 并实现 business loop(业务循环).
+- `supervisor_task.rs`: 声明 `TaskRole::Supervisor`(任务角色: 监督器) 角色单元, 并实现 business loop(业务循环).
 - `observation.rs`: 输出 lifecycle fact(生命周期事实), runtime event(运行时事件), state record(状态记录) 和 shutdown outcome(关闭结果).

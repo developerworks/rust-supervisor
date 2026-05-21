@@ -25,7 +25,7 @@ use crate::policy::decision::{
 };
 use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
 use crate::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
-use crate::policy::role_defaults::{EffectivePolicy, OnSuccessAction};
+use crate::policy::task_role_defaults::{EffectivePolicy, OnSuccessAction};
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
 use crate::runtime::admission::{AdmissionConflict, AdmissionSet};
@@ -1600,7 +1600,7 @@ impl RuntimeControlState {
         event.throttle_gate_owner = owner;
         if let Some(runtime) = self.registry.child(child_id) {
             let effective_policy = prepare_effective_policy(&runtime.spec);
-            event.work_role = Some(effective_policy.work_role);
+            event.task_role = Some(effective_policy.task_role);
             event.used_fallback_default = effective_policy.used_fallback;
             event.effective_policy_source = Some(effective_policy.source);
         }

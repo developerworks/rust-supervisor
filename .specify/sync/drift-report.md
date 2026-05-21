@@ -126,10 +126,10 @@ The core supervisor module architecture fully matches the spec:
 #### Aligned ✅ — all 3 FRs fully implemented
 - Policy pipeline (6 stages), MeltdownTracker (3 scopes), BackoffPolicy (4 jitter modes) ✅
 
-### 005-2-work-role-defaults — 1 FR, 3 SCs
+### 005-2-task-role-defaults — 1 FR, 3 SCs
 
 #### Aligned ✅
-- FR-001: 5 WorkRole variants (Service/Worker/Job/Sidecar/Supervisor) with defaults ✅
+- FR-001: 5 TaskRole variants (Service/Worker/Job/Sidecar/Supervisor) with defaults ✅
 - SeverityClass (Critical/Standard/Optional) with role-specific mapping ✅
 
 ### 006-1-platform-docs-ipc-security — 3 FRs, 4 SCs

@@ -25,7 +25,7 @@ Implement these tests BEFORE implementation tasks:
 - Verify non-zero exit code failures go through all 6 stages in order
 - Each stage must produce structured event output
 - Also verify success exit codes go through all 6 stages and leave auditable records
-- **Note**: This test only verifies the success path goes through 6 stages; restart-after-success policy is covered by companion spec `specs/005-2-work-role-defaults/spec.md`
+- **Note**: This test only verifies the success path goes through 6 stages; restart-after-success policy is covered by companion spec `specs/005-2-task-role-defaults/spec.md`
 
 #### T009 [P] [US1]: Restart limit usage test
 - File: `tests/supervisor_restart_limit_usage.rs`

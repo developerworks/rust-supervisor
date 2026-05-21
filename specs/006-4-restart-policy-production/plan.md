@@ -7,11 +7,11 @@
 
 ## Summary(摘要)
 
-本切片在 005-1(failure-policy-reliability) 和 005-2(work-role-defaults) 已建立的策略入口基础上, 补齐生产级重启策略的三大能力: (1) restart budget(重启预算) 和 fairness probe(公平性探针) 接入统一评估管线, 确保快速失败不会压出无限重启风暴; (2) group strategy(分组策略) 隔离验证, 确认分组熔断不误伤无关任务; (3) critical(关键) 与 optional(可选) 子任务的分叉路径在 typed event(类型化事件) 和 metrics(指标) 双通道完全可观测.
+本切片在 005-1(failure-policy-reliability) 和 005-2(task-role-defaults) 已建立的策略入口基础上, 补齐生产级重启策略的三大能力: (1) restart budget(重启预算) 和 fairness probe(公平性探针) 接入统一评估管线, 确保快速失败不会压出无限重启风暴; (2) group strategy(分组策略) 隔离验证, 确认分组熔断不误伤无关任务; (3) critical(关键) 与 optional(可选) 子任务的分叉路径在 typed event(类型化事件) 和 metrics(指标) 双通道完全可观测.
 
-现有 `src/policy/` 模块已提供 BackoffPolicy(退避策略), MeltdownPolicy/MeltdownTracker(熔断策略/跟踪器), FailureWindow(失败窗口), PolicyEngine(策略引擎), WorkRole(工作角色) 基础实现. 本切片的增量在于统一评估管线(按 `budget -> meltdown -> backoff` 顺序: 预算不足直接拒绝不经过熔断, 熔断后不计算退避), 预算快照, 公平性探测, 分组隔离断言, 以及关键/可选分叉的事件与指标通道.
+现有 `src/policy/` 模块已提供 BackoffPolicy(退避策略), MeltdownPolicy/MeltdownTracker(熔断策略/跟踪器), FailureWindow(失败窗口), PolicyEngine(策略引擎), TaskRole(任务角色) 基础实现. 本切片的增量在于统一评估管线(按 `budget -> meltdown -> backoff` 顺序: 预算不足直接拒绝不经过熔断, 熔断后不计算退避), 预算快照, 公平性探测, 分组隔离断言, 以及关键/可选分叉的事件与指标通道.
 
-**依赖**: 强依赖 `specs/005-1-failure-policy-reliability/`, `specs/005-2-work-role-defaults/`, `specs/006-3-lifecycle-shutdown-realism/`(ChildSlot 基础设施).
+**依赖**: 强依赖 `specs/005-1-failure-policy-reliability/`, `specs/005-2-task-role-defaults/`, `specs/006-3-lifecycle-shutdown-realism/`(ChildSlot 基础设施).
 
 ## Technical Context(技术背景)
 
@@ -64,7 +64,7 @@ src/
 │   ├── backoff.rs       # BackoffPolicy + JitterMode(已有)
 │   ├── meltdown.rs      # MeltdownPolicy, MeltdownTracker(已有, 增强 group 隔离)
 │   ├── failure_window.rs # FailureWindow(已有)
-│   ├── role_defaults.rs  # WorkRole, EffectivePolicy(已有, 增强 critical/optional)
+│   ├── task_role_defaults.rs  # TaskRole, EffectivePolicy(已有, 增强 critical/optional)
 │   ├── budget.rs         # NEW: RestartBudget(重启预算) 跟踪器
 │   └── group.rs          # NEW: GroupStrategy(分组策略) 隔离断言
 ├── observe/
@@ -113,7 +113,7 @@ tests/
 | 文件                          | `use crate::` 导入数 | 耦合说明                                                                                      |
 | ----------------------------- | -------------------- | --------------------------------------------------------------------------------------------- |
 | `src/runtime/control_loop.rs` | 20+                  | 依赖 child_runner/policy/runtime/shutdown/spec/tree 等 8 个模块, 是运行时中枢, 重构影响范围大 |
-| `src/runtime/pipeline.rs`     | 18+                  | 依赖 policy 全部子模块(budget/meltdown/backoff/group/role_defaults) + observe/event/tree/spec |
+| `src/runtime/pipeline.rs`     | 18+                  | 依赖 policy 全部子模块(budget/meltdown/backoff/group/task_role_defaults) + observe/event/tree/spec |
 
 ### 配置复杂度 (Configuration Complexity)
 

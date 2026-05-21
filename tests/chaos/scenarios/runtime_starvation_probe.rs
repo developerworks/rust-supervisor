@@ -22,6 +22,10 @@ pub fn run() -> ScenarioVerdict {
     let elapsed = start.elapsed();
     verdict
         .with_threshold("control_loop_iter_per_sec", result.iterations_per_sec, 0.0)
-        .with_threshold("emit_latency_p99_ms", elapsed.as_millis() as f64 / 30.0, 100.0)
+        .with_threshold(
+            "emit_latency_p99_ms",
+            elapsed.as_millis() as f64 / 30.0,
+            100.0,
+        )
         .with_duration(elapsed.as_nanos())
 }

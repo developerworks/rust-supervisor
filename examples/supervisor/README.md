@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-This example shows a runnable child classified as `WorkRole::Supervisor`. It models a nested supervisor unit as a long-running supervised task, so the example can demonstrate initialization, steady running, cooperative stop, and observation output.
+This example shows a runnable child classified as `TaskRole::Supervisor`. It models a nested supervisor unit as a long-running supervised task, so the example can demonstrate initialization, steady running, cooperative stop, and observation output.
 
 Run it with:
 
@@ -22,5 +22,5 @@ The process keeps running until you press `Ctrl+C`.
 ## File Layout
 
 - `main.rs`: wires the supervisor, event subscriptions, state snapshots, and shutdown command.
-- `supervisor_task.rs`: declares the `WorkRole::Supervisor` role unit and its business loop.
+- `supervisor_task.rs`: declares the `TaskRole::Supervisor` role unit and its business loop.
 - `observation.rs`: prints lifecycle facts, runtime events, state records, and shutdown outcomes.

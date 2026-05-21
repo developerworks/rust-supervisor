@@ -25,7 +25,7 @@
 - **Rationale(理由)**: **`FR-003`** 明确要求 **`seed`(随机种子)** 与 **`inject clock`(注入时钟)** 双路径可重复.
 - **Alternatives considered(曾考虑的备选)**: 引入新 **`crate`** 只做 **`jitter`(抖动)**; 被拒绝, 除非 **`cargo`** 体积或审计明确提出需求 (**Small Increment(小增量)** 闸门).
 
-## 5. 与 `specs/005-2-work-role-defaults/spec.md` 的边界
+## 5. 与 `specs/005-2-task-role-defaults/spec.md` 的边界
 
 - **Decision(决定)**: **`005-1`** 交付统一 **`evaluate budget`** 语义与事件字段; **`005-2`** 只替换 **`RoleDefaultPolicy`(角色默认策略包)** 写入 **`decide action`** 的输入, 不得分叉第二条失败旁路.
 - **Rationale(理由)**: **`005-2`** Dependency Note(依赖说明) 已写明 **`evaluate budget`** 字段用法一致 **`005-1`**.

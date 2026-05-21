@@ -39,7 +39,7 @@
 ## 比对策略(T010 测试)
 
 1. **序列化格式**: 两侧均使用 `serde_json::to_string` 生成 JSON.
-2. **比对范围**: 仅比对映射表中列出的字段. ChildSpec 中 ChildDeclaration 不存在的字段(如 `factory`, `shutdown_policy`, `backoff_policy`, `tags`, `work_role`, `sidecar_config`, `severity`, `group`) 不参与比对.
+2. **比对范围**: 仅比对映射表中列出的字段. ChildSpec 中 ChildDeclaration 不存在的字段(如 `factory`, `shutdown_policy`, `backoff_policy`, `tags`, `task_role`, `sidecar_config`, `severity`, `group`) 不参与比对.
 3. **差异计数定义**: 对映射表中的每个 ChildDeclaration 字段, 从 ChildSpec 的 JSON 中提取对应字段值(按映射表路径), 进行严格相等比较. 不匹配的字段数计为差异计数.
 4. **预期结果**: 差异计数 = 0.
 5. **依赖方向约定**: `dependencies: ["A"]` 表示"当前 child 依赖 A, A 必须在当前 child 之前启动".

@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_ignore_cancel scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new().expect("tokio runtime").enter();
+    let _guard = tokio::runtime::Runtime::new()
+        .expect("tokio runtime")
+        .enter();
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_ignore_cancel");
 
@@ -25,6 +27,10 @@ pub fn run() -> ScenarioVerdict {
     let elapsed = start.elapsed();
 
     verdict
-        .with_threshold("slot_deactivated_ms", elapsed.as_millis() as f64, (Duration::from_secs(10)).as_millis() as f64)
+        .with_threshold(
+            "slot_deactivated_ms",
+            elapsed.as_millis() as f64,
+            (Duration::from_secs(10)).as_millis() as f64,
+        )
         .with_duration(elapsed.as_nanos())
 }

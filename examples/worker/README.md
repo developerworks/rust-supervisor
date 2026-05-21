@@ -2,7 +2,7 @@
 
 [中文说明](README.zh.md)
 
-This example shows a bounded `WorkRole::Worker` child. A worker role is a background task that does a finite amount of work and then stops after success.
+This example shows a bounded `TaskRole::Worker` child. A worker role is a background task that does a finite amount of work and then stops after success.
 
 Run it with:
 
@@ -20,5 +20,5 @@ cargo run --package rust-tokio-supervisor --example worker
 ## File Layout
 
 - `main.rs`: wires the supervisor, event subscription, state snapshots, and cleanup shutdown.
-- `worker_task.rs`: declares the `WorkRole::Worker` child and the bounded worker body.
+- `worker_task.rs`: declares the `TaskRole::Worker` child and the bounded worker body.
 - `observation.rs`: prints worker facts, runtime events, current state records, and shutdown outcomes.

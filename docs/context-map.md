@@ -110,7 +110,7 @@ specs/
 ├── 004-3-child-runtime-state-control/  [实现中] 子任务运行状态控制
 ├── 004-4-generation-fencing/           [实现中] 代次隔离重启
 ├── 005-1-failure-policy-reliability/   [实现中] 失败策略流水线
-├── 005-2-work-role-defaults/           [实现中] 工作角色默认值
+├── 005-2-task-role-defaults/           [实现中] 任务角色默认值
 ├── 006-1-platform-docs-ipc-security/   [实现中] 平台边界与 IPC 安全
 ├── 006-2-release-supply-chain-gates/   [实现中] 发布门禁与供应链
 ├── 006-3-lifecycle-shutdown-realism/   [实现中] 真实生命周期关闭

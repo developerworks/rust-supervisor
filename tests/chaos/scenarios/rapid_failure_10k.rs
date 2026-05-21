@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 /// Runs the rapid_failure_10k scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new().expect("tokio runtime").enter();
+    let _guard = tokio::runtime::Runtime::new()
+        .expect("tokio runtime")
+        .enter();
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("rapid_failure_10k");
 
@@ -26,7 +28,15 @@ pub fn run() -> ScenarioVerdict {
     let elapsed = start.elapsed();
 
     verdict
-        .with_threshold("restart_recovery_rate", if budget_ok { 1.0 } else { 0.0 }, 0.0)
-        .with_threshold("emit_latency_p99_ms", (elapsed.as_micros() as f64) / count as f64 / 1000.0, 10.0)
+        .with_threshold(
+            "restart_recovery_rate",
+            if budget_ok { 1.0 } else { 0.0 },
+            0.0,
+        )
+        .with_threshold(
+            "emit_latency_p99_ms",
+            (elapsed.as_micros() as f64) / count as f64 / 1000.0,
+            10.0,
+        )
         .with_duration(elapsed.as_nanos())
 }

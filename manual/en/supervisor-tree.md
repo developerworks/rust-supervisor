@@ -17,7 +17,7 @@ Language: [中文](../zh/supervisor-tree.html)
 - `group_strategies` — group-level strategy overrides
 - `group_configs` — group-level restart budget, membership, and isolation configs
 - `group_dependencies` — cross-group dependency edges for fault propagation
-- `severity_defaults` — default severity class per work role for escalation bifurcation
+- `severity_defaults` — default severity class per task role for escalation bifurcation
 - `child_strategy_overrides` — per-child strategy and governance overrides
 - `dynamic_supervisor_policy` — runtime add_child acceptance policy
 - `control_channel_capacity` — mpsc command channel capacity
@@ -31,7 +31,7 @@ Language: [中文](../zh/supervisor-tree.html)
 - `dependencies` — child IDs that must become ready before this child starts
 - `tags` — low-cardinality grouping labels
 - `criticality` — `Critical` or `Optional`
-- `work_role` — optional `WorkRole` that selects default lifecycle policy semantics
+- `task_role` — optional `TaskRole` that selects default lifecycle policy semantics
 - `sidecar_config` — optional sidecar binding (required when role is `Sidecar`)
 - `severity` — optional explicit severity override
 - `group` — optional group name for group-level isolation and budget tracking

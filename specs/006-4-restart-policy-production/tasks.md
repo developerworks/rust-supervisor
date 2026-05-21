@@ -7,7 +7,7 @@
 
 **Organization(组织方式)**: 任务按用户故事分组: US1(fast failure doesn't cause storm), US2(group fault stays within boundary), US3(critical/optional bifurcation). 每个故事可独立实现和独立测试.
 
-**Dependencies(依赖)**: 强依赖 `specs/005-1-failure-policy-reliability/`, `specs/005-2-work-role-defaults/`, `specs/006-3-lifecycle-shutdown-realism/`(ChildSlot 基础设施).
+**Dependencies(依赖)**: 强依赖 `specs/005-1-failure-policy-reliability/`, `specs/005-2-task-role-defaults/`, `specs/006-3-lifecycle-shutdown-realism/`(ChildSlot 基础设施).
 
 ## Format(格式): `[ID] [P?] [Story] Description(描述)`
 
@@ -38,7 +38,7 @@
 
 - [x] T005 在 `src/policy/budget.rs` 中定义 `RestartBudgetConfig` 结构体和 `BudgetVerdict` 枚举, 按 `data-model.md` 和 `contracts/restart-budget-api.md`. 字段: `window: Duration`, `max_burst: u32`, `recovery_rate_per_sec: f64`. 所有字段带英文文档注释.
 - [x] T006 [P] 在 `src/policy/group.rs` 中定义 `GroupDependencyEdge` 结构体, `PropagationPolicy` 枚举, `GroupIsolationPolicy` 结构体, 按 `data-model.md` 和 `contracts/group-isolation-api.md`. `GroupIsolationPolicy` 实现 `affected_by()` 方法.
-- [x] T007 [P] 在 `src/policy/role_defaults.rs` 中定义 `SeverityClass` 枚举: `Critical`, `Optional`, `Standard`. 在 `EffectivePolicy` 结构体中新增 `severity: SeverityClass` 和 `group_name: Option<String>` 字段.
+- [x] T007 [P] 在 `src/policy/task_role_defaults.rs` 中定义 `SeverityClass` 枚举: `Critical`, `Optional`, `Standard`. 在 `EffectivePolicy` 结构体中新增 `severity: SeverityClass` 和 `group_name: Option<String>` 字段.
 - [x] T008 [P] 在 `src/observe/fairness.rs` 中定义 `FairnessProbe` 结构体和 `StarvationAlert` 结构体, 按 `data-model.md`. `FairnessProbe` 实现 `record_opportunity()` 和 `check()` 方法.
 - [x] T009 在 `src/event/payload.rs` 的 `What` 枚举中新增 `BudgetExhausted`, `GroupFuseTriggered`, `EscalationBifurcated` 三个事件变体, 按 `data-model.md` 字段定义.
 - [x] T010 运行 `cargo check` 确认 Foundational(基础) 阶段所有新增类型编译无错. 执行 `cargo fmt`.
@@ -122,7 +122,7 @@
 
 ### Implementation for User Story 3(用户故事三的实现)
 
-- [x] T034 [US3] 在 `src/policy/role_defaults.rs` 中: `WorkRole` 添加默认 `SeverityClass` 映射: `Service → Critical`, `Supervisor → Critical`, `Worker → Standard`, `Job → Optional`, `Sidecar → Standard`. `ChildSpec` 中的显式 `severity` 字段覆盖角色默认值.
+- [x] T034 [US3] 在 `src/policy/task_role_defaults.rs` 中: `TaskRole` 添加默认 `SeverityClass` 映射: `Service → Critical`, `Supervisor → Critical`, `Worker → Standard`, `Job → Optional`, `Sidecar → Standard`. `ChildSpec` 中的显式 `severity` 字段覆盖角色默认值.
 - [x] T035 [US3] 在 `src/runtime/pipeline.rs` 中: evaluate_budget 阶段完成后, 根据 `EffectivePolicy.severity` 决定进一步动作. `Critical` → 发射 `EscalationBifurcated` 并升级. `Optional` → 发射 `EscalationBifurcated` 并降噪.
 - [x] T036 [US3] 在 `src/event/payload.rs` 中: 确保 `EscalationBifurcated` 事件变体包含 `severity: SeverityClass`, `budget_verdict: Option<BudgetVerdict>`, `fuse_outcome: Option<MeltdownOutcome>`. `Option` 字段在跳过时使用 `None`, 不引入 `NotEvaluated` 变体. 按 `data-model.md` EscalationBifurcated 诊断键表.
 - [x] T037 [US3] 在 `src/runtime/control_loop.rs` 中: 生成 `CorrelationId(关联标识)` 使用 UUID v4 算法, 确保多个 child 同时触发故障时各自获得独立 ID; 在 budget → meltdown → escalation 事件链路中传递, 确保同一故障链路的所有事件共享同一 CorrelationId. 按 `spec.md` Edge Cases.
@@ -137,7 +137,7 @@
 
 **Purpose(目的)**: 完成影响多个用户故事的改进和代码清理.
 
-- [x] T039 [P] 在 `src/spec/supervisor.rs` 中新增 `GroupConfig` 结构体: `name: String`, `children: Vec<ChildId>`, `budget: Option<RestartBudgetConfig>`. 新增 `group_dependencies: Vec<GroupDependencyEdge>`, `severity_defaults: HashMap<WorkRole, SeverityClass>`.
+- [x] T039 [P] 在 `src/spec/supervisor.rs` 中新增 `GroupConfig` 结构体: `name: String`, `children: Vec<ChildId>`, `budget: Option<RestartBudgetConfig>`. 新增 `group_dependencies: Vec<GroupDependencyEdge>`, `severity_defaults: HashMap<TaskRole, SeverityClass>`.
 - [x] T040 [P] 在 `src/spec/child.rs` 的 `ChildSpec` 中新增 `severity: Option<SeverityClass>` 和 `group: Option<String>` 字段(可选, 覆盖角色默认).
 - [x] T041 [P] 为 `src/policy/budget.rs`, `src/policy/group.rs`, `src/observe/fairness.rs` 补齐模块文档注释(符合 Rust 源码英文注释规范 `//!`).
 - [x] T042 [P] 在 `src/observe/pipeline.rs` 中: 为 `BudgetExhausted`, `GroupFuseTriggered`, `EscalationBifurcated` 事件类型添加观测流水线处理, 转为可审计的 `PipelineStageDiagnostic`.
@@ -174,7 +174,7 @@ Phase 1 (Setup)
 ### Parallel Opportunities(并行机会)
 
 - Phase 2 中 T005, T006, T007, T008, T009 可以并行(不同文件).
-- Phase 3(US1), Phase 4(US2), Phase 5(US3) 的核心实现可并行推进: US1 改 `budget.rs` + `fairness.rs`, US2 改 `meltdown.rs` + `group.rs`, US3 改 `role_defaults.rs` + `payload.rs`.
+- Phase 3(US1), Phase 4(US2), Phase 5(US3) 的核心实现可并行推进: US1 改 `budget.rs` + `fairness.rs`, US2 改 `meltdown.rs` + `group.rs`, US3 改 `task_role_defaults.rs` + `payload.rs`.
 - 同一用户故事中标记 [P] 的测试可以并行(不同测试函数, 同文件).
 
 ---
@@ -191,7 +191,7 @@ Task: "T025 扩展 MeltdownTracker group_counters"
 Task: "T026 实现 track_group_failure, propagate_fuse"
 
 # 开发者 C: US3 实现(同时进行)
-Task: "T034 添加 SeverityClass 默认映射 in role_defaults.rs"
+Task: "T034 添加 SeverityClass 默认映射 in task_role_defaults.rs"
 Task: "T036 新增 EscalationBifurcated 事件变体"
 ```
 

@@ -74,7 +74,13 @@ impl SoakReport {
             let mins = (time % 3600) / 60;
             let secs = time % 60;
             // Simplified: uses a fixed epoch-based date.
-            format!("2026-05-{:02}T{:02}:{:02}:{:02}Z", 19 + days as u8, hours, mins, secs)
+            format!(
+                "2026-05-{:02}T{:02}:{:02}:{:02}Z",
+                19 + days as u8,
+                hours,
+                mins,
+                secs
+            )
         }
 
         Self {
@@ -108,7 +114,10 @@ impl SoakReport {
 
         md.push_str("# SoakReport\n\n");
         md.push_str("## Metadata\n");
-        md.push_str(&format!("- **Window**: {} - {}\n", self.window_start_utc, self.window_end_utc));
+        md.push_str(&format!(
+            "- **Window**: {} - {}\n",
+            self.window_start_utc, self.window_end_utc
+        ));
         md.push_str(&format!("- **Commit**: {}\n", self.commit_hash));
         md.push_str(&format!("- **Hardware**: {}\n\n", self.hardware_config));
 
@@ -133,7 +142,11 @@ impl SoakReport {
                 let ticket = v.exemption_ticket.as_deref().unwrap_or("-");
                 md.push_str(&format!(
                     "| {} | {:.2} | {:.2} | {} | {} |\n",
-                    v.metric, v.actual_value, v.limit, if v.blocking { "yes" } else { "no" }, ticket
+                    v.metric,
+                    v.actual_value,
+                    v.limit,
+                    if v.blocking { "yes" } else { "no" },
+                    ticket
                 ));
             }
             md.push('\n');

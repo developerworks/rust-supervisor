@@ -11,7 +11,7 @@
 本切片强依赖:
 
 - `specs/005-1-failure-policy-reliability/spec.md` — 失败流水线入口 (已完成)
-- `specs/005-2-work-role-defaults/spec.md` — 工作角色默认策略 (已完成)
+- `specs/005-2-task-role-defaults/spec.md` — 任务角色默认策略 (已完成)
 - `specs/006-3-lifecycle-shutdown-realism/spec.md` — ChildSlot 基础设施 (已完成, 本切片基于其 slots 架构)
 
 若条文字面重复, 本条以度量字段完备性与分叉观测补齐为主.
@@ -76,7 +76,7 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
 
 - **FR-001**: 系统必须把 restart budget(重启预算), meltdown fuse(熔断器), backoff jitter(退避抖动) 按 `budget → meltdown → backoff` 顺序接入 decide action(决定动作) 节拍之前同一评估管线里. 预算不足直接拒绝(不经过熔断与退避), 熔断后不计算退避. 预算耗尽后系统等待 `retry_after_ns` 到期自动重试, 不需人工干预. 在快速失败波形下实测 effective restart attempts per minute(每分钟有效重启尝试) 不得超过文档给出曲线上界的 105%. fairness(公平性) 探针记录在任意连续 10 秒窗口内, 其它就绪监督动作至少获得过调度机会的计数不低于文档阈值. 生产环境中应配置监控告警: 当 `BudgetExhausted` 事件率超过 10 次/分钟时触发告警(表示预算过紧), 连续 5 分钟内此类事件率为 0 时自动解除告警.
 - **FR-002**: group strategy(分组策略) 必须保证在未声明跨组 dependency edge(依赖边) 的前提下, 任一 group(分组) 自家熔断或预算耗尽不得把关停的连带后果甩到不相干的 group(分组) 头上. 受影响分组内已处于 running(运行中) 的 child(子任务) 继续运行不受影响, 仅阻止该分组内新重启请求. 一旦发生跨组可见影响, 必须产出指向依赖图节点的 structured diagnostics(结构化诊断) 载荷. `ChildSpec.group` 引用的分组名必须在 `SupervisorSpec.group_configs` 中存在, 配置加载阶段校验不通过则拒绝启动, 不允许运行时兜底处理.
-- **FR-003**: critical child(关键子任务) 与 optional child(可选子任务) 的失败处置必须有配置文件里的分叉默认值. Critical(关键) 失败必须触发升级路径(发射 EscalationBifurcated 并上报告警), Optional(可选) 失败走降噪路径(发射事件但不触发告警升级), Standard(默认) 走标准策略路径(按 WorkRole 默认行为). 每一条分叉路径上的预算耗尽与升级裁决都必须 100% 写入 typed event(类型化事件) 与 metrics(指标) 两组管道, 并能被同一个 correlation id(关联标识) 串联. CorrelationId(关联标识) 在评估管线入口生成, 贯穿整个故障链路(budget → meltdown → backoff → escalation), 即使中间某阶段被跳过(如 budget 直接通过, 无 Exhausted 事件)也继续传递至后续阶段事件.
+- **FR-003**: critical child(关键子任务) 与 optional child(可选子任务) 的失败处置必须有配置文件里的分叉默认值. Critical(关键) 失败必须触发升级路径(发射 EscalationBifurcated 并上报告警), Optional(可选) 失败走降噪路径(发射事件但不触发告警升级), Standard(默认) 走标准策略路径(按 TaskRole 默认行为). 每一条分叉路径上的预算耗尽与升级裁决都必须 100% 写入 typed event(类型化事件) 与 metrics(指标) 两组管道, 并能被同一个 correlation id(关联标识) 串联. CorrelationId(关联标识) 在评估管线入口生成, 贯穿整个故障链路(budget → meltdown → backoff → escalation), 即使中间某阶段被跳过(如 budget 直接通过, 无 Exhausted 事件)也继续传递至后续阶段事件.
 
 ### Key Entities (关键实体) _(涉及数据时填写)_
 
@@ -88,8 +88,8 @@ SRE(站点可靠性工程师) 需要子任务在同一窗口里连着崩溃 10_0
 - **FairnessProbe(公平性探针)**: 控制循环主路径上的轻量探针, 检测调度饥饿并产出 `StarvationAlert(饥饿告警)`.
 - **GroupConfig(分组配置)**: 定义分组名称、成员子任务列表、独立重启预算配置的结构体. 由 `SupervisorSpec.group_configs` 持有.
 - **GroupDependencyEdge(分组依赖边)**: 声明跨组故障传播关系的配置切片. `from_group` 为依赖方, `to_group` 为被依赖方, `propagation` 控制传播策略(Full/EscalateOnly/None). 由 `SupervisorSpec.group_dependencies` 持有.
-- **SeverityDefaults(严重程度默认值)**: 按 `WorkRole` 映射默认 `SeverityClass` 的配置表. Service → Critical, Supervisor → Critical, Worker → Standard, Job → Optional, Sidecar → Standard. 由 `SupervisorSpec.severity_defaults` 持有.
-- **ChildSpec.severity(子任务显式严重程度)**: 可选字段, 覆盖 `WorkRole` 默认的 `SeverityClass` 映射. 当同时存在 group 级默认值时, child 级显式值优先 (见 tie-break 规则表第 4 行).
+- **SeverityDefaults(严重程度默认值)**: 按 `TaskRole` 映射默认 `SeverityClass` 的配置表. Service → Critical, Supervisor → Critical, Worker → Standard, Job → Optional, Sidecar → Standard. 由 `SupervisorSpec.severity_defaults` 持有.
+- **ChildSpec.severity(子任务显式严重程度)**: 可选字段, 覆盖 `TaskRole` 默认的 `SeverityClass` 映射. 当同时存在 group 级默认值时, child 级显式值优先 (见 tie-break 规则表第 4 行).
 - **ChildSpec.group(子任务所属分组)**: 可选字段, 将 child 分配到命名分组, 用于 group-level budget(分组级预算) 和熔断隔离.
 
 ## Constitution Alignment (宪章对齐) _(mandatory (必填))_

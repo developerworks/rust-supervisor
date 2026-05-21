@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_block_forever scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new().expect("tokio runtime").enter();
+    let _guard = tokio::runtime::Runtime::new()
+        .expect("tokio runtime")
+        .enter();
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_block_forever");
 
@@ -28,7 +30,11 @@ pub fn run() -> ScenarioVerdict {
 
     let elapsed = start.elapsed();
     verdict
-        .with_threshold("shutdown_duration_ms", shutdown_duration.as_millis() as f64, budget.as_millis() as f64)
+        .with_threshold(
+            "shutdown_duration_ms",
+            shutdown_duration.as_millis() as f64,
+            budget.as_millis() as f64,
+        )
         .with_threshold("slot_leak", if slot_ok { 0.0 } else { 1.0 }, 0.0)
         .with_duration(elapsed.as_nanos())
 }

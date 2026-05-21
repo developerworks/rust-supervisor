@@ -40,7 +40,7 @@ cargo test
 
 ## 3. 与 `005-2` 合并验收时的额外一步
 
-读完 `specs/005-2-work-role-defaults/spec.md` 的 Dependency Note(依赖说明), 确认 **`RoleDefaultPolicy`** 只在 **`evaluate budget`** 之后改变 **`decide action`** 输入, **不得短路六阶段顺序**.
+读完 `specs/005-2-task-role-defaults/spec.md` 的 Dependency Note(依赖说明), 确认 **`RoleDefaultPolicy`** 只在 **`evaluate budget`** 之后改变 **`decide action`** 输入, **不得短路六阶段顺序**.
 
 ## 4. 当前代码与结构化验收之间的差距
 

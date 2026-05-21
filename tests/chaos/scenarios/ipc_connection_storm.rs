@@ -4,7 +4,7 @@
 //! Verifies legitimate client handshake success rate = 100%
 //! and server accept queue p50 < 1ms.
 
-use crate::chaos::fixtures::ipc_stress::{FixtureIpcStress, ClientClassification};
+use crate::chaos::fixtures::ipc_stress::{ClientClassification, FixtureIpcStress};
 use crate::chaos::verdict::ScenarioVerdict;
 use std::time::Instant;
 
@@ -28,7 +28,15 @@ pub fn run() -> ScenarioVerdict {
 
     let elapsed = start.elapsed();
     verdict
-        .with_threshold("legitimate_handshake_ok", if legitimate { 100.0 } else { 0.0 }, 100.0)
-        .with_threshold("junk_rejected", if junk_rejected { 100.0 } else { 0.0 }, 100.0)
+        .with_threshold(
+            "legitimate_handshake_ok",
+            if legitimate { 100.0 } else { 0.0 },
+            100.0,
+        )
+        .with_threshold(
+            "junk_rejected",
+            if junk_rejected { 100.0 } else { 0.0 },
+            100.0,
+        )
         .with_duration(elapsed.as_nanos())
 }

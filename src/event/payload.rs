@@ -12,7 +12,7 @@ use crate::control::outcome::{
 use crate::error::types::TaskFailure;
 use crate::event::time::{CorrelationId, EventSequence, When};
 use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
-use crate::policy::role_defaults::{PolicySource, WorkRole};
+use crate::policy::task_role_defaults::{PolicySource, TaskRole};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -1015,9 +1015,9 @@ pub struct SupervisorEvent {
     pub hot_loop_reason: HotLoopReason,
     /// Ownership of the throttle gate that limited concurrent restarts.
     pub throttle_gate_owner: ThrottleGateOwner,
-    /// Effective work role used by the policy decision.
-    pub work_role: Option<WorkRole>,
-    /// Whether fallback role defaults were used.
+    /// Effective task role used by the policy decision.
+    pub task_role: Option<TaskRole>,
+    /// Whether fallback task role defaults were used.
     pub used_fallback_default: bool,
     /// Source that produced the effective policy.
     pub effective_policy_source: Option<PolicySource>,
@@ -1085,7 +1085,7 @@ impl SupervisorEvent {
             cold_start_reason: ColdStartReason::NotApplicable,
             hot_loop_reason: HotLoopReason::NotApplicable,
             throttle_gate_owner: ThrottleGateOwner::None,
-            work_role: None,
+            task_role: None,
             used_fallback_default: false,
             effective_policy_source: None,
         }

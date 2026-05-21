@@ -27,7 +27,15 @@ pub fn run() -> ScenarioVerdict {
 
     let elapsed = start.elapsed();
     verdict
-        .with_threshold("monotonic_clock_ok", if monotonic_ok { 1.0 } else { 0.0 }, 1.0)
-        .with_threshold("clock_offset_recorded", if offset_recorded { 1.0 } else { 0.0 }, 1.0)
+        .with_threshold(
+            "monotonic_clock_ok",
+            if monotonic_ok { 1.0 } else { 0.0 },
+            1.0,
+        )
+        .with_threshold(
+            "clock_offset_recorded",
+            if offset_recorded { 1.0 } else { 0.0 },
+            1.0,
+        )
         .with_duration(elapsed.as_nanos())
 }

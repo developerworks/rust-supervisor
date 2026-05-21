@@ -18,7 +18,7 @@
 | ----------------------------- | -------------------------------------------------------------- |
 | `src/policy/budget.rs`        | RestartBudgetTracker 实现                                      |
 | `src/policy/group.rs`         | GroupIsolationPolicy 实现                                      |
-| `src/policy/role_defaults.rs` | SeverityClass 枚举, EffectivePolicy 扩展                       |
+| `src/policy/task_role_defaults.rs` | SeverityClass 枚举, EffectivePolicy 扩展                       |
 | `src/policy/meltdown.rs`      | MeltdownTracker 分组隔离增强                                   |
 | `src/policy/decision.rs`      | PolicyEngine 预算集成                                          |
 | `src/observe/fairness.rs`     | FairnessProbe 实现                                             |
