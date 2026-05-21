@@ -10,7 +10,7 @@ The screenshot below shows the dashboard client view for target lists, topology,
 
 ## Three-End Responsibilities
 
-- `rust-supervisor`: The target process reads `SupervisorConfig`, opens a Unix domain socket when `ipc.enabled=true`, and produces state, event records, log records, command results, and registration heartbeats.
+- `rust-supervisor`: The target process reads `SupervisorConfig`, opens a Unix domain socket when `dashboard.enabled=true`, and produces state, event records, log records, command results, and registration heartbeats.
 - `rust-supervisor-relay`: The relay listens on the registration socket, stores the target registry, exposes external `wss://` dashboard sessions, validates mTLS and allowed IPC path prefixes, and forwards session commands to the target process.
 - `rust-supervisor-ui`: The dashboard client connects to the relay through `wss://` and displays the target list, topology, state, event stream, log tail, and command audit.
 
@@ -61,4 +61,4 @@ npm --prefix ~/rust-supervisor-ui run test:e2e:three-end
 
 ## Production Notes
 
-The target process may expose only a local Unix domain socket and must not expose IPC directly to the network. The relay must use `wss://` for external access. The browser or operating-system certificate store selects the mTLS client certificate, and page scripts must not read the certificate private key. `ipc.path`, `registration.relay_registration_path`, and the relay allowed IPC path prefix must match, otherwise the target will fail to register or the relay will reject the connection.
+The target process may expose only a local Unix domain socket and must not expose IPC directly to the network. The relay must use `wss://` for external access. The browser or operating-system certificate store selects the mTLS client certificate, and page scripts must not read the certificate private key. `dashboard.path`, `registration.relay_registration_path`, and the relay allowed IPC path prefix must match, otherwise the target will fail to register or the relay will reject the connection.

@@ -192,7 +192,7 @@ pub(crate) fn start_demo_dashboard_runtime(
     // Continue the demo expression.
 ) -> Result<Option<DemoDashboardRuntimeGuard>, Box<dyn std::error::Error + Send + Sync>> {
     // Validate the configured dashboard IPC section.
-    let Some(config) = validate_dashboard_ipc_config(state.ipc.as_ref())? else {
+    let Some(config) = validate_dashboard_ipc_config(state.dashboard.as_ref())? else {
         // Return no runtime when IPC is disabled.
         return Ok(None);
         // End disabled IPC branch.

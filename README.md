@@ -38,7 +38,7 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Load the primary YAML configuration from `examples/config/supervisor.yaml`.
 - Reuse `rust_supervisor::config::configurable::SupervisorConfig` for YAML loading, template generation, and JSON Schema generation.
 - Emit structured logs, tracing spans, metrics, audit events, event journal entries, and `RunSummary` diagnostics.
-- Enable target-side dashboard IPC through the optional `ipc` configuration section. The target process owns only local Unix domain socket IPC, snapshot generation, event conversion, command mapping, and shared JSON contracts.
+- Enable target-side dashboard IPC through the optional `dashboard` configuration section. The target process owns only local Unix domain socket IPC, snapshot generation, event conversion, command mapping, and shared JSON contracts.
 
 ## Platform Support
 
@@ -117,7 +117,7 @@ The supervisor dashboard feature uses three directories.
 - [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay) at `~/rust-supervisor-relay`: relay server, dynamic registration, `wss://`, mTLS, session gating, and command audit.
 - [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui) at `~/rust-supervisor-ui`: Vue, shadcn-vue, Tailwind dashboard client.
 
-The target process does not expose IPC to the network. It opens a local Unix domain socket only when `ipc.enabled=true`. A relay can read snapshots, but event and log subscriptions must be triggered by an established remote dashboard session.
+The target process does not expose IPC to the network. It opens a local Unix domain socket only when `dashboard.enabled=true`. A relay can read snapshots, but event and log subscriptions must be triggered by an established remote dashboard session.
 
 ![rust-supervisor dashboard screenshot](docs/screenshot.png)
 
@@ -130,12 +130,23 @@ The official YAML files stay single-file by default:
 - `examples/config/supervisor.yaml`: complete runnable configuration.
 - `examples/config/supervisor.template.yaml`: complete single-file template.
 
+The root configuration includes `backpressure` for observability subscriber queues:
+
+```yaml
+backpressure:
+  strategy: alert_and_block
+  warn_threshold_pct: 80
+  critical_threshold_pct: 95
+  window_secs: 30
+  audit_channel_capacity: 1024
+```
+
 This crate does not bake in `x-tree-split`. Projects that want split configuration files can wrap or reuse `SupervisorConfig` in their own crate and decide their own tree split layout.
 
 The optional dashboard IPC section has this shape:
 
 ```yaml
-ipc:
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: /run/rust-supervisor/payments-worker-a.sock
@@ -149,7 +160,7 @@ ipc:
     registration_heartbeat_interval_seconds: 15
 ```
 
-When `ipc.enabled=true`, `ipc.path` and `ipc.registration.relay_registration_path` must be absolute local paths. Registration uses dynamic registration. The relay configuration must not hard-code target lists.
+When `dashboard.enabled=true`, `dashboard.path` and `dashboard.registration.relay_registration_path` must be absolute local paths. Registration uses dynamic registration. The relay configuration must not hard-code target lists.
 
 ## Quick Start
 

@@ -6,13 +6,13 @@
 
 ## 概述
 
-本文档定义 9 项 IPC 控制点 (C1-C9) 的配置结构与运行时数据结构. 所有结构体以 Rust(编程语言) 类型定义, 配置部分支持 serde(序列化) 反序列化.
+本文档定义 9 项 IPC 控制点 (C1-C9) 的配置结构与运行时数据结构. C7 audit persistence(审计持久化) 使用顶层 `AuditConfig` 统一配置, 不放入 `IpcSecurityConfig`. 所有结构体以 Rust(编程语言) 类型定义, 配置部分支持 serde(序列化) 反序列化.
 
 ## 配置层 (Config Layer)
 
 ### IpcSecurityConfig (IPC 安全配置)
 
-顶层配置, 聚合所有 9 项控制点的可配置参数. 存放在 `src/config/ipc_security.rs`.
+IPC(进程间通信) 安全配置, 聚合除 C7 audit persistence(审计持久化) 外的控制点参数. 存放在 `src/config/ipc_security.rs`. C7 使用顶层 `SupervisorConfig.audit`, 类型存放在 `src/config/audit.rs`.
 
 ```rust
 /// Aggregated IPC security configuration loaded from YAML.
@@ -37,10 +37,6 @@ pub struct IpcSecurityConfig {
     /// C6: Rate limiting settings.
     #[serde(default)]
     pub rate_limit: RateLimitConfig,
-
-    /// C7: Audit persistence settings.
-    #[serde(default)]
-    pub audit: AuditConfig,
 
     /// C8: Command idempotency settings.
     #[serde(default)]
@@ -203,6 +199,8 @@ fn default_20() -> u32 { 20 }
 ```
 
 ### AuditConfig (C7)
+
+C7 audit persistence(审计持久化) 是全局审计策略, 由 `SupervisorConfig.audit` 持有. `DashboardIpcConfig.security_config` 不重复声明该配置. `IpcSecurityPipeline` 运行时同时接收 `IpcSecurityConfig` 与顶层 `AuditConfig`.
 
 ```rust
 /// Audit persistence configuration.

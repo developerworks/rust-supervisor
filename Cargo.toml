@@ -1,8 +1,9 @@
 [package]
 name = "rust-tokio-supervisor"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 rust-version = "1.88"
+autobins = false
 description = "A Rust tokio supervisor with declarative task supervision, restart policy, shutdown coordination, and observability."
 license = "MIT"
 repository = "https://github.com/developerworks/rust-supervisor"
@@ -31,6 +32,10 @@ include = [
 [lib]
 name = "rust_supervisor"
 path = "src/lib.rs"
+
+[[bin]]
+name = "rust-tokio-supervisor"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }

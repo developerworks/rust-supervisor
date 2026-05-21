@@ -67,7 +67,7 @@ pub(crate) async fn run_demo(
 /// Returns a configuration state for the pure library supervisor runtime.
 fn supervisor_runtime_state(mut state: ConfigState) -> ConfigState {
     // Keep dashboard IPC owned by the demo runtime instead of core runtime.
-    state.ipc = None;
+    state.dashboard = None;
     // Return the adjusted runtime state.
     state
     // End runtime state adjustment.

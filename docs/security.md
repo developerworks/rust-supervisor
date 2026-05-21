@@ -16,7 +16,7 @@
 
 ## 三、IPC 安全控制点 (C1-C9)
 
-看板 IPC 配置了 9 项安全控制点, 经 `IpcSecurityPipeline` 统一编排.
+看板 IPC 配置了 9 项安全控制点, 经 `IpcSecurityPipeline` 统一编排. C7 审计持久化不在 `dashboard.security_config` 中重复配置, 它使用顶层 `audit` 配置.
 
 ### 3.1 执行顺序
 
@@ -130,7 +130,7 @@ SBOM 包含所有直接依赖和传递依赖, 每条依赖记录版本、许可�
 ### 6.1 IPC 配置 (Unix only)
 
 ```yaml
-ipc:
+dashboard:
   enabled: true
   path: /run/rust-supervisor/target.sock
   permissions: "0600" # 仅所有者可读写
@@ -153,7 +153,7 @@ ipc:
 | 限制               | 说明                                          | 缓解措施                                              |
 | ------------------ | --------------------------------------------- | ----------------------------------------------------- |
 | IPC 仅 Unix        | Windows 等非 Unix 平台无法使用 dashboard      | 通过 Unix relay 间接访问                              |
-| 审计持久化默认内存 | `AuditBackend` 默认使用 ring buffer, 重启丢失 | 配置 `audit_persistence=file` 落盘                    |
+| 审计持久化默认内存 | `AuditBackend` 默认使用 ring buffer, 重启丢失 | 配置 `audit.backend: file` 和 `audit.file_path` 落盘 |
 | 配置不支持热更新   | 修改安全配置需重启 supervisor                 | 使用配置管理工具自动化重启                            |
 | 无内置 mTLS        | target 侧不处理 mTLS                          | mTLS 由 relay 侧管理, 参考 rust-supervisor-relay 文档 |
 

@@ -3,6 +3,7 @@
 //! The runtime owns the target-side Unix socket accept loop and the dynamic
 //! registration heartbeat used by the relay integration.
 
+use crate::config::audit::AuditConfig;
 use crate::control::handle::SupervisorHandle;
 use crate::dashboard::config::ValidatedDashboardIpcConfig;
 use crate::dashboard::error::DashboardError;
@@ -74,6 +75,7 @@ impl Drop for DashboardIpcRuntimeGuard {
 /// # Arguments
 ///
 /// - `config`: Validated dashboard IPC configuration.
+/// - `audit_config`: Root audit persistence configuration.
 /// - `spec`: Supervisor declaration used to build dashboard state.
 /// - `handle`: Runtime control handle used by command requests.
 ///
@@ -82,13 +84,14 @@ impl Drop for DashboardIpcRuntimeGuard {
 /// Returns a guard that stops runtime tasks and removes the socket on drop.
 pub fn start_dashboard_ipc_runtime(
     config: ValidatedDashboardIpcConfig,
+    audit_config: AuditConfig,
     spec: SupervisorSpec,
     handle: SupervisorHandle,
 ) -> Result<Arc<DashboardIpcRuntimeGuard>, DashboardError> {
     let listener = bind_dashboard_listener(&config)?;
     let ipc_path = config.path.clone();
     let target_id = config.target_id.clone();
-    let service = dashboard_service(config.clone(), spec, handle);
+    let service = dashboard_service(config.clone(), audit_config, spec, handle);
     let ipc_task = tokio::spawn(run_accept_loop(listener, service, target_id));
     let heartbeat_task = start_heartbeat_task(config);
 
@@ -102,9 +105,11 @@ pub fn start_dashboard_ipc_runtime(
 /// Builds the service used by all socket connections.
 ///
 /// When `config.security_config` is present, an IPC security pipeline is
-/// constructed and wired into the service via `with_security_pipeline`.
+/// constructed with the root audit config and wired into the service via
+/// `with_security_pipeline`.
 fn dashboard_service(
     config: ValidatedDashboardIpcConfig,
+    audit_config: AuditConfig,
     spec: SupervisorSpec,
     handle: SupervisorHandle,
 ) -> Arc<DashboardIpcService> {
@@ -113,7 +118,7 @@ fn dashboard_service(
     let mut service =
         DashboardIpcService::new(config.clone(), spec, state, journal).with_handle(handle);
     if let Some(security_config) = config.security_config {
-        let pipeline = IpcSecurityPipeline::new(security_config);
+        let pipeline = IpcSecurityPipeline::new(security_config, audit_config);
         service = service.with_security_pipeline(pipeline);
     }
     Arc::new(service)

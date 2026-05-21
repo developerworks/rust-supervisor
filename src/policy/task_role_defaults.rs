@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter};
 use std::time::Duration;
 
 /// Task role classification for supervised children.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskRole {
     /// Long-running service that should stay online.

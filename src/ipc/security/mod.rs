@@ -2,8 +2,9 @@
 //!
 //! Orchestrates the nine control points (C1-C9) in the contract-defined
 //! execution order. The pipeline is loaded once from `IpcSecurityConfig`
-//! and invoked per-request as a pre-dispatch filter by the dashboard IPC
-//! service. C7 (audit) runs post-dispatch.
+//! plus the root audit configuration, then invoked per-request as a
+//! pre-dispatch filter by the dashboard IPC service. C7 (audit) runs
+//! post-dispatch.
 
 pub mod allowlist;
 pub mod audit;
@@ -13,6 +14,7 @@ pub mod limits;
 pub mod peer_identity;
 pub mod replay;
 
+use crate::config::audit::AuditConfig;
 use crate::config::ipc_security::IpcSecurityConfig;
 use crate::dashboard::error::DashboardError;
 use std::collections::HashMap;
@@ -27,6 +29,8 @@ pub struct IpcSecurityPipeline {
     /// Stored configuration for inspection.
     #[allow(dead_code)]
     config: IpcSecurityConfig,
+    /// Root audit configuration used by C7.
+    audit_config: AuditConfig,
     /// C4: replay protection sliding window.
     replay_window: ReplayWindow,
     /// C6: per-connection token buckets, keyed by connection identifier.
@@ -51,18 +55,20 @@ impl IpcSecurityPipeline {
     /// # Arguments
     ///
     /// - `config`: IPC security configuration.
+    /// - `audit_config`: Root audit persistence configuration.
     ///
     /// # Returns
     ///
     /// Returns an initialized [`IpcSecurityPipeline`] with all control
     /// points ready.
-    pub fn new(config: IpcSecurityConfig) -> Self {
+    pub fn new(config: IpcSecurityConfig, audit_config: AuditConfig) -> Self {
         Self {
             replay_window: ReplayWindow::from_config(&config.replay_protection),
             rate_limiters: HashMap::new(),
-            audit: audit::AuditBackend::from_config(&config.audit),
+            audit: audit::AuditBackend::from_config(&audit_config),
             idempotency_cache: IdempotencyCache::from_config(&config.idempotency),
             config,
+            audit_config,
         }
     }
 
@@ -222,7 +228,7 @@ impl IpcSecurityPipeline {
         denial_error: Option<&DashboardError>,
         denial_control_point: &str,
     ) -> Result<(), DashboardError> {
-        if !self.config.audit.enabled {
+        if !self.audit_config.enabled {
             return Ok(());
         }
         let hash = format!("uid:{}:pid:{}", peer_identity.uid, peer_identity.pid);

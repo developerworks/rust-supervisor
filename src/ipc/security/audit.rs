@@ -1,11 +1,11 @@
-//! Audit persistence (C7).
+//! Audit persistence.
 //!
 //! Records every IPC write request as an immutable audit entry. Supports
 //! two backends: memory (ring buffer) for development and file (append-only
 //! JSON Lines) for production. Failure strategies: fail_closed (deny write
 //! commands when audit is unwritable) and defer_bounded (queue with limit).
 
-use crate::config::ipc_security::AuditConfig;
+use crate::config::audit::AuditConfig;
 use crate::dashboard::error::DashboardError;
 use serde::{Deserialize, Serialize};
 

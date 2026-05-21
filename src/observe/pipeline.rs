@@ -178,6 +178,35 @@ impl ObservabilityPipeline {
         metrics_enabled: bool,
         audit_enabled: bool,
     ) -> Self {
+        Self::with_backpressure_config(
+            journal_capacity,
+            subscriber_capacity,
+            metrics_enabled,
+            audit_enabled,
+            BackpressureConfig::default(),
+        )
+    }
+
+    /// Creates a pipeline with explicit observability and backpressure settings.
+    ///
+    /// # Arguments
+    ///
+    /// - `journal_capacity`: Maximum event journal capacity.
+    /// - `subscriber_capacity`: Maximum queued events per subscriber.
+    /// - `metrics_enabled`: When false, [`ObservabilityPipeline::emit`] skips metric samples for the test recorder.
+    /// - `audit_enabled`: When false, [`ObservabilityPipeline::emit`] skips audit records for the test recorder.
+    /// - `backpressure_config`: Backpressure thresholds and strategy.
+    ///
+    /// # Returns
+    ///
+    /// Returns an [`ObservabilityPipeline`] configured with the requested policy.
+    pub fn with_backpressure_config(
+        journal_capacity: usize,
+        subscriber_capacity: usize,
+        metrics_enabled: bool,
+        audit_enabled: bool,
+        backpressure_config: BackpressureConfig,
+    ) -> Self {
         Self {
             journal: EventJournal::new(journal_capacity),
             metrics: MetricsFacade::new(),
@@ -186,7 +215,7 @@ impl ObservabilityPipeline {
             test_recorder: TestRecorder::new(),
             subscribers: Vec::new(),
             subscriber_capacity,
-            backpressure_config: BackpressureConfig::default(),
+            backpressure_config,
             discarded_count: 0,
         }
     }

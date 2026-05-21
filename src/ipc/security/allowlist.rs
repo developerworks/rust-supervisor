@@ -1,4 +1,4 @@
-//! External command allowlist (C9).
+//! External command allowlist.
 //!
 //! Only absolute executable paths listed in the allowlist configuration
 //! are eligible for execution via control-plane extension points.
@@ -7,7 +7,7 @@
 use crate::config::ipc_security::AllowlistConfig;
 use crate::dashboard::error::DashboardError;
 
-/// Checks whether an executable path is in the allowlist (C9).
+/// Checks whether an executable path is in the allowlist.
 ///
 /// # Arguments
 ///

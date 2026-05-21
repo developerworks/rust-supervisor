@@ -51,14 +51,15 @@ impl Supervisor {
     pub async fn start_from_config_state(
         state: ConfigState,
     ) -> Result<SupervisorHandle, SupervisorError> {
-        let ipc_config = state.ipc.clone();
+        let audit_config = state.audit.clone();
+        let dashboard_config = state.dashboard.clone();
         let spec = state.to_supervisor_spec()?;
         let mut handle = Self::start(spec.clone()).await?;
-        let dashboard_config =
-            validate_dashboard_ipc_config(ipc_config.as_ref()).map_err(dashboard_startup_error)?;
+        let dashboard_config = validate_dashboard_ipc_config(dashboard_config.as_ref())
+            .map_err(dashboard_startup_error)?;
         if let Some(dashboard_config) = dashboard_config {
             let dashboard_runtime =
-                start_dashboard_ipc_runtime(dashboard_config, spec, handle.clone())
+                start_dashboard_ipc_runtime(dashboard_config, audit_config, spec, handle.clone())
                     .map_err(dashboard_startup_error)?;
             handle = handle.with_dashboard_runtime(dashboard_runtime);
         }
@@ -97,12 +98,16 @@ impl Supervisor {
         shutdown_policy: ShutdownPolicy,
     ) -> Result<SupervisorHandle, SupervisorError> {
         spec.validate()?;
+        let backpressure_config = spec.backpressure_config.clone();
         let (command_sender, command_receiver) = mpsc::channel(spec.control_channel_capacity);
         let (event_sender, _) = broadcast::channel(spec.event_channel_capacity);
         let control_plane = RuntimeControlPlane::new();
-        let observability = Arc::new(Mutex::new(ObservabilityPipeline::new(
+        let observability = Arc::new(Mutex::new(ObservabilityPipeline::with_backpressure_config(
             spec.event_channel_capacity,
             spec.event_channel_capacity,
+            true,
+            true,
+            backpressure_config,
         )));
         let state = RuntimeControlState::new(
             spec,

@@ -51,7 +51,7 @@ fn demo_example_owns_dashboard_runtime_outside_core() {
 
     assert!(runner.contains("load_config_from_yaml_file"));
     assert!(runner.contains("Supervisor::start_from_config_state"));
-    assert!(runner.contains("state.ipc = None"));
+    assert!(runner.contains("state.dashboard = None"));
     assert!(bootstrap.contains("start_demo_dashboard_runtime"));
     assert!(!text.contains("Supervisor::start_from_config_file"));
     assert!(!runner.contains("Supervisor::start_from_config_file"));

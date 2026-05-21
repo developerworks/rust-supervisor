@@ -1,7 +1,7 @@
 //! Chaos scenario: socket_path_contention.
 //!
 //! Starts dashboard IPC on an already-occupied socket path.
-//! Verifies structured error with field_path="ipc.path" and hint,
+//! Verifies structured error with field_path="dashboard.path" and hint,
 //! and no panic.
 
 use crate::chaos::verdict::ScenarioVerdict;

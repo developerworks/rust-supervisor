@@ -46,7 +46,7 @@ Language: [中文](../zh/operations-runbook.html)
 | 3    | Restart relay: `kill -TERM <relay_pid>` and wait for auto-restart          | Supervisor auto-restarts relay; `dashboard_link == "connected"` within 10s | 3min               |
 | 4    | If still disconnected, restart the supervisor process (dashboard IPC lifecycle is tied to the supervisor process) | `health.dashboard_link == "connected"`                                     | 2min               |
 
-**Escalation**: If IPC socket path contention (error contains `field_path="ipc.path"`), check deployment guide socket path configuration.
+**Escalation**: If IPC socket path contention (error contains `field_path="dashboard.path"`), check deployment guide socket path configuration.
 **Total estimated duration**: 7min.
 
 ## P1-004: Runtime Starvation

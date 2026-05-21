@@ -6,6 +6,7 @@
 //! compensating records used by the add_child transaction pipeline.
 
 use crate::id::types::ChildId;
+use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::spec::child::{
     BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
     HealthPolicy, ReadinessConfig, ResourceLimits, RestartPolicy, SecretRef, ShutdownPolicy,
@@ -56,6 +57,21 @@ pub struct ChildDeclaration {
     /// Child criticality.
     #[serde(default)]
     pub criticality: Criticality,
+    /// Low-cardinality tags used for grouping and diagnostics.
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// Optional task role that selects default lifecycle semantics.
+    #[serde(default)]
+    pub task_role: Option<TaskRole>,
+    /// Optional sidecar binding used when the role is `sidecar`.
+    #[serde(default)]
+    pub sidecar_config: Option<SidecarConfig>,
+    /// Optional severity classification that overrides the role default.
+    #[serde(default)]
+    pub severity: Option<SeverityClass>,
+    /// Optional group name for group-level isolation and budget tracking.
+    #[serde(default)]
+    pub group: Option<String>,
     /// Restart policy.
     #[serde(default)]
     pub restart_policy: RestartPolicy,
@@ -226,12 +242,12 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
                 0.0,
             ),
             dependencies,
-            tags: Vec::new(),
+            tags: decl.tags,
             criticality,
-            task_role: None,
-            sidecar_config: None,
-            severity: None,
-            group: None,
+            task_role: decl.task_role,
+            sidecar_config: decl.sidecar_config,
+            severity: decl.severity,
+            group: decl.group,
             health_check: decl.health_check,
             readiness: decl.readiness,
             resource_limits: decl.resource_limits,

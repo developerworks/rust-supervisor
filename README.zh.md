@@ -36,7 +36,7 @@
 - 从 `examples/config/supervisor.yaml` 加载主 YAML(数据序列化格式) 配置.
 - 复用 `rust_supervisor::config::configurable::SupervisorConfig` 完成 YAML(数据序列化格式) 加载, template generation(模板生成) 和 JSON Schema(JSON 结构模式) 生成.
 - 发出 structured log(结构化日志), tracing span(追踪跨度), metrics(指标), audit event(审计事件), event journal entry(事件日志条目) 和 `RunSummary`(运行摘要) diagnostics(诊断信息).
-- 通过可选 `ipc` 配置启用 target-side dashboard IPC(目标侧看板进程间通信). target process(目标进程) 只拥有本机 Unix domain socket IPC(Unix 域套接字进程间通信), snapshot(快照) 生成, event conversion(事件转换), command mapping(命令映射) 和 shared JSON contract(共享 JSON 契约).
+- 通过可选 `dashboard` 配置启用 target-side dashboard IPC(目标侧看板进程间通信). target process(目标进程) 只拥有本机 Unix domain socket IPC(Unix 域套接字进程间通信), snapshot(快照) 生成, event conversion(事件转换), command mapping(命令映射) 和 shared JSON contract(共享 JSON 契约).
 
 ## 看板
 
@@ -46,7 +46,7 @@ dashboard(看板) 功能固定拆成三个目录.
 - [rust-supervisor-relay](https://github.com/developerworks/rust-supervisor-relay) 位于 `~/rust-supervisor-relay`: relay server(中继服务), dynamic registration(动态注册), `wss://`, mTLS(双向传输层安全协议认证), session gating(会话门控) 和 command audit(命令审计).
 - [rust-supervisor-ui](https://github.com/developerworks/rust-supervisor-ui) 位于 `~/rust-supervisor-ui`: Vue(网页界面框架), shadcn-vue(组件库), Tailwind(样式框架) dashboard client(看板客户端).
 
-target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `ipc.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
+target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只在 `dashboard.enabled=true` 时打开本机 Unix domain socket(Unix 域套接字). relay(中继) 可以读取 snapshot(快照), 但是 event(事件) 和 log(日志) subscription(订阅) 必须由已认证 dashboard session(看板会话) 触发.
 
 ![rust-supervisor dashboard(看板) screenshot(截图)](docs/screenshot.png)
 
@@ -59,12 +59,23 @@ target process(目标进程) 不把 IPC(进程间通信) 暴露到外网. 它只
 - `examples/config/supervisor.yaml`: 完整可运行配置.
 - `examples/config/supervisor.template.yaml`: 完整单文件模板.
 
+root configuration(根配置) 包含 `backpressure`(背压) 配置, 用来控制 observability subscriber(可观测性订阅者) 队列:
+
+```yaml
+backpressure:
+  strategy: alert_and_block
+  warn_threshold_pct: 80
+  critical_threshold_pct: 95
+  window_secs: 30
+  audit_channel_capacity: 1024
+```
+
 本 crate(包) 不默认写入 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
 
 dashboard IPC(看板进程间通信) 的可选配置如下.
 
 ```yaml
-ipc:
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: /run/rust-supervisor/payments-worker-a.sock
@@ -78,7 +89,7 @@ ipc:
     registration_heartbeat_interval_seconds: 15
 ```
 
-当 `ipc.enabled=true` 时, `ipc.path` 和 `ipc.registration.relay_registration_path` 必须是 absolute path(绝对路径). registration(注册) 使用 dynamic registration(动态注册). relay config(中继配置) 不允许写死 target list(目标列表).
+当 `dashboard.enabled=true` 时, `dashboard.path` 和 `dashboard.registration.relay_registration_path` 必须是 absolute path(绝对路径). registration(注册) 使用 dynamic registration(动态注册). relay config(中继配置) 不允许写死 target list(目标列表).
 
 ## Quick Start(快速开始)
 

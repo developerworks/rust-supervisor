@@ -722,7 +722,7 @@ dependencies = [
 
 [[package]]
 name = "rust-tokio-supervisor"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "clap",
  "confique",

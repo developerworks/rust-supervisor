@@ -8,10 +8,10 @@
 
 ## Target config(目标配置)
 
-target process(目标进程) 使用 `SupervisorConfig`(监督器配置) 的 optional(可选) `ipc` section(配置节) 打开本机 Unix domain socket(Unix 域套接字).
+target process(目标进程) 使用 `SupervisorConfig`(监督器配置) 的 optional(可选) `dashboard` section(配置节) 打开本机 Unix domain socket(Unix 域套接字).
 
 ```yaml
-ipc:
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: /run/rust-supervisor/payments-worker-a.sock
@@ -25,7 +25,7 @@ ipc:
     registration_heartbeat_interval_seconds: 15
 ```
 
-`ipc.path` 必须是 absolute path(绝对路径). `registration.lease_seconds` 必须大于 0. `registration.registration_heartbeat_interval_seconds` 必须小于 `registration.lease_seconds`.
+`dashboard.path` 必须是 absolute path(绝对路径). `registration.lease_seconds` 必须大于 0. `registration.registration_heartbeat_interval_seconds` 必须小于 `registration.lease_seconds`.
 
 ## Protocol(协议)
 

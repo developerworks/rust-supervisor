@@ -12,10 +12,17 @@
 |---|---|---|
 | `include` | `Vec<PathBuf>` | `rust-config-tree`(集中配置树) 包含的附加配置文件 |
 | `supervisor` | `SupervisorRootConfig` | 根监督器策略 |
-| `policy` | `PolicyConfig` | 重启, 退避, 心跳和熔断限制 |
+| `policy` | `PolicyConfig` | 重启, 退避, 心跳, failure window(失败窗口), restart budget(重启预算), meltdown fuse(故障熔断)和 supervision pipeline(监督流水线)容量 |
 | `shutdown` | `ShutdownConfig` | 优雅关闭超时和强制终止等待预算 |
 | `observability` | `ObservabilityConfig` | 事件日志容量和指标/审计开关 |
-| `ipc` | `Option<DashboardIpcConfig>` | 可选的 dashboard IPC(看板进程间通信) socket(仅 Unix) |
+| `audit` | `AuditConfig` | 审计存储后端, JSON Lines(逐行 JSON)文件路径和写入失败策略 |
+| `backpressure` | `BackpressureConfig` | 可观测性 subscriber(订阅者) 队列的背压策略, 阈值, 窗口和审计通道容量 |
+| `groups` | `Vec<GroupConfig>` | group(分组)成员和分组级 restart budget(重启预算) |
+| `group_strategies` | `Vec<GroupStrategyConfig>` | group(分组)级监督策略, 重启限制和升级策略 |
+| `group_dependencies` | `Vec<GroupDependencyConfig>` | group(分组)之间的故障传播关系 |
+| `child_strategy_overrides` | `Vec<ChildStrategyOverrideConfig>` | child(子任务)级监督策略, 重启限制和升级策略 |
+| `severity_defaults` | `Vec<SeverityDefaultConfig>` | TaskRole(任务角色)到 SeverityClass(严重级别)的默认映射 |
+| `dashboard` | `Option<DashboardIpcConfig>` | 可选的 dashboard IPC(看板进程间通信) socket(仅 Unix) |
 | `children` | `Vec<ChildDeclaration>` | 声明式子任务规格 |
 
 ## 配置状态
@@ -24,11 +31,11 @@
 
 `ConfigState`(配置状态) 是校验后的不可变状态. 运行时不应该在其它模块里保存运行时可调常量.
 
-`ConfigState::to_supervisor_spec` 会派生 `SupervisorSpec`(监督器规格). 当前实现用配置值填充 supervision strategy(监督策略),策略默认值,关闭预算,健康检查时间和可观测性容量.
+`ConfigState::to_supervisor_spec` 会派生 `SupervisorSpec`(监督器规格). 当前实现用配置值填充 supervision strategy(监督策略), 策略默认值, 关闭预算, 健康检查时间, 可观测性容量, backpressure(背压)策略, dynamic supervisor(动态监督器)策略, restart budget(重启预算), failure window(失败窗口), meltdown fuse(故障熔断), supervision pipeline(监督流水线)容量, group(分组)策略和 child(子任务)策略覆盖.
 
 ## 模板边界
 
-官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它覆盖 `supervisor`, `policy`, `shutdown`, `observability`, `ipc` 和 `children` (后两个默认注释掉).
+官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它覆盖 `supervisor`, `policy`, `shutdown`, `observability`, `audit`, `backpressure`, `groups`, `group_strategies`, `group_dependencies`, `child_strategy_overrides`, `severity_defaults`, `dashboard` 和 `children`.
 
 本 crate(包) 不会在公开配置结构体, 官方 schema(结构模式) 或官方 template(模板) 中添加 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
 
@@ -44,6 +51,15 @@
 - 数值为零.
 - 初始退避大于最大退避.
 - jitter(抖动)比例不在零到一之间.
+- `policy.restart_budget.window_secs`, `policy.restart_budget.max_burst` 或 `policy.restart_budget.recovery_rate_per_sec` 不合法.
+- `policy.failure_window.window_secs`, `policy.failure_window.max_count` 或 `policy.failure_window.threshold` 不合法.
+- `policy.meltdown.*` 中的窗口或阈值为零.
+- `policy.supervision_pipeline.*` 中的容量或并发重启限制为零.
+- `supervisor.dynamic_supervisor.child_limit` 为零.
+- backpressure(背压) 的 `warn_threshold_pct` 不是 1 到 100 之间的数值.
+- backpressure(背压) 的 `critical_threshold_pct` 不是 1 到 100 之间的数值.
+- backpressure(背压) 的 `warn_threshold_pct` 大于或等于 `critical_threshold_pct`.
+- backpressure(背压) 的 `window_secs` 或 `audit_channel_capacity` 为零.
 
 子任务声明检查:
 - Child ID(子任务标识)和 name(名称)不能为空.
@@ -51,9 +67,12 @@
 - `kind: Supervisor` 的子任务不能有 factory(工厂); `kind: AsyncWorker` 或 `kind: BlockingWorker` 必须有 factory(工厂).
 - Sidecar(辅助进程)任务角色需要 `sidecar_config`, 反之亦然.
 - 依赖循环会被拒绝.
-- `child_strategy_overrides` 引用的 group(分组)名称必须在 `group_strategies` 中存在.
+- `groups.children` 引用的 child(子任务)名称必须存在.
+- `group_strategies` 和 `group_dependencies` 引用的 group(分组)名称必须存在.
+- `child_strategy_overrides` 引用的 child(子任务)名称必须存在.
+- `severity_defaults` 不能为同一个 TaskRole(任务角色)声明多次默认值.
 
-IPC(进程间通信)检查(当 `ipc.enabled = true` 时):
+IPC(进程间通信)检查(当 `dashboard.enabled = true` 时):
 - `target_id` 不能为空.
 - `path` 是必填字段且必须是绝对路径.
 - 注册 `relay_registration_path` 是必填字段且必须是绝对路径.
@@ -67,6 +86,10 @@ IPC(进程间通信)检查(当 `ipc.enabled = true` 时):
 ```yaml
 supervisor:
   strategy: OneForAll
+  escalation_policy: escalate_to_parent
+  dynamic_supervisor:
+    enabled: true
+    child_limit: 16
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000
@@ -77,6 +100,27 @@ policy:
   jitter_ratio: 0.10
   heartbeat_interval_ms: 1000
   stale_after_ms: 3000
+  restart_budget:
+    window_secs: 60
+    max_burst: 10
+    recovery_rate_per_sec: 0.50
+  failure_window:
+    mode: time_sliding
+    window_secs: 60
+    max_count: 5
+    threshold: 5
+  meltdown:
+    child_max_restarts: 3
+    child_window_secs: 10
+    group_max_failures: 5
+    group_window_secs: 30
+    supervisor_max_failures: 10
+    supervisor_window_secs: 60
+    reset_after_secs: 120
+  supervision_pipeline:
+    journal_capacity: 100
+    subscriber_capacity: 10
+    concurrent_restart_limit: 5
 shutdown:
   graceful_timeout_ms: 5000
   abort_wait_ms: 1000
@@ -84,7 +128,59 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
-ipc:
+audit:
+  enabled: true
+  backend: memory
+  failure_strategy: fail_closed
+  max_defer_queue: 1000
+backpressure:
+  strategy: alert_and_block
+  warn_threshold_pct: 80
+  critical_threshold_pct: 95
+  window_secs: 30
+  audit_channel_capacity: 1024
+groups:
+  - name: core
+    children:
+      - api
+    budget:
+      window_secs: 60
+      max_burst: 10
+      recovery_rate_per_sec: 0.50
+  - name: upstream
+    children: []
+group_strategies:
+  - group: core
+    strategy: OneForOne
+    restart_limit:
+      max_restarts: 5
+      window_ms: 60000
+    escalation_policy: quarantine_scope
+group_dependencies:
+  - from_group: core
+    to_group: upstream
+    propagation: Full
+child_strategy_overrides:
+  - child_id: api
+    strategy: RestForOne
+    restart_limit:
+      max_restarts: 3
+      window_ms: 30000
+    escalation_policy: shutdown_tree
+severity_defaults:
+  - task_role: service
+    severity: Critical
+children:
+  - name: api
+    kind: supervisor
+    criticality: critical
+    tags:
+      - core
+    task_role: supervisor
+    severity: Critical
+    group: core
+    restart_policy: transient
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: /tmp/rust-supervisor-demo/payments-worker-a.sock
@@ -104,11 +200,13 @@ ipc:
 在启动 supervisor(监督器) 前, 需要将这些占位符替换为实际的环境变量值或密钥管理方案的值. 示例:
 
 ```yaml
-ipc:
+dashboard:
   security_config:
     peer_identity:
       allowed_uids: [ "${SUPERVISOR_UID}" ]
 ```
+
+`dashboard.security_config` 不携带审计设置. IPC(进程间通信)审计持久化使用顶层 `audit` 配置, 因此全局只有一个权威 `AuditConfig`(审计配置).
 
 supervisor(监督器) 本身不解析运行时占位符; 替换必须在配置加载前完成(例如通过 `envsubst` 或部署流水线).
 

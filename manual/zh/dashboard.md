@@ -10,7 +10,7 @@ dashboard(看板) 功能由三个仓库共同完成. `rust-supervisor` 只负责
 
 ## 三端职责
 
-- `rust-supervisor`: target process(目标进程) 读取 `SupervisorConfig`(监督器配置), 在 `ipc.enabled=true` 时打开 Unix domain socket(Unix 域套接字), 并生成 state(状态), event record(事件记录), log record(日志记录), command result(命令结果) 和 registration heartbeat(注册心跳).
+- `rust-supervisor`: target process(目标进程) 读取 `SupervisorConfig`(监督器配置), 在 `dashboard.enabled=true` 时打开 Unix domain socket(Unix 域套接字), 并生成 state(状态), event record(事件记录), log record(日志记录), command result(命令结果) 和 registration heartbeat(注册心跳).
 - `rust-supervisor-relay`: relay(中继) 监听 registration socket(注册套接字), 保存 target registry(目标注册表), 对外提供 `wss://` dashboard session(看板会话), 校验 mTLS(双向传输层安全协议认证) 和 allowed IPC path prefix(允许的进程间通信路径前缀), 并把会话命令转发到 target process(目标进程).
 - `rust-supervisor-ui`: dashboard client(看板客户端) 通过 `wss://` 连接 relay(中继), 显示 target list(目标列表), topology(拓扑), state(状态), event stream(事件流), log tail(日志尾部) 和 command audit(命令审计).
 
@@ -61,4 +61,4 @@ npm --prefix ~/rust-supervisor-ui run test:e2e:three-end
 
 ## 生产接入注意事项
 
-target process(目标进程) 只能暴露本机 Unix domain socket(Unix 域套接字), 不能直接把 IPC(进程间通信) 暴露到外网. relay(中继) 对外只能使用 `wss://`. mTLS(双向传输层安全协议认证) client certificate(客户端证书) 由 browser(浏览器) 或 operating system certificate store(操作系统证书库) 选择, page script(页面脚本) 不能读取证书私钥. `ipc.path`, `registration.relay_registration_path` 和 relay(中继) 的 allowed IPC path prefix(允许的进程间通信路径前缀) 必须同时匹配, 否则目标会注册失败或被 relay(中继) 拒绝连接.
+target process(目标进程) 只能暴露本机 Unix domain socket(Unix 域套接字), 不能直接把 IPC(进程间通信) 暴露到外网. relay(中继) 对外只能使用 `wss://`. mTLS(双向传输层安全协议认证) client certificate(客户端证书) 由 browser(浏览器) 或 operating system certificate store(操作系统证书库) 选择, page script(页面脚本) 不能读取证书私钥. `dashboard.path`, `registration.relay_registration_path` 和 relay(中继) 的 allowed IPC path prefix(允许的进程间通信路径前缀) 必须同时匹配, 否则目标会注册失败或被 relay(中继) 拒绝连接.

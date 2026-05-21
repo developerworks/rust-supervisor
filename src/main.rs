@@ -12,7 +12,7 @@ const DEFAULT_CONFIG_PATH: &str = "examples/config/supervisor.yaml";
 
 /// Supervisor configuration CLI.
 #[derive(Debug, Parser)]
-#[command(name = "generate-supervisor")]
+#[command(name = "rust-tokio-supervisor")]
 struct Cli {
     /// Root config file used as the template source and validation input.
     #[arg(long)]
@@ -45,6 +45,14 @@ enum Command {
 /// Returns an error when config loading, template rendering, or file writing
 /// fails.
 fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    if std::env::args_os().len() == 1 {
+        let program = std::env::args_os()
+            .next()
+            .unwrap_or_else(|| "rust-tokio-supervisor".into());
+        let _ = Cli::parse_from([program, "--help".into()]);
+        return Ok(());
+    }
+
     let cli = Cli::parse();
     let config_path = cli
         .config

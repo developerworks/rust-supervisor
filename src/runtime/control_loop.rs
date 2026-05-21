@@ -19,12 +19,11 @@ use crate::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use crate::observe::fairness::FairnessProbe;
 use crate::observe::pipeline::{ObservabilityPipeline, PipelineStageDiagnostic};
 use crate::policy::backoff::BackoffPolicy;
-use crate::policy::budget::RestartBudgetConfig;
 use crate::policy::decision::{
     PolicyEngine, RestartDecision, RestartPolicy, TaskExit as PolicyTaskExit,
 };
-use crate::policy::failure_window::{FailureWindow, FailureWindowConfig};
-use crate::policy::meltdown::{MeltdownPolicy, MeltdownTracker};
+use crate::policy::failure_window::FailureWindow;
+use crate::policy::meltdown::MeltdownTracker;
 use crate::policy::task_role_defaults::{EffectivePolicy, OnSuccessAction};
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
@@ -148,30 +147,21 @@ impl RuntimeControlState {
         let time_base = RuntimeTimeBase::new();
         let slots = build_initial_slots(&registry);
 
-        // Initialize six-stage supervision pipeline with default configuration
-        let meltdown_policy = MeltdownPolicy::new(
-            3,                        // child_max_restarts
-            Duration::from_secs(10),  // child_window
-            5,                        // group_max_failures
-            Duration::from_secs(30),  // group_window
-            10,                       // supervisor_max_failures
-            Duration::from_secs(60),  // supervisor_window
-            Duration::from_secs(120), // reset_after
-        );
-        let meltdown_tracker = MeltdownTracker::new(meltdown_policy);
-        let failure_config = FailureWindowConfig::time_sliding(60, 5);
-        let failure_window = FailureWindow::new(failure_config);
-        let supervision_pipeline = SupervisionPipeline::new(
-            100,
-            10,
+        let meltdown_tracker = MeltdownTracker::new(spec.meltdown_policy);
+        let failure_window = FailureWindow::new(spec.failure_window_config);
+        let supervision_pipeline = SupervisionPipeline::with_backpressure_config(
+            spec.pipeline_journal_capacity,
+            spec.pipeline_subscriber_capacity,
             meltdown_tracker,
             failure_window,
-            RestartBudgetConfig::new(Duration::from_secs(60), 10, 0.5),
-            vec![],
+            spec.restart_budget_config.clone(),
+            spec.group_dependencies.clone(),
+            spec.backpressure_config.clone(),
         );
 
-        // Initialize concurrent restart throttle gate (FR-003)
-        let concurrent_gate = crate::runtime::concurrent_gate::SupervisorInstanceGate::new(5);
+        let concurrent_gate = crate::runtime::concurrent_gate::SupervisorInstanceGate::new(
+            spec.concurrent_restart_limit,
+        );
 
         // Initialize fairness probe with current timestamp
         let now_unix_nanos = SystemTime::now()

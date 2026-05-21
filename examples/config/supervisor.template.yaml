@@ -1,97 +1,170 @@
 # Configuration file shape loaded from YAML.
 
 # Additional configuration files included by `rust-config-tree`.
-#
-# Default value: []
-#include: []
-
-# Optional target-side dashboard IPC configuration.
-#ipc:
-
-# Child declarations loaded from YAML children array.
-#
-# Default value: []
-#children: []
+include: []
 
 # Root supervisor declaration values.
 supervisor:
   # Restart scope strategy for child failures.
-  #
-  # Required! This value must be specified.
-  #strategy:
+  strategy: OneForAll
+
+  # Optional supervisor-level escalation policy.
+  escalation_policy: escalate_to_parent
+
+  # Runtime dynamic child acceptance policy.
+  dynamic_supervisor:
+    enabled: true
+    child_limit: 16
 
 # Runtime policy values.
 policy:
   # Maximum child restarts within the child restart window.
-  #
-  # Required! This value must be specified.
-  #child_restart_limit:
+  child_restart_limit: 10
 
   # Child restart window in milliseconds.
-  #
-  # Required! This value must be specified.
-  #child_restart_window_ms:
+  child_restart_window_ms: 60000
 
   # Maximum supervisor failures within the supervisor failure window.
-  #
-  # Required! This value must be specified.
-  #supervisor_failure_limit:
+  supervisor_failure_limit: 30
 
   # Supervisor failure window in milliseconds.
-  #
-  # Required! This value must be specified.
-  #supervisor_failure_window_ms:
+  supervisor_failure_window_ms: 60000
 
   # Initial backoff in milliseconds.
-  #
-  # Required! This value must be specified.
-  #initial_backoff_ms:
+  initial_backoff_ms: 100
 
   # Maximum backoff in milliseconds.
-  #
-  # Required! This value must be specified.
-  #max_backoff_ms:
+  max_backoff_ms: 5000
 
   # Jitter ratio expressed as a fraction between zero and one.
-  #
-  # Required! This value must be specified.
-  #jitter_ratio:
+  jitter_ratio: 0.10
 
   # Heartbeat interval in milliseconds.
-  #
-  # Required! This value must be specified.
-  #heartbeat_interval_ms:
+  heartbeat_interval_ms: 1000
 
   # Stale heartbeat threshold in milliseconds.
-  #
-  # Required! This value must be specified.
-  #stale_after_ms:
+  stale_after_ms: 3000
+
+  # Restart budget used by the supervision pipeline.
+  restart_budget:
+    window_secs: 60
+    max_burst: 10
+    recovery_rate_per_sec: 0.50
+
+  # Failure window used by the supervision pipeline.
+  failure_window:
+    mode: time_sliding
+    window_secs: 60
+    max_count: 5
+    threshold: 5
+
+  # Meltdown fuse limits for child, group, and supervisor scopes.
+  meltdown:
+    child_max_restarts: 3
+    child_window_secs: 10
+    group_max_failures: 5
+    group_window_secs: 30
+    supervisor_max_failures: 10
+    supervisor_window_secs: 60
+    reset_after_secs: 120
+
+  # Supervision pipeline capacities and concurrent restart limit.
+  supervision_pipeline:
+    journal_capacity: 100
+    subscriber_capacity: 10
+    concurrent_restart_limit: 5
 
 # Shutdown budget values.
 shutdown:
-  # Graceful drain timeout in milliseconds.
-  #
-  # Required! This value must be specified.
-  #graceful_timeout_ms:
-
-  # Abort wait timeout in milliseconds.
-  #
-  # Required! This value must be specified.
-  #abort_wait_ms:
+  graceful_timeout_ms: 5000
+  abort_wait_ms: 1000
 
 # Observability switches and capacities.
 observability:
-  # Event journal capacity.
-  #
-  # Required! This value must be specified.
-  #event_journal_capacity:
+  event_journal_capacity: 256
+  metrics_enabled: true
+  audit_enabled: true
 
-  # Whether metrics recording is enabled.
-  #
-  # Required! This value must be specified.
-  #metrics_enabled:
+# Command audit persistence configuration.
+audit:
+  enabled: true
+  backend: memory
+  # file_path is required when backend is file.
+  # file_path: /tmp/rust-supervisor-demo/audit.jsonl
+  failure_strategy: fail_closed
+  max_defer_queue: 1000
 
-  # Whether command audit recording is enabled.
-  #
-  # Required! This value must be specified.
-  #audit_enabled:
+# Backpressure policy for observability event subscribers.
+backpressure:
+  strategy: alert_and_block
+  warn_threshold_pct: 80
+  critical_threshold_pct: 95
+  window_secs: 30
+  audit_channel_capacity: 1024
+
+# Group-level restart budgets and membership declarations.
+groups:
+  - name: core
+    children:
+      - api
+    budget:
+      window_secs: 60
+      max_burst: 10
+      recovery_rate_per_sec: 0.50
+  - name: upstream
+    children: []
+
+# Group-level strategy overrides.
+group_strategies:
+  - group: core
+    strategy: OneForOne
+    restart_limit:
+      max_restarts: 5
+      window_ms: 60000
+    escalation_policy: quarantine_scope
+
+# Cross-group failure propagation dependencies.
+group_dependencies:
+  - from_group: core
+    to_group: upstream
+    propagation: Full
+
+# Child-level strategy overrides.
+child_strategy_overrides:
+  - child_id: api
+    strategy: RestForOne
+    restart_limit:
+      max_restarts: 3
+      window_ms: 30000
+    escalation_policy: shutdown_tree
+
+# Default severity class per task role.
+severity_defaults:
+  - task_role: service
+    severity: Critical
+
+# Child declarations loaded from YAML children array.
+children:
+  - name: api
+    kind: supervisor
+    criticality: critical
+    tags:
+      - core
+    task_role: supervisor
+    severity: Critical
+    group: core
+    restart_policy: transient
+
+# Optional target-side dashboard IPC configuration.
+dashboard:
+  enabled: true
+  target_id: payments-worker-a
+  path: /tmp/rust-supervisor-demo/payments-worker-a.sock
+  permissions: "0600"
+  bind_mode: replace_stale
+  registration:
+    enabled: true
+    relay_registration_path: /tmp/rust-supervisor-demo/dashboard-relay-registration.sock
+    display_name: "payments worker a"
+    lease_seconds: 30
+    registration_heartbeat_interval_seconds: 15

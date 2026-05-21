@@ -56,15 +56,19 @@ pub fn validate_dashboard_ipc_config(
     if !config.enabled {
         return Ok(None);
     }
-    let target_id = required_text(config.target_id.as_deref(), "ipc.target_id")?;
+    let target_id = required_text(config.target_id.as_deref(), "dashboard.target_id")?;
     let path = config.path.clone().ok_or_else(|| {
-        DashboardError::validation("config", None, "ipc.path is required when IPC is enabled")
+        DashboardError::validation(
+            "config",
+            None,
+            "dashboard.path is required when dashboard IPC is enabled",
+        )
     })?;
     if !path.is_absolute() {
         return Err(DashboardError::validation(
             "config",
             Some(target_id.clone()),
-            "ipc.path must be absolute",
+            "dashboard.path must be absolute",
         ));
     }
     let registration = validate_registration(config, &target_id)?;
@@ -110,28 +114,28 @@ fn validate_registration(
                 DashboardError::validation(
                     "config",
                     Some(target_id.to_owned()),
-                    "ipc.registration.relay_registration_path is required",
+                    "dashboard.registration.relay_registration_path is required",
                 )
             })?;
     if !relay_registration_path.is_absolute() {
         return Err(DashboardError::validation(
             "config",
             Some(target_id.to_owned()),
-            "ipc.registration.relay_registration_path must be absolute",
+            "dashboard.registration.relay_registration_path must be absolute",
         ));
     }
     let lease_seconds = registration.lease_seconds.ok_or_else(|| {
         DashboardError::validation(
             "config",
             Some(target_id.to_owned()),
-            "ipc.registration.lease_seconds is required",
+            "dashboard.registration.lease_seconds is required",
         )
     })?;
     if lease_seconds == 0 {
         return Err(DashboardError::validation(
             "config",
             Some(target_id.to_owned()),
-            "ipc.registration.lease_seconds must be greater than zero",
+            "dashboard.registration.lease_seconds must be greater than zero",
         ));
     }
     let heartbeat_seconds = registration
@@ -141,7 +145,7 @@ fn validate_registration(
         return Err(DashboardError::validation(
             "config",
             Some(target_id.to_owned()),
-            "ipc.registration.registration_heartbeat_interval_seconds must be positive and less than lease_seconds",
+            "dashboard.registration.registration_heartbeat_interval_seconds must be positive and less than lease_seconds",
         ));
     }
     Ok(Some(ValidatedDashboardRegistrationConfig {

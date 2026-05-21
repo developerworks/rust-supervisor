@@ -1,8 +1,9 @@
 //! IPC security configuration model.
 //!
-//! Defines the nine control point (C1-C9) configuration structs with serde
-//! deserialization support and secure-by-default values. All control points
-//! are independently configurable via YAML.
+//! Defines the IPC control point configuration structs with serde
+//! deserialization support and secure-by-default values. C7 audit persistence
+//! uses the root [`crate::config::audit::AuditConfig`] instead of a nested IPC
+//! copy.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,8 +14,8 @@ use serde::{Deserialize, Serialize};
 
 /// Aggregated IPC security configuration loaded from YAML.
 ///
-/// Holds all nine control-point sub-configs. Each sub-config is independently
-/// gated by its own `enabled` flag so that partial adoption is possible.
+/// Holds IPC control-point sub-configs except C7 audit persistence, which is
+/// configured once at the supervisor root.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct IpcSecurityConfig {
     /// C1-C2: Peer identity verification settings.
@@ -37,10 +38,6 @@ pub struct IpcSecurityConfig {
     #[serde(default)]
     pub rate_limit: RateLimitConfig,
 
-    /// C7: Audit persistence settings.
-    #[serde(default)]
-    pub audit: AuditConfig,
-
     /// C8: Command idempotency settings.
     #[serde(default)]
     pub idempotency: IdempotencyConfig,
@@ -60,7 +57,6 @@ impl Default for IpcSecurityConfig {
             replay_protection: ReplayProtectionConfig::default(),
             request_size_limit: RequestSizeLimitConfig::default(),
             rate_limit: RateLimitConfig::default(),
-            audit: AuditConfig::default(),
             idempotency: IdempotencyConfig::default(),
             allowlist: AllowlistConfig::default(),
         }
@@ -286,65 +282,6 @@ fn default_100_0() -> f64 {
 /// Serde default helper: returns 20.
 fn default_20() -> u32 {
     20
-}
-
-// ---------------------------------------------------------------------------
-// C7: Audit persistence
-// ---------------------------------------------------------------------------
-
-/// Audit persistence configuration.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct AuditConfig {
-    /// Whether audit logging is enabled. Default: true.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-
-    /// Audit storage backend. Default: "memory".
-    /// - "memory": ring buffer only, not persisted.
-    /// - "file": append-only JSON lines file.
-    #[serde(default = "default_audit_backend")]
-    pub backend: String,
-
-    /// File path for file backend. Required when backend is "file".
-    #[serde(default)]
-    pub file_path: Option<String>,
-
-    /// Failure strategy when audit backend is unavailable.
-    /// - "fail_closed": reject write commands when audit cannot be written.
-    /// - "defer_bounded": defer audit writes with bounded queue.
-    ///   Default: "fail_closed".
-    #[serde(default = "default_fail_closed")]
-    pub failure_strategy: String,
-
-    /// Max queue size for "defer_bounded" strategy. Default: 1000.
-    #[serde(default = "default_1000")]
-    pub max_defer_queue: usize,
-}
-
-impl Default for AuditConfig {
-    /// Returns default audit config: memory backend, fail_closed strategy.
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            backend: "memory".into(),
-            file_path: None,
-            failure_strategy: "fail_closed".into(),
-            max_defer_queue: 1000,
-        }
-    }
-}
-
-/// Serde default helper: returns "memory".
-fn default_audit_backend() -> String {
-    "memory".into()
-}
-/// Serde default helper: returns "fail_closed".
-fn default_fail_closed() -> String {
-    "fail_closed".into()
-}
-/// Serde default helper: returns 1000.
-fn default_1000() -> usize {
-    1000
 }
 
 // ---------------------------------------------------------------------------

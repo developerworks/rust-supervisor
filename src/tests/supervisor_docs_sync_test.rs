@@ -82,6 +82,17 @@ fn docs_reference_supervisor_config_fields() {
         "event_journal_capacity",
         "metrics_enabled",
         "audit_enabled",
+        "audit",
+        "backend",
+        "file_path",
+        "failure_strategy",
+        "max_defer_queue",
+        "backpressure",
+        "warn_threshold_pct",
+        "critical_threshold_pct",
+        "window_secs",
+        "audit_channel_capacity",
+        "dashboard",
     ] {
         assert!(docs.contains(field), "docs are missing {field}");
     }

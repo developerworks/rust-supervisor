@@ -46,7 +46,7 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
-ipc:
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: {}

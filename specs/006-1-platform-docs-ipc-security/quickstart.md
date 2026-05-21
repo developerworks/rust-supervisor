@@ -46,49 +46,48 @@
 
 ```yaml
 dashboard:
-  ipc:
-    enabled: true
-    path: "/run/myapp/supervisor.sock"
-    permissions: "0600"
-    bind_mode: "replace_stale"
+  enabled: true
+  path: "/run/myapp/supervisor.sock"
+  permissions: "0600"
+  bind_mode: "replace_stale"
+  security_config:
+    peer_identity:
+      enabled: true
+      require_uid_match: true
 
-ipc_security:
-  peer_identity:
-    enabled: true
-    require_uid_match: true
+    authorization:
+      enabled: true
+      allowed_uids: [0, 1000] # root and app user
 
-  authorization:
-    enabled: true
-    allowed_uids: [0, 1000] # root and app user
+    replay_protection:
+      enabled: true
+      window_size: 1024
+      ttl_seconds: 60
 
-  replay_protection:
-    enabled: true
-    window_size: 1024
-    ttl_seconds: 60
+    request_size_limit:
+      enabled: true
+      max_bytes: 65536
 
-  request_size_limit:
-    enabled: true
-    max_bytes: 65536
+    rate_limit:
+      enabled: true
+      refill_rate: 100.0
+      burst_capacity: 20
 
-  rate_limit:
-    enabled: true
-    refill_rate: 100.0
-    burst_capacity: 20
+    idempotency:
+      enabled: true
+      result_cache_ttl_seconds: 60
+      max_cached_results: 1024
 
-  audit:
-    enabled: true
-    backend: "file"
-    file_path: "/var/log/myapp/audit.jsonl"
-    failure_strategy: "fail_closed"
+    allowlist:
+      enabled: true
+      allowed_paths: [] # deny all external commands
 
-  idempotency:
-    enabled: true
-    result_cache_ttl_seconds: 60
-    max_cached_results: 1024
-
-  allowlist:
-    enabled: true
-    allowed_paths: [] # deny all external commands
+audit:
+  enabled: true
+  backend: "file"
+  file_path: "/var/log/myapp/audit.jsonl"
+  failure_strategy: "fail_closed"
+  max_defer_queue: 1000
 ```
 
 ### 步骤 5: 运行验收测试 (5 分钟)
@@ -112,12 +111,13 @@ cargo test --test ipc_security_integration
 
 ### Q: 如何放行非 root 用户执行控制命令?
 
-在配置中修改 `ipc_security.authorization.allowed_uids`, 加入目标用户的 uid(用户标识):
+在配置中修改 `dashboard.security_config.authorization.allowed_uids`, 加入目标用户的 uid(用户标识):
 
 ```yaml
-ipc_security:
-  authorization:
-    allowed_uids: [0, 1000]
+dashboard:
+  security_config:
+    authorization:
+      allowed_uids: [0, 1000]
 ```
 
 ### Q: 审计后端选 memory 还是 file?

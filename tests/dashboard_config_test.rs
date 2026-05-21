@@ -24,7 +24,7 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
-ipc:
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: {path}
@@ -45,10 +45,10 @@ fn dashboard_ipc_config_loads_and_validates_absolute_paths() {
     let state = parse_config_state(&dashboard_yaml("/run/rust-supervisor/payments.sock"))
         .expect("dashboard IPC config should load");
 
-    let ipc = state.ipc.expect("ipc section");
-    assert!(ipc.enabled);
-    assert_eq!(ipc.target_id.as_deref(), Some("payments-worker-a"));
-    assert!(ipc.path.expect("ipc path").is_absolute());
+    let dashboard = state.dashboard.expect("dashboard section");
+    assert!(dashboard.enabled);
+    assert_eq!(dashboard.target_id.as_deref(), Some("payments-worker-a"));
+    assert!(dashboard.path.expect("dashboard path").is_absolute());
 }
 
 #[test]
@@ -59,12 +59,12 @@ fn dashboard_ipc_config_rejects_relative_ipc_path() {
 }
 
 #[test]
-fn dashboard_ipc_schema_exposes_optional_ipc_section() {
+fn dashboard_ipc_schema_exposes_optional_dashboard_section() {
     let schema = schemars::schema_for!(SupervisorConfig);
     let text = serde_json::to_string(&schema).expect("schema string");
 
     for field in [
-        "ipc",
+        "dashboard",
         "target_id",
         "relay_registration_path",
         "lease_seconds",
@@ -93,5 +93,5 @@ fn disabled_ipc_keeps_existing_configs_valid() {
     let config: SupervisorConfig = serde_yaml::from_str(&yaml).expect("deserialize config");
     let state = ConfigState::try_from(config).expect("disabled IPC should validate");
 
-    assert!(state.ipc.is_some());
+    assert!(state.dashboard.is_some());
 }

@@ -34,7 +34,7 @@
 
 - [x] T002 [P] 为 dashboard(看板) 模块添加 `#[cfg(unix)]` 条件编译守卫: 在 `src/dashboard/mod.rs` 顶部加 `#[cfg(unix)]` 属性, 在 `src/lib.rs` 中为 `pub mod dashboard` 加 `#[cfg(unix)]`
 - [x] T003 [P] 创建平台模块 `src/platform/mod.rs`, 写明条件编译声明与 Unix-only 构建确认注释, 按 research.md 第一节执行
-- [x] T004 [P] 在 `src/config/ipc_security.rs` 中定义 `IpcSecurityConfig` 及全部 9 个子配置结构体 (`PeerIdentityConfig`, `AuthorizationConfig`, `ReplayProtectionConfig`, `RequestSizeLimitConfig`, `RateLimitConfig`, `AuditConfig`, `IdempotencyConfig`, `AllowlistConfig`), 含 serde(序列化) derive(派生宏) 与默认值函数, 按 data-model.md 执行
+- [x] T004 [P] 在 `src/config/ipc_security.rs` 中定义 `IpcSecurityConfig` 及除 C7 外的子配置结构体 (`PeerIdentityConfig`, `AuthorizationConfig`, `ReplayProtectionConfig`, `RequestSizeLimitConfig`, `RateLimitConfig`, `IdempotencyConfig`, `AllowlistConfig`), 并在 `src/config/audit.rs` 中定义唯一的顶层 `AuditConfig`, 含 serde(序列化) derive(派生宏) 与默认值函数, 按 data-model.md 执行
 - [x] T005 [P] 在 `src/dashboard/error.rs` 中扩展 `DashboardError`, 新增 IPC 安全错误变体: `peer_cred_uid_mismatch`, `peer_cred_gid_not_allowed`, `peer_cred_pid_not_allowed`, `peer_cred_unavailable`, `authz_denied`, `authz_not_configured`, `replay_detected`, `request_too_large`, `rate_limit_exceeded`, `audit_write_failed`, `audit_queue_full`, `ipc_socket_owner_mismatch`, `allowlist_denied`, `allowlist_empty`, 按 contracts/ipc-control-points.md 执行
 
 **Checkpoint(检查点)**: `cargo check` 通过. 平台模块和 IPC 安全配置类型定义完成, 错误枚举扩展完成, dashboard(看板) 模块在 Unix 平台正常编译.
@@ -113,7 +113,7 @@
 
 ### Implementation(实现) — Module Assembly(模块装配)
 
-- [x] T018 [US3] 创建 IPC(进程间通信) 安全模块入口 `src/ipc/security/mod.rs`: 定义 `IpcSecurityPipeline` 结构体, 持有由 `IpcSecurityConfig` 加载的 9 个控制点实例; 实现 `process_request()` 方法, 按 C6 → C5 → C2 → C4 → C3 → C9 → C8 → dispatch(分发) → C7 顺序执行控制点, 按 contracts 执行顺序图; 按控制点暴露 tracing(结构化追踪) target(目标)
+- [x] T018 [US3] 创建 IPC(进程间通信) 安全模块入口 `src/ipc/security/mod.rs`: 定义 `IpcSecurityPipeline` 结构体, 持有由 `IpcSecurityConfig` 加载的 IPC 安全控制实例, 并接收顶层 `AuditConfig` 驱动 C7; 实现 `process_request()` 方法, 按 C6 -> C5 -> C2 -> C4 -> C3 -> C9 -> C8 -> dispatch(分发) -> C7 顺序执行控制点, 按 contracts 执行顺序图; 按控制点暴露 tracing(结构化追踪) target(目标)
 - [x] T019 [US3] 将 `IpcSecurityPipeline` 接入 `DashboardIpcService`: 在 `src/dashboard/ipc_server.rs` 的 `handle_request()` 与 `bind_dashboard_listener()` 中集成管线; 确保 C1 (socket owner(套接字所有者)) 在 bind(绑定) 时执行, C2-C9 在每次请求时执行; 保持与现有协议的向下兼容
 
 **Checkpoint(检查点)**: `cargo test --test ipc_security_integration` 全部通过. 9 项控制点各有放行和拒绝样本. 拒绝路径返回结构化错误. 审计记录正确.
@@ -169,7 +169,7 @@ Phase 6 (Polish 收尾)  ← 所有用户故事完成后
 # 四个基础任务可同时执行:
 Task T002: "为 dashboard(看板) 模块添加 #[cfg(unix)] 守卫"
 Task T003: "创建平台模块 src/platform/mod.rs"
-Task T004: "定义 IPC(进程间通信) 安全配置结构体 src/config/ipc_security.rs"
+Task T004: "定义 IPC(进程间通信) 安全配置结构体 src/config/ipc_security.rs 与顶层审计配置 src/config/audit.rs"
 Task T005: "扩展 DashboardError src/dashboard/error.rs"
 ```
 

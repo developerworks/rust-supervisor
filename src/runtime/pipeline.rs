@@ -26,7 +26,7 @@ use crate::policy::meltdown::{
 use crate::policy::task_role_defaults::{
     EffectivePolicy, OnBudgetExhaustedAction, OnFailureAction, OnSuccessAction, OnTimeoutAction,
 };
-use crate::spec::supervisor::{EscalationPolicy, RestartLimit, SupervisorSpec};
+use crate::spec::supervisor::{BackpressureConfig, EscalationPolicy, RestartLimit, SupervisorSpec};
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::restart_execution_plan;
 use std::time::{Instant, SystemTime};
@@ -222,13 +222,54 @@ impl SupervisionPipeline {
         budget_config: RestartBudgetConfig,
         group_dependencies: Vec<GroupDependencyEdge>,
     ) -> Self {
+        Self::with_backpressure_config(
+            journal_capacity,
+            subscriber_capacity,
+            meltdown_tracker,
+            failure_window,
+            budget_config,
+            group_dependencies,
+            BackpressureConfig::default(),
+        )
+    }
+
+    /// Creates a new supervision pipeline with explicit backpressure policy.
+    ///
+    /// # Arguments
+    ///
+    /// - `journal_capacity`: Event journal capacity.
+    /// - `subscriber_capacity`: Subscriber queue capacity.
+    /// - `meltdown_tracker`: Configured meltdown tracker.
+    /// - `failure_window`: Configured failure window.
+    /// - `budget_config`: Restart budget configuration.
+    /// - `group_dependencies`: Declared group dependency edges.
+    /// - `backpressure_config`: Backpressure thresholds and strategy.
+    ///
+    /// # Returns
+    ///
+    /// Returns a new [`SupervisionPipeline`].
+    pub fn with_backpressure_config(
+        journal_capacity: usize,
+        subscriber_capacity: usize,
+        meltdown_tracker: MeltdownTracker,
+        failure_window: FailureWindow,
+        budget_config: RestartBudgetConfig,
+        group_dependencies: Vec<GroupDependencyEdge>,
+        backpressure_config: BackpressureConfig,
+    ) -> Self {
         let started_at_secs = current_unix_secs();
         let now_unix_nanos = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos();
         Self {
-            observability: ObservabilityPipeline::new(journal_capacity, subscriber_capacity),
+            observability: ObservabilityPipeline::with_backpressure_config(
+                journal_capacity,
+                subscriber_capacity,
+                true,
+                true,
+                backpressure_config,
+            ),
             meltdown_tracker,
             failure_window,
             cold_start_budget: ColdStartBudget::new(60, 5, started_at_secs),

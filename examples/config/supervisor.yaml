@@ -1,5 +1,9 @@
 supervisor:
   strategy: OneForAll
+  escalation_policy: escalate_to_parent
+  dynamic_supervisor:
+    enabled: true
+    child_limit: 16
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000
@@ -10,6 +14,27 @@ policy:
   jitter_ratio: 0.10
   heartbeat_interval_ms: 1000
   stale_after_ms: 3000
+  restart_budget:
+    window_secs: 60
+    max_burst: 10
+    recovery_rate_per_sec: 0.50
+  failure_window:
+    mode: time_sliding
+    window_secs: 60
+    max_count: 5
+    threshold: 5
+  meltdown:
+    child_max_restarts: 3
+    child_window_secs: 10
+    group_max_failures: 5
+    group_window_secs: 30
+    supervisor_max_failures: 10
+    supervisor_window_secs: 60
+    reset_after_secs: 120
+  supervision_pipeline:
+    journal_capacity: 100
+    subscriber_capacity: 10
+    concurrent_restart_limit: 5
 shutdown:
   graceful_timeout_ms: 5000
   abort_wait_ms: 1000
@@ -17,7 +42,61 @@ observability:
   event_journal_capacity: 256
   metrics_enabled: true
   audit_enabled: true
-ipc:
+audit:
+  enabled: true
+  backend: memory
+  # file_path is required when backend is file.
+  # file_path: /tmp/rust-supervisor-demo/audit.jsonl
+  failure_strategy: fail_closed
+  max_defer_queue: 1000
+backpressure:
+  strategy: alert_and_block
+  warn_threshold_pct: 80
+  critical_threshold_pct: 95
+  window_secs: 30
+  audit_channel_capacity: 1024
+groups:
+  - name: core
+    children:
+      - api
+    budget:
+      window_secs: 60
+      max_burst: 10
+      recovery_rate_per_sec: 0.50
+  - name: upstream
+    children: []
+group_strategies:
+  - group: core
+    strategy: OneForOne
+    restart_limit:
+      max_restarts: 5
+      window_ms: 60000
+    escalation_policy: quarantine_scope
+group_dependencies:
+  - from_group: core
+    to_group: upstream
+    propagation: Full
+child_strategy_overrides:
+  - child_id: api
+    strategy: RestForOne
+    restart_limit:
+      max_restarts: 3
+      window_ms: 30000
+    escalation_policy: shutdown_tree
+severity_defaults:
+  - task_role: service
+    severity: Critical
+children:
+  - name: api
+    kind: supervisor
+    criticality: critical
+    tags:
+      - core
+    task_role: supervisor
+    severity: Critical
+    group: core
+    restart_policy: transient
+dashboard:
   enabled: true
   target_id: payments-worker-a
   path: /tmp/rust-supervisor-demo/payments-worker-a.sock

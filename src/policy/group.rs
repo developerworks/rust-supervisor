@@ -12,10 +12,11 @@
 //! another, based on the declared DAG of dependency edges. Cyclic dependencies
 //! are rejected at config load time.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Failure propagation policy across group boundaries.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum PropagationPolicy {
     /// No propagation — groups are fully isolated.
     None,
@@ -29,7 +30,7 @@ pub enum PropagationPolicy {
 }
 
 /// Declares a failure propagation dependency between groups.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct GroupDependencyEdge {
     /// The group that depends on another group.
     pub from_group: String,

@@ -9,8 +9,19 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::{
-    config::ipc_security::IpcSecurityConfig,
-    spec::{child_declaration::ChildDeclaration, supervisor::SupervisionStrategy},
+    config::{
+        audit::AuditConfig,
+        ipc_security::IpcSecurityConfig,
+        policy::{
+            ChildStrategyOverrideConfig, DynamicSupervisorConfig, FailureWindowConfig, GroupConfig,
+            GroupDependencyConfig, GroupStrategyConfig, MeltdownConfig, RestartBudgetConfig,
+            SeverityDefaultConfig, SupervisionPipelineConfig,
+        },
+    },
+    spec::{
+        child_declaration::ChildDeclaration,
+        supervisor::{BackpressureConfig, EscalationPolicy, SupervisionStrategy},
+    },
 };
 
 /// Configuration file shape loaded from YAML.
@@ -33,8 +44,36 @@ pub struct SupervisorConfig {
     /// Observability switches and capacities.
     #[config(nested)]
     pub observability: ObservabilityConfig,
+    /// Command audit persistence configuration.
+    #[config(nested)]
+    #[serde(default)]
+    pub audit: AuditConfig,
+    /// Backpressure policy for observability event subscribers.
+    #[config(nested)]
+    #[serde(default)]
+    pub backpressure: BackpressureConfig,
+    /// Group-level restart budgets and membership declarations.
+    #[config(default = [])]
+    #[serde(default)]
+    pub groups: Vec<GroupConfig>,
+    /// Group-level strategy overrides.
+    #[config(default = [])]
+    #[serde(default)]
+    pub group_strategies: Vec<GroupStrategyConfig>,
+    /// Cross-group failure propagation dependencies.
+    #[config(default = [])]
+    #[serde(default)]
+    pub group_dependencies: Vec<GroupDependencyConfig>,
+    /// Child-level strategy overrides.
+    #[config(default = [])]
+    #[serde(default)]
+    pub child_strategy_overrides: Vec<ChildStrategyOverrideConfig>,
+    /// Default severity class per task role.
+    #[config(default = [])]
+    #[serde(default)]
+    pub severity_defaults: Vec<SeverityDefaultConfig>,
     /// Optional target-side dashboard IPC configuration.
-    pub ipc: Option<DashboardIpcConfig>,
+    pub dashboard: Option<DashboardIpcConfig>,
     /// Child declarations loaded from YAML children array.
     #[config(default = [])]
     #[serde(default)]
@@ -61,6 +100,13 @@ impl rust_config_tree::ConfigSchema for SupervisorConfig {
 pub struct SupervisorRootConfig {
     /// Restart scope strategy for child failures.
     pub strategy: SupervisionStrategy,
+    /// Optional supervisor-level escalation policy.
+    #[serde(default)]
+    pub escalation_policy: Option<EscalationPolicy>,
+    /// Runtime dynamic child acceptance policy.
+    #[config(nested)]
+    #[serde(default)]
+    pub dynamic_supervisor: DynamicSupervisorConfig,
 }
 
 /// Restart, backoff, and fuse configuration.
@@ -84,6 +130,22 @@ pub struct PolicyConfig {
     pub heartbeat_interval_ms: u64,
     /// Stale heartbeat threshold in milliseconds.
     pub stale_after_ms: u64,
+    /// Restart budget used by the supervision pipeline.
+    #[config(nested)]
+    #[serde(default)]
+    pub restart_budget: RestartBudgetConfig,
+    /// Failure window used by the supervision pipeline.
+    #[config(nested)]
+    #[serde(default)]
+    pub failure_window: FailureWindowConfig,
+    /// Meltdown fuse limits for child, group, and supervisor scopes.
+    #[config(nested)]
+    #[serde(default)]
+    pub meltdown: MeltdownConfig,
+    /// Supervision pipeline capacities and concurrent restart limit.
+    #[config(nested)]
+    #[serde(default)]
+    pub supervision_pipeline: SupervisionPipelineConfig,
 }
 
 /// Shutdown coordination configuration.

@@ -14,7 +14,7 @@
 │                                                                 │
 │  ┌─────────────────────┐   ┌─────────────────────┐             │
 │  │  Core Library       │   │  Relay               │             │
-│  │  (目标进程)          │   │  (中继进程)           │             │
+│  │  (目标进程)          |   │  (中继进程)           │             │
 │  │                     │   │                      │             │
 │  │  Unix Domain Socket │◄─►│  Unix Domain Socket  │             │
 │  │  /run/.../*.sock    │   │  /run/.../relay.sock │             │
@@ -75,7 +75,7 @@
 YAML 配置
     │
     ▼
-rust-config-tree v0.1.9 加载
+rust-config-tree 加载
     │
     ▼
 ConfigState (不可变配置状态)
@@ -368,7 +368,7 @@ scripts/
 
 - 所有可调配置通过 `rust-config-tree` v0.1.9 从 YAML 加载
 - `SupervisorConfig` 同时支持 `confique::Config`, `schemars::JsonSchema`, `serde::Serialize/Deserialize`
-- `ConfigState` 加载后不可变,派生 `SupervisorSpec`、默认策略、关闭预算和可观测性配置
+- `ConfigState` 加载后不可变,派生 `SupervisorSpec`,默认策略,关闭预算,可观测性配置,背压配置,底层 policy(策略)配置,分组策略和子任务策略覆盖
 - 模块内部不得保存可调配置默认值
 
 ### 4.5 平台编译隔离
@@ -388,6 +388,10 @@ pub mod ipc;
 ```yaml
 supervisor:
   strategy: OneForAll # 监督策略
+  escalation_policy: escalate_to_parent # 默认升级策略
+  dynamic_supervisor:
+    enabled: true # 是否允许运行时增加子任务
+    child_limit: 16 # 子任务总数上限
 
 policy:
   child_restart_limit: 10 # 子任务窗口内最大重启次数
@@ -399,6 +403,27 @@ policy:
   jitter_ratio: 0.10 # 抖动比率
   heartbeat_interval_ms: 1000 # 心跳间隔
   stale_after_ms: 3000 # 心跳过期阈值
+  restart_budget:
+    window_secs: 60 # 重启预算窗口
+    max_burst: 10 # 突发重启次数上限
+    recovery_rate_per_sec: 0.50 # 令牌恢复速率
+  failure_window:
+    mode: time_sliding # 失败窗口模式
+    window_secs: 60 # 时间滑动窗口
+    max_count: 5 # 数量滑动窗口保留条数
+    threshold: 5 # 失败阈值
+  meltdown:
+    child_max_restarts: 3 # 子任务熔断阈值
+    child_window_secs: 10 # 子任务熔断窗口
+    group_max_failures: 5 # 分组熔断阈值
+    group_window_secs: 30 # 分组熔断窗口
+    supervisor_max_failures: 10 # 监督器熔断阈值
+    supervisor_window_secs: 60 # 监督器熔断窗口
+    reset_after_secs: 120 # 稳定后重置窗口
+  supervision_pipeline:
+    journal_capacity: 100 # 策略流水线事件容量
+    subscriber_capacity: 10 # 策略流水线订阅队列容量
+    concurrent_restart_limit: 5 # 并发重启上限
 
 shutdown:
   graceful_timeout_ms: 5000 # 优雅关闭超时
@@ -409,7 +434,61 @@ observability:
   metrics_enabled: true
   audit_enabled: true
 
-ipc: # 可选,仅 Unix
+backpressure:
+  strategy: alert_and_block # 背压策略
+  warn_threshold_pct: 80 # 告警阈值
+  critical_threshold_pct: 95 # 降级阈值
+  window_secs: 30 # 评估窗口
+  audit_channel_capacity: 1024 # 审计通道容量
+
+groups:
+  - name: core # 分组名称
+    children:
+      - api
+    budget:
+      window_secs: 60
+      max_burst: 10
+      recovery_rate_per_sec: 0.50
+  - name: upstream
+    children: []
+
+group_strategies:
+  - group: core
+    strategy: OneForOne
+    restart_limit:
+      max_restarts: 5
+      window_ms: 60000
+    escalation_policy: quarantine_scope
+
+group_dependencies:
+  - from_group: core
+    to_group: upstream
+    propagation: Full
+
+child_strategy_overrides:
+  - child_id: api
+    strategy: RestForOne
+    restart_limit:
+      max_restarts: 3
+      window_ms: 30000
+    escalation_policy: shutdown_tree
+
+severity_defaults:
+  - task_role: service
+    severity: Critical
+
+children:
+  - name: api
+    kind: supervisor
+    criticality: critical
+    tags:
+      - core
+    task_role: supervisor
+    severity: Critical
+    group: core
+    restart_policy: transient
+
+dashboard: # 可选,仅 Unix
   enabled: true
   target_id: payments-worker-a
   path: /run/rust-supervisor/payments-worker-a.sock
@@ -466,7 +545,7 @@ ipc: # 可选,仅 Unix
 
 ## 八、IPC 安全控制点
 
-看板 IPC 配置了 9 项安全控制点 (C1-C9):
+看板 IPC 配置了 9 项安全控制点 (C1-C9). C7 审计持久化使用顶层 `audit` 配置, 不在 `dashboard.security_config` 中重复声明:
 
 | 编号 | 控制点                     | 说明                            |
 | ---- | -------------------------- | ------------------------------- |

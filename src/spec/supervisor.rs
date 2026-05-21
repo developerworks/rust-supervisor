@@ -6,9 +6,12 @@
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::policy::budget::RestartBudgetConfig;
+use crate::policy::failure_window::FailureWindowConfig;
 use crate::policy::group::GroupDependencyEdge;
+use crate::policy::meltdown::MeltdownPolicy;
 use crate::policy::task_role_defaults::{SeverityClass, TaskRole, semantic_conflicts_for_child};
 use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
+use confique::Config;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -262,21 +265,34 @@ pub enum BackpressureStrategy {
     SampleAndAudit,
 }
 
+impl Default for BackpressureStrategy {
+    /// Returns the default non-dropping backpressure strategy.
+    fn default() -> Self {
+        Self::AlertAndBlock
+    }
+}
+
 /// Configuration for event subscriber backpressure.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct BackpressureConfig {
     /// Backpressure strategy selection.
+    #[config(default = "alert_and_block")]
+    #[serde(default)]
     pub strategy: BackpressureStrategy,
     /// Buffer occupancy soft threshold percentage (triggers warning alert).
+    #[config(default = 80)]
     #[serde(default = "default_warn_threshold")]
     pub warn_threshold_pct: u8,
     /// Buffer occupancy hard threshold percentage (triggers degradation).
+    #[config(default = 95)]
     #[serde(default = "default_critical_threshold")]
     pub critical_threshold_pct: u8,
     /// Sliding window duration in seconds for backpressure evaluation.
+    #[config(default = 30)]
     #[serde(default = "default_window_secs")]
     pub window_secs: u64,
     /// Capacity of the dedicated audit channel.
+    #[config(default = 1024)]
     #[serde(default = "default_audit_capacity")]
     pub audit_channel_capacity: usize,
 }
@@ -355,6 +371,20 @@ pub struct SupervisorSpec {
     pub control_channel_capacity: usize,
     /// Event broadcast channel capacity.
     pub event_channel_capacity: usize,
+    /// Backpressure policy used by observability event subscribers.
+    pub backpressure_config: BackpressureConfig,
+    /// Failure fuse policy used by the supervision pipeline.
+    pub meltdown_policy: MeltdownPolicy,
+    /// Failure accumulation window used by the supervision pipeline.
+    pub failure_window_config: FailureWindowConfig,
+    /// Restart budget used by the supervision pipeline.
+    pub restart_budget_config: RestartBudgetConfig,
+    /// Event journal capacity used by the supervision pipeline.
+    pub pipeline_journal_capacity: usize,
+    /// Subscriber queue capacity used by the supervision pipeline.
+    pub pipeline_subscriber_capacity: usize,
+    /// Maximum concurrent restarts allowed for this supervisor instance.
+    pub concurrent_restart_limit: u32,
 }
 
 impl SupervisorSpec {
@@ -406,6 +436,21 @@ impl SupervisorSpec {
             dynamic_supervisor_policy: DynamicSupervisorPolicy::unbounded(),
             control_channel_capacity: channel_capacity,
             event_channel_capacity: channel_capacity.saturating_mul(2),
+            backpressure_config: BackpressureConfig::default(),
+            meltdown_policy: MeltdownPolicy::new(
+                3,
+                Duration::from_secs(10),
+                5,
+                Duration::from_secs(30),
+                10,
+                Duration::from_secs(60),
+                Duration::from_secs(120),
+            ),
+            failure_window_config: FailureWindowConfig::time_sliding(60, 5),
+            restart_budget_config: RestartBudgetConfig::safe_default(),
+            pipeline_journal_capacity: 100,
+            pipeline_subscriber_capacity: 10,
+            concurrent_restart_limit: 5,
         }
     }
 
@@ -439,6 +484,7 @@ impl SupervisorSpec {
                 "event channel capacity must be greater than zero",
             ));
         }
+        validate_backpressure_config(&self.backpressure_config)?;
         for child in &self.children {
             child.validate()?;
         }
@@ -448,6 +494,7 @@ impl SupervisorSpec {
         validate_task_roles(&self.children)?;
         validate_dynamic_policy(self.dynamic_supervisor_policy)?;
         validate_child_group_names(&self.children, &self.group_configs)?;
+        validate_pipeline_policy(self)?;
         Ok(())
     }
 }
@@ -706,6 +753,87 @@ fn validate_dynamic_policy(policy: DynamicSupervisorPolicy) -> Result<(), Superv
     if policy.child_limit == Some(0) {
         return Err(SupervisorError::fatal_config(
             "dynamic supervisor child_limit must be greater than zero",
+        ));
+    }
+    Ok(())
+}
+
+/// Validates supervision pipeline policy values.
+///
+/// # Arguments
+///
+/// - `spec`: Supervisor specification to validate.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when pipeline policy values are usable.
+fn validate_pipeline_policy(spec: &SupervisorSpec) -> Result<(), SupervisorError> {
+    if spec.pipeline_journal_capacity == 0 {
+        return Err(SupervisorError::fatal_config(
+            "pipeline journal capacity must be greater than zero",
+        ));
+    }
+    if spec.pipeline_subscriber_capacity == 0 {
+        return Err(SupervisorError::fatal_config(
+            "pipeline subscriber capacity must be greater than zero",
+        ));
+    }
+    if spec.concurrent_restart_limit == 0 {
+        return Err(SupervisorError::fatal_config(
+            "concurrent restart limit must be greater than zero",
+        ));
+    }
+    if spec.restart_budget_config.window.is_zero() {
+        return Err(SupervisorError::fatal_config(
+            "restart budget window must be greater than zero",
+        ));
+    }
+    if spec.restart_budget_config.max_burst == 0 {
+        return Err(SupervisorError::fatal_config(
+            "restart budget max_burst must be greater than zero",
+        ));
+    }
+    if spec.restart_budget_config.recovery_rate_per_sec <= 0.0 {
+        return Err(SupervisorError::fatal_config(
+            "restart budget recovery_rate_per_sec must be greater than zero",
+        ));
+    }
+    Ok(())
+}
+
+/// Validates observability backpressure policy.
+///
+/// # Arguments
+///
+/// - `config`: Backpressure configuration to validate.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when thresholds and capacities are coherent.
+fn validate_backpressure_config(config: &BackpressureConfig) -> Result<(), SupervisorError> {
+    if config.warn_threshold_pct == 0 || config.warn_threshold_pct > 100 {
+        return Err(SupervisorError::fatal_config(
+            "backpressure warn_threshold_pct must be between 1 and 100",
+        ));
+    }
+    if config.critical_threshold_pct == 0 || config.critical_threshold_pct > 100 {
+        return Err(SupervisorError::fatal_config(
+            "backpressure critical_threshold_pct must be between 1 and 100",
+        ));
+    }
+    if config.warn_threshold_pct >= config.critical_threshold_pct {
+        return Err(SupervisorError::fatal_config(
+            "backpressure warn_threshold_pct must be less than critical_threshold_pct",
+        ));
+    }
+    if config.window_secs == 0 {
+        return Err(SupervisorError::fatal_config(
+            "backpressure window_secs must be greater than zero",
+        ));
+    }
+    if config.audit_channel_capacity == 0 {
+        return Err(SupervisorError::fatal_config(
+            "backpressure audit_channel_capacity must be greater than zero",
         ));
     }
     Ok(())
