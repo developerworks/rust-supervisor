@@ -65,10 +65,12 @@ fn test_concurrent_gate_and_cold_start_exhaustion_combined() {
     let instance_gate = SupervisorInstanceGate::new(2);
     let combined_gate = CombinedThrottleGate::new(instance_gate.clone(), None);
 
-    // Saturate the gate
-    assert!(combined_gate.try_acquire(None));
-    assert!(combined_gate.try_acquire(None));
-    assert!(!combined_gate.try_acquire(None)); // Gate saturated
+    // Saturate the instance gate directly with long-lived permits.
+    // (CombinedThrottleGate does not hold permits across calls — it checks
+    // capacity ephemerally. For long-lived holds use SupervisorInstanceGate.)
+    let _p1 = instance_gate.try_acquire();
+    let _p2 = instance_gate.try_acquire();
+    assert!(instance_gate.is_saturated());
 
     // Setup cold start budget
     let mut cold_start = ColdStartBudget::new(300, 2, 1000);
@@ -339,16 +341,17 @@ fn test_concurrent_gate_release_allows_immediate_restart() {
     let gate = SupervisorInstanceGate::new(1);
 
     // Acquire the only slot
-    assert!(gate.try_acquire());
+    let permit = gate.try_acquire();
+    assert!(permit.is_some());
     assert!(gate.is_saturated());
 
-    // Release the slot
-    gate.release();
+    // Release the slot by dropping the permit
+    drop(permit);
     assert!(!gate.is_saturated());
 
     // New restart should be allowed immediately
     assert!(
-        gate.try_acquire(),
+        gate.try_acquire().is_some(),
         "New restart should be allowed after release"
     );
 }

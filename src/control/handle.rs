@@ -383,9 +383,17 @@ impl SupervisorHandle {
     ///
     /// # Returns
     ///
-    /// Returns the cached [`RuntimeExitReport`].
+    /// Returns the cached [`RuntimeExitReport`]. If the underlying
+    /// `control_plane.join()` does not complete within 60 seconds, a
+    /// timeout error is returned to prevent infinite hangs caused by
+    /// shutdown pipeline bugs.
     pub async fn join(&self) -> Result<RuntimeExitReport, SupervisorError> {
-        let report = self.control_plane.join().await;
+        let join_deadline = std::time::Duration::from_secs(60);
+        let report = tokio::time::timeout(join_deadline, self.control_plane.join())
+            .await
+            .map_err(|_elapsed| SupervisorError::FatalConfig {
+                message: "control plane join timed out after 60 seconds".to_owned(),
+            })?;
         let _ignored = self.event_sender.send(format!(
             "runtime_control_loop_join_completed:{}:{}:{}",
             report.state.as_str(),

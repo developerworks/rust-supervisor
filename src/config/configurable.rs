@@ -211,4 +211,10 @@ pub struct DashboardRegistrationConfig {
     pub lease_seconds: Option<u64>,
     /// Registration heartbeat interval in seconds.
     pub registration_heartbeat_interval_seconds: Option<u64>,
+    /// Timeout in seconds for connecting to the relay registration socket.
+    /// Default: 5.
+    pub registration_connect_timeout_secs: Option<u64>,
+    /// Timeout in seconds for write and ack-read on the registration socket.
+    /// Default: 5.
+    pub registration_io_timeout_secs: Option<u64>,
 }

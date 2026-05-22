@@ -111,6 +111,11 @@ pub struct RuntimeControlState {
     pub orphan_count: u64,
     /// Strategy for process exit, swappable for testing.
     exit_handler: Arc<dyn crate::exit_handler::ExitHandler>,
+    /// Active gate permits indexed by child_id. Each permit represents one
+    /// acquired concurrent restart slot; dropping the permit releases the
+    /// slot automatically (RAII). This eliminates counting drift when a
+    /// single restart scope spawns multiple children (e.g. OneForAll).
+    active_gate_permits: HashMap<ChildId, crate::runtime::concurrent_gate::GatePermit>,
 }
 
 /// Builds initial [`ChildSlot`] records from the registry.
@@ -202,6 +207,7 @@ impl RuntimeControlState {
             command_sender,
             orphan_count: 0,
             exit_handler: Arc::new(crate::exit_handler::DefaultExitHandler),
+            active_gate_permits: HashMap::new(),
         })
     }
 
@@ -415,10 +421,12 @@ impl RuntimeControlState {
         report: ChildRunReport,
         event_sender: &broadcast::Sender<String>,
     ) {
-        // FR-003: Release concurrent gate slot when child exits (only if gate has active slots)
-        if self.concurrent_gate.get_active_count() > 0 {
-            self.concurrent_gate.release();
-        }
+        // FR-003: Release concurrent gate permit when child exits.
+        // The permit is stored by child_id in active_gate_permits; removing
+        // it drops the permit, which decrements the gate count (RAII).
+        // This is safe to call even when no permit exists for this child
+        // (e.g. initial start-up, not a restart scope).
+        self.active_gate_permits.remove(&report.runtime.id);
 
         let child_id = report.runtime.id.clone();
         let generation = report.runtime.generation;
@@ -844,10 +852,46 @@ impl RuntimeControlState {
         {
             Ok(result) => result,
             Err(_elapsed) => {
-                // Global hard timeout: force state machine to Completed.
+                // Global hard timeout: the shutdown body did not complete
+                // within the deadline. Perform emergency force-kill on
+                // every slot that still holds active handles, then mark
+                // the shutdown state machine as Completed.
                 let _ = event_sender.send("shutdown_global_timeout".to_owned());
+
+                let wait_order: Vec<ChildId> = self.slots.keys().cloned().collect();
+                for child_id in &wait_order {
+                    if let Some(diag) = crate::runtime::shutdown::emergency_force_kill(
+                        &mut self.slots,
+                        child_id,
+                        &mut self.orphan_count,
+                    ) {
+                        let _ = event_sender.send(format!(
+                            "child_orphaned:{}:shutdown_phase=global_timeout",
+                            diag,
+                        ));
+                    }
+                }
+
+                // Advance state machine to Completed. All active handles
+                // have been orphaned so no further wait is possible.
                 self.advance_shutdown_phase(event_sender);
                 self.shutdown.complete();
+
+                // Check orphan threshold after forced cleanup.
+                let threshold = self.shutdown.policy.effective_max_orphan_threshold() as u64;
+                if self.orphan_count >= threshold {
+                    let _ = event_sender.send(format!(
+                        "fatal_orphan_overflow:count={}:threshold={}",
+                        self.orphan_count, threshold,
+                    ));
+                    self.exit_handler.exit(1);
+                } else if self.orphan_count > 0 {
+                    let _ = event_sender.send(format!(
+                        "orphan_count:{}:below_threshold:{}:supervisor_degraded",
+                        self.orphan_count, threshold,
+                    ));
+                }
+
                 Err(SupervisorError::FatalConfig {
                     message: "shutdown global timeout exceeded".to_owned(),
                 })
@@ -1050,11 +1094,11 @@ impl RuntimeControlState {
                         ShutdownPhase::GracefulDrain,
                     ),
                 );
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 continue;
             }
             if !runtime_state.has_active_attempt() {
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 continue;
             };
             let completed = match remaining_duration(deadline) {
@@ -1074,7 +1118,7 @@ impl RuntimeControlState {
                     );
                     self.record_child_exit(report);
                     runtime_state.clear_instance();
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                     let _ignored = event_sender.send(format!("child_shutdown_graceful:{child_id}"));
                     outcomes.insert(child_id.clone(), outcome);
                 }
@@ -1088,10 +1132,10 @@ impl RuntimeControlState {
                             error,
                         ),
                     );
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 }
                 None => {
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 }
             }
         }
@@ -1130,11 +1174,11 @@ impl RuntimeControlState {
                         ShutdownPhase::AbortStragglers,
                     ),
                 );
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 continue;
             }
             if !runtime_state.has_active_attempt() {
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 continue;
             };
             if !policy.abort_after_timeout {
@@ -1164,7 +1208,7 @@ impl RuntimeControlState {
                     );
                     self.record_child_exit(report);
                     runtime_state.clear_instance();
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                     let _ignored = event_sender.send(format!("child_shutdown_aborted:{child_id}"));
                     outcomes.insert(child_id.clone(), outcome);
                 }
@@ -1178,7 +1222,7 @@ impl RuntimeControlState {
                             error,
                         ),
                     );
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 }
                 Err(_elapsed) => {
                     outcomes.insert(
@@ -1199,7 +1243,7 @@ impl RuntimeControlState {
                             reason: "child did not complete after abort request".to_owned(),
                         }),
                     );
-                    self.slots.insert(child_id.clone(), runtime_state);
+                    self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 }
             }
         }
@@ -1237,7 +1281,7 @@ impl RuntimeControlState {
                 );
                 self.record_child_exit(report);
                 runtime_state.clear_instance();
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
                 let _ignored = event_sender.send(format!("child_shutdown_late_report:{child_id}"));
                 outcomes.insert(child_id.clone(), outcome);
             }
@@ -1251,7 +1295,7 @@ impl RuntimeControlState {
                         error,
                     ),
                 );
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
             }
             Err(_elapsed) => {
                 outcomes.insert(
@@ -1271,9 +1315,31 @@ impl RuntimeControlState {
                             .to_owned(),
                     }),
                 );
-                self.slots.insert(child_id.clone(), runtime_state);
+                self.reinsert_slot_unless_replaced(child_id.clone(), runtime_state);
             }
         }
+    }
+
+    /// Reinserts a slot into the slots map unless another entry already exists
+    /// for the same child_id (inserted by a concurrent command while the slot
+    /// was removed during drain/abort). This prevents RestartChild or other
+    /// control commands from being silently overwritten.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Child identifier for the slot.
+    /// - `slot`: The slot to reinsert (or discard if already replaced).
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    fn reinsert_slot_unless_replaced(&mut self, child_id: ChildId, slot: ChildSlot) {
+        if !self.slots.contains_key(&child_id) {
+            self.slots.insert(child_id, slot);
+        }
+        // If another entry exists, the drain/abort outcome is discarded —
+        // the concurrent command (e.g. RestartChild) already set a fresh
+        // placeholder or active state that takes precedence.
     }
 
     /// Adds already-exited outcomes for declared children with no active task.
@@ -1664,31 +1730,40 @@ impl RuntimeControlState {
         let scope_label = child_scope_label(&plan.scope);
         let group_label = plan.group.as_deref().unwrap_or("supervisor");
 
-        // FR-003: Check concurrent restart gate before spawning
-        if !self.concurrent_gate.try_acquire() {
-            // Gate saturated - emit throttle event and skip restart
-            let _ignored = event_sender.send(format!(
-                "restart_throttled:concurrent_gate_saturated:{group_label}:{scope_label}"
-            ));
-            self.emit_throttle_gate_event(
-                &failed_child,
-                plan.group.as_deref(),
-                ThrottleGateOwner::SupervisorInstance,
-            );
-            return;
-        }
-
         let _ignored = event_sender.send(format!(
             "restart_plan:{:?}:{group_label}:{scope_label}",
             plan.strategy
         ));
-        for child_id in plan.scope {
-            self.spawn_child_start(child_id, true, delay);
+
+        // Acquire one concurrent gate slot per child in the restart scope.
+        // OneForAll may restart many children at once — each needs its own
+        // permit so that per-child release (via GatePermit::drop) does not
+        // drive the gate counter negative.
+        for child_id in &plan.scope {
+            // FR-003: Check concurrent restart gate before each spawn.
+            let Some(permit) = self.concurrent_gate.try_acquire() else {
+                // Gate saturated — emit throttle event and skip remaining.
+                let _ignored = event_sender.send(format!(
+                    "restart_throttled:concurrent_gate_saturated:{group_label}:{scope_label}:{}",
+                    child_id,
+                ));
+                self.emit_throttle_gate_event(
+                    child_id,
+                    plan.group.as_deref(),
+                    ThrottleGateOwner::SupervisorInstance,
+                );
+                continue;
+            };
+            // Store the permit indexed by child_id. It will be dropped
+            // (releasing the gate slot) when the child exits in
+            // handle_child_exit.
+            self.active_gate_permits.insert(child_id.clone(), permit);
+            self.spawn_child_start(child_id.clone(), true, delay);
         }
-        // Note: gate is NOT released here — it remains active until
-        // each spawned child exits (handle_child_exit releases it).
-        // This ensures the concurrent restart limit constrains the
-        // number of *simultaneously restarting* children, not just
+        // Note: permits are NOT dropped here — they live in
+        // active_gate_permits until each spawned child exits, at which
+        // point handle_child_exit removes the permit, dropping it and
+        // releasing the gate slot automatically.
         // the rate of restart initiation.
     }
 

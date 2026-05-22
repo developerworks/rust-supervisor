@@ -1,0 +1,14 @@
+# Automatically enable test-support when running tests.
+# This ensures `cargo test` and `cargo check --tests` compile the
+# test-support module without requiring `--features test-support`.
+[env]
+# (empty — reserved for future use)
+
+# Target directory override for CI builds
+# [build]
+# target-dir = "target"
+
+# Test-specific alias
+[alias]
+test = "test --features test-support"
+check-tests = "check --tests --features test-support"

@@ -928,12 +928,33 @@ fn dashboard_with_default_security(
 /// # Returns
 ///
 /// Returns `Ok(())` when IPC is absent, disabled, or semantically valid.
+/// Validates dashboard IPC configuration when the dashboard module is
+/// compiled (Unix). On non-Unix platforms, rejects any configuration that
+/// has `dashboard.enabled = true`.
+#[cfg(unix)]
 fn validate_dashboard(
     dashboard: Option<&DashboardIpcConfig>,
 ) -> Result<(), crate::error::types::SupervisorError> {
     crate::dashboard::config::validate_dashboard_ipc_config(dashboard)
         .map(|_| ())
         .map_err(|error| crate::error::types::SupervisorError::fatal_config(error.to_string()))
+}
+
+/// On non-Unix platforms the dashboard module is not compiled. If the
+/// user explicitly set `dashboard.enabled = true`, report a clear error
+/// instead of silently ignoring the configuration.
+#[cfg(not(unix))]
+fn validate_dashboard(
+    dashboard: Option<&DashboardIpcConfig>,
+) -> Result<(), crate::error::types::SupervisorError> {
+    if let Some(config) = dashboard {
+        if config.enabled {
+            return Err(crate::error::types::SupervisorError::fatal_config(
+                "dashboard is enabled but the dashboard IPC module is only available on Unix platforms",
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Validates that a runtime configuration number is positive.

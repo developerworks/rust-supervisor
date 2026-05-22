@@ -35,6 +35,10 @@ pub struct ValidatedDashboardRegistrationConfig {
     pub lease_seconds: u64,
     /// Registration heartbeat interval in seconds.
     pub registration_heartbeat_interval_seconds: u64,
+    /// Timeout in seconds for connecting to the relay registration socket.
+    pub registration_connect_timeout_secs: u64,
+    /// Timeout in seconds for write and ack-read on the registration socket.
+    pub registration_io_timeout_secs: u64,
 }
 
 /// Validates optional dashboard IPC configuration.
@@ -152,6 +156,22 @@ fn validate_registration(
             "dashboard.registration.registration_heartbeat_interval_seconds must be positive and less than lease_seconds",
         ));
     }
+    let connect_timeout = registration.registration_connect_timeout_secs.unwrap_or(5);
+    if connect_timeout == 0 {
+        return Err(DashboardError::validation(
+            "config",
+            Some(target_id.to_owned()),
+            "dashboard.registration.registration_connect_timeout_secs must be greater than zero",
+        ));
+    }
+    let io_timeout = registration.registration_io_timeout_secs.unwrap_or(5);
+    if io_timeout == 0 {
+        return Err(DashboardError::validation(
+            "config",
+            Some(target_id.to_owned()),
+            "dashboard.registration.registration_io_timeout_secs must be greater than zero",
+        ));
+    }
     Ok(Some(ValidatedDashboardRegistrationConfig {
         relay_registration_path,
         display_name: registration
@@ -161,6 +181,8 @@ fn validate_registration(
             .unwrap_or_else(|| target_id.to_owned()),
         lease_seconds,
         registration_heartbeat_interval_seconds: heartbeat_seconds,
+        registration_connect_timeout_secs: connect_timeout,
+        registration_io_timeout_secs: io_timeout,
     }))
 }
 

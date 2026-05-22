@@ -90,6 +90,11 @@ pub fn registration_to_line(
 
 /// Sends one registration upsert to relay.
 ///
+/// Every I/O step (connect, write, read ack) is wrapped in a timeout so
+/// that a slow or unresponsive relay does not permanently block the
+/// registration heartbeat loop. Timeout values come from the validated
+/// registration configuration.
+///
 /// # Arguments
 ///
 /// - `config`: Validated IPC configuration.
@@ -109,34 +114,81 @@ pub async fn send_registration_upsert(
     })?;
     let payload = build_registration_payload(config)?;
     let line = registration_to_line(&payload)?;
-    let stream = UnixStream::connect(&registration.relay_registration_path)
-        .await
-        .map_err(|error| {
-            DashboardError::new(
-                "registration_connect_failed",
-                "registration_send",
-                Some(config.target_id.clone()),
-                format!("failed to connect relay registration socket: {error}"),
-                true,
-            )
-        })?;
+
+    let connect_timeout = registration.registration_connect_timeout_secs;
+    let io_timeout = registration.registration_io_timeout_secs;
+
+    let stream = tokio::time::timeout(
+        Duration::from_secs(connect_timeout),
+        UnixStream::connect(&registration.relay_registration_path),
+    )
+    .await
+    .map_err(|_elapsed| {
+        DashboardError::new(
+            "registration_connect_timeout",
+            "registration_send",
+            Some(config.target_id.clone()),
+            format!(
+                "timed out connecting to relay registration socket after {}s",
+                connect_timeout,
+            ),
+            true,
+        )
+    })?
+    .map_err(|error| {
+        DashboardError::new(
+            "registration_connect_failed",
+            "registration_send",
+            Some(config.target_id.clone()),
+            format!("failed to connect relay registration socket: {error}"),
+            true,
+        )
+    })?;
     let mut stream = BufReader::new(stream);
-    stream
-        .get_mut()
-        .write_all(line.as_bytes())
-        .await
-        .map_err(|error| {
-            DashboardError::new(
-                "registration_write_failed",
-                "registration_send",
-                Some(config.target_id.clone()),
-                format!("failed to write registration upsert: {error}"),
-                true,
-            )
-        })?;
+
+    tokio::time::timeout(
+        Duration::from_secs(io_timeout),
+        stream.get_mut().write_all(line.as_bytes()),
+    )
+    .await
+    .map_err(|_elapsed| {
+        DashboardError::new(
+            "registration_write_timeout",
+            "registration_send",
+            Some(config.target_id.clone()),
+            format!(
+                "timed out writing registration upsert after {}s",
+                io_timeout,
+            ),
+            true,
+        )
+    })?
+    .map_err(|error| {
+        DashboardError::new(
+            "registration_write_failed",
+            "registration_send",
+            Some(config.target_id.clone()),
+            format!("failed to write registration upsert: {error}"),
+            true,
+        )
+    })?;
 
     let mut ack_line = String::new();
-    stream.read_line(&mut ack_line).await.map_err(|error| {
+    tokio::time::timeout(
+        Duration::from_secs(io_timeout),
+        stream.read_line(&mut ack_line),
+    )
+    .await
+    .map_err(|_elapsed| {
+        DashboardError::new(
+            "registration_ack_read_timeout",
+            "registration_send",
+            Some(config.target_id.clone()),
+            format!("timed out reading registration ack after {}s", io_timeout,),
+            true,
+        )
+    })?
+    .map_err(|error| {
         DashboardError::new(
             "registration_ack_read_failed",
             "registration_send",

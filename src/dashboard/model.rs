@@ -33,11 +33,34 @@ where
     D: Deserializer<'de>,
 {
     use serde::de::Error;
-    // Try string first, then number
-    let s = String::deserialize(deserializer)
-        .map_err(|_| D::Error::custom("expected a string or number for nanosecond timestamp"))?;
-    s.parse::<u128>()
-        .map_err(|e| D::Error::custom(format!("invalid nanos: {e}")))
+
+    struct NanosVisitor;
+    impl<'de> serde::de::Visitor<'de> for NanosVisitor {
+        type Value = u128;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("a nanosecond timestamp as string or integer")
+        }
+
+        fn visit_str<E: Error>(self, s: &str) -> Result<u128, E> {
+            s.parse::<u128>()
+                .map_err(|e| E::custom(format!("invalid nanos string: {e}")))
+        }
+
+        fn visit_u64<E: Error>(self, v: u64) -> Result<u128, E> {
+            Ok(v as u128)
+        }
+
+        fn visit_u128<E: Error>(self, v: u128) -> Result<u128, E> {
+            Ok(v)
+        }
+
+        fn visit_i64<E: Error>(self, v: i64) -> Result<u128, E> {
+            u128::try_from(v).map_err(|_| E::custom("negative timestamp is not valid for nanos"))
+        }
+    }
+
+    deserializer.deserialize_any(NanosVisitor)
 }
 
 /// Serializes an `Option<u128>` nanosecond timestamp as an optional string.
@@ -1054,7 +1077,10 @@ pub struct ControlCommandRequest {
     /// Whether dangerous command confirmation is present.
     pub confirmed: bool,
     /// Request time as Unix nanoseconds.
-    #[serde(serialize_with = "serialize_nanos")]
+    #[serde(
+        serialize_with = "serialize_nanos",
+        deserialize_with = "deserialize_nanos"
+    )]
     pub requested_at_unix_nanos: u128,
 }
 

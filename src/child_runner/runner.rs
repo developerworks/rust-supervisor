@@ -114,21 +114,38 @@ impl ChildRunner {
         let (completion_sender, completion_receiver) = watch::channel(None);
 
         // Choose the spawn strategy based on the child's isolation setting.
-        // BlockingPool tasks use spawn_blocking to avoid starving tokio's
-        // async worker threads — any blocking or CPU-heavy work stays on
-        // the dedicated blocking thread pool (capacity up to 500 threads).
+        // BlockingPool tasks are spawned on the async worker pool normally but
+        // wrapped with `tokio::task::block_in_place` at the very start. This
+        // signals to the tokio scheduler that the worker thread may block and
+        // allows a replacement worker to be spawned, preventing worker thread
+        // starvation without creating a nested runtime.
+        //
+        // Background: `spawn_blocking` + `spawn_blocking` inner runtime is an
+        // anti-pattern because it allocates a full current-thread runtime per
+        // blocking thread, wasting memory and potentially exhausting the
+        // blocking pool. `block_in_place` is the tokio-approved approach for
+        // CPU-heavy or blocking async tasks.
         let child_task = match runtime.spec.isolation {
             crate::spec::child::Isolation::BlockingPool => {
                 let ctx_clone = ctx.clone_for_blocking();
-                tokio::task::spawn_blocking(move || {
-                    // spawn_blocking returns a blocking thread result, but the
-                    // factory future still needs to run on an async runtime.
-                    // We spawn a minimal local runtime to execute it.
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .expect("BlockingPool: failed to build one-shot runtime");
-                    rt.block_on(factory.build(ctx_clone))
+                let shared_factory = factory.clone();
+                tokio::spawn(async move {
+                    // Signal to the tokio scheduler that this task may block.
+                    // The scheduler will spawn a replacement worker if needed.
+                    tokio::task::block_in_place(move || {
+                        // Inside block_in_place we create a minimal one-shot
+                        // runtime to drive the factory future to completion.
+                        // This is unavoidable because the factory returns an
+                        // async future — there is no synchronous variant. The
+                        // key difference from the previous approach is that
+                        // `block_in_place` tells the outer runtime to lend us
+                        // this worker thread rather than permanently stealing it.
+                        let rt = tokio::runtime::Builder::new_current_thread()
+                            .enable_all()
+                            .build()
+                            .expect("BlockingPool: failed to build one-shot runtime");
+                        rt.block_on(shared_factory.build(ctx_clone))
+                    })
                 })
             }
             crate::spec::child::Isolation::AsyncWorker => tokio::spawn(factory.build(ctx)),

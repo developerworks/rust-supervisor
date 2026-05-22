@@ -44,7 +44,10 @@ pub struct DashboardIpcService {
     journal: EventJournal,
     /// Optional runtime control handle.
     handle: Option<SupervisorHandle>,
-    /// Monotonic state generation, incremented on every state read.
+    /// State serial number, incremented only when runtime state actually
+    /// changes (child exit, restart, control command completion, etc.).
+    /// Pure read operations (e.g. CurrentState polling) do NOT bump this
+    /// counter so clients can correctly detect genuine state transitions.
     state_generation: AtomicU64,
     /// Optional IPC security pipeline (C1-C9).
     security_pipeline: Option<Arc<Mutex<IpcSecurityPipeline>>>,
@@ -182,7 +185,19 @@ impl DashboardIpcService {
         let is_high_risk = is_high_risk_command(&method, self);
 
         if let Some(ref pipeline) = self.security_pipeline {
-            let mut guard = pipeline.lock().unwrap();
+            // Recover from a poisoned mutex instead of letting a single
+            // panic in a prior request deny service to all subsequent ones.
+            let mut guard = match pipeline.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    tracing::error!(
+                        target: "rust_supervisor::ipc::security",
+                        %method,
+                        "pipeline mutex poisoned, recovering"
+                    );
+                    poisoned.into_inner()
+                }
+            };
 
             // Step 1: C6 → C5 → C2 → C3 (pre-dispatch checks, no C4/C8)
             match guard.check(&method, raw_body_len, peer, connection_id) {
@@ -213,7 +228,17 @@ impl DashboardIpcService {
                 drop(guard);
                 // C7: audit cache hit
                 if let Some(ref pipeline) = self.security_pipeline {
-                    let mut guard = pipeline.lock().unwrap();
+                    let mut guard = match pipeline.lock() {
+                        Ok(guard) => guard,
+                        Err(poisoned) => {
+                            tracing::error!(
+                                target: "rust_supervisor::ipc::security",
+                                %method,
+                                "pipeline mutex poisoned during C8 audit"
+                            );
+                            poisoned.into_inner()
+                        }
+                    };
                     let _ = self.audit_or_fail(
                         &mut guard,
                         &method,
@@ -269,7 +294,17 @@ impl DashboardIpcService {
 
         // ---- post-dispatch: cache + audit (fail-closed for high-risk) ----
         if let Some(ref pipeline) = self.security_pipeline {
-            let mut guard = pipeline.lock().unwrap();
+            let mut guard = match pipeline.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    tracing::error!(
+                        target: "rust_supervisor::ipc::security",
+                        %method,
+                        "pipeline mutex poisoned during post-dispatch"
+                    );
+                    poisoned.into_inner()
+                }
+            };
 
             // C8: cache dispatch result
             if let Ok(response_json) = serde_json::to_string(&response) {
@@ -373,14 +408,14 @@ impl DashboardIpcService {
                 })
             }
             IpcMethod::EventsSubscribe => {
-                require_session_trigger(request, &self.config.target_id)?;
+                require_session_trigger(request, &self.config.target_id, self)?;
                 Ok(IpcResult::Subscription {
                     target_id: self.config.target_id.clone(),
                     subscription: "events".to_owned(),
                 })
             }
             IpcMethod::LogsTail => {
-                require_session_trigger(request, &self.config.target_id)?;
+                require_session_trigger(request, &self.config.target_id, self)?;
                 Ok(IpcResult::Subscription {
                     target_id: self.config.target_id.clone(),
                     subscription: "logs".to_owned(),
@@ -398,8 +433,11 @@ impl DashboardIpcService {
 
     /// Builds the current dashboard state.
     ///
-    /// Increments state_generation on every call so dashboard clients
-    /// can detect state changes for cache invalidation.
+    /// The `state_generation` in the returned state reflects the current
+    /// serial number of the runtime — it is incremented only when runtime
+    /// state actually transitions (child exits, restarts, control commands).
+    /// Pure read operations do not bump this counter, so dashboard clients
+    /// can reliably detect genuine state changes for cache invalidation.
     ///
     /// # Arguments
     ///
@@ -409,9 +447,9 @@ impl DashboardIpcService {
     ///
     /// Returns the current [`DashboardState`].
     pub async fn current_dashboard_state(&self) -> Result<DashboardState, DashboardError> {
-        // Increment state generation on every read so clients can detect
-        // changes for cache invalidation and delta computation.
-        let generation = self.state_generation.fetch_add(1, Ordering::Relaxed) + 1;
+        // Read the current generation without incrementing — this is a
+        // pure read operation and should not create the illusion of change.
+        let generation = self.state_generation.load(Ordering::Relaxed);
         let registration = self.registration_payload().ok();
         let mut state = build_dashboard_state(
             DashboardStateInput {
@@ -487,6 +525,11 @@ impl DashboardIpcService {
                 "runtime control handle is not attached",
             ))
         };
+        // Bump state generation on every completed command — the runtime
+        // state may have changed as a result of the command execution.
+        // This ensures dashboard clients can reliably detect real changes
+        // while pure read operations (CurrentState) do not bump the counter.
+        let _ = self.state_generation.fetch_add(1, Ordering::Relaxed);
         let result = match result {
             Ok(result) => {
                 let state_delta = dashboard_command_result_value(&result).map_err(|error| {
@@ -706,15 +749,47 @@ fn prepare_socket_path(config: &ValidatedDashboardIpcConfig) -> Result<(), Dashb
 
 /// Validates that subscription was triggered by an established session.
 ///
+/// The relay must have already established a real dashboard session (peer
+/// identity verified through C2/C3 security checks) before forwarding
+/// subscription requests. This function verifies that the request came
+/// through a security pipeline that has performed peer authentication.
+///
+/// If no security pipeline is configured, the subscription is denied
+/// because there is no way to verify the caller's identity — this
+/// prevents unauthorized event/log access when the Unix socket is
+/// exposed to untrusted processes.
+///
 /// # Arguments
 ///
-/// - `request`: Subscription request parameters.
+/// - `request`: Subscription request parameters. The `session_established`
+///   flag is a relay assertion that must be backed by a live security
+///   pipeline; it is not trusted on its own.
 /// - `target_id`: Target process identifier.
+/// - `service`: Dashboard IPC service that owns the security pipeline.
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` when the relay provided the session trigger flag.
-fn require_session_trigger(request: &IpcRequest, target_id: &str) -> Result<(), DashboardError> {
+/// Returns `Ok(())` when the relay provided the session trigger flag and
+/// a security pipeline is active.
+fn require_session_trigger(
+    request: &IpcRequest,
+    target_id: &str,
+    service: &DashboardIpcService,
+) -> Result<(), DashboardError> {
+    // A security pipeline must be present — otherwise there is no peer
+    // identity verification and the `session_established` flag is just an
+    // untrusted JSON parameter.
+    if service.security_pipeline.is_none() {
+        return Err(DashboardError::new(
+            "session_required",
+            "subscription",
+            Some(target_id.to_owned()),
+            "event and log subscription require a security pipeline; \
+             without one the session_established flag cannot be verified",
+            false,
+        ));
+    }
+
     let established = request
         .params
         .get("session_established")
@@ -757,6 +832,63 @@ pub fn validate_command(command: &ControlCommandRequest) -> Result<(), Dashboard
             "requested_by must be derived by relay",
         ));
     }
+    // command_id must be a valid UUID — never silently replace it.
+    // Silently generating a new UUID would break audit trails and
+    // idempotency cache lookups.
+    if uuid::Uuid::parse_str(&command.command_id).is_err() {
+        return Err(DashboardError::validation(
+            "command_validate",
+            Some(command.target_id.clone()),
+            format!("command_id is not a valid UUID: {}", command.command_id),
+        ));
+    }
+    // AddChild requires a non-empty manifest.
+    if matches!(command.command, ControlCommandKind::AddChild) {
+        let has_manifest = command
+            .target
+            .child_manifest
+            .as_ref()
+            .is_some_and(|m| !m.trim().is_empty());
+        if !has_manifest {
+            return Err(DashboardError::validation(
+                "command_validate",
+                Some(command.target_id.clone()),
+                "add_child command requires a non-empty child_manifest",
+            ));
+        }
+    }
+    // Child-targeting commands require a non-empty child_path.
+    if matches!(
+        command.command,
+        ControlCommandKind::RestartChild
+            | ControlCommandKind::PauseChild
+            | ControlCommandKind::ResumeChild
+            | ControlCommandKind::QuarantineChild
+            | ControlCommandKind::RemoveChild
+    ) && command
+        .target
+        .child_path
+        .as_ref()
+        .is_none_or(|p| p.trim().is_empty())
+    {
+        return Err(DashboardError::validation(
+            "command_validate",
+            Some(command.target_id.clone()),
+            format!(
+                "{:?} command requires a non-empty child_path",
+                command.command
+            ),
+        ));
+    }
+    // requested_at_unix_nanos should not be 0 or obviously in the future.
+    // A value of 0 means the field was not set (programming error).
+    if command.requested_at_unix_nanos == 0 {
+        return Err(DashboardError::validation(
+            "command_validate",
+            Some(command.target_id.clone()),
+            "requested_at_unix_nanos must not be 0",
+        ));
+    }
     if matches!(
         command.command,
         ControlCommandKind::ShutdownTree
@@ -790,14 +922,14 @@ async fn execute_command(
 ) -> Result<CommandResult, DashboardError> {
     // Build a CommandMeta with the relay-supplied command_id so that
     // audit events and runtime state carry the same identifier that
-    // the relay and UI see.
+    // the relay and UI see. The command_id is validated as a legal
+    // UUID by validate_command() before dispatch, so unwrap is safe.
+    let command_id = command
+        .command_id
+        .parse::<uuid::Uuid>()
+        .expect("command_id already validated as legal UUID");
     let meta = crate::control::command::CommandMeta::with_id(
-        crate::control::command::CommandId::from_uuid(
-            command
-                .command_id
-                .parse::<uuid::Uuid>()
-                .unwrap_or_else(|_| uuid::Uuid::new_v4()),
-        ),
+        crate::control::command::CommandId::from_uuid(command_id),
         &command.requested_by,
         &command.reason,
     );

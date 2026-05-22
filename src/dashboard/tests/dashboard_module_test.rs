@@ -21,6 +21,8 @@ fn dashboard_registration_payload_uses_validated_target_identity() {
             display_name: Some("Orders Supervisor".to_string()),
             lease_seconds: Some(30),
             registration_heartbeat_interval_seconds: Some(15),
+            registration_connect_timeout_secs: Some(5),
+            registration_io_timeout_secs: Some(5),
         }),
         security_config: None,
     };

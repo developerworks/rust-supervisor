@@ -73,7 +73,10 @@ fn shutdown_policy_default_uses_recommended_constants() {
     assert_eq!(policy.abort_wait, Duration::from_secs(1));
     assert!(policy.abort_after_timeout);
     assert_eq!(policy.force_kill_margin, Duration::from_secs(5));
-    assert_eq!(policy.max_orphan_threshold, 3);
+    // Default is 0 (automatic) — the effective threshold is computed from
+    // the number of tokio worker threads at runtime.
+    assert_eq!(policy.max_orphan_threshold, 0);
+    assert!(policy.effective_max_orphan_threshold() >= 1);
 }
 
 /// Verifies that `effective_global_deadline()` works when margin is zero.
