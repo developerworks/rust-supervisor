@@ -385,6 +385,10 @@ pub struct SupervisorSpec {
     pub pipeline_subscriber_capacity: usize,
     /// Maximum concurrent restarts allowed for this supervisor instance.
     pub concurrent_restart_limit: u32,
+    /// Whether metrics recording is enabled.
+    pub metrics_enabled: bool,
+    /// Whether audit event recording is enabled.
+    pub audit_enabled: bool,
 }
 
 impl SupervisorSpec {
@@ -451,6 +455,8 @@ impl SupervisorSpec {
             pipeline_journal_capacity: 100,
             pipeline_subscriber_capacity: 10,
             concurrent_restart_limit: 5,
+            metrics_enabled: true,
+            audit_enabled: true,
         }
     }
 

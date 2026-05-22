@@ -19,7 +19,7 @@ Engineering implementation must follow the public API contract. Examples may use
 
 No Compatibility: engineering docs must not describe legacy wrappers, old migration layers, or deprecated facades.
 
-Shutdown documentation must use Shutdown Without Orphaned Tasks. Configuration documentation must use rust-config-tree v0.1.9 for the centralized YAML configuration boundary.
+Shutdown documentation must use Shutdown Without Orphaned Tasks. Configuration documentation must use rust-config-tree v0.2.0 for the centralized YAML configuration boundary.
 
 ## Release Contract
 

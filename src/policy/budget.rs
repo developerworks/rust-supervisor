@@ -170,6 +170,9 @@ impl RestartBudgetTracker {
         self.refill(now_unix_nanos);
         self.evict(now_unix_nanos);
 
+        // Record this failure timestamp in the sliding window.
+        self.failures.push_back(now_unix_nanos);
+
         if self.tokens >= 1.0 {
             self.tokens -= 1.0;
             BudgetVerdict::Granted

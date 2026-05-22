@@ -252,6 +252,12 @@ pub struct ChildSlot {
     /// Last observed readiness state.
     #[serde(skip)]
     pub last_observed_readiness: ReadinessState,
+    /// Heartbeat stale threshold (from ChildSpec.health_policy.stale_after).
+    #[serde(skip)]
+    pub stale_after: Duration,
+    /// Group membership (from ChildSpec.group) for structured group fuse.
+    #[serde(skip)]
+    pub group: Option<String>,
 }
 
 impl ChildSlot {
@@ -296,6 +302,8 @@ impl ChildSlot {
             generation_fence: GenerationFenceState::placeholder(),
             registry_identity_anchor_for_spawn_attempt: None,
             last_observed_readiness: ReadinessState::Unreported,
+            stale_after: Duration::from_secs(DEFAULT_HEARTBEAT_TIMEOUT_SECS),
+            group: None,
         }
     }
 
@@ -499,11 +507,19 @@ impl ChildSlot {
     /// # Returns
     ///
     /// Returns the latest [`ChildLivenessState`].
-    pub fn observe_liveness(&mut self, now_unix_nanos: u128) -> ChildLivenessState {
+    pub fn observe_liveness(
+        &mut self,
+        now_unix_nanos: u128,
+        time_base: &RuntimeTimeBase,
+    ) -> ChildLivenessState {
         if let Some(receiver) = &self.heartbeat_receiver {
             let heartbeat = *receiver.borrow();
-            if heartbeat.is_some() {
-                self.last_heartbeat_at = Some(now_unix_nanos);
+            if let Some(instant) = heartbeat {
+                // Use the real heartbeat timestamp (converted from
+                // monotonic Instant to Unix nanos) instead of the
+                // observation time. This prevents polling from
+                // artificially refreshing the stale threshold.
+                self.last_heartbeat_at = Some(time_base.instant_to_unix_nanos(instant));
             }
         }
         let readiness = if let Some(receiver) = &self.readiness_receiver {
@@ -515,9 +531,10 @@ impl ChildSlot {
         } else {
             ReadinessState::Unreported
         };
+        let stale_after = self.stale_after;
         let heartbeat_stale = self.last_heartbeat_at.is_some_and(|heartbeat| {
             let elapsed_nanos = now_unix_nanos.saturating_sub(heartbeat);
-            elapsed_nanos >= Duration::from_secs(DEFAULT_HEARTBEAT_TIMEOUT_SECS).as_nanos()
+            elapsed_nanos >= stale_after.as_nanos()
         });
         ChildLivenessState::new(self.last_heartbeat_at, heartbeat_stale, readiness)
     }
@@ -580,6 +597,11 @@ impl ChildSlot {
         } else {
             None
         };
+        let pending_restart = self
+            .generation_fence
+            .pending_restart
+            .as_ref()
+            .map(|p| crate::control::outcome::PendingRestartSummary::from(p));
         ChildRuntimeRecord::new(
             self.child_id.clone(),
             self.path.clone(),
@@ -592,7 +614,7 @@ impl ChildSlot {
             self.stop_state,
             self.last_control_failure.clone(),
             self.generation_fence.phase,
-            None, // pending_restart
+            pending_restart,
         )
     }
 }

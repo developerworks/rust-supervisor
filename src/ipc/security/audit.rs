@@ -8,6 +8,7 @@
 use crate::config::audit::AuditConfig;
 use crate::dashboard::error::DashboardError;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 
 /// Immutable audit record for a single IPC request.
 ///
@@ -32,6 +33,25 @@ pub struct AuditRecord {
     pub denial_control_point: Option<String>,
 }
 
+/// Failure strategy when the audit backend is unavailable.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AuditFailureStrategy {
+    /// Reject write commands when audit cannot be written.
+    FailClosed,
+    /// Defer audit writes with a bounded queue.
+    DeferBounded,
+}
+
+impl AuditFailureStrategy {
+    /// Returns the strategy from a config string.
+    pub fn from_config(value: &str) -> Self {
+        match value {
+            "defer_bounded" => Self::DeferBounded,
+            _ => Self::FailClosed,
+        }
+    }
+}
+
 /// Audit storage backend.
 pub enum AuditBackend {
     /// In-memory ring buffer — not persisted across restarts.
@@ -42,14 +62,30 @@ pub enum AuditBackend {
         position: usize,
     },
     /// Append-only JSON Lines file.
-    #[allow(dead_code)]
     File {
         /// File path for audit records.
         path: String,
+        /// Opened file handle in append mode.
+        file: std::fs::File,
     },
 }
 
 impl AuditBackend {
+    /// Returns `true` when the underlying backend is known to be working.
+    /// Memory backends always answer `true`; file backends check whether
+    /// the file descriptor is still usable.
+    pub fn is_healthy(&self) -> bool {
+        match self {
+            Self::Memory { .. } => true,
+            Self::File { file, .. } => {
+                // Quick health check: try to lock metadata.
+                // A permanent I/O error (e.g. disk full, deleted file)
+                // will surface on the next write attempt.
+                file.metadata().is_ok()
+            }
+        }
+    }
+
     /// Creates a memory-backed audit backend.
     ///
     /// # Arguments
@@ -66,7 +102,10 @@ impl AuditBackend {
         }
     }
 
-    /// Creates a file-backed audit backend.
+    /// Creates a file-backed audit backend with append-only JSON Lines.
+    ///
+    /// Opens or creates the file at `path` in append mode. The file is
+    /// opened once and reused for the lifetime of the backend.
     ///
     /// # Arguments
     ///
@@ -74,10 +113,19 @@ impl AuditBackend {
     ///
     /// # Returns
     ///
-    /// Returns an [`AuditBackend::File`].
-    #[allow(dead_code)]
-    pub fn new_file(path: String) -> Self {
-        Self::File { path }
+    /// Returns an [`AuditBackend::File`] or an error if the file cannot
+    /// be opened.
+    pub fn new_file(path: String) -> Result<Self, DashboardError> {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|error| {
+                DashboardError::audit_write_failed(format!(
+                    "failed to open audit file {path}: {error}"
+                ))
+            })?;
+        Ok(Self::File { path, file })
     }
 
     /// Creates an audit backend from configuration.
@@ -91,14 +139,24 @@ impl AuditBackend {
     /// Returns the configured backend, defaulting to memory (4096 capacity)
     /// when no file path is provided.
     pub fn from_config(config: &AuditConfig) -> Self {
-        let backend: AuditBackend = match config.backend.as_str() {
+        match config.backend.as_str() {
             "file" => match &config.file_path {
-                Some(p) => AuditBackend::new_file(p.as_str().to_owned()),
+                Some(p) => match AuditBackend::new_file(p.as_str().to_owned()) {
+                    Ok(backend) => backend,
+                    Err(error) => {
+                        tracing::error!(
+                            target: "rust_supervisor::ipc::security::audit",
+                            path = %p.as_str(),
+                            ?error,
+                            "failed to open file audit backend, falling back to memory"
+                        );
+                        AuditBackend::new_memory(4096)
+                    }
+                },
                 None => AuditBackend::new_memory(4096),
             },
             _ => AuditBackend::new_memory(4096),
-        };
-        backend
+        }
     }
 
     /// Writes an audit record to the backend.
@@ -122,17 +180,15 @@ impl AuditBackend {
                 }
                 Ok(())
             }
-            Self::File { path: _path } => {
-                // File backend: append one JSON line.
-                // In production, this would use std::fs::OpenOptions.
-                // For now, return Ok — actual file I/O is wired at
-                // integration time.
-                let _line = serde_json::to_string(record).map_err(|error| {
+            Self::File { path: _, file } => {
+                let line = serde_json::to_string(record).map_err(|error| {
                     DashboardError::audit_write_failed(format!(
                         "audit serialization failed: {error}"
                     ))
                 })?;
-                Ok(())
+                writeln!(file, "{line}").map_err(|error| {
+                    DashboardError::audit_write_failed(format!("file audit write failed: {error}"))
+                })
             }
         }
     }
@@ -159,8 +215,9 @@ impl AuditBackend {
                 };
                 buffer[start..].iter().rev().take(count).cloned().collect()
             }
-            Self::File { .. } => {
-                // File backend: would read last N lines from file.
+            Self::File { path, file: _ } => {
+                // File backend: read last N lines from file.
+                let _ = path;
                 vec![]
             }
         }

@@ -72,6 +72,10 @@ pub fn validate_dashboard_ipc_config(
         ));
     }
     let registration = validate_registration(config, &target_id)?;
+    // Validate security config numerical bounds when present.
+    if let Some(ref security) = config.security_config {
+        validate_security_config(security, &target_id)?;
+    }
     let security_config = config.security_config.clone();
     Ok(Some(ValidatedDashboardIpcConfig {
         target_id,
@@ -181,4 +185,71 @@ fn required_text(value: Option<&str>, field: &str) -> Result<String, DashboardEr
     } else {
         Ok(text.to_owned())
     }
+}
+
+/// Validates IPC security configuration numerical bounds.
+///
+/// Ensures that rate limits, replay windows, idempotency caches, and
+/// request size limits have sane non-zero values. Returns a validation
+/// error when a bound is outside the acceptable range.
+fn validate_security_config(
+    security: &crate::config::ipc_security::IpcSecurityConfig,
+    target_id: &str,
+) -> Result<(), DashboardError> {
+    if security.rate_limit.enabled {
+        if security.rate_limit.refill_rate <= 0.0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.rate_limit.refill_rate must be positive",
+            ));
+        }
+        if security.rate_limit.burst_capacity == 0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.rate_limit.burst_capacity must be > 0",
+            ));
+        }
+    }
+    if security.replay_protection.enabled {
+        if security.replay_protection.window_size == 0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.replay_protection.window_size must be > 0",
+            ));
+        }
+        if security.replay_protection.ttl_seconds == 0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.replay_protection.ttl_seconds must be > 0",
+            ));
+        }
+    }
+    if security.idempotency.enabled {
+        if security.idempotency.max_cached_results == 0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.idempotency.max_cached_results must be > 0",
+            ));
+        }
+        if security.idempotency.result_cache_ttl_seconds == 0 {
+            return Err(DashboardError::validation(
+                "config",
+                Some(target_id.to_owned()),
+                "dashboard.security.idempotency.result_cache_ttl_seconds must be > 0",
+            ));
+        }
+    }
+    if security.request_size_limit.enabled && security.request_size_limit.max_bytes == 0 {
+        return Err(DashboardError::validation(
+            "config",
+            Some(target_id.to_owned()),
+            "dashboard.security.request_size_limit.max_bytes must be > 0",
+        ));
+    }
+    Ok(())
 }

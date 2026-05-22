@@ -18,12 +18,12 @@
         "section": "## [Unreleased]"
     },
     "sbom": {
-        "path": "artifacts/sbom/sbom.spdx.json",
+        "path": "artifacts/sbom/rust-supervisor.spdx.json",
         "sha256": "",
         "format": "spdx-2.3",
         "format_version": "2.3",
         "migration_note": "artifacts/sbom-migration.md",
-        "verify_script": "scripts/verify-sbom.sh"
+        "verify_script": "scripts/validate-sbom.sh"
     },
     "supply_chain_attestation": {
         "path": "artifacts/attestation.json",

@@ -99,3 +99,82 @@ jobs:
           cargo test --test policy_critical_optional_test -- test_event_metrics_consistency_rate
           echo "SC-003 check complete."
     continue-on-error: true
+
+  # ---- Chaos scenarios (shortened, ~5-10 min) ----
+  chaos-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+      - name: Run chaos scenarios (chaos_suite)
+        id: chaos
+        run: |
+          echo "Running chaos scenarios (ignored by default, --include-ignored)..."
+          cargo test --test chaos_suite -- --include-ignored
+          echo "Chaos suite verdicts printed above."
+    continue-on-error: true
+
+  # ---- Soak test (shortened, ~15 min) ----
+  soak-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+      - name: Run soak test (soak_suite, SOAK_DURATION_MINUTES=15)
+        id: soak
+        env:
+          SOAK_DURATION_MINUTES: "15"
+        run: |
+          echo "Running soak test with SOAK_DURATION_MINUTES=15..."
+          cargo test --test soak_suite -- --ignored
+          echo "Soak test report printed above."
+    continue-on-error: true
+
+  # ---- Archive all nightly results into a single artifact bundle ----
+  collect-and-archive:
+    if: always()
+    needs:
+      - coverage
+      - mutation-testing
+      - fuzzing
+      - loom
+      - miri
+      - event-metrics-consistency
+      - chaos-suite
+      - soak-suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare archive directory
+        run: |
+          mkdir -p artifacts/nightly
+          echo "nightly_run: $(date -u '+%Y-%m-%dT%H:%M:%SZ')" > artifacts/nightly/summary.txt
+          echo "trigger: ${{ github.event_name }}" >> artifacts/nightly/summary.txt
+          for job in coverage mutation-testing fuzzing loom miri event-metrics-consistency chaos-suite soak-suite; do
+            result=
+            if [ "${{ needs.$job.result }}" = "success" ]; then
+              result="passed"
+            elif [ "${{ needs.$job.result }}" = "failure" ]; then
+              result="failed"
+            elif [ "${{ needs.$job.result }}" = "cancelled" ]; then
+              result="cancelled"
+            else
+              result="skipped"
+            fi
+            echo "$job: $result" >> artifacts/nightly/summary.txt
+          done
+          echo "summary written to artifacts/nightly/summary.txt"
+          cat artifacts/nightly/summary.txt
+
+      - name: Upload nightly artifact bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-gates-${{ github.run_id }}
+          path: artifacts/nightly/
+          if-no-files-found: warn
+          retention-days: 30

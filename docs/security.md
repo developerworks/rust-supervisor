@@ -1,6 +1,6 @@
 # 安全说明 (Security Documentation)
 
-> 最后更新: 2026-05-19 | 对应版本: 0.1.2
+> 最后更新: 2026-05-22 | 对应版本: 0.1.3
 
 ## 一、概述
 
@@ -111,7 +111,7 @@ SBOM 包含所有直接依赖和传递依赖, 每条依赖记录版本、许可�
 ### 5.3 编译期安全
 
 - `#[cfg(unix)]` 保证 dashboard/IPC 模块不在非 Unix 平台编译
-- 禁止 `unsafe` 代码 (未发现 `unsafe` 使用)
+- `unsafe` 代码仅限 Unix peer credentials(对端凭据) 提取 (已审计, 6 处 `unsafe` 调用, 均在 `peer_identity.rs` 中)
 - 禁止 inline unit test 注入生产代码
 
 ### 5.4 审计追踪
@@ -153,7 +153,7 @@ dashboard:
 | 限制               | 说明                                          | 缓解措施                                              |
 | ------------------ | --------------------------------------------- | ----------------------------------------------------- |
 | IPC 仅 Unix        | Windows 等非 Unix 平台无法使用 dashboard      | 通过 Unix relay 间接访问                              |
-| 审计持久化默认内存 | `AuditBackend` 默认使用 ring buffer, 重启丢失 | 配置 `audit.backend: file` 和 `audit.file_path` 落盘 |
+| 审计持久化默认内存 | `AuditBackend` 默认使用 ring buffer, 重启丢失 | 配置 `audit.backend: file` 和 `audit.file_path` 落盘  |
 | 配置不支持热更新   | 修改安全配置需重启 supervisor                 | 使用配置管理工具自动化重启                            |
 | 无内置 mTLS        | target 侧不处理 mTLS                          | mTLS 由 relay 侧管理, 参考 rust-supervisor-relay 文档 |
 

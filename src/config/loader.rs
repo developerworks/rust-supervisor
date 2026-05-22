@@ -6,14 +6,14 @@
 use crate::config::configurable::SupervisorConfig;
 use crate::config::state::ConfigState;
 use crate::error::types::SupervisorError;
-use std::fs;
 use std::path::Path;
 
-/// Loads validated supervisor configuration from a YAML file.
+/// Loads validated supervisor configuration from a YAML file,
+/// resolving `include` directives via `rust-config-tree`.
 ///
 /// # Arguments
 ///
-/// - `path`: Path to the YAML configuration file.
+/// - `path`: Path to the root YAML configuration file.
 ///
 /// # Returns
 ///
@@ -29,12 +29,14 @@ use std::path::Path;
 /// ```
 pub fn load_config_from_yaml_file(path: impl AsRef<Path>) -> Result<ConfigState, SupervisorError> {
     ensure_yaml_format(path.as_ref())?;
-    let contents = fs::read_to_string(path.as_ref()).map_err(|error| {
-        SupervisorError::fatal_config(format!("failed to read config file: {error}"))
+
+    // Use rust-config-tree to resolve include directives and merge
+    // multiple YAML files. This ensures the `include: [..]` field
+    // in SupervisorConfig is consumed per the README design principle.
+    let config: SupervisorConfig = rust_config_tree::load_config(path).map_err(|error| {
+        SupervisorError::fatal_config(format!("rust-config-tree load failed: {error}"))
     })?;
-    let config: SupervisorConfig = serde_yaml::from_str(&contents).map_err(|error| {
-        SupervisorError::fatal_config(format!("failed to parse YAML config: {error}"))
-    })?;
+
     ConfigState::try_from(config)
 }
 

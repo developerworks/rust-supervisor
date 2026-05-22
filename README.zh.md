@@ -17,7 +17,7 @@
 - 公开 API(接口) 只来自本项目自有模型.
 - 不提供 compatibility wrapper(兼容包装函数), deprecated facade(废弃门面) 或 migration layer(迁移层).
 - `current_state`(当前状态) 只回答当前真实状态, 不承担 lifecycle event history(生命周期事件历史) 职责.
-- 配置必须通过 rust-config-tree(集中配置树) v0.1.9 加载 YAML(数据序列化格式), 运行时可调常量不得散落到模块内部.
+- 配置必须通过 rust-config-tree(集中配置树) v0.2.0 加载 YAML(数据序列化格式), 运行时可调常量不得散落到模块内部.
 - `SupervisorConfig`(监督器配置) 是公开 root configuration struct(根配置结构体), 它同时支持 `confique::Config`(配置派生), `schemars::JsonSchema`(结构模式生成特征), `Serialize`(序列化) 和 `Deserialize`(反序列化).
 - dashboard IPC(看板进程间通信) 只属于 target process(目标进程) 本机入口. 当前仓库只实现 Unix domain socket(Unix 域套接字), snapshot(快照), event record(事件记录), log record(日志记录), command mapping(命令映射) 和 shared contract(共享契约).
 - shutdown(关闭) 必须执行 request stop(请求停止), graceful drain(优雅排空), abort stragglers(强制中止滞留任务) 和 reconcile(状态对账). `ShutdownTree`(关闭监督树) 会向运行中的 child task(子任务) 发送 `CancellationToken`(取消令牌), 按 shutdown order(关闭顺序) 等待任务返回, 超时后使用 `AbortHandle`(强制中止句柄) 终止滞留任务, 并在 `ShutdownResult`(关闭结果) 中返回 per-child outcome(逐子任务结果) 和 reconcile report(对账报告).

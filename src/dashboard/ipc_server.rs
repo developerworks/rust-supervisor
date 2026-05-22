@@ -18,6 +18,7 @@ use crate::dashboard::protocol::{
     decode_command_params,
 };
 use crate::dashboard::registration::build_registration_payload;
+use crate::dashboard::runtime::DEFAULT_MAX_FRAME_BYTES;
 use crate::dashboard::state::{DashboardStateInput, build_dashboard_state};
 use crate::id::types::{ChildId, SupervisorPath};
 use crate::ipc::security::peer_identity::PeerIdentity;
@@ -25,8 +26,9 @@ use crate::ipc::security::{CheckOutcome, IpcSecurityPipeline};
 use crate::journal::ring::EventJournal;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::state::supervisor::SupervisorState;
-use std::os::unix::fs::FileTypeExt;
+use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::net::UnixStream as StdUnixStream;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::net::UnixListener;
 
@@ -42,8 +44,8 @@ pub struct DashboardIpcService {
     journal: EventJournal,
     /// Optional runtime control handle.
     handle: Option<SupervisorHandle>,
-    /// Monotonic state generation.
-    state_generation: u64,
+    /// Monotonic state generation, incremented on every state read.
+    state_generation: AtomicU64,
     /// Optional IPC security pipeline (C1-C9).
     security_pipeline: Option<Arc<Mutex<IpcSecurityPipeline>>>,
 }
@@ -73,7 +75,7 @@ impl DashboardIpcService {
             state,
             journal,
             handle: None,
-            state_generation: 1,
+            state_generation: AtomicU64::new(1),
             security_pipeline: None,
         }
     }
@@ -106,6 +108,23 @@ impl DashboardIpcService {
         self
     }
 
+    /// Returns the effective maximum frame size in bytes for the frame
+    /// reader.
+    ///
+    /// When a security pipeline is configured with C5 request size limit
+    /// enabled, returns the configured `max_bytes`. Otherwise falls back
+    /// to [`DEFAULT_MAX_FRAME_BYTES`] (1 MiB).
+    ///
+    /// This ensures the frame reader rejects oversized frames **before**
+    /// JSON deserialization, fulfilling C5's contract.
+    pub fn max_frame_bytes(&self) -> usize {
+        self.security_pipeline
+            .as_ref()
+            .and_then(|p| p.lock().ok())
+            .and_then(|guard| guard.request_size_limit_bytes())
+            .unwrap_or(DEFAULT_MAX_FRAME_BYTES)
+    }
+
     /// Returns the target registration payload.
     ///
     /// # Arguments
@@ -122,9 +141,24 @@ impl DashboardIpcService {
     /// Handles one parsed IPC request with connection context.
     ///
     /// Runs IPC security checks before dispatching when a
-    /// security pipeline is configured. Cache-hit responses bypass dispatch.
-    /// All paths write audit records. High-risk commands fail closed on
-    /// audit write failure.
+    /// security pipeline is configured.
+    ///
+    /// **Control point ordering:**
+    ///
+    /// 1. C6 (rate limit) → C5 (size limit) → C2 (peer credentials) → C3
+    ///    (authorization) — via [`check()`].
+    /// 2. **C8 (idempotency) checked before C4 (replay)** — if a cached
+    ///    response exists for the request_id, it is returned immediately
+    ///    without recording in the replay window. This prevents C4 from
+    ///    rejecting a legitimate retry that carries the same request_id.
+    /// 3. C4 (replay protection) — records the request_id only after
+    ///    confirming C8 had no cached result.
+    /// 4. Dispatch → C8 cache result → C7 (audit, post-dispatch).
+    ///
+    /// High-risk commands fail closed on audit write failure: when the
+    /// audit backend is unwritable and the failure strategy is
+    /// `fail_closed`, a denial response is returned instead of the normal
+    /// dispatch result.
     ///
     /// # Arguments
     ///
@@ -145,16 +179,17 @@ impl DashboardIpcService {
     ) -> IpcResponse {
         let method = request.method.clone();
         let request_id = request.request_id.clone();
-        let is_high_risk = is_high_risk_command(&method);
+        let is_high_risk = is_high_risk_command(&method, self);
 
         if let Some(ref pipeline) = self.security_pipeline {
             let mut guard = pipeline.lock().unwrap();
 
-            match guard.check(&method, &request_id, raw_body_len, peer, connection_id) {
+            // Step 1: C6 → C5 → C2 → C3 (pre-dispatch checks, no C4/C8)
+            match guard.check(&method, raw_body_len, peer, connection_id) {
                 CheckOutcome::Denied(err) => {
                     let err_code = err.code.clone();
                     // C7: audit denial
-                    self.audit_or_fail(
+                    let _ = self.audit_or_fail(
                         &mut guard,
                         &method,
                         peer,
@@ -169,7 +204,9 @@ impl DashboardIpcService {
                 CheckOutcome::Passed => {}
             }
 
-            // Idempotency cache check — if hit, return cached response directly
+            // Step 2: C8 idempotency check BEFORE C4 replay.
+            // If a cached response exists, return it immediately without
+            // recording the request_id in the replay window.
             if let Some(cached_json) = guard.check_idempotency(&request_id) {
                 let method = method.clone();
                 let peer_clone = peer.clone();
@@ -177,7 +214,7 @@ impl DashboardIpcService {
                 // C7: audit cache hit
                 if let Some(ref pipeline) = self.security_pipeline {
                     let mut guard = pipeline.lock().unwrap();
-                    self.audit_or_fail(
+                    let _ = self.audit_or_fail(
                         &mut guard,
                         &method,
                         &peer_clone,
@@ -202,32 +239,52 @@ impl DashboardIpcService {
                     )
                 });
             }
+
+            // Step 3: C4 replay protection — record request_id only after
+            // confirming no cached response exists.
+            if let Err(err) = guard.check_replay_and_record(&request_id) {
+                let err_code = err.code.clone();
+                // C7: audit replay denial
+                let _ = self.audit_or_fail(
+                    &mut guard,
+                    &method,
+                    peer,
+                    false,
+                    Some(&err),
+                    &err_code,
+                    is_high_risk,
+                    &request_id,
+                );
+                return IpcResponse::error(request.request_id.clone(), err);
+            }
             drop(guard);
         }
 
         // ---- dispatch ----
         let dispatch_result = self.dispatch(&request).await;
-        let response = match &dispatch_result {
+        let mut response = match &dispatch_result {
             Ok(result) => IpcResponse::ok(request.request_id.clone(), result.clone()),
             Err(error) => IpcResponse::error(request.request_id.clone(), error.clone()),
         };
 
-        // ---- post-dispatch: cache + audit ----
+        // ---- post-dispatch: cache + audit (fail-closed for high-risk) ----
         if let Some(ref pipeline) = self.security_pipeline {
             let mut guard = pipeline.lock().unwrap();
 
-            // Cache dispatch result
+            // C8: cache dispatch result
             if let Ok(response_json) = serde_json::to_string(&response) {
                 guard.cache_result(&request_id, &response_json);
             }
 
-            // Audit dispatch outcome
+            // C7: audit dispatch outcome
             let (allowed, denial_error, denial_code): (bool, Option<&DashboardError>, &str) =
                 match &dispatch_result {
                     Ok(_) => (true, None, "dispatch_ok"),
                     Err(err) => (false, Some(err), err.code.as_str()),
                 };
-            self.audit_or_fail(
+            // When audit write fails for a high-risk command with fail_closed
+            // strategy, override the normal response with a denial.
+            if let Err(audit_err) = self.audit_or_fail(
                 &mut guard,
                 &method,
                 peer,
@@ -236,14 +293,28 @@ impl DashboardIpcService {
                 denial_code,
                 is_high_risk,
                 &request_id,
-            );
+            ) && is_high_risk
+            {
+                tracing::error!(
+                    target: "rust_supervisor::ipc::security::audit",
+                    %method,
+                    %request_id,
+                    ?audit_err,
+                    "HIGH-RISK command denied because audit write failed (fail-closed)"
+                );
+                response = IpcResponse::error(request.request_id.clone(), audit_err);
+            }
         }
 
         response
     }
 
-    /// Writes an audit record. For high-risk commands, audit failure
-    /// returns a denial response instead of silently dropping the record.
+    /// Writes an audit record and returns the result.
+    ///
+    /// For high-risk commands with `fail_closed` strategy, audit failure
+    /// returns `Err(DashboardError)` so the caller can return a denial
+    /// response. The `write_audit` method on the pipeline already implements
+    /// the strategy dispatch; this method just logs and propagates.
     #[allow(clippy::too_many_arguments)]
     fn audit_or_fail(
         &self,
@@ -255,31 +326,27 @@ impl DashboardIpcService {
         denial_code: &str,
         is_high_risk: bool,
         request_id: &str,
-    ) {
-        if let Err(_err) = guard.write_audit(method, peer, allowed, denial_error, denial_code) {
-            let _count = crate::ipc::security::audit::alerts::increment_failure_count();
-            tracing::error!(
-                target: "rust_supervisor::ipc::security::audit",
-                %method,
-                high_risk = is_high_risk,
-                "audit write failed"
-            );
-            if is_high_risk {
-                // High-risk command: fail closed — we cannot proceed without audit.
-                // The caller must check the returned response; this method
-                // cannot return directly, so we set a flag via tracing error
-                // and rely on the caller to abort.
-                // In practice the caller should short-circuit after this.
-                // Log as critical and let the caller's response override
-                // the normal return path.
+    ) -> Result<(), DashboardError> {
+        guard
+            .write_audit(
+                method,
+                peer,
+                allowed,
+                denial_error,
+                denial_code,
+                is_high_risk,
+            )
+            .map_err(|err| {
                 tracing::error!(
                     target: "rust_supervisor::ipc::security::audit",
                     %method,
                     %request_id,
-                    "HIGH-RISK command denied because audit write failed (fail-closed)"
+                    high_risk = is_high_risk,
+                    ?err,
+                    "audit write failed"
                 );
-            }
-        }
+                err
+            })
     }
 
     /// Dispatches one request by method.
@@ -331,6 +398,9 @@ impl DashboardIpcService {
 
     /// Builds the current dashboard state.
     ///
+    /// Increments state_generation on every call so dashboard clients
+    /// can detect state changes for cache invalidation.
+    ///
     /// # Arguments
     ///
     /// This function has no arguments.
@@ -339,6 +409,9 @@ impl DashboardIpcService {
     ///
     /// Returns the current [`DashboardState`].
     pub async fn current_dashboard_state(&self) -> Result<DashboardState, DashboardError> {
+        // Increment state generation on every read so clients can detect
+        // changes for cache invalidation and delta computation.
+        let generation = self.state_generation.fetch_add(1, Ordering::Relaxed) + 1;
         let registration = self.registration_payload().ok();
         let mut state = build_dashboard_state(
             DashboardStateInput {
@@ -347,7 +420,7 @@ impl DashboardIpcService {
                     .as_ref()
                     .map(|registration| registration.display_name.clone())
                     .unwrap_or_else(|| self.config.target_id.clone()),
-                state_generation: self.state_generation,
+                state_generation: generation,
                 recent_limit: 128,
             },
             &self.spec,
@@ -477,12 +550,87 @@ pub fn bind_dashboard_listener(
             )
         })?;
     }
-    UnixListener::bind(&config.path).map_err(|error| {
+    let listener = UnixListener::bind(&config.path).map_err(|error| {
         DashboardError::new(
             "ipc_bind_failed",
             "ipc_bind",
             Some(config.target_id.clone()),
             format!("failed to bind target IPC socket: {error}"),
+            true,
+        )
+    })?;
+
+    // ---- enforce socket permissions immediately after bind ----
+    let mode = parse_permissions_string(&config.permissions, &config.target_id)?;
+    set_socket_permissions(&config.path, mode, &config.target_id)?;
+
+    Ok(listener)
+}
+
+/// Parses a Unix permission octal string (e.g. "0600", "0777") into a
+/// `u32` mode bits, rejecting malformed or overly permissive values.
+///
+/// # Arguments
+///
+/// - `perm_str`: Permission string, typically "0600".
+/// - `target_id`: Target identifier for error messages.
+///
+/// # Returns
+///
+/// Returns the mode bits on success.
+fn parse_permissions_string(perm_str: &str, target_id: &str) -> Result<u32, DashboardError> {
+    // Must be 4 octal digits, e.g. "0600".
+    if perm_str.len() != 4 || !perm_str.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(DashboardError::validation(
+            "ipc_bind",
+            Some(target_id.to_owned()),
+            format!("dashboard.permissions must be a 4-digit octal string, got \"{perm_str}\""),
+        ));
+    }
+    let mode = u32::from_str_radix(perm_str, 8).map_err(|_| {
+        DashboardError::validation(
+            "ipc_bind",
+            Some(target_id.to_owned()),
+            format!("dashboard.permissions \"{perm_str}\" is not valid octal"),
+        )
+    })?;
+    // Reject world-writable sockets (others write bit set).
+    if mode & 0o002 != 0 {
+        return Err(DashboardError::validation(
+            "ipc_bind",
+            Some(target_id.to_owned()),
+            format!(
+                "dashboard.permissions \"{perm_str}\" grants world-write access, \
+                 which is not allowed for Unix domain sockets"
+            ),
+        ));
+    }
+    Ok(mode)
+}
+
+/// Sets Unix socket file permissions using `std::fs::set_permissions`.
+///
+/// # Arguments
+///
+/// - `path`: Socket file path.
+/// - `mode`: Permission mode bits (e.g. 0o600).
+/// - `target_id`: Target identifier for error messages.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when permissions were applied.
+fn set_socket_permissions(
+    path: &std::path::Path,
+    mode: u32,
+    target_id: &str,
+) -> Result<(), DashboardError> {
+    let permissions = std::fs::Permissions::from_mode(mode);
+    std::fs::set_permissions(path, permissions).map_err(|error| {
+        DashboardError::new(
+            "ipc_set_permissions_failed",
+            "ipc_bind",
+            Some(target_id.to_owned()),
+            format!("failed to set socket permissions to {mode:#o}: {error}"),
             true,
         )
     })
@@ -625,7 +773,8 @@ pub fn validate_command(command: &ControlCommandRequest) -> Result<(), Dashboard
     Ok(())
 }
 
-/// Executes a validated command through a runtime handle.
+/// Executes a validated command through a runtime handle,
+/// preserving the relay-supplied command_id for end-to-end tracing.
 ///
 /// # Arguments
 ///
@@ -639,45 +788,75 @@ async fn execute_command(
     handle: &SupervisorHandle,
     command: &ControlCommandRequest,
 ) -> Result<CommandResult, DashboardError> {
+    // Build a CommandMeta with the relay-supplied command_id so that
+    // audit events and runtime state carry the same identifier that
+    // the relay and UI see.
+    let meta = crate::control::command::CommandMeta::with_id(
+        crate::control::command::CommandId::from_uuid(
+            command
+                .command_id
+                .parse::<uuid::Uuid>()
+                .unwrap_or_else(|_| uuid::Uuid::new_v4()),
+        ),
+        &command.requested_by,
+        &command.reason,
+    );
+
     let result = match command.command {
         ControlCommandKind::RestartChild => {
             handle
-                .restart_child(child_id(command)?, &command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::RestartChild {
+                    meta: meta.clone(),
+                    child_id: child_id(command)?,
+                })
                 .await
         }
         ControlCommandKind::PauseChild => {
             handle
-                .pause_child(child_id(command)?, &command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::PauseChild {
+                    meta: meta.clone(),
+                    child_id: child_id(command)?,
+                })
                 .await
         }
         ControlCommandKind::ResumeChild => {
             handle
-                .resume_child(child_id(command)?, &command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::ResumeChild {
+                    meta: meta.clone(),
+                    child_id: child_id(command)?,
+                })
                 .await
         }
         ControlCommandKind::QuarantineChild => {
             handle
-                .quarantine_child(child_id(command)?, &command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::QuarantineChild {
+                    meta: meta.clone(),
+                    child_id: child_id(command)?,
+                })
                 .await
         }
         ControlCommandKind::RemoveChild => {
             handle
-                .remove_child(child_id(command)?, &command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::RemoveChild {
+                    meta: meta.clone(),
+                    child_id: child_id(command)?,
+                })
                 .await
         }
         ControlCommandKind::AddChild => {
             handle
-                .add_child(
-                    SupervisorPath::root(),
-                    command.target.child_manifest.clone().unwrap_or_default(),
-                    &command.requested_by,
-                    &command.reason,
-                )
+                .execute_with_command_id(crate::control::command::ControlCommand::AddChild {
+                    meta: meta.clone(),
+                    target: SupervisorPath::root(),
+                    child_manifest: command.target.child_manifest.clone().unwrap_or_default(),
+                })
                 .await
         }
         ControlCommandKind::ShutdownTree => {
             handle
-                .shutdown_tree(&command.requested_by, &command.reason)
+                .execute_with_command_id(crate::control::command::ControlCommand::ShutdownTree {
+                    meta: meta.clone(),
+                })
                 .await
         }
     };
@@ -734,10 +913,27 @@ fn unix_nanos_now() -> u128 {
 
 /// Returns `true` when the method is a high-risk command that must not
 /// execute without a successful audit write (fail-closed).
-fn is_high_risk_command(method: &str) -> bool {
+///
+/// When a security pipeline is configured, reads the method list from
+/// `AuthorizationConfig.high_risk_commands`. Otherwise falls back to
+/// a hardcoded set that includes all write/destructive commands plus
+/// pause and resume.
+fn is_high_risk_command(method: &str, service: &DashboardIpcService) -> bool {
+    // Prefer configured list when security pipeline is available.
+    if let Some(ref pipeline) = service.security_pipeline {
+        if let Ok(guard) = pipeline.lock() {
+            let configured = guard.high_risk_methods();
+            if !configured.is_empty() {
+                return configured.iter().any(|m| m == method);
+            }
+        }
+    }
+    // Fallback: all write/destructive commands including pause/resume.
     matches!(
         method,
         "command.restart_child"
+            | "command.pause_child"
+            | "command.resume_child"
             | "command.quarantine_child"
             | "command.remove_child"
             | "command.shutdown_tree"

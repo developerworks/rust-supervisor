@@ -25,7 +25,14 @@ use tokio::net::{UnixListener, UnixStream};
 use tokio::task::{JoinHandle, JoinSet};
 
 /// Default maximum frame size for bounded frame reader: 1 MiB.
-const DEFAULT_MAX_FRAME_BYTES: usize = 1_048_576;
+pub(crate) const DEFAULT_MAX_FRAME_BYTES: usize = 1_048_576;
+
+/// Maximum concurrent IPC connections (C10 resource boundary).
+const MAX_CONCURRENT_CONNECTIONS: usize = 64;
+
+/// Per-connection idle timeout: drop connections that send no complete
+/// frame within this duration (C10 resource boundary).
+const CONNECTION_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
 
 /// Per-process connection counter for unique connection_id generation.
 static CONNECTION_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -135,6 +142,10 @@ fn start_heartbeat_task(config: ValidatedDashboardIpcConfig) -> Option<JoinHandl
 }
 
 /// Accepts target-side IPC connections until the listener fails or is aborted.
+///
+/// Enforces a maximum concurrent connection limit (`MAX_CONCURRENT_CONNECTIONS`)
+/// to prevent resource exhaustion. When the limit is reached, new connections
+/// are accepted but immediately dropped with a log warning.
 async fn run_accept_loop(
     listener: UnixListener,
     service: Arc<DashboardIpcService>,
@@ -146,6 +157,14 @@ async fn run_accept_loop(
             accepted = listener.accept() => {
                 match accepted {
                     Ok((stream, _)) => {
+                        if connections.len() >= MAX_CONCURRENT_CONNECTIONS {
+                            tracing::warn!(
+                                target: "rust_supervisor::dashboard::ipc",
+                                "dashboard IPC connection limit reached ({MAX_CONCURRENT_CONNECTIONS}), dropping new connection"
+                            );
+                            drop(stream);
+                            continue;
+                        }
                         let service = Arc::clone(&service);
                         let target_id = target_id.clone();
                         connections.spawn(async move {
@@ -174,7 +193,8 @@ async fn run_accept_loop(
 }
 
 /// Handles one IPC connection with bounded frame reading, real peer
-/// credential extraction, and per-connection unique identifier.
+/// credential extraction, per-connection unique identifier,
+/// and idle timeout (C10 resource boundary).
 async fn handle_connection(
     stream: UnixStream,
     service: Arc<DashboardIpcService>,
@@ -204,22 +224,43 @@ async fn handle_connection(
         )
     })?;
 
-    let mut reader = BoundedFrameReader::new(stream, DEFAULT_MAX_FRAME_BYTES);
+    // Use C5 request size limit when security pipeline is configured,
+    // otherwise fall back to 1 MiB default.
+    let max_frame_bytes = service.max_frame_bytes();
+    let mut reader = BoundedFrameReader::new(stream, max_frame_bytes);
     loop {
-        match reader.read_frame().await {
-            Ok(Some(raw_frame)) => {
+        // Enforce per-connection idle timeout: if no complete frame
+        // arrives within CONNECTION_IDLE_TIMEOUT, drop the connection.
+        let frame = tokio::time::timeout(CONNECTION_IDLE_TIMEOUT, reader.read_frame()).await;
+        match frame {
+            Ok(Ok(Some(raw_frame))) => {
                 let raw_body_len = raw_frame.len();
                 let response =
                     response_for_line(&service, &raw_frame, &peer, &connection_id, raw_body_len)
                         .await;
                 write_response(&mut reader, &response, &target_id).await?;
             }
-            Ok(None) => {
+            Ok(Ok(None)) => {
                 // EOF — peer closed connection gracefully
                 return Ok(());
             }
-            Err(error) => {
+            Ok(Err(error)) => {
                 return Err(error);
+            }
+            Err(_elapsed) => {
+                tracing::warn!(
+                    target: "rust_supervisor::dashboard::ipc",
+                    %connection_id,
+                    "dashboard IPC connection idle timeout after {}s",
+                    CONNECTION_IDLE_TIMEOUT.as_secs(),
+                );
+                return Err(DashboardError::new(
+                    "ipc_idle_timeout",
+                    "ipc_read",
+                    Some(target_id),
+                    "connection idle timeout".to_owned(),
+                    false,
+                ));
             }
         }
     }

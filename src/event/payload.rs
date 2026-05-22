@@ -32,9 +32,12 @@ impl FiniteF64 {
     ///
     /// # Panics
     ///
-    /// Panics if `value` is NaN.
+    /// Panics if `value` is NaN or infinity.
     pub fn new(value: f64) -> Self {
-        assert!(!value.is_nan(), "FiniteF64 does not support NaN");
+        assert!(
+            value.is_finite(),
+            "FiniteF64 requires a finite value, got {value}"
+        );
         Self(value)
     }
 
@@ -64,11 +67,13 @@ mod finite_f64_serde {
         value.serialize(serializer)
     }
 
-    /// Deserializes an `f64` from a JSON number, rejecting NaN.
+    /// Deserializes an `f64` from a JSON number, rejecting NaN and infinity.
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
         let value = f64::deserialize(deserializer)?;
-        if value.is_nan() {
-            return Err(serde::de::Error::custom("FiniteF64 does not support NaN"));
+        if !value.is_finite() {
+            return Err(serde::de::Error::custom(format!(
+                "FiniteF64 requires a finite value, got {value}"
+            )));
         }
         Ok(value)
     }

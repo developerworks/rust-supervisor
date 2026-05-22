@@ -428,7 +428,7 @@ impl SupervisionPipeline {
             restart_limit.map(|limit| limit.max_restarts.saturating_sub(restart_failure_count));
 
         let limit_exhausted =
-            restart_limit.is_some_and(|limit| restart_failure_count > limit.max_restarts);
+            restart_limit.is_some_and(|limit| restart_failure_count >= limit.max_restarts);
         let group_id = plan.group.clone();
         let should_restart = ctx
             .exit_classification

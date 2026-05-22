@@ -13,9 +13,43 @@ use crate::control::outcome::{
 };
 use crate::readiness::signal::ReadinessState;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::collections::BTreeMap;
+
+/// Serializes a u128 nanosecond timestamp as a string to preserve
+/// precision across JSON boundaries (JavaScript Number loses precision
+/// above 2^53).
+pub fn serialize_nanos<S>(value: &u128, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&value.to_string())
+}
+
+/// Deserializes a u128 nanosecond timestamp from a string or number.
+pub fn deserialize_nanos<'de, D>(deserializer: D) -> Result<u128, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+    // Try string first, then number
+    let s = String::deserialize(deserializer)
+        .map_err(|_| D::Error::custom("expected a string or number for nanosecond timestamp"))?;
+    s.parse::<u128>()
+        .map_err(|e| D::Error::custom(format!("invalid nanos: {e}")))
+}
+
+/// Serializes an `Option<u128>` nanosecond timestamp as an optional string.
+pub fn serialize_nanos_opt<S>(value: &Option<u128>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match value {
+        Some(v) => serializer.serialize_str(&v.to_string()),
+        None => serializer.serialize_none(),
+    }
+}
 
 /// Supported command metadata sent to the relay.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -108,6 +142,7 @@ pub struct DashboardState {
     /// Configuration version string.
     pub config_version: String,
     /// Generated time as Unix nanoseconds.
+    #[serde(serialize_with = "serialize_nanos")]
     pub generated_at_unix_nanos: u128,
     /// Monotonic state generation for this target.
     pub state_generation: u64,
@@ -413,7 +448,12 @@ impl From<ChildControlFailurePhase> for DashboardChildControlFailurePhase {
 /// Liveness facts shown by dashboard runtime records.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardChildLivenessState {
-    /// Last heartbeat as Unix nanoseconds.
+    /// Last heartbeat as Unix nanoseconds (string in JSON).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_nanos_opt"
+    )]
     pub last_heartbeat_at_unix_nanos: Option<u128>,
     /// Whether the heartbeat is stale.
     pub heartbeat_stale: bool,
@@ -444,6 +484,7 @@ impl DashboardChildLivenessState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardRestartLimitState {
     /// Restart accounting window in milliseconds.
+    #[serde(serialize_with = "serialize_nanos")]
     pub window_millis: u128,
     /// Restart limit inside the window.
     pub limit: u32,
@@ -454,6 +495,7 @@ pub struct DashboardRestartLimitState {
     /// Whether the restart limit is exhausted.
     pub exhausted: bool,
     /// Last update timestamp in Unix nanoseconds.
+    #[serde(serialize_with = "serialize_nanos")]
     pub updated_at_unix_nanos: u128,
 }
 
@@ -936,7 +978,8 @@ pub struct EventRecord {
     pub target_path: String,
     /// Optional child identifier.
     pub child_id: Option<String>,
-    /// Occurred time as Unix nanoseconds.
+    /// Occurred time as Unix nanoseconds (string in JSON).
+    #[serde(serialize_with = "serialize_nanos")]
     pub occurred_at_unix_nanos: u128,
     /// Configuration version.
     pub config_version: String,
@@ -959,7 +1002,8 @@ pub struct LogRecord {
     pub message: String,
     /// Structured log fields.
     pub fields: BTreeMap<String, String>,
-    /// Occurred time as Unix nanoseconds.
+    /// Occurred time as Unix nanoseconds (string in JSON).
+    #[serde(serialize_with = "serialize_nanos")]
     pub occurred_at_unix_nanos: u128,
 }
 
@@ -1010,6 +1054,7 @@ pub struct ControlCommandRequest {
     /// Whether dangerous command confirmation is present.
     pub confirmed: bool,
     /// Request time as Unix nanoseconds.
+    #[serde(serialize_with = "serialize_nanos")]
     pub requested_at_unix_nanos: u128,
 }
 
@@ -1029,6 +1074,11 @@ pub struct ControlCommandResult {
     /// Optional state delta.
     pub state_delta: Option<Value>,
     /// Completion time as Unix nanoseconds.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_nanos_opt"
+    )]
     pub completed_at_unix_nanos: Option<u128>,
 }
 
@@ -1051,6 +1101,7 @@ pub struct AuditEvent {
     pub reason: String,
     /// Result summary.
     pub result: String,
-    /// Occurred time as Unix nanoseconds.
+    /// Occurred time as Unix nanoseconds (string in JSON).
+    #[serde(serialize_with = "serialize_nanos")]
     pub occurred_at_unix_nanos: u128,
 }

@@ -48,3 +48,34 @@ jobs:
       - name: Publish dry-run (publish_dry_run)
         id: publish_dry_run
         run: cargo publish --dry-run
+
+      - name: Coding standard check (coding_standard)
+        id: coding_standard
+        run: bash scripts/check-coding-standard.sh
+
+      - name: Maintainability check (maintainability)
+        id: maintainability
+        run: bash scripts/check-maintainability.sh
+
+      - name: Generate SBOM (generate_sbom)
+        id: generate_sbom
+        run: bash scripts/generate-sbom.sh
+
+      - name: Validate SBOM (validate_sbom)
+        id: validate_sbom
+        run: bash scripts/validate-sbom.sh
+
+  # ---- Cross-platform compile check (core supervision only on non-Unix) ----
+  cross-platform-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88"
+      - name: Compile check (${{ matrix.os }})
+        run: cargo check

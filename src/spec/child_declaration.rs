@@ -219,8 +219,13 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             ),
         };
 
-        // Map readiness using the existing ReadinessPolicy::Immediate as default.
-        let readiness_policy = crate::readiness::signal::ReadinessPolicy::Immediate;
+        // Map readiness: when ReadinessConfig is present, use Explicit
+        // so the child must report readiness before being marked ready;
+        // otherwise Immediate.
+        let readiness_policy = match &decl.readiness {
+            Some(_) => crate::readiness::signal::ReadinessPolicy::Explicit,
+            None => crate::readiness::signal::ReadinessPolicy::Immediate,
+        };
 
         let command_permissions = decl.command_permissions.unwrap_or_default();
 

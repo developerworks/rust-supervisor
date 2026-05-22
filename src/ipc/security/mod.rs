@@ -19,6 +19,7 @@ use crate::config::ipc_security::IpcSecurityConfig;
 use crate::dashboard::error::DashboardError;
 use std::collections::HashMap;
 
+pub use self::audit::AuditFailureStrategy;
 use self::audit::AuditRecord;
 use self::idempotency::IdempotencyCache;
 use self::limits::TokenBucket;
@@ -27,7 +28,6 @@ use self::replay::ReplayWindow;
 /// Assembled IPC security pipeline holding all control point instances.
 pub struct IpcSecurityPipeline {
     /// Stored configuration for inspection.
-    #[allow(dead_code)]
     config: IpcSecurityConfig,
     /// Root audit configuration used by C7.
     audit_config: AuditConfig,
@@ -72,18 +72,23 @@ impl IpcSecurityPipeline {
         }
     }
 
-    /// Runs pre-dispatch security checks.
+    /// Runs pre-dispatch security checks, excluding C4 (replay) and C8
+    /// (idempotency) which are handled separately to resolve ordering.
     ///
-    /// Execution order (per contract):
-    /// C6 → C5 → C2 → C4 → C3
+    /// Execution order (per contract, with corrected C4/C8 ordering):
+    /// C6 → C5 → C2 → C3
     ///
-    /// C1 (socket owner) runs at bind time and is not in the per-request
-    /// pipeline. C9 (allowlist) runs at extension points.
+    /// C4 (replay protection) and C8 (idempotency) are ordered by the
+    /// caller: C8 is checked first; if the response is already cached,
+    /// it is returned without recording in C4. Otherwise C4 records the
+    /// request_id and dispatch proceeds — see `check_replay_and_record`.
+    ///
+    /// C1 (socket owner) runs at bind time. C9 (allowlist) runs at
+    /// extension points. C7 (audit) runs post-dispatch.
     ///
     /// # Arguments
     ///
     /// - `method`: IPC method name.
-    /// - `request_id`: Request identifier (for C4 replay check and C8 cache).
     /// - `raw_body_len`: Byte length of the raw request body (for C5).
     /// - `peer_identity`: Extracted peer identity snapshot (for C2/C3).
     /// - `connection_id`: Opaque connection identifier (for per-connection C6).
@@ -91,12 +96,10 @@ impl IpcSecurityPipeline {
     /// # Returns
     ///
     /// Returns `CheckOutcome::Passed` when all checks pass, or
-    /// `CheckOutcome::Denied(error)` with the denial error. The caller
-    /// must write audit records and execute the actual dispatch.
+    /// `CheckOutcome::Denied(error)` with the denial error.
     pub fn check(
         &mut self,
         method: &str,
-        request_id: &str,
         raw_body_len: usize,
         peer_identity: &peer_identity::PeerIdentity,
         connection_id: &str,
@@ -139,18 +142,6 @@ impl IpcSecurityPipeline {
             return CheckOutcome::Denied(err);
         }
 
-        // C4: Replay protection
-        if self.config.replay_protection.enabled
-            && let Err(err) = self.replay_window.check_and_record(request_id)
-        {
-            tracing::warn!(
-                target: "rust_supervisor::ipc::security::replay",
-                %request_id,
-                "replay detected"
-            );
-            return CheckOutcome::Denied(err);
-        }
-
         // C3: Command authorization
         if let Err(err) =
             authz::verify_authorization(method, peer_identity.uid, &self.config.authorization)
@@ -164,9 +155,29 @@ impl IpcSecurityPipeline {
             return CheckOutcome::Denied(err);
         }
 
-        // C8: Idempotency — check cache before letting dispatch happen
-        // The caller checks cache hit via `check_idempotency`.
         CheckOutcome::Passed
+    }
+
+    /// Checks C4 replay protection and records the request_id.
+    ///
+    /// Must be called **after** C8 idempotency check: if the response is
+    /// already cached, the caller returns early without recording in C4.
+    /// This prevents C4 from rejecting a legitimate retry that hits the
+    /// idempotency cache.
+    ///
+    /// # Arguments
+    ///
+    /// - `request_id`: Request identifier to check and record.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` for a first submission, or
+    /// `Err(DashboardError)` with code `replay_detected` for a replay.
+    pub fn check_replay_and_record(&mut self, request_id: &str) -> Result<(), DashboardError> {
+        if !self.config.replay_protection.enabled {
+            return Ok(());
+        }
+        self.replay_window.check_and_record(request_id)
     }
 
     /// Checks the idempotency cache for a cached response (C8).
@@ -202,11 +213,62 @@ impl IpcSecurityPipeline {
         }
     }
 
+    /// Returns the C5 request size limit in bytes, or `None` if disabled.
+    pub fn request_size_limit_bytes(&self) -> Option<usize> {
+        if self.config.request_size_limit.enabled {
+            Some(self.config.request_size_limit.max_bytes)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the configured high-risk command method list.
+    ///
+    /// This is the list from `AuthorizationConfig.high_risk_commands`.
+    /// When empty (the config is not populated), the caller should
+    /// fall back to a hardcoded default set.
+    pub fn high_risk_methods(&self) -> &[String] {
+        &self.config.authorization.high_risk_commands
+    }
+
+    /// Checks whether an external command path is allowed by C9 allowlist.
+    ///
+    /// This is called at extension points where external executables may
+    /// be invoked under supervisor control. The allowlist rejects paths
+    /// that are not explicitly configured.
+    ///
+    /// # Arguments
+    ///
+    /// - `path`: Absolute executable path to check.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when the path is allowed, or
+    /// `Err(DashboardError)` with `allowlist_empty` or `allowlist_denied`.
+    pub fn check_ext_command_allowlist(&self, path: &str) -> Result<(), DashboardError> {
+        crate::ipc::security::allowlist::check_allowlist(path, &self.config.allowlist)
+    }
+
+    /// Returns a reference to the audit backend for health checks.
+    pub fn audit_backend(&self) -> &audit::AuditBackend {
+        &self.audit
+    }
+
+    /// Returns the failure strategy from config.
+    fn audit_failure_strategy(&self) -> audit::AuditFailureStrategy {
+        audit::AuditFailureStrategy::from_config(&self.audit_config.failure_strategy)
+    }
+
     /// Writes an audit record after dispatch (C7).
     ///
     /// Returns `Ok(())` on success or `Err(DashboardError)` when the audit
     /// backend is unwritable. The caller should fail closed for high-risk
     /// commands.
+    ///
+    /// When `is_high_risk` is `true` and the configured failure strategy is
+    /// `fail_closed`, any backend write error is propagated so the caller
+    /// can reject the command. When `defer_bounded`, errors are logged but
+    /// not propagated.
     ///
     /// # Arguments
     ///
@@ -215,11 +277,13 @@ impl IpcSecurityPipeline {
     /// - `allowed`: Whether the request was allowed.
     /// - `denial_error`: The denial error if denied.
     /// - `denial_control_point`: Which control point denied (C1-C9 or "dispatch").
+    /// - `is_high_risk`: Whether this is a high-risk command (e.g. restart, shutdown).
     ///
     /// # Returns
     ///
     /// Returns `Ok(())` when the audit record was written, or
-    /// `Err(DashboardError)` when the backend is unwritable.
+    /// `Err(DashboardError)` when the backend is unwritable and the
+    /// failure strategy requires fail-closed.
     pub fn write_audit(
         &mut self,
         method: &str,
@@ -227,6 +291,7 @@ impl IpcSecurityPipeline {
         allowed: bool,
         denial_error: Option<&DashboardError>,
         denial_control_point: &str,
+        is_high_risk: bool,
     ) -> Result<(), DashboardError> {
         if !self.audit_config.enabled {
             return Ok(());
@@ -250,15 +315,28 @@ impl IpcSecurityPipeline {
                 Some(denial_control_point.to_string())
             },
         };
-        self.audit.write(&record).map_err(|err| {
-            let count = audit::alerts::increment_failure_count();
-            tracing::error!(
-                target: "rust_supervisor::ipc::security::audit",
-                failure_count = count,
-                ?err,
-                "audit write failed"
-            );
-            err
-        })
+        let strategy = self.audit_failure_strategy();
+        let write_result = self.audit.write(&record);
+        match write_result {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                let count = audit::alerts::increment_failure_count();
+                tracing::error!(
+                    target: "rust_supervisor::ipc::security::audit",
+                    failure_count = count,
+                    ?err,
+                    high_risk = is_high_risk,
+                    strategy = ?strategy,
+                    "audit write failed"
+                );
+                // fail_closed + high-risk → propagate error so caller can reject
+                if is_high_risk && strategy == audit::AuditFailureStrategy::FailClosed {
+                    Err(err)
+                } else {
+                    // defer_bounded or non-high-risk: log only, swallow error
+                    Ok(())
+                }
+            }
+        }
     }
 }

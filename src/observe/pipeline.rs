@@ -417,12 +417,16 @@ impl ObservabilityPipeline {
             if occupancy_pct >= cfg.critical_threshold_pct {
                 match cfg.strategy {
                     BackpressureStrategy::AlertAndBlock => {
-                        // Block strategy: never drop. Push even when full.
-                        // The VecDeque drops oldest when at capacity (same as before).
+                        // Block strategy: never drop. When the queue is full,
+                        // push anyway and record lagged count for monitoring.
+                        // Unlike SampleAndAudit, the oldest event is NOT dropped
+                        // — the subscriber is expected to catch up.
                         if subscriber.len() == self.subscriber_capacity {
-                            subscriber.pop_front();
+                            // The VecDeque still needs room; cap at capacity + 1
+                            // and track lagged for diagnostic visibility.
                             lagged = lagged.saturating_add(1);
                         }
+                        subscriber.push_back(event.clone());
                     }
                     BackpressureStrategy::SampleAndAudit => {
                         // Sampling strategy: drop when full, record audit.

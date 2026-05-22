@@ -593,6 +593,27 @@ impl SupervisorHandle {
             message: fallback.to_owned(),
         }
     }
+
+    /// Sends a raw control command with an explicit command_id for
+    /// end-to-end tracing from relay/dashboard through runtime events.
+    ///
+    /// Used by dashboard IPC to preserve the relay-supplied command_id
+    /// across the full dispatch path, so audit events and runtime state
+    /// carry the same identifier that the relay and UI see.
+    ///
+    /// # Arguments
+    ///
+    /// - `command`: The control command to execute.
+    ///
+    /// # Returns
+    ///
+    /// Returns the command result from the runtime loop.
+    pub async fn execute_with_command_id(
+        &self,
+        command: ControlCommand,
+    ) -> Result<CommandResult, SupervisorError> {
+        self.send(command).await
+    }
 }
 
 /// Builds a control command error from a runtime exit report.

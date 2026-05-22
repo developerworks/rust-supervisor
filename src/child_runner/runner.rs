@@ -87,7 +87,8 @@ impl ChildRunner {
     ///
     /// Returns a [`ChildRunHandle`] when the child owns a task factory.
     pub fn spawn_once(&self, mut runtime: ChildRuntime) -> Result<ChildRunHandle, SupervisorError> {
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-support"))]
+        #[cfg(any(test, feature = "test-support"))]
         if crate::test_support::child_spawn::take_child_spawn_failure_attempt(&runtime.id) {
             return Err(SupervisorError::InvalidTransition {
                 message: "test hook: child spawn_once failure".to_owned(),

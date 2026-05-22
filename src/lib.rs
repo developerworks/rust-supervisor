@@ -27,6 +27,12 @@ pub mod spec;
 pub mod state;
 pub mod summary;
 pub mod task;
+/// Test support utilities (factory, time mocking, child spawning).
+///
+/// This module is public so that integration tests in `tests/` can use
+/// test fixtures. Downstream crate users should consider this an internal
+/// testing API — its public surface is not subject to semver guarantees.
+#[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 pub mod tree;
 pub mod types;

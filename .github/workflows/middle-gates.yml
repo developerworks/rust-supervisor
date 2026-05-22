@@ -31,6 +31,11 @@ jobs:
         with:
           tool: cargo-semver-checks
 
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
       - name: Dependency audit (dependency_audit)
         id: dependency_audit
         run: cargo audit --deny warnings

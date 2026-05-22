@@ -252,8 +252,10 @@ impl ConfigState {
         let spec = (*pending.child_spec).clone();
         self.children.push(spec);
 
-        // Update spec_hash.
-        self.spec_hash = format!("sha256-{}", transaction_id);
+        // Compute a deterministic spec hash from the current children list.
+        // Uses JSON serialization for cross-version stability; this is a
+        // content hash for change detection, not a cryptographic digest.
+        self.spec_hash = self.compute_spec_hash();
 
         Ok(())
     }
@@ -288,7 +290,7 @@ impl ConfigState {
             operation: "add_child".to_string(),
             state: "compensated".to_string(),
             child_name: pending.declaration.name.clone(),
-            declaration_hash: format!("sha256-{}", transaction_id),
+            declaration_hash: compute_declaration_hash(&pending.declaration),
             error: Some(error),
             correlation_id: None,
             child_id: Some(pending.child_spec.id.value.clone()),
@@ -312,6 +314,21 @@ impl ConfigState {
     /// Returns the current spec hash for audit reconciliation.
     pub fn hash(&self) -> &str {
         &self.spec_hash
+    }
+
+    /// Computes a deterministic spec hash from the current children list.
+    ///
+    /// Uses JSON serialization for cross-version stability. This is a
+    /// content hash for change detection and audit reconciliation, not a
+    /// cryptographic digest. Changes to the serialization format will
+    /// produce different hashes — this is acceptable because the hash is
+    /// always recomputed from the current state after restart.
+    pub fn compute_spec_hash(&self) -> String {
+        let json = serde_json::to_string(&self.children).unwrap_or_default();
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        json.hash(&mut hasher);
+        format!("v{:x}", hasher.finish())
     }
 
     /// Recovers pending transactions after a restart.
@@ -423,6 +440,8 @@ impl ConfigState {
             self.policy.child_restart_limit,
             Duration::from_millis(self.policy.child_restart_window_ms),
         ));
+        spec.metrics_enabled = self.observability.metrics_enabled;
+        spec.audit_enabled = self.observability.audit_enabled;
         spec.validate()?;
         Ok(spec)
     }
@@ -677,6 +696,50 @@ fn validate_group_inputs(
         }
     }
 
+    // Detect cycles in group dependency graph using Kahn's algorithm.
+    if !group_dependencies.is_empty() {
+        let mut in_degree: std::collections::HashMap<&str, usize> =
+            group_names.iter().map(|&n| (n, 0)).collect();
+        let mut adj: std::collections::HashMap<&str, Vec<&str>> =
+            group_names.iter().map(|&n| (n, Vec::new())).collect();
+        for dep in group_dependencies {
+            adj.entry(dep.from_group.as_str())
+                .or_default()
+                .push(dep.to_group.as_str());
+            *in_degree.entry(dep.to_group.as_str()).or_insert(0) += 1;
+        }
+        let mut queue: Vec<&str> = in_degree
+            .iter()
+            .filter(|(_, deg)| **deg == 0)
+            .map(|(n, _)| *n)
+            .collect();
+        let mut visited = 0;
+        while let Some(node) = queue.pop() {
+            visited += 1;
+            if let Some(neighbors) = adj.get(node) {
+                for &next in neighbors {
+                    if let Some(deg) = in_degree.get_mut(next) {
+                        *deg = deg.saturating_sub(1);
+                        if *deg == 0 {
+                            queue.push(next);
+                        }
+                    }
+                }
+            }
+        }
+        if visited != group_names.len() {
+            let cycle_nodes: Vec<&str> = in_degree
+                .iter()
+                .filter(|(_, deg)| **deg > 0)
+                .map(|(n, _)| *n)
+                .collect();
+            return Err(crate::error::types::SupervisorError::fatal_config(format!(
+                "Group dependency cycle detected among groups: {:?}",
+                cycle_nodes
+            )));
+        }
+    }
+
     for child_override in child_strategy_overrides {
         if !child_names.contains(child_override.child_id.as_str()) {
             return Err(crate::error::types::SupervisorError::fatal_config(format!(
@@ -894,4 +957,17 @@ fn validate_positive(
     } else {
         Ok(())
     }
+}
+
+/// Computes a deterministic hash of a ChildDeclaration content.
+///
+/// This is used for compensating record identification, not for
+/// cryptographic security. The hash is always recomputed from the
+/// declaration content after restart.
+fn compute_declaration_hash(declaration: &ChildDeclaration) -> String {
+    let json = serde_json::to_string(declaration).unwrap_or_default();
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    json.hash(&mut hasher);
+    format!("v{:x}", hasher.finish())
 }

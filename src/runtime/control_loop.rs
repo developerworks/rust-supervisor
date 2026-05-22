@@ -109,13 +109,21 @@ pub struct RuntimeControlState {
 }
 
 /// Builds initial [`ChildSlot`] records from the registry.
-fn build_initial_slots(registry: &RegistryStore) -> HashMap<ChildId, ChildSlot> {
+fn build_initial_slots(
+    registry: &RegistryStore,
+    spec: &SupervisorSpec,
+) -> HashMap<ChildId, ChildSlot> {
     registry
         .declaration_order()
         .iter()
         .filter_map(|child_id| {
             registry.child(child_id).map(|runtime| {
-                let slot = ChildSlot::new_placeholder(runtime.id.clone(), runtime.path.clone());
+                let mut slot = ChildSlot::new_placeholder(runtime.id.clone(), runtime.path.clone());
+                // Apply health_policy.stale_after and group from the child spec.
+                if let Some(child_spec) = spec.children.iter().find(|c| &c.id == child_id) {
+                    slot.stale_after = child_spec.health_policy.stale_after;
+                    slot.group = child_spec.group.clone();
+                }
                 (child_id.clone(), slot)
             })
         })
@@ -145,7 +153,7 @@ impl RuntimeControlState {
         let mut registry = RegistryStore::new();
         registry.register_tree(&tree)?;
         let time_base = RuntimeTimeBase::new();
-        let slots = build_initial_slots(&registry);
+        let slots = build_initial_slots(&registry, &spec);
 
         let meltdown_tracker = MeltdownTracker::new(spec.meltdown_policy);
         let failure_window = FailureWindow::new(spec.failure_window_config);
@@ -191,6 +199,13 @@ impl RuntimeControlState {
     }
 
     /// Starts every declared child in supervisor startup order.
+    ///
+    /// Children are spawned in topological order (dependencies first), but
+    /// readiness waiting (a child's dependencies must be ready before it
+    /// starts) is not yet implemented — this is tracked for a future slice.
+    /// As a result, children that declare `dependencies` will start in the
+    /// correct order but may begin executing before their dependencies
+    /// report readiness.
     ///
     /// # Arguments
     ///
@@ -263,7 +278,11 @@ impl RuntimeControlState {
         command.validate_audit_metadata()?;
         self.reconcile_stop_deadlines();
         match command {
-            ControlCommand::AddChild { child_manifest, .. } => {
+            ControlCommand::AddChild {
+                child_manifest,
+                meta: _,
+                target: _,
+            } => {
                 self.ensure_dynamic_child_allowed()?;
 
                 // Reject add_child when shutdown is in progress.
@@ -284,9 +303,6 @@ impl RuntimeControlState {
                 // Validate declaration against existing children.
                 let all_names: std::collections::HashSet<String> =
                     self.spec.children.iter().map(|c| c.name.clone()).collect();
-                let mut new_names = all_names.clone();
-                new_names.insert(declaration.name.clone());
-
                 validate_child_declaration(&declaration, &all_names).map_err(|e| {
                     SupervisorError::fatal_config(format!(
                         "Child validation failed at {}: {}",
@@ -294,15 +310,40 @@ impl RuntimeControlState {
                     ))
                 })?;
 
-                // Staged via begin_transaction — for now register directly
-                // since we operate inside the control loop's mutable state.
+                // Convert to ChildSpec and register in registry, slot, and spec.
                 let child_spec =
                     crate::spec::child::ChildSpec::try_from(declaration).map_err(|e| {
                         SupervisorError::fatal_config(format!("Child conversion failed: {e:?}"))
                     })?;
 
-                self.manifests.push(child_manifest.clone());
+                let child_id = child_spec.id.clone();
+                let path = crate::id::types::SupervisorPath::root().join(
+                    crate::id::types::ChildId::new(&child_spec.name)
+                        .value
+                        .clone(),
+                );
+
+                // Register in registry.
+                let runtime = crate::registry::entry::ChildRuntime::new(child_spec.clone(), path);
+                self.registry.register(runtime.clone()).map_err(|e| {
+                    SupervisorError::fatal_config(format!("Registry registration failed: {e}"))
+                })?;
+
+                // Create slot with default restart window.
+                let slot = crate::runtime::child_slot::ChildSlot::new(
+                    child_id.clone(),
+                    runtime.path.clone(),
+                    std::time::Duration::from_secs(60),
+                );
+                self.slots.insert(child_id.clone(), slot);
+
+                // Add to spec and manifests.
                 self.spec.children.push(child_spec);
+                self.manifests.push(child_manifest.clone());
+
+                // Spawn child start.
+                self.spawn_child_start(child_id.clone(), false, Duration::ZERO);
+
                 Ok(CommandResult::ChildAdded { child_manifest })
             }
             ControlCommand::RemoveChild { meta, child_id } => Ok(self.execute_stop_child_control(
@@ -586,7 +627,7 @@ impl RuntimeControlState {
             let _ignored = event_sender.send(format!("group_fuse_active:{group_id}:{}", child_id));
             // Mark all children in the affected group as non-restartable.
             for (_cid, slot) in self.slots.iter_mut() {
-                if slot.path.to_string().contains(group_id) {
+                if slot.group.as_deref() == Some(group_id.as_str()) {
                     slot.last_control_failure = Some(ChildControlFailure::new(
                         ChildControlFailurePhase::WaitCompletion,
                         format!("group_fuse_active:{group_id}"),
@@ -1233,7 +1274,7 @@ impl RuntimeControlState {
                 ChildStopState::NoActiveAttempt
             },
             runtime_state.restart_limit.clone(),
-            runtime_state.observe_liveness(self.time_base.now_unix_nanos()),
+            runtime_state.observe_liveness(self.time_base.now_unix_nanos(), &self.time_base),
             operation_before == operation,
             runtime_state.last_control_failure.clone(),
             None,
@@ -1262,6 +1303,34 @@ impl RuntimeControlState {
         meta: &CommandMeta,
         event_sender: &broadcast::Sender<String>,
     ) -> CommandResult {
+        // Unknown child: return an explicit unknown outcome instead of
+        // creating a placeholder slot. This ensures pause/remove/quarantine
+        // on non-existent children do not silently produce state changes.
+        if !self.slots.contains_key(&child_id) && self.registry.child(&child_id).is_none() {
+            return CommandResult::ChildControl {
+                outcome: ChildControlResult {
+                    child_id: child_id.clone(),
+                    operation_before: ChildControlOperation::Active,
+                    operation_after: ChildControlOperation::Active,
+                    cancel_delivered: false,
+                    idempotent: true,
+                    attempt: None,
+                    generation: None,
+                    stop_state: ChildStopState::Idle,
+                    restart_limit: RestartLimitState::default(),
+                    liveness: ChildLivenessState::new(
+                        None,
+                        false,
+                        crate::readiness::signal::ReadinessState::Unreported,
+                    ),
+                    failure: None,
+                    generation_fence: None,
+                    status: None,
+                    admission_conflict: None,
+                },
+            };
+        }
+
         if !self.slots.contains_key(&child_id) {
             let placeholder = self
                 .registry
@@ -1527,7 +1596,11 @@ impl RuntimeControlState {
         for child_id in plan.scope {
             self.spawn_child_start(child_id, true, delay);
         }
-        self.concurrent_gate.release();
+        // Note: gate is NOT released here — it remains active until
+        // each spawned child exits (handle_child_exit releases it).
+        // This ensures the concurrent restart limit constrains the
+        // number of *simultaneously restarting* children, not just
+        // the rate of restart initiation.
     }
 
     /// Emits a typed event for a restart throttle gate hit.
@@ -2136,7 +2209,8 @@ impl RuntimeControlState {
         let declaration_order = self.registry.declaration_order().to_vec();
         for child_id in declaration_order {
             if let Some(runtime_state) = self.slots.get_mut(&child_id) {
-                let liveness = runtime_state.observe_liveness(self.time_base.now_unix_nanos());
+                let liveness = runtime_state
+                    .observe_liveness(self.time_base.now_unix_nanos(), &self.time_base);
                 if let Some(event) = heartbeat_stale_event(runtime_state, &liveness) {
                     pending_events.push(event);
                 }
@@ -2147,7 +2221,8 @@ impl RuntimeControlState {
             if self.registry.child(child_id).is_some() {
                 continue;
             }
-            let liveness = runtime_state.observe_liveness(self.time_base.now_unix_nanos());
+            let liveness =
+                runtime_state.observe_liveness(self.time_base.now_unix_nanos(), &self.time_base);
             if let Some(event) = heartbeat_stale_event(runtime_state, &liveness) {
                 pending_events.push(event);
             }
@@ -2840,7 +2915,7 @@ fn build_child_control_outcome(
     time_base: &RuntimeTimeBase,
     generation_fence: Option<GenerationFenceOutcome>,
 ) -> ChildControlResult {
-    let liveness = runtime_state.observe_liveness(time_base.now_unix_nanos());
+    let liveness = runtime_state.observe_liveness(time_base.now_unix_nanos(), time_base);
     // Data model: status is None when there is no active attempt.
     let status = if runtime_state.attempt.is_some() {
         Some(runtime_state.status)

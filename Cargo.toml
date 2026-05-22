@@ -13,12 +13,7 @@ keywords = ["supervisor", "tokio", "lifecycle", "observability", "runtime"]
 categories = ["asynchronous", "concurrency", "config"]
 include = [
     "/src/**",
-    "/tests/**",
     "/examples/**",
-    "/manual/**",
-    "/docs/**",
-    "/artifacts/sbom/**",
-    "/artifacts/validation/**",
     "/README.md",
     "/README.zh.md",
     "/ASSUMPTIONS.md",
@@ -28,6 +23,10 @@ include = [
     "/Cargo.toml",
     "/Cargo.lock",
 ]
+
+[features]
+default = ["test-support"]
+test-support = []
 
 [lib]
 name = "rust_supervisor"

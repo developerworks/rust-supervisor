@@ -39,6 +39,22 @@ impl CommandId {
             value: Uuid::new_v4(),
         }
     }
+
+    /// Creates a command identifier from an existing UUID.
+    ///
+    /// Used by dashboard IPC when the relay supplies a command_id for
+    /// end-to-end tracing.
+    ///
+    /// # Arguments
+    ///
+    /// - `value`: UUID value to use.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`CommandId`] with the supplied UUID.
+    pub const fn from_uuid(value: Uuid) -> Self {
+        Self { value }
+    }
 }
 
 impl Default for CommandId {
@@ -60,7 +76,7 @@ pub struct CommandMeta {
 }
 
 impl CommandMeta {
-    /// Creates command metadata.
+    /// Creates command metadata with a newly generated command identifier.
     ///
     /// # Arguments
     ///
@@ -73,6 +89,32 @@ impl CommandMeta {
     pub fn new(requested_by: impl Into<String>, reason: impl Into<String>) -> Self {
         Self {
             command_id: CommandId::new(),
+            requested_by: requested_by.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Creates command metadata with an explicit command identifier.
+    ///
+    /// Used by dashboard IPC when the relay supplies a command_id for
+    /// end-to-end tracing across relay, target, and UI.
+    ///
+    /// # Arguments
+    ///
+    /// - `command_id`: Explicit command identifier.
+    /// - `requested_by`: Caller that requested the command.
+    /// - `reason`: Human-readable command reason.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`CommandMeta`] value with the supplied command identifier.
+    pub fn with_id(
+        command_id: CommandId,
+        requested_by: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self {
+            command_id,
             requested_by: requested_by.into(),
             reason: reason.into(),
         }

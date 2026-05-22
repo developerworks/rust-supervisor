@@ -5,9 +5,11 @@
 
 use crate::config::state::ConfigState;
 use crate::control::handle::SupervisorHandle;
-use crate::dashboard::config::validate_dashboard_ipc_config;
-use crate::dashboard::error::DashboardError;
-use crate::dashboard::runtime::start_dashboard_ipc_runtime;
+#[cfg(unix)]
+use crate::dashboard::{
+    config::validate_dashboard_ipc_config, error::DashboardError,
+    runtime::start_dashboard_ipc_runtime,
+};
 use crate::error::types::SupervisorError;
 use crate::observe::pipeline::ObservabilityPipeline;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
@@ -51,13 +53,16 @@ impl Supervisor {
     pub async fn start_from_config_state(
         state: ConfigState,
     ) -> Result<SupervisorHandle, SupervisorError> {
+        #[cfg(unix)]
         let audit_config = state.audit.clone();
+        #[cfg(unix)]
         let dashboard_config = state.dashboard.clone();
         let spec = state.to_supervisor_spec()?;
         let mut handle = Self::start(spec.clone()).await?;
-        let dashboard_config = validate_dashboard_ipc_config(dashboard_config.as_ref())
-            .map_err(dashboard_startup_error)?;
-        if let Some(dashboard_config) = dashboard_config {
+        #[cfg(unix)]
+        if let Some(dashboard_config) = validate_dashboard_ipc_config(dashboard_config.as_ref())
+            .map_err(dashboard_startup_error)?
+        {
             let dashboard_runtime =
                 start_dashboard_ipc_runtime(dashboard_config, audit_config, spec, handle.clone())
                     .map_err(dashboard_startup_error)?;
@@ -105,8 +110,8 @@ impl Supervisor {
         let observability = Arc::new(Mutex::new(ObservabilityPipeline::with_backpressure_config(
             spec.event_channel_capacity,
             spec.event_channel_capacity,
-            true,
-            true,
+            spec.metrics_enabled,
+            spec.audit_enabled,
             backpressure_config,
         )));
         let state = RuntimeControlState::new(

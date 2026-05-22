@@ -102,22 +102,22 @@ examples/     → 示例 (supervisor_quickstart, demo, restart_policy_lab 等)
 
 ```text
 specs/
-├── 001-create-supervisor-core/         [实现中] 基础核心
-├── 002-config-schema-support/          [实现中] 配置模型
-├── 003-supervisor-dashboard/           [实现中] 看板
-├── 004-1-runtime-lifecycle-guard/      [实现中] 运行时生命周期守卫
-├── 004-2-real-shutdown-pipeline/       [实现中] 真实关闭流水线
-├── 004-3-child-runtime-state-control/  [实现中] 子任务运行状态控制
-├── 004-4-generation-fencing/           [实现中] 代次隔离重启
-├── 005-1-failure-policy-reliability/   [实现中] 失败策略流水线
-├── 005-2-task-role-defaults/           [实现中] 任务角色默认值
-├── 006-1-platform-docs-ipc-security/   [实现中] 平台边界与 IPC 安全
-├── 006-2-release-supply-chain-gates/   [实现中] 发布门禁与供应链
-├── 006-3-lifecycle-shutdown-realism/   [实现中] 真实生命周期关闭
-| 006-4-restart-policy-production/    [已实现] 生产级重启策略
-| 006-5-typed-events-observability/   [已实现] 类型化事件
-| 006-6-config-dynamic-children/      [已实现] 配置与动态子任务
-| 006-7-chaos-soak-reliability/       [已实现] 混沌与浸泡测试
+├── 001-create-supervisor-core/         [已实现] 基础核心
+├── 002-config-schema-support/          [已实现] 配置模型
+├── 003-supervisor-dashboard/           [已实现] 看板
+├── 004-1-runtime-lifecycle-guard/      [已实现] 运行时生命周期守卫
+├── 004-2-real-shutdown-pipeline/       [已实现] 真实关闭流水线
+├── 004-3-child-runtime-state-control/  [已实现] 子任务运行状态控制
+├── 004-4-generation-fencing/           [已实现] 代次隔离重启
+├── 005-1-failure-policy-reliability/   [已实现] 失败策略流水线
+├── 005-2-task-role-defaults/           [已实现] 任务角色默认值
+├── 006-1-platform-docs-ipc-security/   [已实现] 平台边界与 IPC 安全
+├── 006-2-release-supply-chain-gates/   [已实现] 发布门禁与供应链
+├── 006-3-lifecycle-shutdown-realism/   [已实现] 真实生命周期关闭
+├── 006-4-restart-policy-production/    [已实现] 生产级重启策略
+├── 006-5-typed-events-observability/   [已实现] 类型化事件
+├── 006-6-config-dynamic-children/      [已实现] 配置与动态子任务
+├── 006-7-chaos-soak-reliability/       [已实现] 混沌与浸泡测试
 └── 006-8-product-bundle-runbooks/      [已实现] 生产包与运维手册
 ```
 

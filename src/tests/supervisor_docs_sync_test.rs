@@ -29,7 +29,7 @@ fn docs_reference_current_config_and_examples() {
     .collect::<Vec<_>>()
     .join("\n");
 
-    assert!(docs.contains("rust-config-tree(集中配置树) v0.1.9"));
+    assert!(docs.contains("rust-config-tree(集中配置树) v0.2.0"));
     assert!(docs.contains("supervisor_quickstart"));
     assert!(docs.contains("supervisor_tree_story"));
     assert!(docs.contains("runtime_control_story"));
