@@ -925,7 +925,7 @@ impl RuntimeControlState {
 
         // Step 4: active orphan degradation detection.
         // After shutdown, check if orphan count exceeds the threshold.
-        let threshold = self.shutdown.policy.max_orphan_threshold as u64;
+        let threshold = self.shutdown.policy.effective_max_orphan_threshold() as u64;
         if self.orphan_count >= threshold {
             let _ = event_sender.send(format!(
                 "fatal_orphan_overflow:count={}:threshold={}",
@@ -2676,9 +2676,37 @@ impl RuntimeControlState {
                 return;
             }
         }
-        let Some(runtime) = self.prepare_child_start(&child_id, is_restart) else {
+        let Some(mut runtime) = self.prepare_child_start(&child_id, is_restart) else {
             return;
         };
+
+        // Override isolation for previously orphaned slots.
+        // If a child was emergency-force-killed, its future probably never
+        // yielded — restarting it on the async worker pool would immediately
+        // starve another worker thread. Force BlockingPool instead.
+        if let Some(slot) = self.slots.get(&child_id)
+            && slot.orphaned
+        {
+            runtime.spec.isolation = crate::spec::child::Isolation::BlockingPool;
+        }
+
+        // Clean up orphaned file system resources before spawn.
+        // When a previous instance was emergency-force-killed, its Drop never
+        // ran — leaving behind sockets, PID files, and temp files. Removing
+        // them here prevents "Address already in use" errors on restart.
+        for path in &runtime.spec.cleanup_paths {
+            if let Err(error) = std::fs::remove_file(path) {
+                if error.kind() != std::io::ErrorKind::NotFound {
+                    tracing::warn!(
+                        child_id = %child_id,
+                        path = %path.display(),
+                        ?error,
+                        "failed to clean up orphaned resource before spawn",
+                    );
+                }
+            }
+        }
+
         let sender = self.command_sender.clone();
         if !delay.is_zero() {
             tokio::spawn(async move {
@@ -2827,7 +2855,7 @@ impl RuntimeControlState {
         let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
 
         // Step 4: active orphan degradation detection.
-        let threshold = self.shutdown.policy.max_orphan_threshold as u64;
+        let threshold = self.shutdown.policy.effective_max_orphan_threshold() as u64;
         if self.orphan_count >= threshold {
             let _ = event_sender.send(format!(
                 "fatal_orphan_overflow:count={}:threshold={}",

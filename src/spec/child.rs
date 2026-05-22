@@ -33,6 +33,29 @@ impl Default for TaskKind {
     }
 }
 
+/// Runtime isolation strategy for a child task.
+///
+/// Controls which tokio runtime the child's future is spawned into. Tasks
+/// that are prone to blocking (CPU-heavy loops, synchronous I/O) should use
+/// `BlockingPool` to avoid starving the async worker threads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Isolation {
+    /// Spawn on the default multi-threaded async worker pool.
+    /// Suitable for well-behaved async tasks that always yield at `.await`.
+    AsyncWorker,
+    /// Spawn on the dedicated `spawn_blocking` thread pool (up to 500 threads).
+    /// Use for tasks that may block or perform CPU-heavy work without `.await`.
+    BlockingPool,
+}
+
+impl Default for Isolation {
+    /// Returns the default isolation: [`AsyncWorker`](Isolation::AsyncWorker).
+    fn default() -> Self {
+        Self::AsyncWorker
+    }
+}
+
 /// Importance of a child to its parent supervisor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -272,6 +295,9 @@ pub struct ChildSpec {
     pub name: String,
     /// Child task kind.
     pub kind: TaskKind,
+    /// Runtime isolation strategy (default: AsyncWorker).
+    #[serde(default)]
+    pub isolation: Isolation,
     /// Optional factory for worker children.
     #[serde(skip)]
     #[schemars(skip)]
@@ -322,6 +348,11 @@ pub struct ChildSpec {
     /// Secret references for this child.
     #[serde(default)]
     pub secrets: Vec<SecretRef>,
+    /// File system paths (sockets, PID files, temp dirs) to clean up before
+    /// every spawn attempt. Prevents "Address already in use" errors when a
+    /// previous instance was orphaned by emergency force-kill.
+    #[serde(default)]
+    pub cleanup_paths: Vec<std::path::PathBuf>,
 }
 
 impl Debug for ChildSpec {
@@ -329,6 +360,7 @@ impl Debug for ChildSpec {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ChildSpec")
+            .field("isolation", &self.isolation)
             .field("id", &self.id)
             .field("name", &self.name)
             .field("kind", &self.kind)
@@ -392,6 +424,7 @@ impl ChildSpec {
             id,
             name: name.into(),
             kind,
+            isolation: Isolation::AsyncWorker,
             factory: Some(factory),
             restart_policy: RestartPolicy::Transient,
             shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
@@ -415,6 +448,7 @@ impl ChildSpec {
             command_permissions: CommandPermissions::default(),
             environment: Vec::new(),
             secrets: Vec::new(),
+            cleanup_paths: Vec::new(),
         }
     }
 

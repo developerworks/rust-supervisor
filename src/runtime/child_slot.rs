@@ -258,6 +258,11 @@ pub struct ChildSlot {
     /// Group membership (from ChildSpec.group) for structured group fuse.
     #[serde(skip)]
     pub group: Option<String>,
+    /// Whether this slot was ever orphaned by emergency_force_kill.
+    /// When true, subsequent restarts should use BlockingPool isolation
+    /// instead of the default async worker pool to avoid worker starvation.
+    #[serde(skip)]
+    pub orphaned: bool,
 }
 
 impl ChildSlot {
@@ -304,6 +309,7 @@ impl ChildSlot {
             last_observed_readiness: ReadinessState::Unreported,
             stale_after: Duration::from_secs(DEFAULT_HEARTBEAT_TIMEOUT_SECS),
             group: None,
+            orphaned: false,
         }
     }
 

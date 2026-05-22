@@ -232,4 +232,22 @@ impl TaskContext {
     pub fn readiness_receiver(&self) -> watch::Receiver<ReadinessState> {
         self.ready_signal.subscribe()
     }
+
+    /// Creates a minimal clone for use inside `spawn_blocking`.
+    ///
+    /// The returned context shares the same cancellation token and signal
+    /// senders, but is `Send + 'static` — suitable for passing into a
+    /// `tokio::task::spawn_blocking` closure that creates its own one-shot
+    /// runtime.
+    pub fn clone_for_blocking(&self) -> Self {
+        Self {
+            child_id: self.child_id.clone(),
+            path: self.path.clone(),
+            generation: self.generation,
+            child_start_count: self.child_start_count,
+            cancellation_token: self.cancellation_token.clone(),
+            ready_signal: self.ready_signal.clone(),
+            heartbeat_sender: self.heartbeat_sender.clone(),
+        }
+    }
 }

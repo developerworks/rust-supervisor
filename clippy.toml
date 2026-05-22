@@ -1,6 +1,6 @@
-# Disallow blocking I/O and synchronous locks in asynchronous contexts.
-# Subtask code must use tokio::fs, tokio::net, tokio::sync::Mutex,
-# and tokio::time::sleep instead.
+# Disallow blocking I/O, synchronous locks, and raw OS process spawns in
+# asynchronous contexts. Subtask code must use tokio::fs, tokio::net,
+# tokio::sync::Mutex, tokio::time::sleep, and tokio::process::Command instead.
 disallowed-methods = [
     "std::fs::read",
     "std::fs::write",
@@ -8,4 +8,5 @@ disallowed-methods = [
     "std::net::TcpStream",
     "std::thread::sleep",
     "std::sync::Mutex",
+    "std::process::Command",
 ]

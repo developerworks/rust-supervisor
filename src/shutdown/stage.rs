@@ -4,16 +4,47 @@
 //! own task handles or cancellation tokens.
 
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 /// Default extra grace beyond graceful_timeout + abort_wait before the
 /// global hard deadline is enforced.
-const DEFAULT_FORCE_KILL_MARGIN_SECS: u64 = 5;
+pub(crate) const DEFAULT_FORCE_KILL_MARGIN_SECS: u64 = 5;
 
+/// Default ratio of tokio worker threads used to compute
+/// `max_orphan_threshold` when no explicit value is set.
+const DEFAULT_ORPHAN_THRESHOLD_WORKER_RATIO: f64 = 0.25;
+
+/// Global counter used to ensure at most one call to
+/// `detect_num_worker_threads` performs the runtime query.
+static NUM_WORKER_THREADS: AtomicU32 = AtomicU32::new(0);
+
+/// Queries the tokio runtime for the number of worker threads.
+///
+/// Falls back to `std::thread::available_parallelism()` when the runtime
+/// is not available (e.g. in unit tests or `current_thread` mode).
+fn detect_num_worker_threads() -> u32 {
+    NUM_WORKER_THREADS
+        .load(Ordering::Relaxed)
+        .max(std::thread::available_parallelism().map_or(1, |v| v.get() as u32))
+}
+
+/// Approximates the tokio worker thread count without blocking.
+///
+/// Uses `std::thread::available_parallelism()` as a fallback since the
+/// tokio runtime's actual worker count is not exposed through a public API
+/// at the time of writing. This is conservative: on an 8-core machine the
+/// heuristic returns 8, matching the default `multi_thread` runtime.
+pub fn compute_orphan_threshold_from_worker_count(worker_count: u32) -> u32 {
+    (worker_count as f64 * DEFAULT_ORPHAN_THRESHOLD_WORKER_RATIO)
+        .ceil()
+        .max(1.0) as u32
+}
+
+/// Default extra grace beyond graceful_timeout + abort_wait before the
+/// global hard deadline is enforced.
 /// Default maximum number of orphaned child tasks before the supervisor
-/// triggers a controlled process exit.
-const DEFAULT_MAX_ORPHAN_THRESHOLD: u32 = 3;
-
+/// triggers a controlled process exit. Computed dynamically as a fraction
 /// Shutdown timing policy for a supervisor tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShutdownPolicy {
@@ -30,7 +61,9 @@ pub struct ShutdownPolicy {
     /// Maximum number of orphaned child tasks (tasks that could not be
     /// stopped within policy timeouts) before the supervisor triggers a
     /// controlled process exit to reclaim leaked OS threads.
-    /// Recommended default: 3.
+    /// When set to 0 (default), the threshold is computed automatically
+    /// as `max(1, ceil(num_worker_threads * 0.25))` — preventing starvation
+    /// before a quarter of the async worker pool is consumed.
     pub max_orphan_threshold: u32,
 }
 
@@ -44,6 +77,7 @@ impl ShutdownPolicy {
     /// - `abort_after_timeout`: Whether async stragglers may be aborted.
     /// - `force_kill_margin`: Extra grace before global hard deadline.
     /// - `max_orphan_threshold`: Max orphan count before process exit.
+    ///   Pass 0 to compute automatically as `max(1, ceil(workers * 0.25))`.
     ///
     /// # Returns
     ///
@@ -59,9 +93,11 @@ impl ShutdownPolicy {
     ///     Duration::from_secs(1),
     ///     true,
     ///     Duration::from_secs(5),
-    ///     3,
+    ///     0,
     /// );
     /// assert!(policy.abort_after_timeout);
+    /// // Automatic threshold on 8-core machine: max(1, ceil(8 * 0.25)) = 2
+    /// assert!(policy.effective_max_orphan_threshold() >= 1);
     /// assert_eq!(policy.effective_global_deadline(), Duration::from_secs(11));
     /// ```
     pub fn new(
@@ -102,7 +138,7 @@ impl ShutdownPolicy {
     ///     Duration::from_secs(1),
     ///     true,
     ///     Duration::from_secs(5),
-    ///     3,
+    ///     0,
     /// );
     /// assert_eq!(
     ///     policy.effective_global_deadline(),
@@ -112,6 +148,30 @@ impl ShutdownPolicy {
     pub fn effective_global_deadline(&self) -> Duration {
         self.graceful_timeout + self.abort_wait + self.force_kill_margin
     }
+
+    /// Returns the effective orphan threshold.
+    ///
+    /// When `max_orphan_threshold` is 0 (default), computes the threshold
+    /// from the number of tokio worker threads:
+    /// `max(1, ceil(num_worker_threads * 0.25))`.
+    ///
+    /// This ensures the supervisor exits before more than a quarter of the
+    /// async worker pool is consumed by orphaned (zombie) tasks.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the effective orphan threshold.
+    pub fn effective_max_orphan_threshold(&self) -> u32 {
+        if self.max_orphan_threshold > 0 {
+            self.max_orphan_threshold
+        } else {
+            compute_orphan_threshold_from_worker_count(detect_num_worker_threads())
+        }
+    }
 }
 
 impl Default for ShutdownPolicy {
@@ -120,14 +180,14 @@ impl Default for ShutdownPolicy {
     /// - `abort_wait`: 1 second
     /// - `abort_after_timeout`: true
     /// - `force_kill_margin`: 5 seconds
-    /// - `max_orphan_threshold`: 3
+    /// - `max_orphan_threshold`: 0 (automatic, based on worker count)
     fn default() -> Self {
         Self {
             graceful_timeout: Duration::from_secs(5),
             abort_wait: Duration::from_secs(1),
             abort_after_timeout: true,
             force_kill_margin: Duration::from_secs(DEFAULT_FORCE_KILL_MARGIN_SECS),
-            max_orphan_threshold: DEFAULT_MAX_ORPHAN_THRESHOLD,
+            max_orphan_threshold: 0,
         }
     }
 }

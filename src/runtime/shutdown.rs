@@ -129,6 +129,9 @@ pub fn emergency_force_kill(
         exited_at_unix_nanos: 0,
     });
     slot.clear_instance();
+    // Mark the slot as orphaned so the restart logic knows to switch to
+    // BlockingPool isolation — preventing repeated worker thread starvation.
+    slot.orphaned = true;
 
     *orphan_count += 1;
 

@@ -259,6 +259,8 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             command_permissions,
             environment: decl.environment,
             secrets: decl.secrets,
+            isolation: crate::spec::child::Isolation::AsyncWorker,
+            cleanup_paths: Vec::new(),
         })
     }
 }

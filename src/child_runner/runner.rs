@@ -112,7 +112,27 @@ impl ChildRunner {
         mark_immediate_ready(runtime.spec.readiness_policy, &ctx, &mut runtime);
         runtime.status = ChildRuntimeStatus::Running;
         let (completion_sender, completion_receiver) = watch::channel(None);
-        let child_task = tokio::spawn(factory.build(ctx));
+
+        // Choose the spawn strategy based on the child's isolation setting.
+        // BlockingPool tasks use spawn_blocking to avoid starving tokio's
+        // async worker threads — any blocking or CPU-heavy work stays on
+        // the dedicated blocking thread pool (capacity up to 500 threads).
+        let child_task = match runtime.spec.isolation {
+            crate::spec::child::Isolation::BlockingPool => {
+                let ctx_clone = ctx.clone_for_blocking();
+                tokio::task::spawn_blocking(move || {
+                    // spawn_blocking returns a blocking thread result, but the
+                    // factory future still needs to run on an async runtime.
+                    // We spawn a minimal local runtime to execute it.
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .expect("BlockingPool: failed to build one-shot runtime");
+                    rt.block_on(factory.build(ctx_clone))
+                })
+            }
+            crate::spec::child::Isolation::AsyncWorker => tokio::spawn(factory.build(ctx)),
+        };
         let abort_handle = child_task.abort_handle();
         let run_ready_receiver = ready_receiver.clone();
         tokio::spawn(async move {
