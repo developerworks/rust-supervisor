@@ -389,6 +389,14 @@ pub struct SupervisorSpec {
     pub metrics_enabled: bool,
     /// Whether audit event recording is enabled.
     pub audit_enabled: bool,
+    /// Extra grace beyond graceful_timeout + abort_wait before the
+    /// global hard deadline is enforced.
+    /// Recommended default: 5 seconds.
+    pub force_kill_margin: Duration,
+    /// Maximum number of orphaned child tasks before the supervisor
+    /// triggers a controlled process exit.
+    /// Recommended default: 3.
+    pub max_orphan_threshold: u32,
 }
 
 impl SupervisorSpec {
@@ -457,6 +465,8 @@ impl SupervisorSpec {
             concurrent_restart_limit: 5,
             metrics_enabled: true,
             audit_enabled: true,
+            force_kill_margin: Duration::from_secs(5),
+            max_orphan_threshold: 3,
         }
     }
 

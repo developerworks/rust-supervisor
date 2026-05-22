@@ -14,7 +14,13 @@ use std::time::Duration;
 
 /// Helper to create a ShutdownPolicy with short timeouts for fast tests.
 fn test_shutdown_policy() -> ShutdownPolicy {
-    ShutdownPolicy::new(Duration::from_millis(200), Duration::from_millis(100), true)
+    ShutdownPolicy::new(
+        Duration::from_millis(200),
+        Duration::from_millis(100),
+        true,
+        Duration::from_millis(200),
+        3,
+    )
 }
 
 /// Helper to create a minimal ChildSlot that holds an active attempt
@@ -110,7 +116,9 @@ async fn test_shutdown_completion_no_orphan_join_handles() {
         }
     }
 
-    let _outcomes = shutdown_tree_fanout(&mut slots, &policy, &mut admission).await;
+    let mut orphan_count = 0u64;
+    let _outcomes =
+        shutdown_tree_fanout(&mut slots, &policy, &mut admission, &mut orphan_count).await;
 
     // After shutdown, all slots must be clean.
     let reconcile = reconcile_shutdown_slots(&slots);

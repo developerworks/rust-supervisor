@@ -11,6 +11,7 @@ pub mod control;
 pub mod dashboard;
 pub mod error;
 pub mod event;
+pub mod exit_handler;
 pub mod health;
 pub mod id;
 #[cfg(unix)]

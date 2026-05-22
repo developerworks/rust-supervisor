@@ -32,6 +32,8 @@ fn main() {
         Duration::from_secs(5), // graceful_timeout
         Duration::from_secs(1), // abort_wait
         true,                   // abort_after_timeout
+        Duration::from_secs(5), // force_kill_margin
+        3,                      // max_orphan_threshold
     );
 
     println!("  graceful_timeout = {:?}", policy.graceful_timeout);
@@ -92,7 +94,13 @@ fn main() {
     println!("--- ShutdownCoordinator ---");
     println!();
 
-    let coord_policy = ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1), true);
+    let coord_policy = ShutdownPolicy::new(
+        Duration::from_secs(5),
+        Duration::from_secs(1),
+        true,
+        Duration::from_secs(5),
+        3,
+    );
     let mut coordinator = ShutdownCoordinator::new(coord_policy);
 
     let cause = ShutdownCause::new("operator", "scheduled maintenance");

@@ -364,6 +364,8 @@ async fn start_with_short_policy(
             Duration::from_millis(10),
             Duration::from_millis(200),
             abort_after_timeout,
+            Duration::from_millis(10),
+            3,
         ),
     )
     .await
@@ -374,7 +376,13 @@ async fn start_with_short_policy(
 async fn start_with_t046_policy(spec: SupervisorSpec) -> SupervisorHandle {
     Supervisor::start_with_policy(
         spec,
-        ShutdownPolicy::new(Duration::from_millis(100), Duration::from_millis(250), true),
+        ShutdownPolicy::new(
+            Duration::from_millis(100),
+            Duration::from_millis(250),
+            true,
+            Duration::from_millis(100),
+            3,
+        ),
     )
     .await
     .expect("supervisor should start")

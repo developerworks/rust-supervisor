@@ -36,8 +36,13 @@ async fn main() -> ExampleResult {
     // Keep enough event buffer for the full shutdown observation sequence.
     spec.event_channel_capacity = 32;
     // Use short shutdown windows so the example finishes quickly.
-    let shutdown_policy =
-        ShutdownPolicy::new(Duration::from_millis(250), Duration::from_millis(50), true);
+    let shutdown_policy = ShutdownPolicy::new(
+        Duration::from_millis(250),
+        Duration::from_millis(50),
+        true,
+        Duration::from_millis(250),
+        3,
+    );
     // Start the runtime with the service child.
     let handle = Supervisor::start_with_policy(spec, shutdown_policy).await?;
     // Subscribe to lifecycle event text before commands are sent.

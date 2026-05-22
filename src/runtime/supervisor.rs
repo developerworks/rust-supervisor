@@ -150,6 +150,8 @@ fn shutdown_policy_from_spec(spec: &SupervisorSpec) -> ShutdownPolicy {
         spec.default_shutdown_policy.graceful_timeout,
         spec.default_shutdown_policy.abort_wait,
         true,
+        spec.force_kill_margin,
+        spec.max_orphan_threshold,
     )
 }
 

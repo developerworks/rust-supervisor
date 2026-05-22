@@ -23,11 +23,16 @@ use tokio::time::{Instant, timeout};
 /// `graceful_timeout`, abort stragglers, wait up to `abort_wait`, then
 /// deactivate and collect outcomes.
 ///
+/// Phase 5 uses `emergency_force_kill` to orphan any slot that still holds
+/// active handles, ensuring the control loop cannot be blocked by tasks that
+/// never yield.
+///
 /// # Arguments
 ///
 /// - `slots`: Mutable map of child slots owned by the runtime.
 /// - `policy`: Shutdown timing policy (graceful + abort windows).
 /// - `admission`: Admission set to release after each slot finishes.
+/// - `orphan_count`: Shared counter of orphaned tasks across the runtime.
 ///
 /// # Returns
 ///
@@ -36,6 +41,7 @@ pub async fn shutdown_tree_fanout(
     slots: &mut HashMap<ChildId, ChildSlot>,
     policy: &ShutdownPolicy,
     admission: &mut AdmissionSet,
+    orphan_count: &mut u64,
 ) -> Vec<ChildShutdownOutcome> {
     let global_deadline = Instant::now() + policy.graceful_timeout + policy.abort_wait;
     let graceful_deadline = Instant::now() + policy.graceful_timeout;
@@ -77,16 +83,12 @@ pub async fn shutdown_tree_fanout(
         }
     }
 
-    // Phase 5: force-deactivate any slot still holding handles.
+    // Phase 5: emergency force-kill any slot still holding handles.
     for child_id in &child_ids {
-        if let Some(slot) = slots.get_mut(child_id)
-            && slot.has_active_attempt()
+        emergency_force_kill(slots, child_id, orphan_count);
+        if let Some(slot) = slots.get(child_id)
+            && !slot.has_active_attempt()
         {
-            slot.deactivate(ChildExitSummary {
-                exit_code: None,
-                exit_reason: "shutdown deadline reached; force-cleared".to_owned(),
-                exited_at_unix_nanos: 0,
-            });
             admission.release(child_id);
         }
     }
@@ -96,6 +98,44 @@ pub async fn shutdown_tree_fanout(
         .iter()
         .map(|(child_id, slot)| build_slot_outcome(child_id, slot))
         .collect()
+}
+
+/// Orphans one slot that cannot be drained or aborted within policy
+/// timeouts. Clears the slot's handles and records an orphan event
+/// diagnostic string. Returns `Some(diagnostic)` when the slot was
+/// actually force-killed, or `None` when the slot had nothing to do.
+///
+/// This function:
+/// 1. Deactivates the slot (clears handles, records exit summary)
+/// 2. Clears all instance fields to guarantee clean state
+/// 3. Increments the orphan counter
+/// 4. Returns a diagnostic string for event emission
+pub fn emergency_force_kill(
+    slots: &mut HashMap<ChildId, ChildSlot>,
+    child_id: &ChildId,
+    orphan_count: &mut u64,
+) -> Option<String> {
+    let slot = slots.get_mut(child_id)?;
+    if !slot.has_active_attempt() {
+        return None;
+    }
+
+    let generation = slot.generation.map_or(0, |g| g.value);
+    let attempt = slot.attempt.map_or(0, |a| a.value);
+
+    slot.deactivate(ChildExitSummary {
+        exit_code: None,
+        exit_reason: "shutdown force kill timeout; task orphaned".to_owned(),
+        exited_at_unix_nanos: 0,
+    });
+    slot.clear_instance();
+
+    *orphan_count += 1;
+
+    Some(format!(
+        "child_orphaned:{}:generation={}:attempt={}",
+        child_id, generation, attempt
+    ))
 }
 
 /// Builds a shutdown outcome for one slot.

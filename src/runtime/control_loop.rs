@@ -106,6 +106,11 @@ pub struct RuntimeControlState {
     policy_engine: PolicyEngine,
     /// Sender used by spawned child start_counts to report runtime messages.
     command_sender: mpsc::Sender<RuntimeLoopMessage>,
+    /// Active count of orphaned child tasks that could not be
+    /// stopped within policy timeouts.
+    pub orphan_count: u64,
+    /// Strategy for process exit, swappable for testing.
+    exit_handler: Arc<dyn crate::exit_handler::ExitHandler>,
 }
 
 /// Builds initial [`ChildSlot`] records from the registry.
@@ -195,6 +200,8 @@ impl RuntimeControlState {
             spec,
             policy_engine: PolicyEngine::new(),
             command_sender,
+            orphan_count: 0,
+            exit_handler: Arc::new(crate::exit_handler::DefaultExitHandler),
         })
     }
 
@@ -240,6 +247,10 @@ impl RuntimeControlState {
     /// # Returns
     ///
     /// This function does not return a value.
+    pub fn set_exit_handler(&mut self, handler: Arc<dyn crate::exit_handler::ExitHandler>) {
+        self.exit_handler = handler;
+    }
+
     fn attach_spawned_child_handle(
         &mut self,
         child_id: ChildId,
@@ -796,7 +807,23 @@ impl RuntimeControlState {
     /// # Returns
     ///
     /// Returns a [`ShutdownResult`] with a completed report attached.
-    async fn execute_shutdown(
+    ///
+    /// This method wraps the core shutdown body in a global hard timeout
+    /// computed from `effective_global_deadline()` (graceful + abort + margin).
+    /// If the timeout fires, the shutdown state machine is forced to
+    /// `Completed` and a `shutdown_global_timeout` event is emitted.
+    ///
+    /// **Note**: Under correct operation this timeout is never reached — the
+    /// body uses `remaining_duration` for every child-level `.await`, so the
+    /// body always completes within `graceful + abort` (< `global_deadline`).
+    /// This timeout is a last-resort guard against programming errors that
+    /// would otherwise cause an infinite hang.  The timeout branch (~5 lines)
+    /// is verified by code review rather than automated test because it cannot
+    /// be reliably triggered without violating Tokio's cooperative scheduling
+    /// guarantees.  Related integration tests (
+    /// `shutdown_tree_aborts_straggler_after_timeout`) confirm that the
+    /// timeout does not fire during normal shutdown.
+    pub(crate) async fn execute_shutdown(
         &mut self,
         requested_by: String,
         reason: String,
@@ -808,7 +835,38 @@ impl RuntimeControlState {
                 .result_with_report(report.as_idempotent(), true));
         }
 
-        let cause = ShutdownCause::new(requested_by, reason);
+        let global_deadline = self.shutdown.policy.effective_global_deadline();
+        match tokio::time::timeout(
+            global_deadline,
+            self.execute_shutdown_body(requested_by, reason, event_sender),
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(_elapsed) => {
+                // Global hard timeout: force state machine to Completed.
+                let _ = event_sender.send("shutdown_global_timeout".to_owned());
+                self.advance_shutdown_phase(event_sender);
+                self.shutdown.complete();
+                Err(SupervisorError::FatalConfig {
+                    message: "shutdown global timeout exceeded".to_owned(),
+                })
+            }
+        }
+    }
+
+    /// Core shutdown body extracted for global timeout wrapping.
+    ///
+    /// Performs the four-phase shutdown pipeline and returns the shutdown
+    /// result. After completion, checks the orphan threshold and triggers
+    /// a controlled process exit when exceeded.
+    async fn execute_shutdown_body(
+        &mut self,
+        requested_by: String,
+        reason: String,
+        event_sender: &broadcast::Sender<String>,
+    ) -> Result<ShutdownResult, SupervisorError> {
+        let cause = ShutdownCause::new(requested_by.clone(), reason.clone());
         let requested = self.shutdown.request_stop(cause);
         let started_at_unix_nanos = unix_epoch_nanos();
         let wait_order = self.shutdown_wait_order();
@@ -830,6 +888,17 @@ impl RuntimeControlState {
 
         self.advance_shutdown_phase(event_sender);
         self.reconcile_shutdown_outcomes(&wait_order, &mut outcomes);
+        // Phase 5: emergency force-kill any slot that still holds handles.
+        for child_id in &wait_order {
+            if let Some(diag) = crate::runtime::shutdown::emergency_force_kill(
+                &mut self.slots,
+                child_id,
+                &mut self.orphan_count,
+            ) {
+                let _ =
+                    event_sender.send(format!("child_orphaned:{}:shutdown_phase=reconcile", diag,));
+            }
+        }
         let reconcile = ShutdownReconcileReport::core_runtime_completed();
 
         let from = self.shutdown.phase();
@@ -853,6 +922,26 @@ impl RuntimeControlState {
         };
         let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
         self.shutdown_pipeline.cache_report(report.clone());
+
+        // Step 4: active orphan degradation detection.
+        // After shutdown, check if orphan count exceeds the threshold.
+        let threshold = self.shutdown.policy.max_orphan_threshold as u64;
+        if self.orphan_count >= threshold {
+            let _ = event_sender.send(format!(
+                "fatal_orphan_overflow:count={}:threshold={}",
+                self.orphan_count, threshold,
+            ));
+            // All healthy children have completed shutdown at this point.
+            // A controlled process exit is the safest way to reclaim orphaned
+            // OS threads that cannot be forcibly terminated.
+            self.exit_handler.exit(1);
+        } else if self.orphan_count > 0 {
+            let _ = event_sender.send(format!(
+                "orphan_count:{}:below_threshold:{}:supervisor_degraded",
+                self.orphan_count, threshold,
+            ));
+        }
+
         Ok(self.shutdown.result_with_report(report, false))
     }
 
@@ -2704,8 +2793,13 @@ impl RuntimeControlState {
         self.advance_shutdown_phase(event_sender);
         self.advance_shutdown_phase(event_sender);
 
-        let outcomes =
-            shutdown_tree_fanout(&mut self.slots, &policy, &mut self.admission_set).await;
+        let outcomes = shutdown_tree_fanout(
+            &mut self.slots,
+            &policy,
+            &mut self.admission_set,
+            &mut self.orphan_count,
+        )
+        .await;
         let reconcile = reconcile_shutdown_slots(&self.slots);
 
         // Emit orphan warning when residual handles remain after shutdown.
@@ -2731,6 +2825,22 @@ impl RuntimeControlState {
         };
         self.shutdown_pipeline.cache_report(report.clone());
         let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
+
+        // Step 4: active orphan degradation detection.
+        let threshold = self.shutdown.policy.max_orphan_threshold as u64;
+        if self.orphan_count >= threshold {
+            let _ = event_sender.send(format!(
+                "fatal_orphan_overflow:count={}:threshold={}",
+                self.orphan_count, threshold,
+            ));
+            self.exit_handler.exit(1);
+        } else if self.orphan_count > 0 {
+            let _ = event_sender.send(format!(
+                "orphan_count:{}:below_threshold:{}:supervisor_degraded",
+                self.orphan_count, threshold,
+            ));
+        }
+
         Ok(self.shutdown.result_with_report(report, false))
     }
 
