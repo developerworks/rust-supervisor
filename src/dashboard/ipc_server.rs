@@ -905,6 +905,11 @@ pub fn validate_command(command: &ControlCommandRequest) -> Result<(), Dashboard
     Ok(())
 }
 
+/// Default command timeout in seconds, matching the registration payload's
+/// declared timeout_seconds = 30. This ensures the IPC layer enforces the
+/// same deadline that relay and UI expect.
+const COMMAND_TIMEOUT_SECS: u64 = 30;
+
 /// Executes a validated command through a runtime handle,
 /// preserving the relay-supplied command_id for end-to-end tracing.
 ///
@@ -917,6 +922,33 @@ pub fn validate_command(command: &ControlCommandRequest) -> Result<(), Dashboard
 ///
 /// Returns a runtime command result or dashboard error.
 async fn execute_command(
+    handle: &SupervisorHandle,
+    command: &ControlCommandRequest,
+) -> Result<CommandResult, DashboardError> {
+    // Enforce the command timeout declared in the registration payload.
+    // Without this, a hung control loop (e.g. shutdown blocked on an
+    // unyielding child) would leave the relay and UI waiting indefinitely.
+    tokio::time::timeout(
+        std::time::Duration::from_secs(COMMAND_TIMEOUT_SECS),
+        execute_command_inner(handle, command),
+    )
+    .await
+    .map_err(|_elapsed| {
+        DashboardError::new(
+            "command_timeout",
+            "command_dispatch",
+            Some(command.target_id.clone()),
+            format!(
+                "command {:?} timed out after {}s",
+                command.command, COMMAND_TIMEOUT_SECS,
+            ),
+            true,
+        )
+    })?
+}
+
+/// Inner body of [`execute_command`], without the timeout wrapper.
+async fn execute_command_inner(
     handle: &SupervisorHandle,
     command: &ControlCommandRequest,
 ) -> Result<CommandResult, DashboardError> {

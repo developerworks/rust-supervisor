@@ -25,6 +25,7 @@ use crate::policy::decision::{
 use crate::policy::failure_window::FailureWindow;
 use crate::policy::meltdown::MeltdownTracker;
 use crate::policy::task_role_defaults::{EffectivePolicy, OnSuccessAction};
+use crate::readiness::signal::ReadinessState;
 use crate::registry::entry::{ChildRuntime, ChildRuntimeStatus};
 use crate::registry::store::RegistryStore;
 use crate::runtime::admission::{AdmissionConflict, AdmissionSet};
@@ -111,11 +112,16 @@ pub struct RuntimeControlState {
     pub orphan_count: u64,
     /// Strategy for process exit, swappable for testing.
     exit_handler: Arc<dyn crate::exit_handler::ExitHandler>,
-    /// Active gate permits indexed by child_id. Each permit represents one
-    /// acquired concurrent restart slot; dropping the permit releases the
-    /// slot automatically (RAII). This eliminates counting drift when a
-    /// single restart scope spawns multiple children (e.g. OneForAll).
-    active_gate_permits: HashMap<ChildId, crate::runtime::concurrent_gate::GatePermit>,
+    /// Active gate permits indexed by (child_id, generation, attempt).
+    /// Each permit represents one acquired concurrent restart slot;
+    /// dropping the permit releases the slot automatically (RAII).
+    /// The triple-key ensures that a late-report from an old generation
+    /// or attempt does not release the permit belonging to a newer
+    /// restart attempt of the same child.
+    active_gate_permits: HashMap<
+        (ChildId, Generation, ChildStartCount),
+        crate::runtime::concurrent_gate::GatePermit,
+    >,
 }
 
 /// Builds initial [`ChildSlot`] records from the registry.
@@ -217,8 +223,10 @@ impl RuntimeControlState {
     /// readiness waiting (a child's dependencies must be ready before it
     /// starts) is not yet implemented — this is tracked for a future slice.
     /// As a result, children that declare `dependencies` will start in the
-    /// correct order but may begin executing before their dependencies
-    /// report readiness.
+    /// correct order but dependencies must report ready before the
+    /// dependent child starts. This prevents downstream workers from
+    /// beginning execution before their required services (database,
+    /// cache, message queue) are ready to serve requests.
     ///
     /// # Arguments
     ///
@@ -227,13 +235,82 @@ impl RuntimeControlState {
     /// # Returns
     ///
     /// This function does not return a value.
-    pub fn start_declared_children(&mut self) {
+    pub async fn start_declared_children(&mut self) {
         let child_ids = startup_order(&self.tree)
             .into_iter()
             .map(|node| node.child.id.clone())
             .collect::<Vec<_>>();
-        for child_id in child_ids {
-            self.spawn_child_start(child_id, false, Duration::ZERO);
+        for child_id in &child_ids {
+            // Wait for all dependencies to report ready before spawning
+            // this child. This implements true readiness gating on top of
+            // the topological startup order.
+            if let Some(deps) = self
+                .registry
+                .child(child_id)
+                .map(|r| r.spec.dependencies.clone())
+                .filter(|d| !d.is_empty())
+            {
+                self.wait_for_dependencies(&deps, child_id).await;
+            }
+            self.spawn_child_start(child_id.clone(), false, Duration::ZERO);
+        }
+    }
+
+    /// Awaits until every dependency of a child has reported readiness.
+    ///
+    /// Each dependency's readiness is observed through the shared
+    /// readiness receiver on its [`ChildSlot`]. When a dependency has no
+    /// active slot (e.g. already exited), the wait resolves immediately
+    /// to avoid blocking the startup sequence indefinitely.
+    ///
+    /// # Arguments
+    ///
+    /// - `deps`: Child identifiers this child depends on.
+    /// - `child_id`: The child that is waiting (for diagnostics).
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    async fn wait_for_dependencies(&mut self, deps: &[ChildId], child_id: &ChildId) {
+        for dep_id in deps {
+            let mut receiver = self
+                .slots
+                .get(dep_id)
+                .and_then(|slot| slot.readiness_receiver.clone());
+
+            let Some(ref mut rx) = receiver else {
+                // Dependency has no active slot — skip wait.
+                continue;
+            };
+
+            // Fast path: already ready.
+            if *rx.borrow_and_update() == ReadinessState::Ready {
+                continue;
+            }
+
+            tracing::info!(
+                child_id = %child_id,
+                dependency = %dep_id,
+                "waiting for dependency readiness",
+            );
+
+            // Slow path: wait for readiness change.
+            loop {
+                let result = rx.changed().await;
+                if result.is_err() {
+                    // Sender dropped — dependency exited or slot cleared.
+                    break;
+                }
+                if *rx.borrow() == ReadinessState::Ready {
+                    break;
+                }
+            }
+
+            tracing::info!(
+                child_id = %child_id,
+                dependency = %dep_id,
+                "dependency ready, proceeding",
+            );
         }
     }
 
@@ -446,13 +523,6 @@ impl RuntimeControlState {
         report: ChildRunReport,
         event_sender: &broadcast::Sender<String>,
     ) {
-        // FR-003: Release concurrent gate permit when child exits.
-        // The permit is stored by child_id in active_gate_permits; removing
-        // it drops the permit, which decrements the gate count (RAII).
-        // This is safe to call even when no permit exists for this child
-        // (e.g. initial start-up, not a restart scope).
-        self.active_gate_permits.remove(&report.runtime.id);
-
         let child_id = report.runtime.id.clone();
         let generation = report.runtime.generation;
         let attempt = report.runtime.child_start_count;
@@ -475,6 +545,16 @@ impl RuntimeControlState {
                 && state.generation == Some(generation)
                 && state.attempt == Some(attempt)
         });
+
+        // FR-003: Release concurrent gate permit only when the exiting
+        // attempt matches the current active or pending-fence attempt.
+        // Using (child_id, generation, attempt) as the key prevents a
+        // stale late-report from an old generation from releasing the
+        // permit of a newer restart of the same child.
+        if matches_active_attempt || matches_pending_fence {
+            self.active_gate_permits
+                .remove(&(child_id.clone(), generation, attempt));
+        }
         let manual_stop_requested = self
             .slots
             .get(&child_id)
@@ -1779,17 +1859,21 @@ impl RuntimeControlState {
                 );
                 continue;
             };
-            // Store the permit indexed by child_id. It will be dropped
-            // (releasing the gate slot) when the child exits in
-            // handle_child_exit.
-            self.active_gate_permits.insert(child_id.clone(), permit);
+            // Store the permit indexed by (child_id, generation, attempt).
+            // Using the triple-key ensures handle_child_exit can only
+            // release a permit that matches the exact generation and
+            // attempt that acquired it, preventing stale late-reports
+            // from releasing permits belonging to newer restart attempts.
             self.spawn_child_start(child_id.clone(), true, delay);
+            // Retrieve the generation and attempt assigned by the spawn
+            // (set inside prepare_child_start + attach_spawned_child_handle).
+            if let Some(slot) = self.slots.get(child_id) {
+                if let (Some(gen_val), Some(att_val)) = (slot.generation, slot.attempt) {
+                    self.active_gate_permits
+                        .insert((child_id.clone(), gen_val, att_val), permit);
+                }
+            }
         }
-        // Note: permits are NOT dropped here — they live in
-        // active_gate_permits until each spawned child exits, at which
-        // point handle_child_exit removes the permit, dropping it and
-        // releasing the gate slot automatically.
-        // the rate of restart initiation.
     }
 
     /// Emits a typed event for a restart throttle gate hit.
@@ -3351,7 +3435,7 @@ pub async fn run_control_loop(
     mut receiver: mpsc::Receiver<RuntimeLoopMessage>,
     event_sender: broadcast::Sender<String>,
 ) -> RuntimeExitReport {
-    state.start_declared_children();
+    state.start_declared_children().await;
     while let Some(message) = receiver.recv().await {
         match message {
             RuntimeLoopMessage::Control {
