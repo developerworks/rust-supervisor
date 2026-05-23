@@ -477,10 +477,12 @@ pub struct DashboardChildLivenessState {
         skip_serializing_if = "Option::is_none",
         serialize_with = "serialize_nanos_opt"
     )]
+    /// Last heartbeat Unix timestamp in nanoseconds, serialized as a
+    /// JSON string to preserve precision across JavaScript boundaries.
     pub last_heartbeat_at_unix_nanos: Option<u128>,
     /// Whether the heartbeat is stale.
     pub heartbeat_stale: bool,
-    /// Latest readiness state.
+    /// Last observed readiness state.
     pub readiness: DashboardReadinessState,
 }
 
@@ -1076,11 +1078,11 @@ pub struct ControlCommandRequest {
     pub requested_by: String,
     /// Whether dangerous command confirmation is present.
     pub confirmed: bool,
-    /// Request time as Unix nanoseconds.
     #[serde(
         serialize_with = "serialize_nanos",
         deserialize_with = "deserialize_nanos"
     )]
+    /// Request time as Unix nanoseconds.
     pub requested_at_unix_nanos: u128,
 }
 
@@ -1105,6 +1107,7 @@ pub struct ControlCommandResult {
         skip_serializing_if = "Option::is_none",
         serialize_with = "serialize_nanos_opt"
     )]
+    /// Completion time as Unix nanoseconds.
     pub completed_at_unix_nanos: Option<u128>,
 }
 

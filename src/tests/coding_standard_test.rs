@@ -236,7 +236,15 @@ fn has_previous_doc(lines: &[&str], index: usize) -> bool {
     while cursor > 0 {
         cursor -= 1;
         let trimmed = lines[cursor].trim_start();
-        if trimmed.is_empty() || trimmed.starts_with("#[") {
+        // Skip blank lines, attribute starts (#[...]), and attribute
+        // continuations (]), (])), etc. so that a doc comment placed
+        // before a multi-line #[serde(...)] attribute is still found.
+        if trimmed.is_empty()
+            || trimmed.starts_with("#[")
+            || trimmed.starts_with(']')
+            || trimmed == ")"
+            || trimmed == "),"
+        {
             continue;
         }
         return trimmed.starts_with("///") || trimmed.starts_with("//!");

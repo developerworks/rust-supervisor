@@ -103,6 +103,7 @@ pub fn check_fd_count(baseline: Option<u64>) -> FdWatchResult {
 mod tests {
     use super::*;
 
+    /// Returns the current FD count on this platform.
     #[test]
     fn count_open_fds_returns_some() {
         // Every process has at least stdin (0), stdout (1), stderr (2).
@@ -111,6 +112,10 @@ mod tests {
         assert!(count.unwrap() >= 3, "at least stdin/out/err");
     }
 
+    /// Verifies that `check_fd_count` without a baseline returns the
+    /// current FD count and does not flag growth.
+    /// Verifies that `check_fd_count` without a baseline returns the
+    /// current FD count and does not flag growth.
     #[test]
     fn check_fd_no_baseline_returns_current() {
         let result = check_fd_count(None);
@@ -119,6 +124,8 @@ mod tests {
         assert!(!result.growth_detected);
     }
 
+    /// Verifies that an artificially low baseline triggers the growth
+    /// warning in `check_fd_count`.
     #[test]
     fn check_fd_growth_detected() {
         // Artificially set a very low baseline to trigger the warning.
@@ -132,6 +139,8 @@ mod tests {
         );
     }
 
+    /// Verifies that `check_fd_count` with a matching baseline does
+    /// not flag growth.
     #[test]
     fn check_fd_no_growth() {
         let current = count_open_fds().unwrap_or(100);

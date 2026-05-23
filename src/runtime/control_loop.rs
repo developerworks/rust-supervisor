@@ -252,11 +252,36 @@ impl RuntimeControlState {
     ///
     /// # Returns
     ///
+    /// Sets the exit handler strategy for process termination.
+    ///
+    /// The default handler calls `std::process::exit(1)`. Tests can swap in
+    /// a stub that records the exit request without terminating the process.
+    ///
+    /// # Arguments
+    ///
+    /// - `handler`: Exit handler implementation.
+    ///
+    /// # Returns
+    ///
     /// This function does not return a value.
     pub fn set_exit_handler(&mut self, handler: Arc<dyn crate::exit_handler::ExitHandler>) {
         self.exit_handler = handler;
     }
 
+    /// Activates a spawned child handle in the slots map and spawns a
+    /// watcher that forwards the exit report back to the control loop.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child owning the spawned attempt.
+    /// - `path`: Supervisor path for the child.
+    /// - `generation`: Generation pinned from the registry runtime record.
+    /// - `attempt`: Attempt counter pinned from the registry runtime record.
+    /// - `handle`: Runner handle carrying cancellation and completion endpoints.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
     fn attach_spawned_child_handle(
         &mut self,
         child_id: ChildId,
