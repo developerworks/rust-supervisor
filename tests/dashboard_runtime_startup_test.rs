@@ -3,6 +3,7 @@ use rust_supervisor::dashboard::config::ValidatedDashboardIpcConfig;
 use rust_supervisor::dashboard::ipc_server::bind_dashboard_listener;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use serde_json::Value;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};

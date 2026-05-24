@@ -58,16 +58,22 @@ impl Supervisor {
         #[cfg(unix)]
         let dashboard_config = state.dashboard.clone();
         let spec = state.to_supervisor_spec()?;
-        let mut handle = Self::start(spec.clone()).await?;
         #[cfg(unix)]
-        if let Some(dashboard_config) = validate_dashboard_ipc_config(dashboard_config.as_ref())
-            .map_err(dashboard_startup_error)?
+        let handle = Self::start(spec.clone()).await?;
+        #[cfg(not(unix))]
+        let handle = Self::start(spec).await?;
+        #[cfg(unix)]
+        let handle = if let Some(dashboard_config) =
+            validate_dashboard_ipc_config(dashboard_config.as_ref())
+                .map_err(dashboard_startup_error)?
         {
             let dashboard_runtime =
                 start_dashboard_ipc_runtime(dashboard_config, audit_config, spec, handle.clone())
                     .map_err(dashboard_startup_error)?;
-            handle = handle.with_dashboard_runtime(dashboard_runtime);
-        }
+            handle.with_dashboard_runtime(dashboard_runtime)
+        } else {
+            handle
+        };
         Ok(handle)
     }
 
@@ -156,6 +162,7 @@ fn shutdown_policy_from_spec(spec: &SupervisorSpec) -> ShutdownPolicy {
 }
 
 /// Converts dashboard startup failures into supervisor startup errors.
+#[cfg(unix)]
 fn dashboard_startup_error(error: DashboardError) -> SupervisorError {
     SupervisorError::fatal_config(format!("dashboard IPC startup failed: {error}"))
 }

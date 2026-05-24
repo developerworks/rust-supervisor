@@ -5,6 +5,7 @@
 
 use crate::child_runner::runner::ChildRunReport;
 use crate::control::command::{CommandMeta, CommandResult, ControlCommand};
+#[cfg(unix)]
 use crate::dashboard::runtime::DashboardIpcRuntimeGuard;
 use crate::error::types::SupervisorError;
 use crate::id::types::{ChildId, SupervisorPath};
@@ -27,6 +28,7 @@ pub struct SupervisorHandle {
     /// Shared typed observability pipeline.
     observability: Arc<Mutex<ObservabilityPipeline>>,
     /// Optional dashboard IPC runtime guard.
+    #[cfg(unix)]
     dashboard_runtime: Option<Arc<DashboardIpcRuntimeGuard>>,
 }
 
@@ -77,6 +79,7 @@ impl SupervisorHandle {
             event_sender,
             control_plane,
             observability,
+            #[cfg(unix)]
             dashboard_runtime: None,
         }
     }
@@ -90,6 +93,7 @@ impl SupervisorHandle {
     /// # Returns
     ///
     /// Returns this handle with dashboard runtime lifecycle attached.
+    #[cfg(unix)]
     pub(crate) fn with_dashboard_runtime(
         mut self,
         dashboard_runtime: Arc<DashboardIpcRuntimeGuard>,
