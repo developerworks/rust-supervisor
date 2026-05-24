@@ -71,18 +71,29 @@ fn test_concurrent_gate_denies_when_exceeded() {
 
 #[test]
 fn test_atomicity_ten_concurrent_samples() {
-    // SC-003: Atomicity test using production CombinedThrottleGate
+    // SC-003: Atomicity test using production SupervisorInstanceGate permits.
     // 10 concurrent failures with instance gate limit of 5
     // All beyond limit should enter protection
-    let instance_gate = SupervisorInstanceGate::new(5);
-    let combined = CombinedThrottleGate::new(instance_gate, None);
+    let gate = SupervisorInstanceGate::new(5);
 
     let mut results = Vec::new();
+    let mut permits = Vec::new();
 
     // Simulate 10 concurrent restart attempts
     for _ in 0..10 {
-        let (action, owner) = evaluate_restart_attempt(&combined, None);
-        results.push((action, owner));
+        match gate.try_acquire() {
+            Some(permit) => {
+                permits.push(permit);
+                results.push((
+                    ProtectionAction::RestartAllowed,
+                    ThrottleGateOwner::SupervisorInstance,
+                ));
+            }
+            None => results.push((
+                ProtectionAction::RestartDenied,
+                ThrottleGateOwner::SupervisorInstance,
+            )),
+        }
     }
 
     // First 5 should be allowed
@@ -98,25 +109,24 @@ fn test_atomicity_ten_concurrent_samples() {
 }
 
 #[test]
-fn test_gate_release_allows_new_restarts() {
-    // SC-003: Test release mechanism using production gate
-    let instance_gate = SupervisorInstanceGate::new(2);
-    let combined = CombinedThrottleGate::new(instance_gate, None);
+fn test_gate_permit_drop_allows_new_restarts() {
+    // SC-003: Test permit drop release mechanism using production gate.
+    let gate = SupervisorInstanceGate::new(2);
 
     // Fill the gate
-    evaluate_restart_attempt(&combined, None);
-    evaluate_restart_attempt(&combined, None);
+    let first = gate.try_acquire().expect("first permit");
+    let second = gate.try_acquire().expect("second permit");
 
     // Next should be denied
-    let (action, _) = evaluate_restart_attempt(&combined, None);
-    assert_eq!(action, ProtectionAction::RestartDenied);
+    assert!(gate.try_acquire().is_none());
 
     // Release one slot
-    combined.release(None);
+    drop(first);
 
     // Now should be allowed
-    let (action, _) = evaluate_restart_attempt(&combined, None);
-    assert_eq!(action, ProtectionAction::RestartAllowed);
+    let third = gate.try_acquire();
+    assert!(third.is_some());
+    drop(second);
 }
 
 #[test]

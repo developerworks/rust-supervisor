@@ -54,8 +54,9 @@ fn pipeline_fans_out_signals_and_accounts_for_lag() {
     pipeline.emit(event(2, What::ChildRestarted { restart_count: 2 }));
 
     let queued = pipeline.drain_subscriber(subscriber);
-    assert_eq!(queued.len(), 1);
-    assert_eq!(queued[0].sequence.value, 2);
+    assert_eq!(queued.len(), 2);
+    assert_eq!(queued[0].sequence.value, 1);
+    assert_eq!(queued[1].sequence.value, 2);
     assert_eq!(pipeline.test_recorder.subscriber_lag, 1);
     assert_eq!(pipeline.test_recorder.events.len(), 2);
     assert_eq!(pipeline.test_recorder.metrics.len(), 2);

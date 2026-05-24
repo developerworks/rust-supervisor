@@ -24,6 +24,7 @@ fn main() {
     println!("=== Generation Fencing Demo ===");
     println!();
 
+    // Build stable identifiers for the example.
     let child_id = ChildId::new("order_processor");
     let command_id = Uuid::nil();
 
@@ -77,6 +78,7 @@ fn main() {
     println!("=== Fence Decisions ===");
     println!();
 
+    // Build the decision descriptions.
     let decisions: [(GenerationFenceDecision, &str); 5] = [
         (
             GenerationFenceDecision::StartedImmediately,
@@ -100,6 +102,7 @@ fn main() {
         ),
     ];
 
+    // Print each generation fence decision.
     for (decision, description) in &decisions {
         println!("  {decision:?}");
         println!("    -> {description}");
@@ -110,6 +113,7 @@ fn main() {
     println!("=== Complete Fence Outcome ===");
     println!();
 
+    // Build a queued restart outcome.
     let outcome = GenerationFenceOutcome::new(
         GenerationFenceDecision::QueuedAfterStop,
         Some(Generation { value: 2 }),
@@ -120,6 +124,7 @@ fn main() {
         None,  // no conflict
     );
 
+    // Print the queued restart outcome.
     println!("  decision          = {:?}", outcome.decision);
     println!(
         "  old_generation    = {:?}",
@@ -142,12 +147,14 @@ fn main() {
     println!("=== Rejected Outcome with Conflict ===");
     println!();
 
+    // Build a conflict used by a rejected outcome.
     let conflict = ChildControlFailure::new(
         ChildControlFailurePhase::WaitCompletion,
         "child is already being stopped by another command",
         true, // recoverable
     );
 
+    // Build a rejected generation fence outcome.
     let rejected = GenerationFenceOutcome::new(
         GenerationFenceDecision::Rejected,
         Some(Generation { value: 2 }),
@@ -158,6 +165,7 @@ fn main() {
         Some(conflict),
     );
 
+    // Print the rejected generation fence outcome.
     println!("  decision          = {:?}", rejected.decision);
     println!(
         "  conflict.phase    = {:?}",
@@ -177,6 +185,7 @@ fn main() {
     println!("=== Stale Attempt Report ===");
     println!();
 
+    // Build a stale report from an older generation.
     let stale = StaleAttemptReport::new(
         child_id,
         Generation { value: 1 },
@@ -188,6 +197,7 @@ fn main() {
         1000,
     );
 
+    // Print the stale report handling outcome.
     println!(
         "  A late completion report from gen={} attempt={} arrived after",
         stale.reported_generation.value, stale.reported_attempt.value,
@@ -204,6 +214,7 @@ fn main() {
     println!("=== GenerationFenceState Timeline ===");
     println!();
 
+    // Build the ordered generation fence timeline.
     let states: [(GenerationFencePhase, &str); 5] = [
         (GenerationFencePhase::Open, "initial state, no fence"),
         (
@@ -224,6 +235,7 @@ fn main() {
         ),
     ];
 
+    // Print the generation fence timeline.
     for (phase, desc) in &states {
         let state = GenerationFenceState {
             phase: *phase,
@@ -235,6 +247,7 @@ fn main() {
         println!("  {:20} - {}", format!("{:?}", state.phase), desc);
     }
 
+    // Print the generation fencing summary.
     println!();
     println!("=== Summary ===");
     println!("Generation fencing ensures at-most-one active attempt per child.");

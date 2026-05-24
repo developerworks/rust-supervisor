@@ -25,6 +25,7 @@ fn main() {
         audit_channel_capacity: 1024,
     };
 
+    // Build the sampling backpressure configuration.
     let sample_audit = BackpressureConfig {
         strategy: BackpressureStrategy::SampleAndAudit,
         warn_threshold_pct: 70,
@@ -33,6 +34,7 @@ fn main() {
         audit_channel_capacity: 2048,
     };
 
+    // Print the blocking strategy details.
     println!("--- AlertAndBlock (default) ---");
     println!(
         "  warn_threshold       = {}%",
@@ -51,6 +53,7 @@ fn main() {
     println!("  behavior at crit:    block producer until subscriber catches up");
     println!();
 
+    // Print the sampling strategy details.
     println!("--- SampleAndAudit ---");
     println!(
         "  warn_threshold       = {}%",
@@ -73,6 +76,7 @@ fn main() {
     println!("--- Pipeline Construction ---");
     println!();
 
+    // Build a small observability pipeline.
     let _pipeline = ObservabilityPipeline::new(16, 16);
     println!("  pipeline created with journal_capacity=16, subscriber_capacity=16");
 
@@ -84,10 +88,12 @@ fn main() {
     println!("--- TestRecorder (lag recording) ---");
     println!();
 
+    // Record a sample subscriber lag event.
     let mut recorder = TestRecorder::new();
     recorder.record_lag(5);
     println!("  recorded subscriber lag of 5 events");
 
+    // Print the strategy summary.
     println!();
     println!("=== Summary ===");
     println!("AlertAndBlock   -> safe default, never drops events, blocks producers.");

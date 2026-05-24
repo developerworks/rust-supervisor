@@ -558,14 +558,12 @@ async fn stop_failure_outcome_carries_phase_and_reason_test() {
 /// Verifies restart limit exhaustion is visible in control outcomes.
 #[tokio::test(start_paused = true)]
 async fn restart_limit_exhaustion_visible_in_outcome_test() {
-    let (started_sender, mut started_receiver) = mpsc::channel(4);
+    let (started_sender, _started_receiver) = mpsc::channel(4);
     let mut spec = SupervisorSpec::root(vec![always_fail_child("worker", started_sender)]);
     spec.restart_limit = Some(RestartLimit::new(2, Duration::from_secs(60)));
     let handle = Supervisor::start(spec).await.expect("start supervisor");
-    wait_for_started(&mut started_receiver, 3).await;
-    advance_test_clock(Duration::from_millis(30)).await;
 
-    let state = current_state(&handle).await;
+    let state = wait_for_restart_limit_exhaustion(&handle, "worker").await;
     let record = find_record(&state, "worker");
     assert_eq!(record.restart_limit.limit, 2);
     assert!(record.restart_limit.used >= 2);
@@ -876,6 +874,23 @@ async fn wait_for_record_attempt(handle: &SupervisorHandle, name: &str, expected
     }
 }
 
+/// Waits until a record reports restart limit exhaustion.
+async fn wait_for_restart_limit_exhaustion(handle: &SupervisorHandle, name: &str) -> CurrentState {
+    let deadline = Instant::now() + Duration::from_secs(1);
+    loop {
+        let state = current_state(handle).await;
+        if find_record(&state, name).restart_limit.exhausted {
+            return state;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "record {name} should exhaust restart limit"
+        );
+        advance_test_clock(Duration::from_millis(10)).await;
+        tokio::task::yield_now().await;
+    }
+}
+
 /// Asserts that no extra child attempt starts before virtual time elapses.
 async fn assert_no_extra_start(receiver: &mut mpsc::Receiver<String>) {
     for _millisecond in 0..80 {
@@ -1177,7 +1192,7 @@ fn ignores_cancellation_child(
 
 /// Creates a child that fails on every attempt.
 fn always_fail_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildSpec {
-    worker_child(
+    let mut child = worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
             let sender = sender.clone();
@@ -1186,7 +1201,9 @@ fn always_fail_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildS
                 failed_result("always failed")
             }
         }),
-    )
+    );
+    child.backoff_policy = BackoffPolicy::new(Duration::ZERO, Duration::ZERO, 0.0);
+    child
 }
 
 /// Creates a typed task failure result for restart tests.

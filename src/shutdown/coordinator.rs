@@ -51,6 +51,8 @@ impl ShutdownCoordinator {
     ///     Duration::from_secs(1),
     ///     Duration::from_secs(1),
     ///     true,
+    ///     Duration::from_secs(1),
+    ///     0,
     /// );
     /// let coordinator = rust_supervisor::shutdown::coordinator::ShutdownCoordinator::new(policy);
     /// assert_eq!(coordinator.phase(), rust_supervisor::shutdown::stage::ShutdownPhase::Idle);

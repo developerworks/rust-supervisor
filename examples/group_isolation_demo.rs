@@ -18,6 +18,7 @@ fn main() {
     println!("=== Group Isolation Demo ===");
     println!();
 
+    // Define the sample group names.
     let payment_group = "payment-gateway";
     let risk_group = "risk-engine";
 
@@ -28,18 +29,21 @@ fn main() {
         propagation: PropagationPolicy::Full,
     };
 
+    // Build the escalate-only dependency edge.
     let edge_escalate = GroupDependencyEdge {
         from_group: payment_group.to_owned(),
         to_group: risk_group.to_owned(),
         propagation: PropagationPolicy::EscalateOnly,
     };
 
+    // Build the independent dependency edge.
     let edge_none = GroupDependencyEdge {
         from_group: payment_group.to_owned(),
         to_group: risk_group.to_owned(),
         propagation: PropagationPolicy::None,
     };
 
+    // Print the declared group topology.
     println!("Groups declared:");
     println!("  [1] {risk_group}  - handles risk scoring");
     println!("  [2] {payment_group} - handles payment processing");
@@ -51,6 +55,7 @@ fn main() {
     println!("=== Propagation Evaluation ===");
     println!();
 
+    // Evaluate each propagation mode.
     for (label, edge) in [
         ("Full", &edge_full),
         ("EscalateOnly", &edge_escalate),
@@ -59,6 +64,7 @@ fn main() {
         let iso = GroupIsolationPolicy::new(vec![edge.clone()]);
         let affected = iso.affected_by(payment_group, risk_group);
 
+        // Print the propagation evaluation for this edge.
         println!("--- PropagationPolicy::{label} ---");
         println!("  from_group = {}", edge.from_group);
         println!("  to_group   = {}", edge.to_group);
@@ -71,17 +77,22 @@ fn main() {
     println!("=== Same-Group vs Cross-Group ===");
     println!();
 
+    // Build a policy for same-group and cross-group checks.
     let iso = GroupIsolationPolicy::new(vec![edge_full]);
 
+    // Check same-group propagation.
     let same = iso.affected_by(risk_group, risk_group);
     println!("  {risk_group} affected by {risk_group} (same group)     = {same}");
 
+    // Check cross-group propagation.
     let cross = iso.affected_by(payment_group, risk_group);
     println!("  {payment_group} affected by {risk_group} (Full edge)   = {cross}");
 
+    // Check an unrelated group.
     let unrelated = iso.affected_by(payment_group, "monitoring");
     println!("  {payment_group} affected by 'monitoring' (no edge) = {unrelated}");
 
+    // Print the group isolation summary.
     println!();
     println!("=== Summary ===");
     println!("GroupIsolationPolicy::affected_by checks a directed DAG of dependency edges.");

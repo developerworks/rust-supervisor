@@ -267,7 +267,7 @@ async fn target_ipc_rejects_command_for_different_target_id() {
                 request_id: "r4".to_owned(),
                 method: "command.pause_child".to_owned(),
                 params: serde_json::json!({
-                    "command_id": "cmd-1",
+                    "command_id": "00000000-0000-0000-0000-000000000001",
                     "target_id": "orders-worker-b",
                     "command": "pause_child",
                     "target": {"child_path": "/root/payment_loop"},

@@ -307,16 +307,48 @@ fn is_code_line(line: &str) -> bool {
     !trimmed.is_empty() && !trimmed.starts_with("//")
 }
 
-/// Returns whether the previous non-empty example line is a comment.
+/// Returns whether the current example code group has a leading comment.
 fn has_previous_comment(lines: &[&str], index: usize) -> bool {
     let mut cursor = index;
+    let mut blank_before_first_code = false;
     while cursor > 0 {
         cursor -= 1;
         let trimmed = lines[cursor].trim_start();
         if trimmed.is_empty() {
+            blank_before_first_code = true;
             continue;
         }
-        return trimmed.starts_with("//");
+        if trimmed.starts_with("//") {
+            return true;
+        }
+        if is_code_line(trimmed) {
+            if blank_before_first_code {
+                return false;
+            }
+            while cursor > 0 {
+                cursor -= 1;
+                let previous = lines[cursor].trim_start();
+                if previous.is_empty() {
+                    while cursor > 0 {
+                        cursor -= 1;
+                        let leading = lines[cursor].trim_start();
+                        if leading.is_empty() {
+                            continue;
+                        }
+                        return leading.starts_with("//");
+                    }
+                    return false;
+                }
+                if previous.starts_with("//") {
+                    return true;
+                }
+                if !is_code_line(previous) {
+                    return false;
+                }
+            }
+            return false;
+        }
+        return false;
     }
     false
 }

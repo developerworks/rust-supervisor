@@ -8,13 +8,13 @@ use rust_supervisor::spec::supervisor::SupervisionStrategy;
 use std::fs;
 use std::path::Path;
 
-/// Verifies that the declared dependency version is rust-config-tree v0.1.9.
+/// Verifies that the declared dependency version is rust-config-tree v0.2.0.
 #[test]
-fn cargo_uses_rust_config_tree_v019() {
+fn cargo_uses_rust_config_tree_v020() {
     let cargo = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml"))
         .expect("read Cargo.toml");
 
-    assert!(cargo.contains("rust-config-tree = \"0.1.9\""));
+    assert!(cargo.contains("rust-config-tree = \"0.2.0\""));
 }
 
 /// Verifies that the example YAML configuration loads and derives a spec.

@@ -32,6 +32,7 @@ use crate::runtime::admission::{AdmissionConflict, AdmissionSet};
 use crate::runtime::child_slot::{
     ChildExitSummary, ChildSlot, DEFAULT_HEARTBEAT_TIMEOUT_SECS, RuntimeTimeBase,
 };
+use crate::runtime::concurrent_gate::GatePermit;
 use crate::runtime::lifecycle::RuntimeExitReport;
 use crate::runtime::message::{ChildStartMessage, ControlPlaneMessage, RuntimeLoopMessage};
 use crate::runtime::pipeline::{ExitClassification, PipelineContext, SupervisionPipeline};
@@ -118,10 +119,7 @@ pub struct RuntimeControlState {
     /// The triple-key ensures that a late-report from an old generation
     /// or attempt does not release the permit belonging to a newer
     /// restart attempt of the same child.
-    active_gate_permits: HashMap<
-        (ChildId, Generation, ChildStartCount),
-        crate::runtime::concurrent_gate::GatePermit,
-    >,
+    active_gate_permits: HashMap<(ChildId, Generation, ChildStartCount), GatePermit>,
 }
 
 /// Builds initial [`ChildSlot`] records from the registry.
@@ -2037,7 +2035,7 @@ impl RuntimeControlState {
         })
     }
 
-    /// Counts declared and dynamic child records.
+    /// Counts currently registered declared and dynamic child records.
     ///
     /// # Arguments
     ///
@@ -2045,12 +2043,9 @@ impl RuntimeControlState {
     ///
     /// # Returns
     ///
-    /// Returns the number of declared children plus accepted dynamic manifests.
+    /// Returns the number of registered child records.
     fn dynamic_child_count(&self) -> usize {
-        self.registry
-            .declaration_order()
-            .len()
-            .saturating_add(self.manifests.len())
+        self.registry.declaration_order().len()
     }
 
     /// Handles `RestartChild` with generation fencing semantics.

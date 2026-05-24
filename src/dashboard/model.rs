@@ -38,23 +38,28 @@ where
     impl<'de> serde::de::Visitor<'de> for NanosVisitor {
         type Value = u128;
 
+        /// Describes the accepted timestamp representation.
         fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             formatter.write_str("a nanosecond timestamp as string or integer")
         }
 
+        /// Parses a timestamp from a string.
         fn visit_str<E: Error>(self, s: &str) -> Result<u128, E> {
             s.parse::<u128>()
                 .map_err(|e| E::custom(format!("invalid nanos string: {e}")))
         }
 
+        /// Converts an unsigned 64-bit timestamp.
         fn visit_u64<E: Error>(self, v: u64) -> Result<u128, E> {
             Ok(v as u128)
         }
 
+        /// Accepts an unsigned 128-bit timestamp.
         fn visit_u128<E: Error>(self, v: u128) -> Result<u128, E> {
             Ok(v)
         }
 
+        /// Converts a signed 64-bit timestamp when it is non-negative.
         fn visit_i64<E: Error>(self, v: i64) -> Result<u128, E> {
             u128::try_from(v).map_err(|_| E::custom("negative timestamp is not valid for nanos"))
         }

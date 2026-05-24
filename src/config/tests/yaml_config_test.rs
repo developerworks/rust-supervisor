@@ -8,10 +8,8 @@ use rust_supervisor::policy::group::PropagationPolicy;
 use rust_supervisor::policy::task_role_defaults::{SeverityClass, TaskRole};
 use rust_supervisor::spec::supervisor::{BackpressureStrategy, SupervisionStrategy};
 
-/// Returns a valid YAML configuration document.
-/// Returns a valid YAML configuration document for parser tests.
-fn valid_yaml() -> &'static str {
-    r#"
+/// Valid YAML configuration document for parser tests.
+const VALID_YAML: &str = r#"
 supervisor:
   strategy: RestForOne
   escalation_policy: escalate_to_parent
@@ -108,7 +106,11 @@ children:
     severity: Critical
     group: core
     restart_policy: permanent
-"#
+"#;
+
+/// Returns a valid YAML configuration document.
+fn valid_yaml() -> &'static str {
+    VALID_YAML
 }
 
 /// Verifies that all required runtime tunables load from YAML.

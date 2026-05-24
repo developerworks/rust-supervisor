@@ -350,6 +350,7 @@ impl BoundedFrameReader {
 }
 
 impl std::os::unix::io::AsRawFd for BoundedFrameReader {
+    /// Returns the raw file descriptor for readiness polling.
     fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
         self.stream.as_raw_fd()
     }

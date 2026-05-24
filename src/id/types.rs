@@ -173,6 +173,7 @@ pub struct ChildStartCount {
 }
 
 impl std::hash::Hash for ChildStartCount {
+    /// Feeds the child start count value into the provided hasher.
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.value.hash(state);
     }
@@ -218,6 +219,7 @@ pub struct Generation {
 }
 
 impl std::hash::Hash for Generation {
+    /// Feeds the generation value into the provided hasher.
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.value.hash(state);
     }

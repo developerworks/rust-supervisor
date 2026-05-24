@@ -98,7 +98,7 @@ pub fn check_fd_count(baseline: Option<u64>) -> FdWatchResult {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::health::fd_watch::{check_fd_count, count_open_fds};
 
     /// Returns the current FD count on this platform.
     #[test]

@@ -14,7 +14,7 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 
 // Use the Tokio runtime for the asynchronous example.
 // Return typed supervisor errors from the example.
-// Runs the runtime control story example.
+/// Runs the runtime control story example.
 #[tokio::main]
 async fn main() -> ExampleResult {
     // Load centralized YAML configuration.

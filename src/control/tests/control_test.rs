@@ -15,6 +15,15 @@ async fn supervisor_handle_operations_are_idempotent() {
         .await
         .unwrap();
     let child_id = ChildId::new("worker");
+    let added = handle
+        .add_child(
+            SupervisorPath::root(),
+            "name: worker\nkind: async_worker\n",
+            "operator",
+            "scale",
+        )
+        .await
+        .unwrap();
 
     let first = handle
         .pause_child(child_id.clone(), "operator", "maintenance")
@@ -25,6 +34,7 @@ async fn supervisor_handle_operations_are_idempotent() {
         .await
         .unwrap();
 
+    assert!(matches!(added, CommandResult::ChildAdded { .. }));
     assert!(matches!(
         first,
         CommandResult::ChildControl { outcome }

@@ -19,6 +19,7 @@ pub trait ExitHandler: Send + Sync + std::fmt::Debug {
 pub struct DefaultExitHandler;
 
 impl ExitHandler for DefaultExitHandler {
+    /// Terminates the current process with the provided code.
     fn exit(&self, code: i32) {
         std::process::exit(code);
     }
@@ -60,6 +61,7 @@ impl TestExitHandler {
 }
 
 impl ExitHandler for TestExitHandler {
+    /// Records the requested exit code without terminating the process.
     fn exit(&self, code: i32) {
         self.called.store(true, Ordering::SeqCst);
         *self.exit_code.lock().unwrap_or_else(|e| e.into_inner()) = Some(code);
@@ -68,6 +70,7 @@ impl ExitHandler for TestExitHandler {
 }
 
 impl Default for TestExitHandler {
+    /// Creates a default test exit handler.
     fn default() -> Self {
         Self::new()
     }

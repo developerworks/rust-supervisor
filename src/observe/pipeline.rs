@@ -396,6 +396,7 @@ impl ObservabilityPipeline {
         let cfg = &self.backpressure_config;
 
         for (idx, subscriber) in &mut self.subscribers.iter_mut().enumerate() {
+            let mut should_push_event = true;
             let occupancy_pct = if self.subscriber_capacity == 0 {
                 100_u8
             } else {
@@ -427,6 +428,7 @@ impl ObservabilityPipeline {
                             lagged = lagged.saturating_add(1);
                         }
                         subscriber.push_back(event.clone());
+                        should_push_event = false;
                     }
                     BackpressureStrategy::SampleAndAudit => {
                         // Sampling strategy: drop when full, record audit.
@@ -457,7 +459,9 @@ impl ObservabilityPipeline {
                 }
             }
 
-            subscriber.push_back(event.clone());
+            if should_push_event {
+                subscriber.push_back(event.clone());
+            }
         }
         lagged
     }

@@ -30,6 +30,7 @@ async fn main() -> ExampleResult {
         // Wait for the shutdown command result.
         .await?;
 
+    // Query the state after shutdown.
     let current = supervisor_handle.current_state().await?;
     println!("{current:#?}");
     // Finish the example successfully.

@@ -28,6 +28,7 @@ fn main() {
     println!("--- Shutdown Policy ---");
     println!();
 
+    // Build the sample shutdown policy.
     let policy = ShutdownPolicy::new(
         Duration::from_secs(5), // graceful_timeout
         Duration::from_secs(1), // abort_wait
@@ -36,6 +37,7 @@ fn main() {
         3,                      // max_orphan_threshold
     );
 
+    // Print the shutdown policy values.
     println!("  graceful_timeout = {:?}", policy.graceful_timeout);
     println!("  abort_wait       = {:?}", policy.abort_wait);
     println!(
@@ -48,21 +50,27 @@ fn main() {
     println!("--- Shutdown Phases ---");
     println!();
 
+    // Print the idle phase.
     let mut phase = ShutdownPhase::Idle;
     println!("  Phase 0: {phase:?} - supervisor is running normally");
 
+    // Print the request-stop phase.
     phase = ShutdownPhase::RequestStop;
     println!("  Phase 1: {phase:?} - shutdown requested, cancellation sent to all children");
 
+    // Print the graceful-drain phase.
     phase = ShutdownPhase::GracefulDrain;
     println!("  Phase 2: {phase:?} - waiting for children to exit cooperatively");
 
+    // Print the abort-stragglers phase.
     phase = ShutdownPhase::AbortStragglers;
     println!("  Phase 3: {phase:?} - graceful timeout expired, stragglers aborted");
 
+    // Print the reconcile phase.
     phase = ShutdownPhase::Reconcile;
     println!("  Phase 4: {phase:?} - reconciling final state, cleaning up resources");
 
+    // Print the completed phase.
     phase = ShutdownPhase::Completed;
     println!("  Phase 5: {phase:?} - shutdown complete");
 
@@ -71,6 +79,7 @@ fn main() {
     println!("--- Phase Transitions ---");
     println!();
 
+    // Walk through all phase transitions.
     let mut current = ShutdownPhase::Idle;
     while let Some(next) = current.next() {
         println!("  {current:?} -> {next:?}");
@@ -82,6 +91,7 @@ fn main() {
     println!("--- ShutdownCoordinator ---");
     println!();
 
+    // Build a coordinator-specific policy.
     let coord_policy = ShutdownPolicy::new(
         Duration::from_secs(5),
         Duration::from_secs(1),
@@ -91,9 +101,11 @@ fn main() {
     );
     let mut coordinator = ShutdownCoordinator::new(coord_policy);
 
+    // Request shutdown through the coordinator.
     let cause = ShutdownCause::new("operator", "scheduled maintenance");
     let result = coordinator.request_stop(cause);
 
+    // Print the first coordinator result.
     println!(
         "  after request_stop: phase={:?} idempotent={}",
         result.phase, result.idempotent
@@ -115,6 +127,7 @@ fn main() {
     println!("--- Child Shutdown Outcomes ---");
     println!();
 
+    // Build sample child shutdown outcomes.
     let make_outcome = |name: &str, status: ChildShutdownStatus, phase: ShutdownPhase| {
         ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
             child_id: ChildId::new(name),
@@ -129,6 +142,7 @@ fn main() {
         })
     };
 
+    // Collect the sample child shutdown outcomes.
     let outcomes = vec![
         make_outcome(
             "feed_handler",
@@ -147,6 +161,7 @@ fn main() {
         ),
     ];
 
+    // Print the sample child shutdown outcomes.
     for outcome in &outcomes {
         println!(
             "  child={:12} status={:?} phase={:?}",
@@ -159,6 +174,7 @@ fn main() {
     println!("--- Reconcile Report ---");
     println!();
 
+    // Build a sample reconcile report.
     let reconcile = ShutdownReconcileReport {
         registry_status: ResourceReconcileStatus::Cleaned,
         runtime_handle_status: ResourceReconcileStatus::Cleaned,
@@ -171,6 +187,7 @@ fn main() {
         warnings: vec![],
     };
 
+    // Print the reconcile report values.
     println!("  registry_status       = {:?}", reconcile.registry_status);
     println!(
         "  runtime_handle_status = {:?}",
@@ -191,6 +208,7 @@ fn main() {
     println!("--- Full Pipeline Report ---");
     println!();
 
+    // Build a complete shutdown pipeline report.
     let report = ShutdownPipelineReport {
         cause: ShutdownCause::new("operator", "scheduled maintenance"),
         started_at_unix_nanos: 1000,
@@ -201,6 +219,7 @@ fn main() {
         idempotent: false,
     };
 
+    // Print the complete report values.
     println!("  cause.requested_by = {}", report.cause.requested_by);
     println!("  cause.reason       = {}", report.cause.reason);
     println!(
@@ -210,6 +229,7 @@ fn main() {
     println!("  final_phase        = {:?}", report.phase);
     println!("  child_outcomes     = {}", report.outcomes.len());
 
+    // Print the shutdown pipeline summary.
     println!();
     println!("=== Summary ===");
     println!("Shutdown pipeline: 5 phases (Idle -> RequestStop -> GracefulDrain");

@@ -28,6 +28,7 @@ fn main() {
         // Resolve the default policy pack for this role.
         let pack = RoleDefaultPolicy::for_role(role);
 
+        // Print the resolved policy pack for the current role.
         println!("--- role={} ---", role.as_str());
         println!(
             "  on_success_exit       = {}",
@@ -58,6 +59,7 @@ fn main() {
     println!("=== EffectivePolicy (with merge) ===");
     println!();
 
+    // Print the merged policy for each declared role.
     for role in [
         TaskRole::Service,
         TaskRole::Worker,
@@ -80,6 +82,7 @@ fn main() {
     println!("=== Fallback (no role declared) ===");
     println!();
 
+    // Resolve the fallback policy when no role is declared.
     let fallback = EffectivePolicy::merge(None, vec![]);
     println!("task_role  = {}", fallback.task_role.as_str());
     println!("source     = {}", label_source(fallback.source));
