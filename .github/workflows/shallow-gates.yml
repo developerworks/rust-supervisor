@@ -24,6 +24,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.88"
+          components: rustfmt, clippy
 
       - name: Format check (fmt)
         id: fmt
