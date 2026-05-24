@@ -141,8 +141,7 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         let _sorted = kahn_sort(&child_specs).map_err(|cycle_nodes| {
             let node_names: Vec<String> = cycle_nodes.iter().map(|id| id.value.clone()).collect();
             crate::error::types::SupervisorError::fatal_config(format!(
-                "Dependency cycle detected among children: {:?}",
-                node_names
+                "Dependency cycle detected among children: {node_names:?}",
             ))
         })?;
 
@@ -734,8 +733,7 @@ fn validate_group_inputs(
                 .map(|(n, _)| *n)
                 .collect();
             return Err(crate::error::types::SupervisorError::fatal_config(format!(
-                "Group dependency cycle detected among groups: {:?}",
-                cycle_nodes
+                "Group dependency cycle detected among groups: {cycle_nodes:?}",
             )));
         }
     }

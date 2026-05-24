@@ -128,10 +128,7 @@ pub async fn send_registration_upsert(
             "registration_connect_timeout",
             "registration_send",
             Some(config.target_id.clone()),
-            format!(
-                "timed out connecting to relay registration socket after {}s",
-                connect_timeout,
-            ),
+            format!("timed out connecting to relay registration socket after {connect_timeout}s",),
             true,
         )
     })?
@@ -156,10 +153,7 @@ pub async fn send_registration_upsert(
             "registration_write_timeout",
             "registration_send",
             Some(config.target_id.clone()),
-            format!(
-                "timed out writing registration upsert after {}s",
-                io_timeout,
-            ),
+            format!("timed out writing registration upsert after {io_timeout}s",),
             true,
         )
     })?
