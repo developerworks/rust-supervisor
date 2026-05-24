@@ -126,10 +126,10 @@ impl MetricsCollector {
             if line.starts_with("VmRSS:") {
                 // Format: "VmRSS:    12345 kB"
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if let Some(kb_str) = parts.get(1) {
-                    if let Ok(kb) = kb_str.parse::<f64>() {
-                        return kb / 1024.0;
-                    }
+                if let Some(kb_str) = parts.get(1)
+                    && let Ok(kb) = kb_str.parse::<f64>()
+                {
+                    return kb / 1024.0;
                 }
             }
         }
