@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 /// Runs the clock_step_backward scenario.
 pub fn run() -> ScenarioVerdict {
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("clock_step_backward");
 
@@ -18,7 +19,7 @@ pub fn run() -> ScenarioVerdict {
 
     // Verify monotonic clock unaffected: Instant should still advance.
     let t1 = Instant::now();
-    std::thread::sleep(Duration::from_millis(1));
+    runtime.block_on(tokio::time::sleep(Duration::from_millis(1)));
     let t2 = Instant::now();
     let monotonic_ok = t2 > t1;
 

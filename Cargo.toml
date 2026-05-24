@@ -25,8 +25,8 @@ include = [
 ]
 
 [features]
-default = []
-test-support = []
+default = ["test-support"]
+test-support = ["tokio/test-util"]
 
 [lib]
 name = "rust_supervisor"
@@ -64,7 +64,7 @@ tracing-subscriber = "0.3.23"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
-tokio = { version = "1.52.3", features = ["test-util"] }
+tokio = { version = "1.52.3", features = ["test-util", "fs"] }
 
 
 [[test]]

@@ -1084,12 +1084,12 @@ fn unix_nanos_now() -> u128 {
 /// pause and resume.
 fn is_high_risk_command(method: &str, service: &DashboardIpcService) -> bool {
     // Prefer configured list when security pipeline is available.
-    if let Some(ref pipeline) = service.security_pipeline {
-        if let Ok(guard) = pipeline.lock() {
-            let configured = guard.high_risk_methods();
-            if !configured.is_empty() {
-                return configured.iter().any(|m| m == method);
-            }
+    if let Some(ref pipeline) = service.security_pipeline
+        && let Ok(guard) = pipeline.lock()
+    {
+        let configured = guard.high_risk_methods();
+        if !configured.is_empty() {
+            return configured.iter().any(|m| m == method);
         }
     }
     // Fallback: all write/destructive commands including pause/resume.

@@ -9,9 +9,7 @@ use std::time::{Duration, Instant};
 
 /// Runs the rapid_failure_10k scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new()
-        .expect("tokio runtime")
-        .enter();
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("rapid_failure_10k");
 
@@ -19,11 +17,13 @@ pub fn run() -> ScenarioVerdict {
     let budget_ok = true; // Budget never fully exhausted at this scale.
     let spawner = FixtureChildSpawner::with_panic_delay(Duration::from_millis(1));
 
-    for _ in 0..count {
-        let cancel = spawner.spawn();
-        std::thread::sleep(Duration::from_micros(100));
-        cancel.cancel();
-    }
+    runtime.block_on(async {
+        for _ in 0..count {
+            let cancel = spawner.spawn();
+            tokio::time::sleep(Duration::from_micros(100)).await;
+            cancel.cancel();
+        }
+    });
 
     let elapsed = start.elapsed();
 

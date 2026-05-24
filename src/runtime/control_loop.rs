@@ -1439,9 +1439,7 @@ impl RuntimeControlState {
     ///
     /// This function does not return a value.
     fn reinsert_slot_unless_replaced(&mut self, child_id: ChildId, slot: ChildSlot) {
-        if !self.slots.contains_key(&child_id) {
-            self.slots.insert(child_id, slot);
-        }
+        self.slots.entry(child_id).or_insert(slot);
         // If another entry exists, the drain/abort outcome is discarded —
         // the concurrent command (e.g. RestartChild) already set a fresh
         // placeholder or active state that takes precedence.
@@ -1867,11 +1865,11 @@ impl RuntimeControlState {
             self.spawn_child_start(child_id.clone(), true, delay);
             // Retrieve the generation and attempt assigned by the spawn
             // (set inside prepare_child_start + attach_spawned_child_handle).
-            if let Some(slot) = self.slots.get(child_id) {
-                if let (Some(gen_val), Some(att_val)) = (slot.generation, slot.attempt) {
-                    self.active_gate_permits
-                        .insert((child_id.clone(), gen_val, att_val), permit);
-                }
+            if let Some(slot) = self.slots.get(child_id)
+                && let (Some(gen_val), Some(att_val)) = (slot.generation, slot.attempt)
+            {
+                self.active_gate_permits
+                    .insert((child_id.clone(), gen_val, att_val), permit);
             }
         }
     }
@@ -2879,15 +2877,15 @@ impl RuntimeControlState {
         // ran — leaving behind sockets, PID files, and temp files. Removing
         // them here prevents "Address already in use" errors on restart.
         for path in &runtime.spec.cleanup_paths {
-            if let Err(error) = std::fs::remove_file(path) {
-                if error.kind() != std::io::ErrorKind::NotFound {
-                    tracing::warn!(
-                        child_id = %child_id,
-                        path = %path.display(),
-                        ?error,
-                        "failed to clean up orphaned resource before spawn",
-                    );
-                }
+            if let Err(error) = std::fs::remove_file(path)
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                tracing::warn!(
+                    child_id = %child_id,
+                    path = %path.display(),
+                    ?error,
+                    "failed to clean up orphaned resource before spawn",
+                );
             }
         }
 

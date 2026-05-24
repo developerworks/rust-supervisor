@@ -157,11 +157,11 @@ jobs:
           echo "trigger: ${{ github.event_name }}" >> artifacts/nightly/summary.txt
           for job in coverage mutation-testing fuzzing loom miri event-metrics-consistency chaos-suite soak-suite; do
             result=
-            if [ "${{ needs.$job.result }}" = "success" ]; then
+            if [ "${{ needs[job].result }}" = "success" ]; then
               result="passed"
-            elif [ "${{ needs.$job.result }}" = "failure" ]; then
+            elif [ "${{ needs[job].result }}" = "failure" ]; then
               result="failed"
-            elif [ "${{ needs.$job.result }}" = "cancelled" ]; then
+            elif [ "${{ needs[job].result }}" = "cancelled" ]; then
               result="cancelled"
             else
               result="skipped"

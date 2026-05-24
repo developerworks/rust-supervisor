@@ -9,9 +9,7 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_panic_storm scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new()
-        .expect("tokio runtime")
-        .enter();
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_panic_storm");
 
@@ -21,14 +19,16 @@ pub fn run() -> ScenarioVerdict {
 
     // Repeatedly spawn panicking children for 60s.
     let spawn_start = Instant::now();
-    while spawn_start.elapsed() < window {
-        let cancel = spawner.spawn();
-        // Wait briefly for the child to panic.
-        std::thread::sleep(Duration::from_millis(5));
-        // Cancel any lingering handles.
-        cancel.cancel();
-        panic_count += 1;
-    }
+    runtime.block_on(async {
+        while spawn_start.elapsed() < window {
+            let cancel = spawner.spawn();
+            // Wait briefly for the child to panic.
+            tokio::time::sleep(Duration::from_millis(5)).await;
+            // Cancel any lingering handles.
+            cancel.cancel();
+            panic_count += 1;
+        }
+    });
 
     let elapsed = start.elapsed();
 

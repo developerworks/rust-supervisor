@@ -9,17 +9,19 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_ignore_cancel scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new()
-        .expect("tokio runtime")
-        .enter();
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_ignore_cancel");
 
-    let spawner = FixtureChildSpawner::with_ignore_cancel();
-    let cancel = spawner.spawn();
+    let cancel = runtime.block_on(async {
+        let spawner = FixtureChildSpawner::with_ignore_cancel();
+        let cancel = spawner.spawn();
 
-    // Wait for child to start ignoring.
-    std::thread::sleep(Duration::from_millis(100));
+        // Wait for child to start ignoring.
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        cancel
+    });
+
     cancel.cancel();
 
     // In a real implementation, we'd verify the slot is deactivated.

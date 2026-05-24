@@ -165,11 +165,17 @@ impl Display for SupervisorPath {
 
 /// Monotonic child_start_count number for a child run.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 pub struct ChildStartCount {
     /// One-based child_start_count number.
     pub value: u64,
+}
+
+impl std::hash::Hash for ChildStartCount {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 impl ChildStartCount {
@@ -204,11 +210,17 @@ impl ChildStartCount {
 
 /// Monotonic generation number for a child runtime slot.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 pub struct Generation {
     /// Zero-based generation number.
     pub value: u64,
+}
+
+impl std::hash::Hash for Generation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
 }
 
 impl Generation {

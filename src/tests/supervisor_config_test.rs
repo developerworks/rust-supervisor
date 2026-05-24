@@ -7,8 +7,8 @@ use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::supervisor::SupervisionStrategy;
-use std::fs;
 use std::path::Path;
+use tokio::fs;
 
 /// Verifies that the example YAML configuration can produce a running handle.
 #[tokio::test]
@@ -47,12 +47,14 @@ async fn supervisor_starts_from_config_state() {
 async fn supervisor_starts_from_config_file() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = root.join("target/no-ipc-supervisor-config.yaml");
-    fs::create_dir_all(path.parent().expect("target parent")).expect("create target");
-    fs::write(&path, no_ipc_startup_yaml()).expect("write config");
+    std::fs::create_dir_all(path.parent().expect("target parent")).expect("create target");
+    fs::write(&path, no_ipc_startup_yaml())
+        .await
+        .expect("write config");
     let handle = Supervisor::start_from_config_file(&path)
         .await
         .expect("start from config file");
-    let _ = fs::remove_file(&path);
+    let _ = std::fs::remove_file(&path);
 
     let current = handle.current_state().await.expect("current state");
     assert!(matches!(
@@ -80,7 +82,7 @@ async fn invalid_config_state_does_not_return_handle() {
 async fn invalid_config_file_does_not_return_handle() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = root.join("target/invalid-supervisor-config.yaml");
-    fs::create_dir_all(path.parent().expect("target parent")).expect("create target");
+    std::fs::create_dir_all(path.parent().expect("target parent")).expect("create target");
     fs::write(
         &path,
         r#"
@@ -105,10 +107,11 @@ observability:
   audit_enabled: true
 "#,
     )
+    .await
     .expect("write invalid config");
 
     let result = Supervisor::start_from_config_file(&path).await;
-    let _ = fs::remove_file(&path);
+    let _ = std::fs::remove_file(&path);
 
     assert!(matches!(
         result,

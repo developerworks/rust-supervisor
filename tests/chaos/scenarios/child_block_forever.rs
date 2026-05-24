@@ -9,17 +9,19 @@ use std::time::{Duration, Instant};
 
 /// Runs the child_block_forever scenario.
 pub fn run() -> ScenarioVerdict {
-    let _guard = tokio::runtime::Runtime::new()
-        .expect("tokio runtime")
-        .enter();
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     let start = Instant::now();
     let verdict = ScenarioVerdict::new("child_block_forever");
 
-    let spawner = FixtureChildSpawner::with_block_forever();
-    let cancel = spawner.spawn();
+    let cancel = runtime.block_on(async {
+        let spawner = FixtureChildSpawner::with_block_forever();
+        let cancel = spawner.spawn();
 
-    // Wait for child to start blocking.
-    std::thread::sleep(Duration::from_millis(50));
+        // Wait for child to start blocking.
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        cancel
+    });
+
     let abort_start = Instant::now();
     cancel.cancel();
 

@@ -4,9 +4,9 @@
 disallowed-methods = [
     "std::fs::read",
     "std::fs::write",
-    "std::fs::File",
-    "std::net::TcpStream",
+    { path = "std::fs::File", allow-invalid = true },
+    { path = "std::net::TcpStream", allow-invalid = true },
     "std::thread::sleep",
-    "std::sync::Mutex",
-    "std::process::Command",
+    { path = "std::sync::Mutex", allow-invalid = true },
+    { path = "std::process::Command", allow-invalid = true },
 ]

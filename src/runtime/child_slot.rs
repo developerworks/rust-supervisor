@@ -607,7 +607,7 @@ impl ChildSlot {
             .generation_fence
             .pending_restart
             .as_ref()
-            .map(|p| crate::control::outcome::PendingRestartSummary::from(p));
+            .map(crate::control::outcome::PendingRestartSummary::from);
         ChildRuntimeRecord::new(
             self.child_id.clone(),
             self.path.clone(),
