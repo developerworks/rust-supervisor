@@ -23,7 +23,7 @@ cargo publish --dry-run
 - 五个 example(示例) 文件存在.
 - 主配置 `examples/config/supervisor.yaml` 存在.
 - 文档不包含常见中文标点.
-- README(说明文档) 不描述 compatibility wrapper(兼容包装函数), migration layer(迁移层) 或 deprecated facade(废弃门面).
+- README(说明文档) 不写旧 API(接口) 形状相关说明.
 
 ## 可维护性门禁
 

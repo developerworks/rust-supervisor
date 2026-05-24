@@ -23,7 +23,7 @@ cargo publish --dry-run
 - Five `examples/*.rs` files exist.
 - Main configuration `examples/config/supervisor.yaml` exists.
 - Documents avoid common full-width punctuation where ASCII is required.
-- README files do not describe compatibility wrappers, migration layers, or deprecated facades.
+- README files keep banned legacy API-shape wording out of release docs.
 
 ## Maintainability Gate
 

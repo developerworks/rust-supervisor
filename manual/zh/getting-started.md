@@ -83,7 +83,7 @@ JSON schema(模式) 定义在 [health-selfcheck-schema.md](../specs/006-8-produc
 4. 构建 `RuntimeControlState`(运行时控制状态)
 5. `tokio::spawn(run_control_loop(...))` 启动异步控制循环
 6. 启动 `RuntimeWatchdog`(运行时看门狗) 监控控制循环健康
-7. 返回 `SupervisorHandle`(监督器句柄),用于后续发送命令(重启、关闭等)和订阅事件
+7. 返回 `SupervisorHandle`(监督器句柄), 用于后续发送命令(重启, 关闭等)和订阅事件
 
 ### 用法示例
 
