@@ -298,7 +298,7 @@ impl ObservabilityPipeline {
                 }
                 diag = diag.with_supervisor_path(event.r#where.supervisor_path.to_string());
                 diag.budget_evaluation =
-                    Some(format!("BudgetExhausted:retry_after_ns={}", retry_after_ns));
+                    Some(format!("BudgetExhausted:retry_after_ns={retry_after_ns}"));
                 Some(diag)
             }
             What::GroupFuseTriggered {

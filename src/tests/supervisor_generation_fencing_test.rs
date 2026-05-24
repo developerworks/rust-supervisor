@@ -565,9 +565,7 @@ async fn auto_restart_and_manual_restart_share_fence_gate_test() {
                 ..
             } if *id == beta_id && command_id == "runtime-policy"
         )),
-        "expected runtime-policy automatic restart suppression on {:?}; conflicts observed {:?}",
-        beta_id,
-        restart_conflicts_for_debug
+        "expected runtime-policy automatic restart suppression on {beta_id:?}; conflicts observed {restart_conflicts_for_debug:?}"
     );
     let _ignored = with_auto_clock_drive(async {
         handle

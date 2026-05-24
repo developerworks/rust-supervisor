@@ -21,8 +21,7 @@ fn functions_stay_within_line_budget() {
                 current_function_lines += 1;
                 assert!(
                     current_function_lines <= 80,
-                    "function line budget exceeded in {:?}",
-                    path
+                    "function line budget exceeded in {path:?}"
                 );
                 if trimmed == "}" {
                     current_function_lines = 0;

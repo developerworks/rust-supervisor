@@ -316,7 +316,10 @@ impl BoundedFrameReader {
                             "frame_too_large",
                             "ipc_read",
                             None,
-                            format!("frame exceeded maximum size of {max} bytes", max = self.max_bytes),
+                            format!(
+                                "frame exceeded maximum size of {max} bytes",
+                                max = self.max_bytes
+                            ),
                             false,
                         ));
                     }

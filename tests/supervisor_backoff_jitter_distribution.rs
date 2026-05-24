@@ -106,11 +106,7 @@ fn test_full_jitter_produces_dispersion() {
     // SC-004: Full jitter should produce non-zero CV.
     let samples = full_jitter_samples(RNG_SEED);
     let cv = coefficient_of_variation(&samples);
-    assert!(
-        cv > 0.0,
-        "Full jitter should produce non-zero CV, got {}",
-        cv
-    );
+    assert!(cv > 0.0, "Full jitter should produce non-zero CV, got {cv}");
 }
 
 #[test]
@@ -120,8 +116,7 @@ fn test_decorrelated_jitter_produces_dispersion() {
     let cv = coefficient_of_variation(&samples);
     assert!(
         cv > 0.0,
-        "Decorrelated jitter should produce non-zero CV, got {}",
-        cv
+        "Decorrelated jitter should produce non-zero CV, got {cv}"
     );
 }
 
@@ -154,7 +149,7 @@ fn test_cv_ratio_requirement_full_jitter() {
     let cv_fixed = coefficient_of_variation(&fixed_samples);
     let cv_jitter = coefficient_of_variation(&jitter_samples);
 
-    println!("Fixed CV: {}, Full Jitter CV: {}", cv_fixed, cv_jitter);
+    println!("Fixed CV: {cv_fixed}, Full Jitter CV: {cv_jitter}");
 
     assert!(
         cv_fixed > 0.0,
@@ -163,8 +158,7 @@ fn test_cv_ratio_requirement_full_jitter() {
     let ratio = cv_jitter / cv_fixed;
     assert!(
         ratio >= 1.3,
-        "Full jitter CV / fixed baseline CV should be >= 1.3, got {:.2}",
-        ratio
+        "Full jitter CV / fixed baseline CV should be >= 1.3, got {ratio:.2}"
     );
 }
 
@@ -177,10 +171,7 @@ fn test_cv_ratio_requirement_decorrelated_jitter() {
     let cv_fixed = coefficient_of_variation(&fixed_samples);
     let cv_jitter = coefficient_of_variation(&jitter_samples);
 
-    println!(
-        "Fixed CV: {}, Decorrelated Jitter CV: {}",
-        cv_fixed, cv_jitter
-    );
+    println!("Fixed CV: {cv_fixed}, Decorrelated Jitter CV: {cv_jitter}");
 
     assert!(
         cv_fixed > 0.0,
@@ -189,8 +180,7 @@ fn test_cv_ratio_requirement_decorrelated_jitter() {
     let ratio = cv_jitter / cv_fixed;
     assert!(
         ratio >= 1.3,
-        "Decorrelated jitter CV / fixed baseline CV should be >= 1.3, got {:.2}",
-        ratio
+        "Decorrelated jitter CV / fixed baseline CV should be >= 1.3, got {ratio:.2}"
     );
 }
 
@@ -209,7 +199,6 @@ fn test_full_jitter_spread_across_range() {
     let cv = coefficient_of_variation(&samples);
     assert!(
         cv > 0.1,
-        "Full jitter should have reasonable dispersion, got CV={:.3}",
-        cv
+        "Full jitter should have reasonable dispersion, got CV={cv:.3}"
     );
 }

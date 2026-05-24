@@ -201,7 +201,7 @@ impl std::fmt::Display for ThrottleGateOwner {
         match self {
             Self::None => write!(f, "none"),
             Self::SupervisorInstance => write!(f, "supervisor_global"),
-            Self::Group(group) => write!(f, "group:{}", group),
+            Self::Group(group) => write!(f, "group:{group}"),
         }
     }
 }

@@ -13,8 +13,7 @@ fn source_imports_use_absolute_crate_paths() {
         let text = fs::read_to_string(&path).expect("read rust file");
         assert!(
             !text.contains(&forbidden),
-            "relative super import is forbidden in {:?}",
-            path
+            "relative super import is forbidden in {path:?}"
         );
     }
 }

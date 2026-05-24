@@ -85,10 +85,7 @@ pub fn check_fd_count(baseline: Option<u64>) -> FdWatchResult {
             FD_GROWTH_TOLERANCE * 100.0,
         )
     } else {
-        format!(
-            "FD count normal: current={} baseline={} ratio={:.2}",
-            current, baseline, growth_ratio,
-        )
+        format!("FD count normal: current={current} baseline={baseline} ratio={growth_ratio:.2}",)
     };
 
     FdWatchResult {

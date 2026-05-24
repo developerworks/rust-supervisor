@@ -45,8 +45,7 @@ fn rust_source_files_have_module_documentation() {
         let text = fs::read_to_string(&path).expect("read rust file");
         assert!(
             text.trim_start().starts_with("//!"),
-            "missing module documentation in {:?}",
-            path
+            "missing module documentation in {path:?}",
         );
     }
 }
@@ -60,8 +59,7 @@ fn example_module_docs_use_english_only() {
             lines
                 .first()
                 .is_some_and(|line| line.trim_start().starts_with("//!")),
-            "missing example module documentation in {:?}",
-            path
+            "missing example module documentation in {path:?}",
         );
         for (index, line) in lines.iter().enumerate() {
             if line.trim_start().starts_with("//") {

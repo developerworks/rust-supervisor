@@ -49,34 +49,22 @@ fn main() {
     println!();
 
     let mut phase = ShutdownPhase::Idle;
-    println!("  Phase 0: {:?} - supervisor is running normally", phase);
+    println!("  Phase 0: {phase:?} - supervisor is running normally");
 
     phase = ShutdownPhase::RequestStop;
-    println!(
-        "  Phase 1: {:?} - shutdown requested, cancellation sent to all children",
-        phase
-    );
+    println!("  Phase 1: {phase:?} - shutdown requested, cancellation sent to all children");
 
     phase = ShutdownPhase::GracefulDrain;
-    println!(
-        "  Phase 2: {:?} - waiting for children to exit cooperatively",
-        phase
-    );
+    println!("  Phase 2: {phase:?} - waiting for children to exit cooperatively");
 
     phase = ShutdownPhase::AbortStragglers;
-    println!(
-        "  Phase 3: {:?} - graceful timeout expired, stragglers aborted",
-        phase
-    );
+    println!("  Phase 3: {phase:?} - graceful timeout expired, stragglers aborted");
 
     phase = ShutdownPhase::Reconcile;
-    println!(
-        "  Phase 4: {:?} - reconciling final state, cleaning up resources",
-        phase
-    );
+    println!("  Phase 4: {phase:?} - reconciling final state, cleaning up resources");
 
     phase = ShutdownPhase::Completed;
-    println!("  Phase 5: {:?} - shutdown complete", phase);
+    println!("  Phase 5: {phase:?} - shutdown complete");
 
     // --- Phase transitions ---
     println!();
@@ -85,7 +73,7 @@ fn main() {
 
     let mut current = ShutdownPhase::Idle;
     while let Some(next) = current.next() {
-        println!("  {:?} -> {:?}", current, next);
+        println!("  {current:?} -> {next:?}");
         current = next;
     }
 
@@ -137,7 +125,7 @@ fn main() {
             cancel_delivered: true,
             exit: None,
             phase,
-            reason: format!("child completed during {:?}", phase),
+            reason: format!("child completed during {phase:?}"),
         })
     };
 

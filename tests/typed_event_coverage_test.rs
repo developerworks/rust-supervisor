@@ -110,20 +110,16 @@ fn test_all_variants_serializable() {
 
     for (i, variant) in variants.iter().enumerate() {
         let json_str = serde_json::to_string_pretty(variant)
-            .unwrap_or_else(|e| panic!("variant[{}] {:?} serialization failed: {}", i, variant, e));
+            .unwrap_or_else(|e| panic!("variant[{i}] {variant:?} serialization failed: {e}"));
         let deserialized: What = serde_json::from_str(&json_str).unwrap_or_else(|e| {
-            panic!(
-                "variant[{}] deserialization failed: {}\njson: {}",
-                i, e, json_str
-            )
+            panic!("variant[{i}] deserialization failed: {e}\njson: {json_str}")
         });
         // Verify round-trip: debug output should contain the same type name
-        let original_debug = format!("{:?}", variant);
-        let roundtrip_debug = format!("{:?}", deserialized);
+        let original_debug = format!("{variant:?}");
+        let roundtrip_debug = format!("{deserialized:?}");
         assert_eq!(
             original_debug, roundtrip_debug,
-            "variant[{}] round-trip debug mismatch",
-            i
+            "variant[{i}] round-trip debug mismatch"
         );
     }
 }
@@ -134,32 +130,24 @@ fn test_what_type_field_is_snake_case() {
 
     for (i, variant) in variants.iter().enumerate() {
         let json_value: serde_json::Value = serde_json::to_value(variant)
-            .unwrap_or_else(|e| panic!("variant[{}] to_value failed: {}", i, e));
+            .unwrap_or_else(|e| panic!("variant[{i}] to_value failed: {e}"));
 
         // The `type` field should be present and in snake_case.
         let type_field = json_value
             .get("type")
             .and_then(|v| v.as_str())
-            .unwrap_or_else(|| {
-                panic!("variant[{}] has no 'type' field in JSON: {}", i, json_value)
-            });
+            .unwrap_or_else(|| panic!("variant[{i}] has no 'type' field in JSON: {json_value}"));
 
         // Verify snake_case: no uppercase letters, words separated by underscores.
         assert!(
             !type_field.contains(char::is_uppercase),
-            "variant[{}] type '{}' is not snake_case: {}",
-            i,
-            type_field,
-            json_value
+            "variant[{i}] type '{type_field}' is not snake_case: {json_value}"
         );
 
         // Verify the payload field is present (even if empty).
-        let _payload = json_value.get("payload").unwrap_or_else(|| {
-            panic!(
-                "variant[{}] has no 'payload' field in JSON: {}",
-                i, json_value
-            )
-        });
+        let _payload = json_value
+            .get("payload")
+            .unwrap_or_else(|| panic!("variant[{i}] has no 'payload' field in JSON: {json_value}"));
     }
 }
 
@@ -185,12 +173,12 @@ fn test_all_new_variants_have_correct_field_types() {
         events_discarded: 0,
     };
     let json = serde_json::to_value(&audit).unwrap();
-    assert_eq!(json["type"], "audit_recorded", "JSON: {}", json);
+    assert_eq!(json["type"], "audit_recorded", "JSON: {json}");
     // correlation_id serializes as an object with a `value` string (UUID format).
     let cid = json["payload"]["correlation_id"]["value"]
         .as_str()
         .expect("correlation_id.value should be a string");
-    assert!(cid.len() > 10, "correlation_id too short: {}", cid);
+    assert!(cid.len() > 10, "correlation_id too short: {cid}");
 }
 
 #[test]

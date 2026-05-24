@@ -46,8 +46,7 @@ fn module_mod_rs_contains_only_public_modules() {
                 || trimmed.starts_with("//!");
             assert!(
                 allowed,
-                "unexpected module entry line in {:?}: {trimmed}",
-                module_file
+                "unexpected module entry line in {module_file:?}: {trimmed}"
             );
         }
         assert!(!text.contains("pub use"));

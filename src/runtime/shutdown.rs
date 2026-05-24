@@ -136,8 +136,7 @@ pub fn emergency_force_kill(
     *orphan_count += 1;
 
     Some(format!(
-        "child_orphaned:{}:generation={}:attempt={}",
-        child_id, generation, attempt
+        "child_orphaned:{child_id}:generation={generation}:attempt={attempt}"
     ))
 }
 

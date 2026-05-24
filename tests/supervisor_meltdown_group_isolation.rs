@@ -278,7 +278,7 @@ fn test_90_percent_isolation_metric() {
             now + Duration::from_secs(20 + i),
         );
 
-        println!("Attempt {}: group={}, outcome={:?}", i, group_name, outcome);
+        println!("Attempt {i}: group={group_name}, outcome={outcome:?}");
 
         if outcome == MeltdownOutcome::Continue {
             successful_attempts += 1;

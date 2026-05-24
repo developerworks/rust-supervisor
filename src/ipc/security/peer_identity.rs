@@ -132,7 +132,7 @@ fn extract_peer_identity_macos(stream: &StdUnixStream) -> Result<PeerIdentity, D
     // macOS xucred provides cr_uid and cr_groups[] but no single cr_gid.
     // Use cr_uid for identity; gid is set to 0 (gid checks are opt-in).
     let gid = if cred.cr_ngroups > 0 {
-        cred.cr_groups[0] as u32
+        cred.cr_groups[0]
     } else {
         0
     };

@@ -119,8 +119,7 @@ fn test_correlation_gap_detected() {
         }) => {
             assert!(
                 missing_stages.contains(&"failure_decision".to_string()),
-                "should detect missing failure_decision: {:?}",
-                missing_stages
+                "should detect missing failure_decision: {missing_stages:?}"
             );
             assert!(
                 present_stages.contains(&"spawn".to_string()),
@@ -131,7 +130,7 @@ fn test_correlation_gap_detected() {
                 "should have shutdown present"
             );
         }
-        other => panic!("expected CorrelationGapDetected, got {:?}", other),
+        other => panic!("expected CorrelationGapDetected, got {other:?}"),
     }
 }
 
@@ -143,7 +142,7 @@ fn test_correlation_not_found() {
     let result = handle.export_chain(None);
     match result {
         Err(CorrelationQueryError::CorrelationNotFound { .. }) => {} // expected
-        other => panic!("expected CorrelationNotFound, got {:?}", other),
+        other => panic!("expected CorrelationNotFound, got {other:?}"),
     }
 }
 

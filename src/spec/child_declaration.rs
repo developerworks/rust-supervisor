@@ -328,7 +328,7 @@ pub fn validate_child_declaration(
         {
             return Err(ValidationError {
                 field_path: format!("environment[{}].secret_ref", env.name),
-                reason: format!("Secret reference '{}' has invalid syntax", secret_ref),
+                reason: format!("Secret reference '{secret_ref}' has invalid syntax"),
                 hint: Some(
                     "Secret references must match ^\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}$".to_string(),
                 ),

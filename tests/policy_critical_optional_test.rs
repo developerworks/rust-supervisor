@@ -63,11 +63,11 @@ fn test_correlation_id_uuid_v4_uniqueness() {
     // Simulate 1000 children failing simultaneously.
     let mut ids = HashSet::new();
     for i in 0..1000 {
-        let child_id = ChildId::new(format!("child-{}", i));
+        let child_id = ChildId::new(format!("child-{i}"));
         let path = SupervisorPath::root();
         // Each PipelineContext generates a correlation_id; in production
         // this would use UUID v4 via the `uuid` crate.
-        let ctx = PipelineContext::new(child_id, path, 1, format!("corr-{:08x}", i));
+        let ctx = PipelineContext::new(child_id, path, 1, format!("corr-{i:08x}"));
         let inserted = ids.insert(ctx.correlation_id.clone());
         assert!(
             inserted,

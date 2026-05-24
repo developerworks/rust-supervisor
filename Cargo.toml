@@ -2,7 +2,7 @@
 name = "rust-tokio-supervisor"
 version = "0.1.3"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.94"
 autobins = false
 description = "A Rust tokio supervisor with declarative task supervision, restart policy, shutdown coordination, and observability."
 license = "MIT"

@@ -971,8 +971,7 @@ impl RuntimeControlState {
                         &mut self.orphan_count,
                     ) {
                         let _ = event_sender.send(format!(
-                            "child_orphaned:{}:shutdown_phase=global_timeout",
-                            diag,
+                            "child_orphaned:{diag}:shutdown_phase=global_timeout"
                         ));
                     }
                 }
@@ -1850,8 +1849,7 @@ impl RuntimeControlState {
             let Some(permit) = self.concurrent_gate.try_acquire() else {
                 // Gate saturated — emit throttle event and skip remaining.
                 let _ignored = event_sender.send(format!(
-                    "restart_throttled:concurrent_gate_saturated:{group_label}:{scope_label}:{}",
-                    child_id,
+                    "restart_throttled:concurrent_gate_saturated:{group_label}:{scope_label}:{child_id}",
                 ));
                 self.emit_throttle_gate_event(
                     child_id,
@@ -2360,8 +2358,7 @@ impl RuntimeControlState {
             },
         });
         let _ignored = event_sender.send(format!(
-            "child_control_command_completed:{}:restart_child",
-            outcome_identifier
+            "child_control_command_completed:{outcome_identifier}:restart_child"
         ));
     }
 
@@ -3140,8 +3137,7 @@ impl RuntimeControlState {
             {
                 stale_count += 1;
                 let _ignored = event_sender.send(format!(
-                    "child_liveness_stale: child_id={} last_heartbeat_at={}",
-                    child_id, last_hb
+                    "child_liveness_stale: child_id={child_id} last_heartbeat_at={last_hb}"
                 ));
             }
         }

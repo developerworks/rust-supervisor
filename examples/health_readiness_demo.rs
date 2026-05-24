@@ -56,14 +56,8 @@ fn main() {
     let immediate = ReadinessPolicy::Immediate;
     let explicit = ReadinessPolicy::Explicit;
 
-    println!(
-        "  {:?} -> child is considered ready as soon as it starts",
-        immediate
-    );
-    println!(
-        "  {:?} -> child must call mark_ready() before being considered ready",
-        explicit
-    );
+    println!("  {immediate:?} -> child is considered ready as soon as it starts");
+    println!("  {explicit:?} -> child must call mark_ready() before being considered ready");
 
     // --- ReadySignal ---
     println!();
