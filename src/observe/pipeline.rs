@@ -472,7 +472,7 @@ fn make_backpressure_alert(
 ) -> SupervisorEvent {
     let mut ev = event.clone();
     ev.what = What::BackpressureAlert {
-        subscriber: format!("subscriber_{}", subscriber_index),
+        subscriber: format!("subscriber_{subscriber_index}"),
         buffer_pct: occupancy_pct,
         threshold_pct,
     };
@@ -493,7 +493,7 @@ fn make_backpressure_degradation(
         BackpressureStrategy::SampleAndAudit => "sample_and_audit",
     };
     ev.what = What::BackpressureDegradation {
-        subscriber: format!("subscriber_{}", subscriber_index),
+        subscriber: format!("subscriber_{subscriber_index}"),
         strategy: strategy_name.to_owned(),
         sample_ratio: FiniteF64::new(0.5),
         buffer_peak_pct: occupancy_pct,
@@ -1200,7 +1200,7 @@ fn merge_generation_fence_child_control_audit_fields(
     if let Some(fence) = &outcome.generation_fence {
         context.insert(
             "generation_fence_decision".to_owned(),
-            format!("{:?}", fence.decision),
+            format!("{decision:?}", decision = fence.decision),
         );
         context.insert(
             "generation_fence_abort_requested".to_owned(),
@@ -1283,11 +1283,11 @@ fn audit_child_control(input: ChildControlAuditInput<'_>) -> AuditRecord {
     context.insert("status".to_owned(), optional_debug(input.outcome.status));
     context.insert(
         "operation_before".to_owned(),
-        format!("{:?}", input.outcome.operation_before),
+        format!("{ob:?}", ob = input.outcome.operation_before),
     );
     context.insert(
         "operation_after".to_owned(),
-        format!("{:?}", input.outcome.operation_after),
+        format!("{oa:?}", oa = input.outcome.operation_after),
     );
     context.insert(
         "cancel_delivered".to_owned(),
@@ -1295,7 +1295,7 @@ fn audit_child_control(input: ChildControlAuditInput<'_>) -> AuditRecord {
     );
     context.insert(
         "stop_state".to_owned(),
-        format!("{:?}", input.outcome.stop_state),
+        format!("{ss:?}", ss = input.outcome.stop_state),
     );
     context.insert(
         "restart_limit_remaining".to_owned(),

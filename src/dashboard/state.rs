@@ -57,7 +57,12 @@ pub fn build_dashboard_state(
     );
     let recent_logs = recent_events
         .iter()
-        .map(|event| log_record_for_event(event, format!("event {}", event.event_type)))
+        .map(|event| {
+            log_record_for_event(
+                event,
+                format!("event {event_type}", event_type = event.event_type),
+            )
+        })
         .collect::<Vec<_>>();
     DashboardState {
         target: TargetProcessIdentity {
@@ -160,8 +165,8 @@ pub fn runtime_state_rows(state: &SupervisorState) -> Vec<RuntimeState> {
         .map(|child| RuntimeState {
             child_path: child.path.to_string(),
             lifecycle_state: child.state.as_label().to_owned(),
-            health: format!("{:?}", child.health).to_lowercase(),
-            readiness: format!("{:?}", child.readiness).to_lowercase(),
+            health: format!("{health:?}", health = child.health).to_lowercase(),
+            readiness: format!("{readiness:?}", readiness = child.readiness).to_lowercase(),
             generation: child.generation.value,
             child_start_count: child.child_start_count.value,
             restart_count: child.restart_count,
@@ -173,7 +178,7 @@ pub fn runtime_state_rows(state: &SupervisorState) -> Vec<RuntimeState> {
                 .last_policy_decision
                 .as_ref()
                 .map(|decision| decision.decision.clone()),
-            shutdown_state: format!("{:?}", state.shutdown_state).to_lowercase(),
+            shutdown_state: format!("{s:?}", s = state.shutdown_state).to_lowercase(),
         })
         .collect()
 }

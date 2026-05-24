@@ -700,7 +700,7 @@ impl RuntimeControlState {
         // Execute six-stage supervision pipeline for failure processing.
         let sequence = self.event_sequences.next().value;
         // T037: Generate a real CorrelationId to link budget→meltdown→escalation events.
-        let correlation_id_str = format!("{}", uuid::Uuid::new_v4());
+        let correlation_id_str = uuid::Uuid::new_v4().to_string();
         let supervisor_path = self
             .slots
             .get(&child_id)
@@ -748,7 +748,7 @@ impl RuntimeControlState {
             )
             && let Some(ref group_id) = pipeline_result.group_id
         {
-            let _ignored = event_sender.send(format!("group_fuse_active:{group_id}:{}", child_id));
+            let _ignored = event_sender.send(format!("group_fuse_active:{group_id}:{child_id}"));
             // Mark all children in the affected group as non-restartable.
             for (_cid, slot) in self.slots.iter_mut() {
                 if slot.group.as_deref() == Some(group_id.as_str()) {
@@ -1045,7 +1045,7 @@ impl RuntimeControlState {
                 &mut self.orphan_count,
             ) {
                 let _ =
-                    event_sender.send(format!("child_orphaned:{}:shutdown_phase=reconcile", diag,));
+                    event_sender.send(format!("child_orphaned:{diag}:shutdown_phase=reconcile"));
             }
         }
         let reconcile = ShutdownReconcileReport::core_runtime_completed();
@@ -1069,7 +1069,10 @@ impl RuntimeControlState {
             reconcile,
             idempotent: false,
         };
-        let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
+        let _ignored = event_sender.send(format!(
+            "shutdown_completed:{len}",
+            len = report.outcomes.len()
+        ));
         self.shutdown_pipeline.cache_report(report.clone());
 
         // Step 4: active orphan degradation detection.
@@ -3034,7 +3037,10 @@ impl RuntimeControlState {
             idempotent: false,
         };
         self.shutdown_pipeline.cache_report(report.clone());
-        let _ignored = event_sender.send(format!("shutdown_completed:{}", report.outcomes.len()));
+        let _ignored = event_sender.send(format!(
+            "shutdown_completed:{len}",
+            len = report.outcomes.len()
+        ));
 
         // Step 4: active orphan degradation detection.
         let threshold = self.shutdown.policy.effective_max_orphan_threshold() as u64;
@@ -3480,7 +3486,10 @@ pub async fn run_control_loop(
                     Ok(()) => {
                         let report = RuntimeExitReport::completed(
                             "shutdown",
-                            format!("runtime control plane shutdown requested: {}", meta.reason),
+                            format!(
+                                "runtime control plane shutdown requested: {reason}",
+                                reason = meta.reason
+                            ),
                         );
                         let _ignored = reply_sender.send(Ok(report.clone()));
                         return report;

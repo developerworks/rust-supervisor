@@ -747,9 +747,9 @@ impl SupervisionPipeline {
                     let fuse_outcome_str = ctx
                         .budget_evaluation
                         .as_ref()
-                        .map(|be| format!("{:?}", be.meltdown_outcome));
+                        .map(|be| format!("{mo:?}", mo = be.meltdown_outcome));
                     return What::EscalationBifurcated {
-                        severity: format!("{:?}", policy.severity),
+                        severity: format!("{s:?}", s = policy.severity),
                         budget_verdict: budget_verdict_str,
                         fuse_outcome: fuse_outcome_str,
                         tie_break_reason: None,

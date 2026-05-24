@@ -64,8 +64,7 @@ impl RuntimeWatchdog {
                 | RuntimeControlPlaneState::Alive
                 | RuntimeControlPlaneState::ShuttingDown => "runtime_control_loop_unexpected",
             };
-            let _ignored =
-                event_sender.send(format!("{event_name}:{}:{}", report.phase, report.reason));
+            let _ignored = event_sender.send(format!("{event_name}:{phase}:{reason}", phase = report.phase, reason = report.reason));
         });
     }
 }

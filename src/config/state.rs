@@ -327,7 +327,7 @@ impl ConfigState {
         use std::hash::{Hash, Hasher};
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         json.hash(&mut hasher);
-        format!("v{:x}", hasher.finish())
+        format!("v{hash:x}", hash = hasher.finish())
     }
 
     /// Recovers pending transactions after a restart.

@@ -839,7 +839,10 @@ pub fn validate_command(command: &ControlCommandRequest) -> Result<(), Dashboard
         return Err(DashboardError::validation(
             "command_validate",
             Some(command.target_id.clone()),
-            format!("command_id is not a valid UUID: {}", command.command_id),
+            format!(
+                "command_id is not a valid UUID: {id}",
+                id = command.command_id
+            ),
         ));
     }
     // AddChild requires a non-empty manifest.

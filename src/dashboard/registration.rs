@@ -178,7 +178,7 @@ pub async fn send_registration_upsert(
             "registration_ack_read_timeout",
             "registration_send",
             Some(config.target_id.clone()),
-            format!("timed out reading registration ack after {}s", io_timeout,),
+            format!("timed out reading registration ack after {io_timeout}s"),
             true,
         )
     })?

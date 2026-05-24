@@ -296,7 +296,11 @@ impl IpcSecurityPipeline {
         if !self.audit_config.enabled {
             return Ok(());
         }
-        let hash = format!("uid:{}:pid:{}", peer_identity.uid, peer_identity.pid);
+        let hash = format!(
+            "uid:{uid}:pid:{pid}",
+            uid = peer_identity.uid,
+            pid = peer_identity.pid
+        );
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()

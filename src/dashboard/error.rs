@@ -68,7 +68,7 @@ impl DashboardError {
             "unsupported_method",
             "protocol_parse",
             None,
-            format!("unsupported dashboard IPC method {}", method.as_ref()),
+            format!("unsupported dashboard IPC method {m}", m = method.as_ref()),
             false,
         )
     }
@@ -182,7 +182,7 @@ impl DashboardError {
             "authz_denied",
             "authorization",
             None,
-            format!("command {} is not authorized", method.into()),
+            format!("command {m} is not authorized", m = method.into()),
             false,
         )
     }
@@ -204,7 +204,7 @@ impl DashboardError {
             "replay_detected",
             "replay_protection",
             None,
-            format!("replay detected for request_id {}", request_id.into()),
+            format!("replay detected for request_id {r}", r = request_id.into()),
             false,
         )
     }
@@ -253,7 +253,7 @@ impl DashboardError {
             "allowlist_denied",
             "allowlist",
             None,
-            format!("external command not in allowlist: {}", path.into()),
+            format!("external command not in allowlist: {p}", p = path.into()),
             false,
         )
     }
