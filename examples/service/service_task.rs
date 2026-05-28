@@ -1,5 +1,7 @@
 //! Service role child construction for the service example.
 
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
 // Import service task role defaults.
@@ -50,7 +52,7 @@ pub enum ServiceEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Service`].
-pub fn service_child(events: mpsc::UnboundedSender<ServiceEvent>) -> ChildSpec {
+pub fn service_child(events: mpsc::UnboundedSender<ServiceEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the service function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -68,7 +70,7 @@ pub fn service_child(events: mpsc::UnboundedSender<ServiceEvent>) -> ChildSpec {
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the task as a long-running service.
     child.task_role = Some(TaskRole::Service);
     // Keep the service in the critical path.
@@ -79,7 +81,7 @@ pub fn service_child(events: mpsc::UnboundedSender<ServiceEvent>) -> ChildSpec {
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the service child declaration.
-    child
+    Ok(child)
 }
 
 /// Runs one service attempt until cancellation arrives.

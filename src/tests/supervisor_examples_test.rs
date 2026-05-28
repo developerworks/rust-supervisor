@@ -20,6 +20,7 @@ fn example_suite_contains_learning_programs() {
         "policy_failure_matrix.rs",
         "diagnostic_replay.rs",
         "task_role_demo.rs",
+        "child_spec_builder_demo.rs",
         "group_isolation_demo.rs",
         "generation_fencing_demo.rs",
         "backpressure_demo.rs",

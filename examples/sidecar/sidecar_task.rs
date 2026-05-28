@@ -1,5 +1,7 @@
 //! Sidecar role child construction for the sidecar example.
 
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
 // Import task role defaults and sidecar configuration.
@@ -54,7 +56,7 @@ pub enum SidecarEvent {
 /// # Returns
 ///
 /// Returns a primary service [`ChildSpec`].
-pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
+pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the primary service function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -72,7 +74,7 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Chi
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the primary as a long-running service.
     child.task_role = Some(TaskRole::Service);
     // Keep the primary in the critical path.
@@ -83,7 +85,7 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Chi
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the primary child declaration.
-    child
+    Ok(child)
 }
 
 /// Builds the sidecar child attached to the primary service.
@@ -95,7 +97,7 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Chi
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Sidecar`].
-pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
+pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the sidecar function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -113,7 +115,7 @@ pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the task as a sidecar.
     child.task_role = Some(TaskRole::Sidecar);
     // Attach the sidecar to the primary service.
@@ -128,7 +130,7 @@ pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> ChildSpec {
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the sidecar child declaration.
-    child
+    Ok(child)
 }
 
 /// Returns the primary service child identifier.

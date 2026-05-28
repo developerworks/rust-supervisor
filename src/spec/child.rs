@@ -400,9 +400,14 @@ impl ChildSpec {
     ///
     /// Returns a [`ChildSpec`] with conservative policy values.
     ///
+    /// # Errors
+    ///
+    /// Returns [`SupervisorError`] when local invariants fail validation.
+    ///
     /// # Examples
     ///
     /// ```
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
     /// let factory = rust_supervisor::task::factory::service_fn(|_ctx| async {
     ///     rust_supervisor::task::factory::TaskResult::Succeeded
     /// });
@@ -411,45 +416,18 @@ impl ChildSpec {
     ///     "worker",
     ///     rust_supervisor::spec::child::TaskKind::AsyncWorker,
     ///     std::sync::Arc::new(factory),
-    /// );
+    /// )?;
     /// assert_eq!(spec.name, "worker");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn worker(
         id: ChildId,
         name: impl Into<String>,
         kind: TaskKind,
         factory: Arc<dyn TaskFactory>,
-    ) -> Self {
-        Self {
-            id,
-            name: name.into(),
-            kind,
-            isolation: Isolation::AsyncWorker,
-            factory: Some(factory),
-            restart_policy: RestartPolicy::Transient,
-            shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
-            health_policy: HealthPolicy::new(Duration::from_secs(1), Duration::from_secs(3)),
-            readiness_policy: ReadinessPolicy::Immediate,
-            backoff_policy: BackoffPolicy::new(
-                Duration::from_millis(10),
-                Duration::from_secs(1),
-                0.0,
-            ),
-            dependencies: Vec::new(),
-            tags: Vec::new(),
-            criticality: Criticality::Critical,
-            task_role: Some(TaskRole::Worker),
-            sidecar_config: None,
-            severity: None,
-            group: None,
-            health_check: None,
-            readiness: None,
-            resource_limits: None,
-            command_permissions: CommandPermissions::default(),
-            environment: Vec::new(),
-            secrets: Vec::new(),
-            cleanup_paths: Vec::new(),
-        }
+    ) -> Result<Self, SupervisorError> {
+        crate::spec::child_builder::ChildSpecBuilder::worker(id, name, kind, factory).build()
     }
 
     /// Validates local child specification invariants.

@@ -4,6 +4,9 @@
 //! These tests verify that shutdown, cancel, pause, and resume commands
 //! propagate to the underlying CancellationToken and JoinHandle, rather than
 //! merely rewriting in-memory state labels.
+//!
+//! Async cases that spawn long-lived tasks use `start_paused = true` so a
+//! stubborn child’s internal sleep binds to the mock clock per `SC-010`.
 
 use rust_supervisor::child_runner::runner::ChildRunHandle;
 use rust_supervisor::control::outcome::{ChildAttemptStatus, ChildControlOperation};
@@ -28,7 +31,7 @@ fn empty_test_slot(child_name: &str) -> ChildSlot {
 
 /// Verifies that cancel() on a ChildSlot triggers is_cancelled() on the
 /// underlying CancellationToken.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_shutdown_tree_delivers_cancel_to_sleeping_child() {
     // Create a CancellationToken that is NOT yet cancelled.
     let token = CancellationToken::new();
@@ -75,7 +78,7 @@ async fn test_shutdown_tree_delivers_cancel_to_sleeping_child() {
 // ---------------------------------------------------------------------------
 
 /// Verifies that abort() on a ChildSlot triggers the AbortHandle.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_shutdown_tree_aborts_after_graceful_timeout() {
     let token = CancellationToken::new();
     // Spawn a real Tokio task that sleeps forever (will be aborted).
@@ -119,7 +122,7 @@ async fn test_shutdown_tree_aborts_after_graceful_timeout() {
 
 /// Verifies that a cancel command on a slot with an active attempt triggers
 /// cancellation and transitions the status to Stopped after deactivation.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_cancel_command_delivers_token_to_active_child() {
     let token = CancellationToken::new();
     let mut slot = empty_test_slot("worker");

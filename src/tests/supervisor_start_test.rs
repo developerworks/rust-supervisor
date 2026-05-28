@@ -7,7 +7,7 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 
 /// Verifies that an empty supervisor starts and answers current state.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_start_returns_control_handle() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await

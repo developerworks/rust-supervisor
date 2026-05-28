@@ -2,6 +2,7 @@
 //!
 //! These tests verify declaration-order registration and child lookup.
 
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::registry::store::RegistryStore;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
@@ -12,8 +13,8 @@ use std::sync::Arc;
 
 /// Verifies that registry indexes tree nodes by child and path.
 #[test]
-fn registry_indexes_tree_nodes_by_child_and_path() {
-    let child = worker("worker");
+fn registry_indexes_tree_nodes_by_child_and_path() -> Result<(), SupervisorError> {
+    let child = worker("worker")?;
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).unwrap();
     let mut store = RegistryStore::new();
@@ -23,10 +24,11 @@ fn registry_indexes_tree_nodes_by_child_and_path() {
     assert!(store.child(&child.id).is_some());
     assert_eq!(store.declaration_order(), &[child.id]);
     assert!(store.child_by_path(&tree.nodes[0].path).is_some());
+    Ok(())
 }
 
 /// Builds one worker child specification for registry tests.
-fn worker(id: &str) -> ChildSpec {
+fn worker(id: &str) -> Result<ChildSpec, SupervisorError> {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     ChildSpec::worker(
         ChildId::new(id),

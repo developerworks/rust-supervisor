@@ -4,6 +4,7 @@
 //! bindings are validated with sibling context, and emitted events carry
 //! effective policy attribution.
 
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::event::payload::{ProtectionAction, SupervisorEvent, What, Where};
 use rust_supervisor::event::time::{CorrelationId, EventSequence, EventTime, When};
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
@@ -26,16 +27,16 @@ use std::time::Duration;
 use uuid::Uuid;
 
 /// Creates a test child with the requested task role.
-fn child_with_role(id: &str, role: TaskRole) -> ChildSpec {
+fn child_with_role(id: &str, role: TaskRole) -> Result<ChildSpec, SupervisorError> {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     let mut child = ChildSpec::worker(
         ChildId::new(id),
         id,
         TaskKind::AsyncWorker,
         Arc::new(factory),
-    );
+    )?;
     child.task_role = Some(role);
-    child
+    Ok(child)
 }
 
 /// Creates a pipeline with high protection limits for role behavior tests.
@@ -62,33 +63,35 @@ fn create_pipeline() -> SupervisionPipeline {
 }
 
 /// Runs a successful exit through the production pipeline with a role policy.
-fn run_success_with_role(role: TaskRole) -> PipelineContext {
+fn run_success_with_role(role: TaskRole) -> Result<PipelineContext, SupervisorError> {
     let mut pipeline = create_pipeline();
-    let child = child_with_role("role-child", role);
+    let child = child_with_role("role-child", role)?;
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
     let mut ctx = PipelineContext::new(child.id.clone(), SupervisorPath::root(), 1, "role-success");
     ctx.effective_policy = Some(EffectivePolicy::for_child(&child));
 
-    pipeline.execute_pipeline(ctx, TaskExit::Succeeded, &spec, &tree)
+    Ok(pipeline.execute_pipeline(ctx, TaskExit::Succeeded, &spec, &tree))
 }
 
 #[test]
-fn job_success_exit_does_not_request_restart() {
-    let ctx = run_success_with_role(TaskRole::Job);
+fn job_success_exit_does_not_request_restart() -> Result<(), SupervisorError> {
+    let ctx = run_success_with_role(TaskRole::Job)?;
     let decision = ctx.action_decision.expect("action decision");
 
     assert_eq!(decision.action, ProtectionAction::SupervisedStop);
     assert_eq!(decision.reason, "role_success_stop");
+    Ok(())
 }
 
 #[test]
-fn service_success_exit_allows_restart() {
-    let ctx = run_success_with_role(TaskRole::Service);
+fn service_success_exit_allows_restart() -> Result<(), SupervisorError> {
+    let ctx = run_success_with_role(TaskRole::Service)?;
     let decision = ctx.action_decision.expect("action decision");
 
     assert_eq!(decision.action, ProtectionAction::RestartAllowed);
     assert_eq!(decision.reason, "role_success_restart");
+    Ok(())
 }
 
 #[test]
@@ -100,9 +103,9 @@ fn worker_failure_default_uses_bounded_retry() {
 }
 
 #[test]
-fn worker_default_restart_limit_feeds_budget_evaluation() {
+fn worker_default_restart_limit_feeds_budget_evaluation() -> Result<(), SupervisorError> {
     let mut pipeline = create_pipeline();
-    let child = child_with_role("worker-budget", TaskRole::Worker);
+    let child = child_with_role("worker-budget", TaskRole::Worker)?;
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
     let mut final_ctx = None;
@@ -136,12 +139,13 @@ fn worker_default_restart_limit_feeds_budget_evaluation() {
         budget.escalation_policy,
         Some("EscalateToParent".to_string())
     );
+    Ok(())
 }
 
 #[test]
-fn sidecar_failure_default_restarts_only_sidecar_scope() {
-    let primary = child_with_role("primary-service", TaskRole::Service);
-    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
+fn sidecar_failure_default_restarts_only_sidecar_scope() -> Result<(), SupervisorError> {
+    let primary = child_with_role("primary-service", TaskRole::Service)?;
+    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar)?;
     sidecar.sidecar_config = Some(SidecarConfig::new(primary.id.clone(), false));
     let spec = SupervisorSpec::root(vec![primary, sidecar.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
@@ -153,6 +157,7 @@ fn sidecar_failure_default_restarts_only_sidecar_scope() {
         RoleDefaultPolicy::for_role(TaskRole::Sidecar).on_failure_exit,
         OnFailureAction::RestartWithBackoff
     );
+    Ok(())
 }
 
 #[test]
@@ -173,8 +178,8 @@ fn missing_role_uses_worker_fallback_attribution() {
 }
 
 #[test]
-fn child_spec_deserialization_defaults_role_fields() {
-    let child = child_with_role("serde-child", TaskRole::Worker);
+fn child_spec_deserialization_defaults_role_fields() -> Result<(), SupervisorError> {
+    let child = child_with_role("serde-child", TaskRole::Worker)?;
     let mut value = serde_json::to_value(child).expect("serialize child spec");
     let object = value.as_object_mut().expect("child spec object");
     object.remove("task_role");
@@ -184,11 +189,12 @@ fn child_spec_deserialization_defaults_role_fields() {
 
     assert_eq!(decoded.task_role, None);
     assert_eq!(decoded.sidecar_config, None);
+    Ok(())
 }
 
 #[test]
-fn unknown_task_role_is_rejected_by_deserialization() {
-    let child = child_with_role("unknown-role-child", TaskRole::Worker);
+fn unknown_task_role_is_rejected_by_deserialization() -> Result<(), SupervisorError> {
+    let child = child_with_role("unknown-role-child", TaskRole::Worker)?;
     let mut value = serde_json::to_value(child).expect("serialize child spec");
     let object = value.as_object_mut().expect("child spec object");
     object.insert(
@@ -200,11 +206,12 @@ fn unknown_task_role_is_rejected_by_deserialization() {
         .expect_err("unknown task_role should be rejected");
 
     assert!(error.to_string().contains("unknown variant"));
+    Ok(())
 }
 
 #[test]
-fn sidecar_missing_config_is_rejected() {
-    let sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
+fn sidecar_missing_config_is_rejected() -> Result<(), SupervisorError> {
+    let sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar)?;
     let spec = SupervisorSpec::root(vec![sidecar]);
 
     let error = spec
@@ -212,11 +219,12 @@ fn sidecar_missing_config_is_rejected() {
         .expect_err("sidecar config should be required");
 
     assert!(error.to_string().contains("sidecar_config"));
+    Ok(())
 }
 
 #[test]
-fn sidecar_unknown_primary_is_rejected() {
-    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar);
+fn sidecar_unknown_primary_is_rejected() -> Result<(), SupervisorError> {
+    let mut sidecar = child_with_role("metrics-sidecar", TaskRole::Sidecar)?;
     sidecar.sidecar_config = Some(SidecarConfig::new(ChildId::new("missing-primary"), true));
     let spec = SupervisorSpec::root(vec![sidecar]);
 
@@ -225,15 +233,16 @@ fn sidecar_unknown_primary_is_rejected() {
         .expect_err("primary child should be required");
 
     assert!(error.to_string().contains("primary_child_id"));
+    Ok(())
 }
 
 #[test]
-fn sidecar_chain_is_rejected() {
-    let mut first = child_with_role("first-sidecar", TaskRole::Sidecar);
+fn sidecar_chain_is_rejected() -> Result<(), SupervisorError> {
+    let mut first = child_with_role("first-sidecar", TaskRole::Sidecar)?;
     first.sidecar_config = Some(SidecarConfig::new(ChildId::new("primary"), true));
-    let mut second = child_with_role("second-sidecar", TaskRole::Sidecar);
+    let mut second = child_with_role("second-sidecar", TaskRole::Sidecar)?;
     second.sidecar_config = Some(SidecarConfig::new(ChildId::new("first-sidecar"), true));
-    let primary = child_with_role("primary", TaskRole::Service);
+    let primary = child_with_role("primary", TaskRole::Service)?;
     let spec = SupervisorSpec::root(vec![primary, first, second]);
 
     let error = spec
@@ -241,23 +250,25 @@ fn sidecar_chain_is_rejected() {
         .expect_err("sidecar chains should be rejected");
 
     assert!(error.to_string().contains("must not use another sidecar"));
+    Ok(())
 }
 
 #[test]
-fn job_permanent_restart_conflict_is_reported() {
-    let mut child = child_with_role("job-child", TaskRole::Job);
+fn job_permanent_restart_conflict_is_reported() -> Result<(), SupervisorError> {
+    let mut child = child_with_role("job-child", TaskRole::Job)?;
     child.restart_policy = RestartPolicy::Permanent;
 
     let conflicts = semantic_conflicts_for_child(&child);
 
     assert_eq!(conflicts.len(), 1);
     assert_eq!(conflicts[0].conflicting_field, "restart_policy");
+    Ok(())
 }
 
 #[test]
-fn emitted_pipeline_event_carries_policy_attribution() {
+fn emitted_pipeline_event_carries_policy_attribution() -> Result<(), SupervisorError> {
     let mut pipeline = create_pipeline();
-    let child = child_with_role("service-child", TaskRole::Service);
+    let child = child_with_role("service-child", TaskRole::Service)?;
     let spec = SupervisorSpec::root(vec![child.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build supervisor tree");
     let mut ctx = PipelineContext::new(child.id.clone(), SupervisorPath::root(), 1, "role-event");
@@ -277,6 +288,7 @@ fn emitted_pipeline_event_carries_policy_attribution() {
         Some(PolicySource::RoleDefault)
     );
     assert!(!event.used_fallback_default);
+    Ok(())
 }
 
 #[test]

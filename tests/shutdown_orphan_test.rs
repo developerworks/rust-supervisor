@@ -3,12 +3,17 @@
 //! These tests verify that:
 //! 1. After shutdown_tree completes, no ChildSlot holds residual handles.
 //! 2. reconcile_shutdown_slots correctly reports orphaned slots.
+//!
+//! Fan-out shutdown uses Tokio paused runtime and
+//! [`with_auto_clock_drive`](rust_supervisor::test_support::test_time::with_auto_clock_drive)
+//! per `SC-010`.
 
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::runtime::admission::AdmissionSet;
 use rust_supervisor::runtime::child_slot::ChildSlot;
 use rust_supervisor::runtime::shutdown::{reconcile_shutdown_slots, shutdown_tree_fanout};
 use rust_supervisor::shutdown::stage::ShutdownPolicy;
+use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -88,7 +93,7 @@ fn active_slot(name: &str, cancel_aware: bool) -> (ChildSlot, tokio::task::JoinH
 // ---------------------------------------------------------------------------
 
 /// Verifies that after shutdown_tree all slots are clean.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_shutdown_completion_no_orphan_join_handles() {
     let mut slots: HashMap<ChildId, ChildSlot> = HashMap::new();
     let mut admission = AdmissionSet::new();
@@ -117,8 +122,13 @@ async fn test_shutdown_completion_no_orphan_join_handles() {
     }
 
     let mut orphan_count = 0u64;
-    let _outcomes =
-        shutdown_tree_fanout(&mut slots, &policy, &mut admission, &mut orphan_count).await;
+    let _outcomes = with_auto_clock_drive(shutdown_tree_fanout(
+        &mut slots,
+        &policy,
+        &mut admission,
+        &mut orphan_count,
+    ))
+    .await;
 
     // After shutdown, all slots must be clean.
     let reconcile = reconcile_shutdown_slots(&slots);
@@ -154,7 +164,7 @@ async fn test_shutdown_completion_no_orphan_join_handles() {
 // ---------------------------------------------------------------------------
 
 /// Verifies that reconcile_shutdown_slots detects residual handles.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_shutdown_reconcile_report_lists_residual_slots() {
     let mut slots: HashMap<ChildId, ChildSlot> = HashMap::new();
 

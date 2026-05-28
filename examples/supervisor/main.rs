@@ -30,7 +30,7 @@ async fn main() -> ExampleResult {
     // Build a channel that receives supervisor role lifecycle facts.
     let (supervisor_event_sender, mut supervisor_events) = mpsc::unbounded_channel();
     // Build one child declared as a supervisor role unit.
-    let supervisor_child = supervisor_task::supervisor_role_child(supervisor_event_sender);
+    let supervisor_child = supervisor_task::supervisor_role_child(supervisor_event_sender)?;
     // Build a root supervisor with the supervisor role child.
     let mut spec = SupervisorSpec::root(vec![supervisor_child]);
     // Keep enough event buffer for the full shutdown observation sequence.

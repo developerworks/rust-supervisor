@@ -6,6 +6,8 @@
 - [配置模型和结构模式](configuration.md)
 - [监督树](supervisor-tree.md)
 - [任务模型](task-model.md)
+- [ChildSpec 与 ChildDeclaration](child-spec.md)
+- [ChildSpecBuilder](child-spec-builder.md)
 - [策略](policies.md)
 - [运行时控制](runtime-control.md)
 - [Dashboard(看板)](dashboard.md)

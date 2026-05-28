@@ -76,7 +76,7 @@ fn test_golden_yaml_roundtrip() {
 
 /// Tests that a dependency cycle is detected by kahn_sort.
 #[test]
-fn test_dag_cycle_detection() {
+fn test_dag_cycle_detection() -> Result<(), rust_supervisor::error::types::SupervisorError> {
     use rust_supervisor::id::types::ChildId;
     use rust_supervisor::spec::child::ChildSpec;
 
@@ -88,7 +88,7 @@ fn test_dag_cycle_detection() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
     let child_b = ChildSpec::worker(
         ChildId::new("B"),
         "B",
@@ -96,7 +96,7 @@ fn test_dag_cycle_detection() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
     let child_c = ChildSpec::worker(
         ChildId::new("C"),
         "C",
@@ -104,7 +104,7 @@ fn test_dag_cycle_detection() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
 
     // We need to modify children to have dependencies.
     // Since ChildSpec is created via worker(), we need to set dependencies after.
@@ -120,11 +120,12 @@ fn test_dag_cycle_detection() {
         result.is_ok(),
         "Expected Ok for children with no dependencies"
     );
+    Ok(())
 }
 
 /// Tests that kahn_sort produces a valid topological order for a linear chain.
 #[test]
-fn test_dag_valid_topological_order() {
+fn test_dag_valid_topological_order() -> Result<(), rust_supervisor::error::types::SupervisorError> {
     use rust_supervisor::id::types::ChildId;
     use rust_supervisor::spec::child::ChildSpec;
 
@@ -135,7 +136,7 @@ fn test_dag_valid_topological_order() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
     let child_b = ChildSpec::worker(
         ChildId::new("B"),
         "B",
@@ -143,7 +144,7 @@ fn test_dag_valid_topological_order() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
     let child_c = ChildSpec::worker(
         ChildId::new("C"),
         "C",
@@ -151,7 +152,7 @@ fn test_dag_valid_topological_order() {
         std::sync::Arc::new(rust_supervisor::task::factory::service_fn(|_ctx| async {
             rust_supervisor::task::factory::TaskResult::Succeeded
         })),
-    );
+    )?;
 
     let children = vec![child_a, child_b, child_c];
     let result = rust_supervisor::tree::order::kahn_sort(&children);
@@ -167,4 +168,5 @@ fn test_dag_valid_topological_order() {
     assert!(ids.contains(&"A".to_string()));
     assert!(ids.contains(&"B".to_string()));
     assert!(ids.contains(&"C".to_string()));
+    Ok(())
 }

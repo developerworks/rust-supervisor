@@ -12,6 +12,8 @@ const MANUAL_PAGES: &[&str] = &[
     "configuration.md",
     "supervisor-tree.md",
     "task-model.md",
+    "child-spec.md",
+    "child-spec-builder.md",
     "policies.md",
     "runtime-control.md",
     "shutdown.md",

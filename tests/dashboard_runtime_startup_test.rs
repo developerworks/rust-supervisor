@@ -2,6 +2,7 @@ use rust_supervisor::config::yaml::parse_config_state;
 use rust_supervisor::dashboard::config::ValidatedDashboardIpcConfig;
 use rust_supervisor::dashboard::ipc_server::bind_dashboard_listener;
 use rust_supervisor::runtime::supervisor::Supervisor;
+use rust_supervisor::test_support::test_time::{advance_test_clock, with_auto_clock_drive};
 use serde_json::Value;
 #[cfg(target_os = "linux")]
 use std::os::unix::fs::PermissionsExt;
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
-use tokio::time::{sleep, timeout};
+use tokio::time::timeout;
 
 fn test_directory(name: &str) -> PathBuf {
     let nanos = SystemTime::now()
@@ -89,12 +90,12 @@ async fn wait_until_removed(path: &Path) {
         if !path.exists() {
             return;
         }
-        sleep(Duration::from_millis(10)).await;
+        advance_test_clock(Duration::from_millis(10)).await;
     }
     assert!(!path.exists(), "socket path should be removed");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn start_from_config_state_starts_ipc_and_registration_heartbeat() {
     let directory = test_directory("runtime-start");
     let ipc_path = directory.join("target.sock");
@@ -153,7 +154,7 @@ async fn start_from_config_state_starts_ipc_and_registration_heartbeat() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn non_retryable_registration_ack_stops_fixed_heartbeat() {
     let directory = test_directory("runtime-nonretryable");
     let ipc_path = directory.join("target.sock");
@@ -186,9 +187,12 @@ async fn non_retryable_registration_ack_stops_fixed_heartbeat() {
             .await
             .expect("write ack");
         assert!(
-            timeout(Duration::from_millis(1200), listener.accept())
-                .await
-                .is_err(),
+            with_auto_clock_drive(timeout(
+                Duration::from_millis(1200),
+                listener.accept(),
+            ))
+            .await
+            .is_err(),
             "heartbeat should stop after non-retryable ack"
         );
     });
@@ -202,7 +206,7 @@ async fn non_retryable_registration_ack_stops_fixed_heartbeat() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn unavailable_registration_socket_does_not_fail_startup() {
     let directory = test_directory("runtime-unavailable-relay");
     let ipc_path = directory.join("target.sock");
@@ -228,7 +232,7 @@ async fn unavailable_registration_socket_does_not_fail_startup() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn create_new_rejects_existing_live_socket() {
     let directory = test_directory("runtime-create-new-live");
     let ipc_path = directory.join("target.sock");
@@ -250,7 +254,7 @@ async fn create_new_rejects_existing_live_socket() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn replace_stale_deletes_only_unserved_unix_socket() {
     let directory = test_directory("runtime-replace-stale");
     let ipc_path = directory.join("target.sock");
@@ -278,7 +282,7 @@ async fn replace_stale_deletes_only_unserved_unix_socket() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn replace_stale_rejects_live_socket() {
     let directory = test_directory("runtime-replace-live");
     let ipc_path = directory.join("target.sock");
@@ -300,7 +304,7 @@ async fn replace_stale_rejects_live_socket() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn replace_stale_rejects_symlink_path() {
     let directory = test_directory("runtime-replace-symlink");
     let ipc_path = directory.join("target.sock");
@@ -327,7 +331,7 @@ async fn replace_stale_rejects_symlink_path() {
 // Socket permissions enforcement
 // ======================================================================
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn bind_dashboard_listener_sets_0600_permissions() {
     let directory = test_directory("bind-perms-0600");
     let ipc_path = directory.join("target.sock");
@@ -369,7 +373,7 @@ async fn bind_dashboard_listener_sets_0600_permissions() {
 }
 
 #[cfg(target_os = "macos")]
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn bind_dashboard_listener_sets_permissions_checked_via_fchmod_equivalent() {
     // On macOS, verify permissions via a direct approach: use
     // bind_dashboard_listener with a world-readable permissions value
@@ -391,7 +395,7 @@ async fn bind_dashboard_listener_sets_permissions_checked_via_fchmod_equivalent(
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn bind_dashboard_listener_rejects_world_writable_permissions() {
     let directory = test_directory("bind-perms-ow");
     let ipc_path = directory.join("target.sock");
@@ -415,7 +419,7 @@ async fn bind_dashboard_listener_rejects_world_writable_permissions() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn bind_dashboard_listener_rejects_malformed_permissions_string() {
     let directory = test_directory("bind-perms-bad");
     let ipc_path = directory.join("target.sock");

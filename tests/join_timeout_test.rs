@@ -7,6 +7,10 @@
 //!    to terminal state.
 //! 4. emergency_force_kill cleans slot handles and increments orphan_count.
 //! 5. orphan_count degradation detection emits correct events.
+//!
+//! Timer-driven cases use Tokio paused runtime and
+//! [`advance_test_clock`](rust_supervisor::test_support::test_time::advance_test_clock)
+//! per `SC-010`, not wall-clock sleep.
 
 use rust_supervisor::control::outcome::ChildAttemptStatus;
 use rust_supervisor::exit_handler::ExitHandler;
@@ -14,6 +18,7 @@ use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, Superviso
 use rust_supervisor::runtime::child_slot::{ChildExitSummary, ChildSlot};
 use rust_supervisor::runtime::shutdown::emergency_force_kill;
 use rust_supervisor::shutdown::stage::ShutdownPolicy;
+use rust_supervisor::test_support::test_time::advance_test_clock;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -87,7 +92,7 @@ fn spawn_child_slot(cancel_aware: bool) -> (ChildSlot, tokio::task::JoinHandle<(
 
 /// Verifies that a never-ending task is force-cleared within the global
 /// timeout (graceful_timeout + abort_wait).
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_join_timeout_respected_with_never_ending_task() {
     let policy = timeout_policy();
     let global_timeout = policy.graceful_timeout + policy.abort_wait;
@@ -95,19 +100,19 @@ async fn test_join_timeout_respected_with_never_ending_task() {
 
     let start = tokio::time::Instant::now();
 
-    // Execute cancel → abort → force-deactivate inline (simulating fanout for
+    // Execute cancel -> abort -> force-deactivate inline (simulating fanout for
     // a single slot).
     slot.cancel();
 
-    // Wait for graceful_timeout.
-    tokio::time::sleep(policy.graceful_timeout).await;
+    // Advance through graceful_timeout.
+    advance_test_clock(policy.graceful_timeout).await;
 
     if slot.has_active_attempt() {
         slot.abort();
     }
 
-    // Wait for abort_wait.
-    tokio::time::sleep(policy.abort_wait).await;
+    // Advance through abort_wait.
+    advance_test_clock(policy.abort_wait).await;
 
     if slot.has_active_attempt() {
         slot.deactivate(ChildExitSummary {
@@ -135,7 +140,7 @@ async fn test_join_timeout_respected_with_never_ending_task() {
 
 /// Verifies that a simulated remove operation leaves the slot without an active
 /// attempt.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_remove_command_cleans_slot_completely() {
     let (mut slot, _task_handle) = spawn_child_slot(true); // cancel-aware
 
@@ -143,11 +148,11 @@ async fn test_remove_command_cleans_slot_completely() {
 
     // Simulate remove: cancel + wait + deactivate.
     slot.cancel();
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    advance_test_clock(Duration::from_millis(200)).await;
 
     if slot.has_active_attempt() {
         slot.abort();
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        advance_test_clock(Duration::from_millis(100)).await;
     }
 
     if slot.has_active_attempt() {
@@ -173,7 +178,7 @@ async fn test_remove_command_cleans_slot_completely() {
 
 /// Verifies that normal exit, cancel, and timeout+abort paths all end with
 /// slot.has_active_attempt() == false and last_exit recorded.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_all_lifecycle_paths_join_to_terminal() {
     // --- Path 1: normal exit ---
     {
@@ -194,7 +199,7 @@ async fn test_all_lifecycle_paths_join_to_terminal() {
     {
         let (mut slot, _task_handle) = spawn_child_slot(true);
         slot.cancel();
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        advance_test_clock(Duration::from_millis(200)).await;
         if slot.has_active_attempt() {
             slot.deactivate(ChildExitSummary {
                 exit_code: None,
@@ -211,11 +216,11 @@ async fn test_all_lifecycle_paths_join_to_terminal() {
         let (mut slot, _task_handle) = spawn_child_slot(false); // never checks cancel
         let policy = timeout_policy();
         slot.cancel();
-        tokio::time::sleep(policy.graceful_timeout).await;
+        advance_test_clock(policy.graceful_timeout).await;
         if slot.has_active_attempt() {
             slot.abort();
         }
-        tokio::time::sleep(policy.abort_wait).await;
+        advance_test_clock(policy.abort_wait).await;
         if slot.has_active_attempt() {
             slot.deactivate(ChildExitSummary {
                 exit_code: None,
@@ -234,7 +239,7 @@ async fn test_all_lifecycle_paths_join_to_terminal() {
 
 /// Verifies that `emergency_force_kill` deactivates an active slot,
 /// clears all instance fields, and increments the orphan counter.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn emergency_force_kill_cleans_slot_and_increments_orphan_count() {
     let (slot, _task_handle) = spawn_child_slot(false);
     assert!(slot.has_active_attempt());
@@ -272,7 +277,7 @@ async fn emergency_force_kill_cleans_slot_and_increments_orphan_count() {
 
 /// Verifies that `emergency_force_kill` returns `None` when the slot has
 /// no active attempt (idempotent safety).
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn emergency_force_kill_is_idempotent_on_inactive_slot() {
     let child_id = ChildId::new("idle");
     let path = SupervisorPath::root().join("idle");
@@ -292,7 +297,7 @@ async fn emergency_force_kill_is_idempotent_on_inactive_slot() {
 
 /// Verifies that `emergency_force_kill` correctly handles a slot that does
 /// not exist in the map (graceful no-op).
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn emergency_force_kill_handles_missing_slot() {
     let mut slots: HashMap<ChildId, ChildSlot> = HashMap::new();
     let missing_id = ChildId::new("nonexistent");
@@ -313,7 +318,7 @@ async fn emergency_force_kill_handles_missing_slot() {
 /// The integration-level orphan detection via `shutdown_tree_fanout`
 /// depends on Tokio runtime scheduling and is covered by the
 /// `emergency_force_kill_*` unit tests above.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn emergency_force_kill_produces_orphan_diagnostic() {
     let (slot, _task_handle) = spawn_child_slot(false);
     let child_id = slot.child_id.clone();
@@ -341,7 +346,7 @@ async fn emergency_force_kill_produces_orphan_diagnostic() {
 /// We construct a `RuntimeControlState`, install a `TestExitHandler`,
 /// then directly invoke the exit handler threshold logic that lives in
 /// `execute_shutdown_body` and `handle_shutdown_tree`.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn orphan_overflow_triggers_exit_handler() {
     use rust_supervisor::exit_handler::TestExitHandler;
     use std::sync::Arc;

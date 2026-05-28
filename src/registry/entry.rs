@@ -58,6 +58,7 @@ impl ChildRuntime {
     /// # Examples
     ///
     /// ```
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
     /// let factory = rust_supervisor::task::factory::service_fn(|_ctx| async {
     ///     rust_supervisor::task::factory::TaskResult::Succeeded
     /// });
@@ -66,12 +67,14 @@ impl ChildRuntime {
     ///     "worker",
     ///     rust_supervisor::spec::child::TaskKind::AsyncWorker,
     ///     std::sync::Arc::new(factory),
-    /// );
+    /// )?;
     /// let runtime = rust_supervisor::registry::entry::ChildRuntime::new(
     ///     spec,
     ///     rust_supervisor::id::types::SupervisorPath::root().join("worker"),
     /// );
     /// assert!(matches!(runtime.status, rust_supervisor::registry::entry::ChildRuntimeStatus::Registered));
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(spec: ChildSpec, path: SupervisorPath) -> Self {
         Self {

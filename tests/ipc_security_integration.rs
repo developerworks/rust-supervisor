@@ -571,7 +571,7 @@ mod ipc_security_tests {
     // Regression: socket file permissions enforced after bind
     // ==================================================================
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn dashboard_bind_sets_socket_permissions() {
         // Only run on Linux where metadata accurately reflects
         // permissions set by std::fs::set_permissions on sockets.
@@ -612,7 +612,7 @@ mod ipc_security_tests {
     // Regression: parse_permissions_string rejects dangerous values
     // ==================================================================
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn dashboard_bind_rejects_world_writable_permissions() {
         // Verify world-writable permission strings are rejected before
         // bind by testing parse_permissions_string indirectly via the
@@ -639,7 +639,7 @@ mod ipc_security_tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn dashboard_bind_rejects_malformed_permissions() {
         // Verify non-octal and short permission strings are rejected.
         let config = rust_supervisor::dashboard::config::ValidatedDashboardIpcConfig {

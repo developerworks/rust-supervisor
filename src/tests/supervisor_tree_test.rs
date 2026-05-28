@@ -2,6 +2,7 @@
 //!
 //! These tests verify tree build and traversal behavior.
 
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::{SupervisionStrategy, SupervisorSpec};
@@ -12,9 +13,9 @@ use std::sync::Arc;
 
 /// Verifies that declaration order drives startup and shutdown traversal.
 #[test]
-fn supervisor_tree_preserves_declaration_order() {
-    let first = worker("first");
-    let second = worker("second");
+fn supervisor_tree_preserves_declaration_order() -> Result<(), SupervisorError> {
+    let first = worker("first")?;
+    let second = worker("second")?;
     let spec = SupervisorSpec::root(vec![first.clone(), second.clone()]);
     let tree = SupervisorTree::build(&spec).expect("build tree");
 
@@ -24,10 +25,11 @@ fn supervisor_tree_preserves_declaration_order() {
         restart_scope(&tree, SupervisionStrategy::RestForOne, &first.id),
         vec![first.id, second.id]
     );
+    Ok(())
 }
 
 /// Builds a deterministic worker specification.
-fn worker(id: &str) -> ChildSpec {
+fn worker(id: &str) -> Result<ChildSpec, SupervisorError> {
     let factory = service_fn(|_context| async { TaskResult::Succeeded });
     ChildSpec::worker(
         ChildId::new(id),

@@ -8,7 +8,7 @@ use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
 
 /// Verifies that service functions build fresh task futures.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn service_fn_builds_fresh_task_future() {
     let service = service_fn(|ctx| async move {
         ctx.heartbeat();

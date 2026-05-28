@@ -15,11 +15,12 @@ use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
+use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
 /// Verifies that control commands mutate runtime state.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn control_commands_update_child_state() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -58,7 +59,7 @@ async fn control_commands_update_child_state() {
 }
 
 /// Verifies that the old child-state command result shape is gone.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn child_state_result_variant_is_replaced_by_child_control_test() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -76,8 +77,8 @@ async fn child_state_result_variant_is_replaced_by_child_control_test() {
 }
 
 /// Verifies that child control results expose runtime state identity.
-#[tokio::test]
-async fn child_control_result_contains_runtime_state_identity_test() {
+#[tokio::test(start_paused = true)]
+async fn child_control_result_contains_runtime_state_identity_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let child_id = ChildId::new("worker");
     let spec = SupervisorSpec::root(vec![worker_child(
@@ -90,7 +91,7 @@ async fn child_control_result_contains_runtime_state_identity_test() {
                 TaskResult::Cancelled
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     started_receiver.recv().await.expect("child should start");
 
@@ -110,14 +111,16 @@ async fn child_control_result_contains_runtime_state_identity_test() {
     assert_eq!(outcome.status, Some(ChildAttemptStatus::Cancelling));
     assert_eq!(outcome.stop_state, ChildStopState::CancelDelivered);
 
-    let _shutdown = handle
-        .shutdown_tree("test", "finish control identity test")
-        .await
-        .expect("shutdown supervisor");
+    let _shutdown = with_auto_clock_drive(
+        handle.shutdown_tree("test", "finish control identity test"),
+    )
+    .await
+    .expect("shutdown supervisor");
+    Ok(())
 }
 
 /// Verifies that control commands require auditable metadata.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn control_commands_reject_empty_audit_metadata() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -134,14 +137,13 @@ async fn control_commands_reject_empty_audit_metadata() {
 }
 
 /// Verifies that shutdown control command returns a completed report.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn shutdown_tree_returns_completed_report() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
         .expect("start supervisor");
 
-    let result = handle
-        .shutdown_tree("operator", "control regression")
+    let result = with_auto_clock_drive(handle.shutdown_tree("operator", "control regression"))
         .await
         .expect("shutdown tree");
 
@@ -170,7 +172,7 @@ fn assert_invalid_transition(result: Result<CommandResult, SupervisorError>, exp
 }
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> ChildSpec {
+fn worker_child(name: &'static str, factory: impl TaskFactory) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,

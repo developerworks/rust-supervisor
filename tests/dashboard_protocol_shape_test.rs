@@ -242,7 +242,7 @@ fn dashboard_command_result_model_serializes_current_state_runtime_records() {
     assert_eq!(record["pending_restart"], serde_json::Value::Null);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn target_ipc_rejects_command_for_different_target_id() {
     let config = ValidatedDashboardIpcConfig {
         target_id: "payments-worker-a".to_owned(),

@@ -48,7 +48,7 @@ fn dashboard_config(
         .expect("IPC should be enabled")
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn registration_upsert_writes_payload_and_reads_ack() {
     let directory = test_directory("registration-upsert");
     let register_path = directory.join("register.sock");
@@ -90,7 +90,7 @@ async fn registration_upsert_writes_payload_and_reads_ack() {
     std::fs::remove_dir_all(directory).expect("remove temp directory");
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn registration_heartbeat_stops_on_non_retryable_ack() {
     let directory = test_directory("registration-heartbeat");
     let register_path = directory.join("register.sock");

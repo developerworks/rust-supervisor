@@ -27,7 +27,7 @@ async fn main() -> ExampleResult {
     // Build a channel that receives job lifecycle facts.
     let (job_event_sender, mut job_events) = mpsc::unbounded_channel();
     // Build one child declared as a job role.
-    let job_child = job_task::job_child(job_event_sender);
+    let job_child = job_task::job_child(job_event_sender)?;
     // Build a root supervisor with the job child.
     let mut spec = SupervisorSpec::root(vec![job_child]);
     // Keep enough event buffer for the shutdown observation sequence.

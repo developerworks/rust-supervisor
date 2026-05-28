@@ -11,11 +11,12 @@ use rust_supervisor::runtime::lifecycle::{
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::test_support::factory::runtime_control_plane_failed_handle;
+use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 use tokio::sync::broadcast;
 use tokio::time::{Duration, timeout};
 
 /// Verifies that a supervisor reports alive immediately after startup.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_reports_alive_after_start() {
     let handle = start_empty_supervisor().await;
 
@@ -23,7 +24,7 @@ async fn supervisor_reports_alive_after_start() {
 }
 
 /// Verifies that health includes startup time and last observation time.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_health_reports_alive_timestamps_after_start() {
     let handle = start_empty_supervisor().await;
     let health = handle.health();
@@ -32,7 +33,7 @@ async fn supervisor_health_reports_alive_timestamps_after_start() {
 }
 
 /// Verifies that subscribers can receive a control loop started event.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_emits_runtime_control_loop_started_event() {
     let handle = start_empty_supervisor().await;
     let mut receiver = handle.subscribe_events();
@@ -43,7 +44,7 @@ async fn supervisor_emits_runtime_control_loop_started_event() {
 }
 
 /// Verifies that health reports a failed reason after abnormal loop exit.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_health_reports_failed_control_loop() {
     let handle = runtime_control_plane_failed_handle().await;
     let health = handle.health();
@@ -58,7 +59,7 @@ async fn supervisor_health_reports_failed_control_loop() {
 }
 
 /// Verifies that commands after control loop exit report the known reason.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_command_after_control_loop_exit_reports_known_reason() {
     let handle = runtime_control_plane_failed_handle().await;
 
@@ -70,12 +71,11 @@ async fn supervisor_command_after_control_loop_exit_reports_known_reason() {
 }
 
 /// Verifies that shutdown completes the control plane normally.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_shutdown_completes_runtime_control_plane() {
     let handle = start_empty_supervisor().await;
 
-    let report = handle
-        .shutdown("operator", "test shutdown")
+    let report = with_auto_clock_drive(handle.shutdown("operator", "test shutdown"))
         .await
         .expect("shutdown control plane");
 
@@ -84,11 +84,10 @@ async fn supervisor_shutdown_completes_runtime_control_plane() {
 }
 
 /// Verifies that repeated join calls do not hang and return the same result.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_join_returns_cached_exit_report_repeatedly() {
     let handle = start_empty_supervisor().await;
-    let expected = handle
-        .shutdown("operator", "repeat join")
+    let expected = with_auto_clock_drive(handle.shutdown("operator", "repeat join"))
         .await
         .expect("shutdown control plane");
 
@@ -102,15 +101,13 @@ async fn supervisor_join_returns_cached_exit_report_repeatedly() {
 }
 
 /// Verifies that repeated shutdown returns the cached final result.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_shutdown_after_completion_returns_cached_exit_report() {
     let handle = start_empty_supervisor().await;
-    let first = handle
-        .shutdown("operator", "first shutdown")
+    let first = with_auto_clock_drive(handle.shutdown("operator", "first shutdown"))
         .await
         .expect("first shutdown");
-    let second = handle
-        .shutdown("operator", "second shutdown")
+    let second = with_auto_clock_drive(handle.shutdown("operator", "second shutdown"))
         .await
         .expect("second shutdown");
 

@@ -1,5 +1,7 @@
 //! Worker role child construction for the worker example.
 
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
 // Import worker task role defaults.
@@ -48,7 +50,7 @@ pub enum WorkerEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Worker`].
-pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> ChildSpec {
+pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the worker function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -66,7 +68,7 @@ pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> ChildSpec {
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the task as a bounded worker.
     child.task_role = Some(TaskRole::Worker);
     // Keep the worker in the critical path for this example.
@@ -77,7 +79,7 @@ pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> ChildSpec {
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the worker child declaration.
-    child
+    Ok(child)
 }
 
 /// Runs one bounded worker attempt.

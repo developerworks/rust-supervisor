@@ -11,7 +11,7 @@ use std::path::Path;
 use tokio::fs;
 
 /// Verifies that the example YAML configuration can produce a running handle.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn yaml_config_derives_startable_supervisor_spec() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let state = load_config_from_yaml_file(root.join("examples/config/supervisor.yaml"))
@@ -28,7 +28,7 @@ async fn yaml_config_derives_startable_supervisor_spec() {
 }
 
 /// Verifies that validated configuration state can start a supervisor runtime.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_starts_from_config_state() {
     let state = no_ipc_startup_state();
     let handle = Supervisor::start_from_config_state(state)
@@ -43,7 +43,7 @@ async fn supervisor_starts_from_config_state() {
 }
 
 /// Verifies that YAML file configuration can start a supervisor runtime.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_starts_from_config_file() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = root.join("target/no-ipc-supervisor-config.yaml");
@@ -64,7 +64,7 @@ async fn supervisor_starts_from_config_file() {
 }
 
 /// Verifies that invalid configuration state is rejected before startup.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn invalid_config_state_does_not_return_handle() {
     let mut state = no_ipc_startup_state();
     state.observability.event_journal_capacity = 0;
@@ -78,7 +78,7 @@ async fn invalid_config_state_does_not_return_handle() {
 }
 
 /// Verifies that invalid YAML file configuration is rejected before startup.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn invalid_config_file_does_not_return_handle() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = root.join("target/invalid-supervisor-config.yaml");

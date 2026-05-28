@@ -6,6 +6,8 @@
 - [Configuration and Schema](configuration.md)
 - [Supervisor Tree](supervisor-tree.md)
 - [Task Model](task-model.md)
+- [ChildSpec and ChildDeclaration](child-spec.md)
+- [ChildSpecBuilder](child-spec-builder.md)
 - [Policies](policies.md)
 - [Runtime Control](runtime-control.md)
 - [Dashboard](dashboard.md)

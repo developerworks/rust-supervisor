@@ -1,5 +1,7 @@
 //! Supervisor role child construction for the supervisor example.
 
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
 // Import supervisor task role defaults.
@@ -50,7 +52,7 @@ pub enum SupervisorEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Supervisor`].
-pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> ChildSpec {
+pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the supervisor role function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -68,7 +70,7 @@ pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> 
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the task as a supervisor role unit.
     child.task_role = Some(TaskRole::Supervisor);
     // Keep the supervisor role unit in the critical path.
@@ -79,7 +81,7 @@ pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> 
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the supervisor role child declaration.
-    child
+    Ok(child)
 }
 
 /// Runs one supervisor role attempt until cancellation arrives.

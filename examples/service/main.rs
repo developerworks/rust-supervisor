@@ -30,7 +30,7 @@ async fn main() -> ExampleResult {
     // Build a channel that receives service lifecycle facts.
     let (service_event_sender, mut service_events) = mpsc::unbounded_channel();
     // Build one child declared as a service role.
-    let service_child = service_task::service_child(service_event_sender);
+    let service_child = service_task::service_child(service_event_sender)?;
     // Build a root supervisor with the service child.
     let mut spec = SupervisorSpec::root(vec![service_child]);
     // Keep enough event buffer for the full shutdown observation sequence.

@@ -8,7 +8,7 @@ use rust_supervisor::control::outcome::{
     ChildStopState, GenerationFenceDecision, RestartLimitState,
 };
 use rust_supervisor::dashboard::model::dashboard_command_result_value;
-use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
+use rust_supervisor::error::types::{SupervisorError, TaskFailure, TaskFailureKind};
 use rust_supervisor::event::payload::What;
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::readiness::signal::ReadinessState;
@@ -25,7 +25,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> ChildSpec {
+fn worker_child(name: &'static str, factory: impl TaskFactory) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,
@@ -77,7 +77,7 @@ fn generation_fence_optional_field_present_in_dashboard_child_control_projection
 
 /// Verifies restart delivers cancellation, fences the attempt, and keeps a single active handle.
 #[tokio::test(start_paused = true)]
-async fn restart_child_sends_cancel_before_second_spawn_test() {
+async fn restart_child_sends_cancel_before_second_spawn_test() -> Result<(), SupervisorError> {
     let child_id = ChildId::new("worker");
     let start_counter_inner = Arc::new(AtomicUsize::new(0));
     let start_counter_body = start_counter_inner.clone();
@@ -112,7 +112,7 @@ async fn restart_child_sends_cancel_before_second_spawn_test() {
                 }
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     boot_rx.recv().await.expect("child should boot");
 
@@ -187,11 +187,12 @@ async fn restart_child_sends_cancel_before_second_spawn_test() {
             .await
     })
     .await;
+    Ok(())
 }
 
 /// Verifies manual restart waits for graceful stop semantics and cites the old identities.
 #[tokio::test(start_paused = true)]
-async fn restart_child_queues_after_stop_decision_test() {
+async fn restart_child_queues_after_stop_decision_test() -> Result<(), SupervisorError> {
     let child_id = ChildId::new("worker");
     let baseline = Generation::initial();
     let baseline_attempt = ChildStartCount::first();
@@ -206,7 +207,7 @@ async fn restart_child_queues_after_stop_decision_test() {
                 TaskResult::Cancelled
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     started_rx.recv().await.expect("child starts");
 
@@ -243,11 +244,12 @@ async fn restart_child_queues_after_stop_decision_test() {
             .await
     })
     .await;
+    Ok(())
 }
 
 /// Verifies restart during shutdown returns a deterministic blocked outcome without spawning anew.
 #[tokio::test(start_paused = true)]
-async fn restart_child_blocked_during_tree_shutdown_test() {
+async fn restart_child_blocked_during_tree_shutdown_test() -> Result<(), SupervisorError> {
     let child_id = ChildId::new("worker");
     let (started_tx, mut started_rx) = mpsc::channel(1);
     let spec = SupervisorSpec::root(vec![worker_child(
@@ -260,7 +262,7 @@ async fn restart_child_blocked_during_tree_shutdown_test() {
                 TaskResult::Cancelled
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     started_rx.recv().await.expect("child starts");
 
@@ -297,11 +299,12 @@ async fn restart_child_blocked_during_tree_shutdown_test() {
         &event.what,
         What::ChildRestartFenceEntered { child_id: id, .. } if *id == child_id
     )));
+    Ok(())
 }
 
 /// Validates spawn failures after fencing retain the earlier exit verdict and expose the error.
 #[tokio::test(start_paused = true)]
-async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() {
+async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() -> Result<(), SupervisorError> {
     const SPAWN_HOOK_CASE_CHILD: &str = "worker_spawn_hook_fence_case";
     let child_id = ChildId::new(SPAWN_HOOK_CASE_CHILD);
     let (boot_tx, mut boot_rx) = mpsc::channel(1);
@@ -322,7 +325,7 @@ async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() {
                 TaskResult::Cancelled
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     boot_rx.recv().await.expect("child starts");
 
@@ -397,11 +400,12 @@ async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() {
             .await
     })
     .await;
+    Ok(())
 }
 
 /// Verifies duplicate restart commands collapse into [`GenerationFenceDecision::AlreadyPending`].
 #[tokio::test(start_paused = true)]
-async fn duplicate_restart_child_merges_to_already_pending_test() {
+async fn duplicate_restart_child_merges_to_already_pending_test() -> Result<(), SupervisorError> {
     let child_id = ChildId::new("worker_dup_fence");
     let (boot_tx, mut boot_rx) = mpsc::channel(1);
     let boot_clone = boot_tx.clone();
@@ -417,7 +421,7 @@ async fn duplicate_restart_child_merges_to_already_pending_test() {
                 TaskResult::Cancelled
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     boot_rx.recv().await.expect("child boots");
 
@@ -472,11 +476,12 @@ async fn duplicate_restart_child_merges_to_already_pending_test() {
             .await
     })
     .await;
+    Ok(())
 }
 
 /// Verifies automatic restart scope respects manual pending restart gates without duplicate spawns.
 #[tokio::test(start_paused = true)]
-async fn auto_restart_and_manual_restart_share_fence_gate_test() {
+async fn auto_restart_and_manual_restart_share_fence_gate_test() -> Result<(), SupervisorError> {
     let beta_id = ChildId::new("scope_beta");
     let beta_invocations = Arc::new(AtomicUsize::new(0));
     let beta_invocations_body = beta_invocations.clone();
@@ -492,7 +497,7 @@ async fn auto_restart_and_manual_restart_share_fence_gate_test() {
                     "scope alpha triggers restart plan",
                 ))
             }),
-        ),
+        )?,
         worker_child(
             "scope_beta",
             service_fn(move |ctx: TaskContext| {
@@ -504,7 +509,7 @@ async fn auto_restart_and_manual_restart_share_fence_gate_test() {
                     TaskResult::Cancelled
                 }
             }),
-        ),
+        )?,
     ]);
     spec.strategy = SupervisionStrategy::OneForAll;
 
@@ -573,11 +578,12 @@ async fn auto_restart_and_manual_restart_share_fence_gate_test() {
             .await
     })
     .await;
+    Ok(())
 }
 
 /// Verifies stale completion triples publish observability facts without overwriting generation truth.
 #[tokio::test(start_paused = true)]
-async fn stale_exit_report_never_overwrites_current_attempt_test() {
+async fn stale_exit_report_never_overwrites_current_attempt_test() -> Result<(), SupervisorError> {
     const STALE_CHILD: &str = "stale_fence_worker";
     let child_id = ChildId::new(STALE_CHILD);
     let start_counter_inner = Arc::new(AtomicUsize::new(0));
@@ -613,7 +619,7 @@ async fn stale_exit_report_never_overwrites_current_attempt_test() {
                 }
             }
         }),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     boot_rx.recv().await.expect("child should boot");
 
@@ -636,7 +642,7 @@ async fn stale_exit_report_never_overwrites_current_attempt_test() {
     let stale_leaf = worker_child(
         STALE_CHILD,
         service_fn(|_ctx: TaskContext| async { TaskResult::Succeeded }),
-    );
+    )?;
     let mut stale_runtime = ChildRuntime::new(stale_leaf, SupervisorPath::root().join(STALE_CHILD));
     stale_runtime.generation = Generation::initial();
     stale_runtime.child_start_count = ChildStartCount::first();
@@ -682,4 +688,5 @@ async fn stale_exit_report_never_overwrites_current_attempt_test() {
             .await
     })
     .await;
+    Ok(())
 }

@@ -29,9 +29,9 @@ async fn main() -> ExampleResult {
     // Build a channel that receives sidecar example lifecycle facts.
     let (event_sender, mut role_events) = mpsc::unbounded_channel();
     // Build the primary service and its attached sidecar.
-    let primary = sidecar_task::primary_service_child(event_sender.clone());
+    let primary = sidecar_task::primary_service_child(event_sender.clone())?;
     // Build the sidecar child with an attachment to the primary service.
-    let sidecar = sidecar_task::sidecar_child(event_sender);
+    let sidecar = sidecar_task::sidecar_child(event_sender)?;
     // Build a root supervisor with both children.
     let mut spec = SupervisorSpec::root(vec![primary, sidecar]);
     // Keep enough event buffer for the full shutdown observation sequence.

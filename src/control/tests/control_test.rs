@@ -7,9 +7,10 @@ use rust_supervisor::control::outcome::ChildControlOperation;
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::supervisor::{DynamicSupervisorPolicy, SupervisorSpec};
+use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 
 /// Verifies that repeated child state commands are idempotent.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn supervisor_handle_operations_are_idempotent() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -52,7 +53,7 @@ async fn supervisor_handle_operations_are_idempotent() {
 }
 
 /// Verifies that add and shutdown commands return typed results.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn add_child_and_shutdown_tree_return_results() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -63,7 +64,9 @@ async fn add_child_and_shutdown_tree_return_results() {
         .add_child(SupervisorPath::root(), manifest, "operator", "scale")
         .await
         .unwrap();
-    let shutdown = handle.shutdown_tree("operator", "done").await.unwrap();
+    let shutdown = with_auto_clock_drive(handle.shutdown_tree("operator", "done"))
+        .await
+        .unwrap();
 
     assert_eq!(
         added,
@@ -75,7 +78,7 @@ async fn add_child_and_shutdown_tree_return_results() {
 }
 
 /// Verifies that dynamic child additions obey the configured child limit.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn add_child_respects_dynamic_supervisor_limit() {
     let mut spec = SupervisorSpec::root(Vec::new());
     spec.dynamic_supervisor_policy = DynamicSupervisorPolicy::limited(1);
@@ -112,7 +115,7 @@ async fn add_child_respects_dynamic_supervisor_limit() {
 }
 
 /// Verifies that add_child is rejected when shutdown is in progress.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn add_child_during_shutdown_tree_is_rejected() {
     let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
         .await
@@ -121,9 +124,10 @@ async fn add_child_during_shutdown_tree_is_rejected() {
     // First, start shutdown in the background.
     let shutdown_handle = handle.clone();
     let shutdown_task = tokio::spawn(async move {
-        shutdown_handle
-            .shutdown_tree("operator", "concurrent test")
-            .await
+        with_auto_clock_drive(
+            shutdown_handle.shutdown_tree("operator", "concurrent test"),
+        )
+        .await
     });
 
     // Give shutdown a moment to start.
@@ -159,7 +163,7 @@ async fn add_child_during_shutdown_tree_is_rejected() {
 }
 
 /// Verifies that dynamic child additions can be disabled by specification.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn add_child_rejects_disabled_dynamic_supervisor() {
     let mut spec = SupervisorSpec::root(Vec::new());
     spec.dynamic_supervisor_policy.enabled = false;

@@ -1,3 +1,4 @@
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::dashboard::state::{
     DashboardStateInput, build_dashboard_state, declared_state_from_spec,
 };
@@ -9,7 +10,7 @@ use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-fn large_spec(count: usize) -> SupervisorSpec {
+fn large_spec(count: usize) -> Result<SupervisorSpec, SupervisorError> {
     let mut children = Vec::new();
     for index in 0..count {
         let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
@@ -18,14 +19,14 @@ fn large_spec(count: usize) -> SupervisorSpec {
             format!("worker {index}"),
             TaskKind::AsyncWorker,
             Arc::new(factory),
-        ));
+        )?);
     }
-    SupervisorSpec::root(children)
+    Ok(SupervisorSpec::root(children))
 }
 
 #[test]
-fn dashboard_state_builds_two_hundred_children_quickly() {
-    let spec = large_spec(200);
+fn dashboard_state_builds_two_hundred_children_quickly() -> Result<(), SupervisorError> {
+    let spec = large_spec(200)?;
     let state = declared_state_from_spec(&spec);
     let journal = EventJournal::new(256);
     let started = Instant::now();
@@ -44,4 +45,5 @@ fn dashboard_state_builds_two_hundred_children_quickly() {
 
     assert_eq!(state.runtime_state.len(), 200);
     assert!(started.elapsed() < Duration::from_secs(5));
+    Ok(())
 }

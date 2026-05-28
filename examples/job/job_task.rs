@@ -1,5 +1,7 @@
 //! Job role child construction for the job example.
 
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child identifiers.
 use rust_supervisor::id::types::ChildId;
 // Import job task role defaults.
@@ -46,7 +48,7 @@ pub enum JobEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Job`].
-pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> ChildSpec {
+pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the job function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -64,7 +66,7 @@ pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> ChildSpec {
         TaskKind::AsyncWorker,
         // Store the factory behind shared ownership.
         Arc::new(factory),
-    );
+    )?;
     // Classify the task as a one-shot job.
     child.task_role = Some(TaskRole::Job);
     // Mark the job as optional in parent health policy.
@@ -75,7 +77,7 @@ pub fn job_child(events: mpsc::UnboundedSender<JobEvent>) -> ChildSpec {
     child.shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the job child declaration.
-    child
+    Ok(child)
 }
 
 /// Runs one one-shot job attempt.

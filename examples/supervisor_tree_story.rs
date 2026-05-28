@@ -4,6 +4,8 @@
 use rust_supervisor::id::types::ChildId;
 // Import readiness policy values.
 use rust_supervisor::readiness::signal::ReadinessPolicy;
+// Import supervisor error values.
+use rust_supervisor::error::types::SupervisorError;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, TaskKind};
 // Import supervisor specification values.
@@ -24,21 +26,21 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 /// Runs the supervisor tree declaration example.
 fn main() -> ExampleResult {
     // Build the market feed child.
-    let mut market_feed = worker("market_feed", "Market Feed");
+    let mut market_feed = worker("market_feed", "Market Feed")?;
     // Add low-cardinality market feed tags.
     market_feed.tags = vec!["market".to_owned(), "network".to_owned()];
     // Require explicit readiness for the market feed.
     market_feed.readiness_policy = ReadinessPolicy::Explicit;
 
     // Build the risk engine child.
-    let mut risk_engine = worker("risk_engine", "Risk Engine");
+    let mut risk_engine = worker("risk_engine", "Risk Engine")?;
     // Make the risk engine depend on the market feed.
     risk_engine.dependencies = vec![market_feed.id.clone()];
     // Add low-cardinality risk engine tags.
     risk_engine.tags = vec!["risk".to_owned()];
 
     // Build the audit sink child.
-    let mut audit_sink = worker("audit_sink", "Audit Sink");
+    let mut audit_sink = worker("audit_sink", "Audit Sink")?;
     // Mark the audit sink as optional.
     audit_sink.criticality = Criticality::Optional;
     // Add low-cardinality audit tags.
@@ -75,7 +77,7 @@ fn main() -> ExampleResult {
 
 // Build a worker child specification.
 /// Builds one worker child specification.
-fn worker(id: &str, name: &str) -> ChildSpec {
+fn worker(id: &str, name: &str) -> Result<ChildSpec, SupervisorError> {
     // Capture the task name for the async task.
     let task_name = name.to_owned();
     // Create a task factory from a closure.
@@ -98,7 +100,7 @@ fn worker(id: &str, name: &str) -> ChildSpec {
     });
 
     // Create the worker child specification.
-    ChildSpec::worker(
+    Ok(ChildSpec::worker(
         // Set the child identifier.
         ChildId::new(id),
         // Set the child name.
@@ -108,7 +110,7 @@ fn worker(id: &str, name: &str) -> ChildSpec {
         // Store the task factory behind shared ownership.
         Arc::new(factory),
         // Finish the worker child specification.
-    )
+    )?)
     // Finish the worker builder.
 }
 

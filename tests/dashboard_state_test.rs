@@ -1,3 +1,4 @@
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::dashboard::state::{
     DashboardStateInput, build_dashboard_state, declared_state_from_spec,
 };
@@ -8,20 +9,20 @@ use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
 
-fn sample_spec() -> SupervisorSpec {
+fn sample_spec() -> Result<SupervisorSpec, SupervisorError> {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     let child = ChildSpec::worker(
         ChildId::new("payment_loop"),
         "payment loop",
         TaskKind::AsyncWorker,
         Arc::new(factory),
-    );
-    SupervisorSpec::root(vec![child])
+    )?;
+    Ok(SupervisorSpec::root(vec![child]))
 }
 
 #[test]
-fn dashboard_state_contains_topology_and_runtime_state() {
-    let spec = sample_spec();
+fn dashboard_state_contains_topology_and_runtime_state() -> Result<(), SupervisorError> {
+    let spec = sample_spec()?;
     let state = declared_state_from_spec(&spec);
     let journal = EventJournal::new(16);
 
@@ -41,4 +42,5 @@ fn dashboard_state_contains_topology_and_runtime_state() {
     assert_eq!(state.topology.nodes.len(), 2);
     assert_eq!(state.runtime_state.len(), 1);
     assert_eq!(state.state_generation, 1);
+    Ok(())
 }

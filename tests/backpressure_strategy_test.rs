@@ -9,7 +9,7 @@ use rust_supervisor::event::payload::{FiniteF64, What};
 use rust_supervisor::event::time::CorrelationId;
 use rust_supervisor::spec::supervisor::{BackpressureConfig, BackpressureStrategy};
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_backpressure_config_defaults() {
     let config = BackpressureConfig::default();
     assert_eq!(config.strategy, BackpressureStrategy::AlertAndBlock);
@@ -19,7 +19,7 @@ async fn test_backpressure_config_defaults() {
     assert_eq!(config.audit_channel_capacity, 1024);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_backpressure_strategy_serde() {
     let alert = BackpressureStrategy::AlertAndBlock;
     let json = serde_json::to_string(&alert).unwrap();
@@ -34,7 +34,7 @@ async fn test_backpressure_strategy_serde() {
     assert_eq!(deserialized, BackpressureStrategy::AlertAndBlock);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_backpressure_config_serde() {
     let config = BackpressureConfig {
         strategy: BackpressureStrategy::SampleAndAudit,
@@ -54,7 +54,7 @@ async fn test_backpressure_config_serde() {
     assert_eq!(deserialized.warn_threshold_pct, 85);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_audit_recorded_variant_serialization() {
     let audit = What::AuditRecorded {
         command_id: "cmd-001".to_string(),
@@ -71,7 +71,7 @@ async fn test_audit_recorded_variant_serialization() {
     assert_eq!(json["payload"]["events_discarded"], 42);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_backpressure_alert_variant_serialization() {
     let alert = What::BackpressureAlert {
         subscriber: "metrics".to_string(),
@@ -84,7 +84,7 @@ async fn test_backpressure_alert_variant_serialization() {
     assert_eq!(json["payload"]["buffer_pct"], 85);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn test_backpressure_degradation_variant_serialization() {
     let deg = What::BackpressureDegradation {
         subscriber: "journal".to_string(),

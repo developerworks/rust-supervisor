@@ -3,7 +3,7 @@
 //! These tests verify that child exits reach the runtime control loop and that
 //! supervision strategy scopes are executed automatically.
 
-use rust_supervisor::error::types::{TaskFailure, TaskFailureKind};
+use rust_supervisor::error::types::{SupervisorError, TaskFailure, TaskFailureKind};
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
@@ -16,12 +16,12 @@ use std::time::Duration;
 
 /// Verifies that `OneForOne` restarts only the failed child after one failure.
 #[tokio::test(start_paused = true)]
-async fn one_for_one_restarts_only_failed_child_after_failure() {
+async fn one_for_one_restarts_only_failed_child_after_failure() -> Result<(), SupervisorError> {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
     let second_start_counts = Arc::new(AtomicUsize::new(0));
-    let first = counted_worker("first", true, first_start_counts.clone(), gate.clone());
-    let second = counted_worker("second", false, second_start_counts.clone(), gate.clone());
+    let first = counted_worker("first", true, first_start_counts.clone(), gate.clone())?;
+    let second = counted_worker("second", false, second_start_counts.clone(), gate.clone())?;
     let mut spec = SupervisorSpec::root(vec![first, second]);
     spec.strategy = SupervisionStrategy::OneForOne;
     let handle = Supervisor::start(spec).await.expect("start supervisor");
@@ -34,16 +34,17 @@ async fn one_for_one_restarts_only_failed_child_after_failure() {
     with_auto_clock_drive(handle.shutdown_tree("test", "one_for_one complete"))
         .await
         .expect("shutdown supervisor");
+    Ok(())
 }
 
 /// Verifies that `OneForAll` restarts every declared child after one failure.
 #[tokio::test(start_paused = true)]
-async fn one_for_all_restarts_every_child_after_failure() {
+async fn one_for_all_restarts_every_child_after_failure() -> Result<(), SupervisorError> {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
     let second_start_counts = Arc::new(AtomicUsize::new(0));
-    let first = counted_worker("first", true, first_start_counts.clone(), gate.clone());
-    let second = counted_worker("second", false, second_start_counts.clone(), gate.clone());
+    let first = counted_worker("first", true, first_start_counts.clone(), gate.clone())?;
+    let second = counted_worker("second", false, second_start_counts.clone(), gate.clone())?;
     let mut spec = SupervisorSpec::root(vec![first, second]);
     spec.strategy = SupervisionStrategy::OneForAll;
     let handle = Supervisor::start(spec).await.expect("start supervisor");
@@ -56,18 +57,19 @@ async fn one_for_all_restarts_every_child_after_failure() {
     with_auto_clock_drive(handle.shutdown_tree("test", "one_for_all complete"))
         .await
         .expect("shutdown supervisor");
+    Ok(())
 }
 
 /// Verifies that `RestForOne` restarts the failed child and following children.
 #[tokio::test(start_paused = true)]
-async fn rest_for_one_restarts_failed_child_and_following_children() {
+async fn rest_for_one_restarts_failed_child_and_following_children() -> Result<(), SupervisorError> {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
     let second_start_counts = Arc::new(AtomicUsize::new(0));
     let third_start_counts = Arc::new(AtomicUsize::new(0));
-    let first = counted_worker("first", false, first_start_counts.clone(), gate.clone());
-    let second = counted_worker("second", true, second_start_counts.clone(), gate.clone());
-    let third = counted_worker("third", false, third_start_counts.clone(), gate.clone());
+    let first = counted_worker("first", false, first_start_counts.clone(), gate.clone())?;
+    let second = counted_worker("second", true, second_start_counts.clone(), gate.clone())?;
+    let third = counted_worker("third", false, third_start_counts.clone(), gate.clone())?;
     let mut spec = SupervisorSpec::root(vec![first, second, third]);
     spec.strategy = SupervisionStrategy::RestForOne;
     let handle = Supervisor::start(spec).await.expect("start supervisor");
@@ -81,20 +83,21 @@ async fn rest_for_one_restarts_failed_child_and_following_children() {
     with_auto_clock_drive(handle.shutdown_tree("test", "rest_for_one complete"))
         .await
         .expect("shutdown supervisor");
+    Ok(())
 }
 
 /// Verifies that a group strategy limits runtime restarts to group members.
 #[tokio::test(start_paused = true)]
-async fn group_strategy_restarts_only_group_members_after_failure() {
+async fn group_strategy_restarts_only_group_members_after_failure() -> Result<(), SupervisorError> {
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
     let second_start_counts = Arc::new(AtomicUsize::new(0));
     let third_start_counts = Arc::new(AtomicUsize::new(0));
     let fourth_start_counts = Arc::new(AtomicUsize::new(0));
-    let first = counted_worker("first", false, first_start_counts.clone(), gate.clone());
-    let mut second = counted_worker("second", true, second_start_counts.clone(), gate.clone());
-    let mut third = counted_worker("third", false, third_start_counts.clone(), gate.clone());
-    let fourth = counted_worker("fourth", false, fourth_start_counts.clone(), gate.clone());
+    let first = counted_worker("first", false, first_start_counts.clone(), gate.clone())?;
+    let mut second = counted_worker("second", true, second_start_counts.clone(), gate.clone())?;
+    let mut third = counted_worker("third", false, third_start_counts.clone(), gate.clone())?;
+    let fourth = counted_worker("fourth", false, fourth_start_counts.clone(), gate.clone())?;
     second.tags.push("pipeline".to_owned());
     third.tags.push("pipeline".to_owned());
     let mut spec = SupervisorSpec::root(vec![first, second, third, fourth]);
@@ -115,6 +118,7 @@ async fn group_strategy_restarts_only_group_members_after_failure() {
     with_auto_clock_drive(handle.shutdown_tree("test", "group_strategy complete"))
         .await
         .expect("shutdown supervisor");
+    Ok(())
 }
 
 /// Builds a worker that can fail only its first child_start_count.
@@ -134,7 +138,7 @@ fn counted_worker(
     fail_first_child_start_count: bool,
     start_counts: Arc<AtomicUsize>,
     gate: Arc<AtomicBool>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     let name = id.to_owned();
     let factory = service_fn(move |_context| {
         let start_counts = start_counts.clone();

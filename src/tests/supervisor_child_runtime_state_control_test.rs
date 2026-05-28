@@ -29,11 +29,11 @@ use tokio::time::Instant;
 
 /// Verifies that current state exposes active child runtime records.
 #[tokio::test(start_paused = true)]
-async fn current_state_exposes_full_runtime_state_fields_test() {
+async fn current_state_exposes_full_runtime_state_fields_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let spec = SupervisorSpec::root(vec![
-        ready_heartbeat_child("alpha", started_sender.clone()),
-        ready_heartbeat_child("beta", started_sender),
+        ready_heartbeat_child("alpha", started_sender.clone())?,
+        ready_heartbeat_child("beta", started_sender)?,
     ]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 2).await;
@@ -54,18 +54,20 @@ async fn current_state_exposes_full_runtime_state_fields_test() {
     }
     assert_current_state_fast_20_reads(&handle).await;
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that readiness distinguishes unreported and not-ready values.
 #[tokio::test(start_paused = true)]
-async fn current_state_distinguishes_unreported_from_degraded_readiness_test() {
+async fn current_state_distinguishes_unreported_from_degraded_readiness_test(
+) -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let degrade = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![degradable_child(
         "worker",
         started_sender,
         degrade.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -84,18 +86,19 @@ async fn current_state_distinguishes_unreported_from_degraded_readiness_test() {
     );
     assert_current_state_fast_20_reads(&handle).await;
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that missing heartbeat and stale heartbeat are distinct.
 #[tokio::test(start_paused = true)]
-async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
+async fn current_state_distinguishes_no_heartbeat_from_stale_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let heartbeat = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![delayed_heartbeat_child(
         "worker",
         started_sender,
         heartbeat.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -132,11 +135,12 @@ async fn current_state_distinguishes_no_heartbeat_from_stale_test() {
     );
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that pausing a child delivers real cancellation to the task.
 #[tokio::test(start_paused = true)]
-async fn pause_child_delivers_real_cancellation_test() {
+async fn pause_child_delivers_real_cancellation_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -145,7 +149,7 @@ async fn pause_child_delivers_real_cancellation_test() {
         started_sender,
         cancelled_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -216,11 +220,12 @@ async fn pause_child_delivers_real_cancellation_test() {
 
     release.notify_waiters();
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that removing a running child cancels and removes its runtime record.
 #[tokio::test(start_paused = true)]
-async fn remove_child_cancels_and_eventually_removes_runtime_state_test() {
+async fn remove_child_cancels_and_eventually_removes_runtime_state_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -229,7 +234,7 @@ async fn remove_child_cancels_and_eventually_removes_runtime_state_test() {
         started_sender,
         cancelled_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -269,18 +274,19 @@ async fn remove_child_cancels_and_eventually_removes_runtime_state_test() {
     }));
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that quarantine prevents automatic restart after failure.
 #[tokio::test(start_paused = true)]
-async fn quarantine_child_blocks_auto_restart_test() {
+async fn quarantine_child_blocks_auto_restart_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![release_then_fail_child(
         "worker",
         started_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -300,18 +306,19 @@ async fn quarantine_child_blocks_auto_restart_test() {
     assert!(record.attempt.is_none());
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that pause prevents automatic restart after the active attempt exits.
 #[tokio::test(start_paused = true)]
-async fn pause_child_blocks_auto_restart_after_exit_test() {
+async fn pause_child_blocks_auto_restart_after_exit_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![release_then_fail_child(
         "worker",
         started_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -338,11 +345,12 @@ async fn pause_child_blocks_auto_restart_after_exit_test() {
     }
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies that a control command targets the currently active attempt.
 #[tokio::test(start_paused = true)]
-async fn control_command_targets_current_instance_test() {
+async fn control_command_targets_current_instance_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(3);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -351,7 +359,7 @@ async fn control_command_targets_current_instance_test() {
         started_sender,
         cancelled_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 2).await;
     wait_for_record_attempt(&handle, "worker", 2).await;
@@ -374,11 +382,13 @@ async fn control_command_targets_current_instance_test() {
 
     release.notify_waiters();
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies idempotent repeated stop commands after cancellation delivery.
 #[tokio::test(start_paused = true)]
-async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test() {
+async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test(
+) -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(3);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(3);
     let release = Arc::new(Notify::new());
@@ -388,19 +398,19 @@ async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test() {
             started_sender.clone(),
             cancelled_sender.clone(),
             release.clone(),
-        ),
+        )?,
         controlled_cancellable_child(
             "remove-worker",
             started_sender.clone(),
             cancelled_sender.clone(),
             release.clone(),
-        ),
+        )?,
         controlled_cancellable_child(
             "quarantine-worker",
             started_sender,
             cancelled_sender,
             release.clone(),
-        ),
+        )?,
     ]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 3).await;
@@ -435,17 +445,19 @@ async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test() {
     }
     assert_no_extra_cancel(&mut cancelled_receiver).await;
 
-    assert_no_active_idempotent_stop_commands().await;
+    assert_no_active_idempotent_stop_commands().await?;
 
     release.notify_waiters();
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies removing a registered child without an active attempt.
 #[tokio::test(start_paused = true)]
-async fn remove_without_active_instance_returns_no_active_instance_test() {
+async fn remove_without_active_instance_returns_no_active_instance_test(
+) -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
-    let spec = SupervisorSpec::root(vec![temporary_success_child("worker", started_sender)]);
+    let spec = SupervisorSpec::root(vec![temporary_success_child("worker", started_sender)?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
     wait_for_record_without_attempt(&handle, "worker").await;
@@ -481,18 +493,19 @@ async fn remove_without_active_instance_returns_no_active_instance_test() {
     }));
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies stop deadline failures surface in outcomes and events.
 #[tokio::test(start_paused = true)]
-async fn stop_failure_outcome_carries_phase_and_reason_test() {
+async fn stop_failure_outcome_carries_phase_and_reason_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
     let mut spec = SupervisorSpec::root(vec![ignores_cancellation_child(
         "worker",
         started_sender,
         release.clone(),
-    )]);
+    )?]);
     spec.default_shutdown_policy =
         ShutdownPolicy::new(Duration::from_millis(20), Duration::from_millis(20));
     let handle = Supervisor::start(spec).await.expect("start supervisor");
@@ -553,13 +566,14 @@ async fn stop_failure_outcome_carries_phase_and_reason_test() {
 
     release.notify_waiters();
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies restart limit exhaustion is visible in control outcomes.
 #[tokio::test(start_paused = true)]
-async fn restart_limit_exhaustion_visible_in_outcome_test() {
+async fn restart_limit_exhaustion_visible_in_outcome_test() -> Result<(), SupervisorError> {
     let (started_sender, _started_receiver) = mpsc::channel(4);
-    let mut spec = SupervisorSpec::root(vec![always_fail_child("worker", started_sender)]);
+    let mut spec = SupervisorSpec::root(vec![always_fail_child("worker", started_sender)?]);
     spec.restart_limit = Some(RestartLimit::new(2, Duration::from_secs(60)));
     let handle = Supervisor::start(spec).await.expect("start supervisor");
 
@@ -585,18 +599,19 @@ async fn restart_limit_exhaustion_visible_in_outcome_test() {
     assert!(outcome.restart_limit.updated_at_unix_nanos >= updated_at);
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Verifies an operator operation wins over an automatic restart race.
 #[tokio::test(start_paused = true)]
-async fn operation_wins_over_auto_restart_race_test() {
+async fn operation_wins_over_auto_restart_race_test() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let release = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![release_then_fail_child(
         "worker",
         started_sender,
         release.clone(),
-    )]);
+    )?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 
@@ -616,6 +631,7 @@ async fn operation_wins_over_auto_restart_race_test() {
     assert!(record.attempt.is_none());
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Stop command variants used by repeated idempotency assertions.
@@ -717,11 +733,11 @@ async fn assert_repeated_stop_is_idempotent(
 }
 
 /// Asserts idempotency for paused and quarantined records without active attempts.
-async fn assert_no_active_idempotent_stop_commands() {
+async fn assert_no_active_idempotent_stop_commands() -> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(2);
     let spec = SupervisorSpec::root(vec![
-        temporary_success_child("paused-idle", started_sender.clone()),
-        temporary_success_child("quarantined-idle", started_sender),
+        temporary_success_child("paused-idle", started_sender.clone())?,
+        temporary_success_child("quarantined-idle", started_sender)?,
     ]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 2).await;
@@ -786,6 +802,7 @@ async fn assert_no_active_idempotent_stop_commands() {
     }
 
     shutdown(handle).await;
+    Ok(())
 }
 
 /// Counts cancellation delivery events for one child.
@@ -1010,7 +1027,10 @@ async fn shutdown(handle: SupervisorHandle) {
 }
 
 /// Creates a child that reports heartbeat and readiness.
-fn ready_heartbeat_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildSpec {
+fn ready_heartbeat_child(
+    name: &'static str,
+    sender: mpsc::Sender<String>,
+) -> Result<ChildSpec, SupervisorError> {
     worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1031,7 +1051,7 @@ fn degradable_child(
     name: &'static str,
     sender: mpsc::Sender<String>,
     degrade: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     let mut child = worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1045,9 +1065,9 @@ fn degradable_child(
                 TaskResult::Cancelled
             }
         }),
-    );
+    )?;
     child.readiness_policy = ReadinessPolicy::Explicit;
-    child
+    Ok(child)
 }
 
 /// Creates a child that waits after observing cancellation.
@@ -1056,7 +1076,7 @@ fn controlled_cancellable_child(
     started: mpsc::Sender<String>,
     cancelled: mpsc::Sender<String>,
     release: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1081,7 +1101,7 @@ fn delayed_heartbeat_child(
     name: &'static str,
     sender: mpsc::Sender<String>,
     heartbeat: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1099,7 +1119,10 @@ fn delayed_heartbeat_child(
 }
 
 /// Creates a child that exits successfully after reporting startup.
-fn temporary_success_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildSpec {
+fn temporary_success_child(
+    name: &'static str,
+    sender: mpsc::Sender<String>,
+) -> Result<ChildSpec, SupervisorError> {
     let mut child = worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1109,9 +1132,9 @@ fn temporary_success_child(name: &'static str, sender: mpsc::Sender<String>) -> 
                 TaskResult::Succeeded
             }
         }),
-    );
+    )?;
     child.restart_policy = RestartPolicy::Temporary;
-    child
+    Ok(child)
 }
 
 /// Creates a child that waits for release and then fails.
@@ -1119,7 +1142,7 @@ fn release_then_fail_child(
     name: &'static str,
     sender: mpsc::Sender<String>,
     release: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1142,7 +1165,7 @@ fn restart_then_wait_child(
     started: mpsc::Sender<String>,
     cancelled: mpsc::Sender<u64>,
     release: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     let starts = Arc::new(AtomicUsize::new(0));
     let mut child = worker_child(
         name,
@@ -1163,9 +1186,9 @@ fn restart_then_wait_child(
                 TaskResult::Cancelled
             }
         }),
-    );
+    )?;
     child.backoff_policy = BackoffPolicy::new(Duration::ZERO, Duration::ZERO, 0.0);
-    child
+    Ok(child)
 }
 
 /// Creates a child that ignores cancellation until released.
@@ -1173,7 +1196,7 @@ fn ignores_cancellation_child(
     name: &'static str,
     sender: mpsc::Sender<String>,
     release: Arc<Notify>,
-) -> ChildSpec {
+) -> Result<ChildSpec, SupervisorError> {
     worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1191,7 +1214,10 @@ fn ignores_cancellation_child(
 }
 
 /// Creates a child that fails on every attempt.
-fn always_fail_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildSpec {
+fn always_fail_child(
+    name: &'static str,
+    sender: mpsc::Sender<String>,
+) -> Result<ChildSpec, SupervisorError> {
     let mut child = worker_child(
         name,
         service_fn(move |ctx: TaskContext| {
@@ -1201,9 +1227,9 @@ fn always_fail_child(name: &'static str, sender: mpsc::Sender<String>) -> ChildS
                 failed_result("always failed")
             }
         }),
-    );
+    )?;
     child.backoff_policy = BackoffPolicy::new(Duration::ZERO, Duration::ZERO, 0.0);
-    child
+    Ok(child)
 }
 
 /// Creates a typed task failure result for restart tests.
@@ -1216,7 +1242,10 @@ fn failed_result(message: &'static str) -> TaskResult {
 }
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> ChildSpec {
+fn worker_child(
+    name: &'static str,
+    factory: impl TaskFactory,
+) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,

@@ -2,6 +2,7 @@
 //!
 //! These tests verify child and supervisor declaration validation.
 
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
@@ -10,16 +11,17 @@ use std::sync::Arc;
 
 /// Verifies worker child specification field validation.
 #[test]
-fn child_spec_validates_worker_fields() {
+fn child_spec_validates_worker_fields() -> Result<(), SupervisorError> {
     let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
     let spec = ChildSpec::worker(
         ChildId::new("worker"),
         "worker",
         TaskKind::AsyncWorker,
         Arc::new(factory),
-    );
+    )?;
 
     assert!(spec.validate().is_ok());
+    Ok(())
 }
 
 /// Verifies supervisor specification validation for child declarations.
