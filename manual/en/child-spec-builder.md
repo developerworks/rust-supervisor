@@ -141,10 +141,10 @@ ChildSpecBuilder::worker / supervisor / new
 Runnable demo:
 
 ```bash
-cargo run --example child_spec_builder_demo
+cargo run --example child_spec_builder
 ```
 
-Source: [`examples/child_spec_builder_demo.rs`](../../examples/child_spec_builder_demo.rs). Covers worker, job override, supervisor, `new()` + sidecar, and an intentionally invalid sidecar combination.
+Source: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). Covers worker, job override, supervisor, `new()` + sidecar, and an intentionally invalid sidecar combination.
 
 ## Tests and regression
 

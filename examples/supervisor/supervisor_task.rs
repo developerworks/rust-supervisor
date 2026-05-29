@@ -8,7 +8,6 @@ use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
-use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 // Import task context values.
 use rust_supervisor::task::context::TaskContext;
 // Import task factory helpers.

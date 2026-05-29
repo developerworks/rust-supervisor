@@ -141,10 +141,10 @@ ChildSpecBuilder::worker / supervisor / new
 可运行演示:
 
 ```bash
-cargo run --example child_spec_builder_demo
+cargo run --example child_spec_builder
 ```
 
-源码: [`examples/child_spec_builder_demo.rs`](../../examples/child_spec_builder_demo.rs). 覆盖 worker, job 覆盖, supervisor, `new()` + sidecar, 以及故意失败的 sidecar 组合.
+源码: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). 覆盖 worker, job 覆盖, supervisor, `new()` + sidecar, 以及故意失败的 sidecar 组合.
 
 ## 测试与回归
 
