@@ -69,6 +69,12 @@ fn supervisor_config_generates_schema_for_all_public_fields() {
         "child_strategy_overrides",
         "severity_defaults",
         "children",
+        "dependencies",
+        "health_check",
+        "readiness",
+        "command_permissions",
+        "environment",
+        "secrets",
         "tags",
         "task_role",
         "sidecar_config",
@@ -109,5 +115,143 @@ fn supervisor_config_schema_contains_top_level_sections() {
             properties.contains_key(section),
             "missing section {section}"
         );
+    }
+}
+
+/// Verifies that optional child fields do not leak serde defaults into YAML completion.
+#[test]
+fn child_optional_fields_do_not_emit_null_defaults() {
+    let schema = schemars::schema_for!(SupervisorConfig);
+    let schema_value = serde_json::to_value(&schema).expect("serialize schema");
+    let child_properties = schema_value
+        .pointer("/definitions/ChildDeclaration/properties")
+        .or_else(|| schema_value.pointer("/$defs/ChildDeclaration/properties"))
+        .and_then(Value::as_object)
+        .expect("child field schemas");
+
+    for field in [
+        "task_role",
+        "sidecar_config",
+        "severity",
+        "group",
+        "health_check",
+        "readiness",
+        "command_permissions",
+    ] {
+        let field_schema = child_properties.get(field).expect("child field schema");
+
+        assert!(
+            field_schema.get("default").is_none(),
+            "{field} schema must not emit default: null"
+        );
+    }
+}
+
+/// Verifies that health check completion stays field-by-field.
+#[test]
+fn child_health_check_schema_uses_field_by_field_completion() {
+    let schema = schemars::schema_for!(SupervisorConfig);
+    let schema_value = serde_json::to_value(&schema).expect("serialize schema");
+    let health_check_schema = schema_value
+        .pointer("/definitions/ChildDeclaration/properties/health_check")
+        .or_else(|| schema_value.pointer("/$defs/ChildDeclaration/properties/health_check"))
+        .expect("child health check schema");
+
+    assert!(
+        health_check_schema.get("default").is_none(),
+        "health_check schema must not emit default: null"
+    );
+
+    assert!(
+        health_check_schema.get("defaultSnippets").is_none(),
+        "health_check schema must not emit aggregate snippets"
+    );
+
+    let health_check_fields = schema_value
+        .pointer("/definitions/HealthCheckConfig/properties")
+        .or_else(|| schema_value.pointer("/$defs/HealthCheckConfig/properties"))
+        .and_then(Value::as_object)
+        .expect("health check field schemas");
+
+    for field in ["check_interval_secs", "timeout_secs", "max_retries"] {
+        assert!(
+            health_check_fields.contains_key(field),
+            "health_check nested completion is missing {field}"
+        );
+    }
+}
+
+/// Verifies that readiness completion exposes policy values, not unused check settings.
+#[test]
+fn child_readiness_schema_uses_policy_enum() {
+    let schema = schemars::schema_for!(SupervisorConfig);
+    let schema_value = serde_json::to_value(&schema).expect("serialize schema");
+    let readiness_schema = schema_value
+        .pointer("/definitions/ChildDeclaration/properties/readiness")
+        .or_else(|| schema_value.pointer("/$defs/ChildDeclaration/properties/readiness"))
+        .expect("child readiness schema");
+    let readiness_text = serde_json::to_string(readiness_schema).expect("stringify readiness");
+
+    assert!(
+        readiness_schema.get("default").is_none(),
+        "readiness schema must not emit default: null"
+    );
+    assert!(
+        readiness_text.contains("ReadinessPolicy"),
+        "readiness must reference the readiness policy enum"
+    );
+
+    let definitions = schema_value
+        .get("definitions")
+        .or_else(|| schema_value.get("$defs"))
+        .and_then(Value::as_object)
+        .expect("schema definitions");
+
+    assert!(
+        definitions.get("ReadinessConfig").is_none(),
+        "unused readiness check config must not be public schema"
+    );
+    assert!(
+        definitions.get("ResourceLimits").is_none(),
+        "unused resource limits must not be public schema"
+    );
+}
+
+/// Verifies that the public schema never advertises null as a completion default.
+#[test]
+fn supervisor_config_schema_does_not_emit_null_defaults() {
+    let schema = schemars::schema_for!(SupervisorConfig);
+    let schema_value = serde_json::to_value(&schema).expect("serialize schema");
+    let mut null_default_paths = Vec::new();
+
+    collect_null_default_paths(&schema_value, "$", &mut null_default_paths);
+
+    assert!(
+        null_default_paths.is_empty(),
+        "schema must not emit default: null at {}",
+        null_default_paths.join(", ")
+    );
+}
+
+/// Collects schema object paths whose default value is explicit null.
+fn collect_null_default_paths(value: &Value, path: &str, paths: &mut Vec<String>) {
+    match value {
+        Value::Object(object) => {
+            if object.get("default") == Some(&Value::Null) {
+                paths.push(path.to_string());
+            }
+
+            for (key, child) in object {
+                let child_path = format!("{path}.{key}");
+                collect_null_default_paths(child, &child_path, paths);
+            }
+        }
+        Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                let child_path = format!("{path}[{index}]");
+                collect_null_default_paths(child, &child_path, paths);
+            }
+        }
+        _ => {}
     }
 }

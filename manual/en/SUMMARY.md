@@ -15,4 +15,5 @@
 - [Observability](observability.md)
 - [Examples](examples.md)
 - [Operations Runbook](operations-runbook.md)
+- [FAQ](faq.md)
 - [Quality Gates](quality-gates.md)

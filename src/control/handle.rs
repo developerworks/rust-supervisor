@@ -122,8 +122,8 @@ impl SupervisorHandle {
     /// ```
     ///
     /// Optional fields can be added when the child needs dependencies,
-    /// lifecycle policy, resource limits, command permissions, environment
-    /// variables, or secret references:
+    /// lifecycle policy, command permissions, environment variables, or secret
+    /// references:
     ///
     /// ```yaml
     /// name: worker
@@ -136,13 +136,7 @@ impl SupervisorHandle {
     ///   check_interval_secs: 10
     ///   timeout_secs: 5
     ///   max_retries: 3
-    /// readiness:
-    ///   check_interval_secs: 5
-    ///   timeout_secs: 3
-    /// resource_limits:
-    ///   max_memory_mb: 256
-    ///   max_cpu_percent: 80
-    ///   max_file_descriptors: 1024
+    /// readiness: explicit
     /// command_permissions:
     ///   allow_shutdown: false
     ///   allow_restart: true

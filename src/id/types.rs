@@ -4,12 +4,13 @@
 //! supervisor runtime.
 
 use schemars::JsonSchema;
+use confique::Config;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 /// Stable identifier for a child task.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Config, JsonSchema)]
 pub struct ChildId {
     /// Human-readable child identifier from configuration.
     pub value: String,

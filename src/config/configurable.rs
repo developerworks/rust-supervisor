@@ -4,6 +4,7 @@
 //! YAML loading, template rendering, and JSON Schema generation.
 
 use confique::Config;
+use rust_config_tree::ConfigSchema;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -80,7 +81,7 @@ pub struct SupervisorConfig {
     pub children: Vec<ChildDeclaration>,
 }
 
-impl rust_config_tree::ConfigSchema for SupervisorConfig {
+impl ConfigSchema for SupervisorConfig {
     /// Returns child configuration paths declared by one loaded layer.
     ///
     /// # Arguments
@@ -101,6 +102,7 @@ pub struct SupervisorRootConfig {
     /// Restart scope strategy for child failures.
     pub strategy: SupervisionStrategy,
     /// Optional supervisor-level escalation policy.
+    #[schemars(!default)]
     #[serde(default)]
     pub escalation_policy: Option<EscalationPolicy>,
     /// Runtime dynamic child acceptance policy.
@@ -184,6 +186,7 @@ pub struct DashboardIpcConfig {
     /// Dynamic registration settings used after IPC is ready.
     pub registration: Option<DashboardRegistrationConfig>,
     /// Optional IPC security pipeline configuration (C1-C9).
+    #[schemars(!default)]
     #[serde(default)]
     pub security_config: Option<IpcSecurityConfig>,
 }

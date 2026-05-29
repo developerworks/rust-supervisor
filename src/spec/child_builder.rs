@@ -10,8 +10,7 @@ use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::spec::child::{
     BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
-    HealthPolicy, Isolation, ReadinessConfig, ResourceLimits, RestartPolicy, SecretRef,
-    ShutdownPolicy, TaskKind,
+    HealthPolicy, Isolation, RestartPolicy, SecretRef, ShutdownPolicy, TaskKind,
 };
 use crate::task::factory::TaskFactory;
 use std::path::PathBuf;
@@ -39,11 +38,7 @@ fn worker_policy_defaults() -> WorkerPolicyDefaults {
         shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(1), Duration::from_secs(3)),
         readiness_policy: ReadinessPolicy::Immediate,
-        backoff_policy: BackoffPolicy::new(
-            Duration::from_millis(10),
-            Duration::from_secs(1),
-            0.0,
-        ),
+        backoff_policy: BackoffPolicy::new(Duration::from_millis(10), Duration::from_secs(1), 0.0),
     }
 }
 
@@ -54,11 +49,7 @@ fn baseline_policy_defaults() -> WorkerPolicyDefaults {
         shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(10), Duration::from_secs(5)),
         readiness_policy: ReadinessPolicy::Immediate,
-        backoff_policy: BackoffPolicy::new(
-            Duration::from_millis(10),
-            Duration::from_secs(1),
-            0.0,
-        ),
+        backoff_policy: BackoffPolicy::new(Duration::from_millis(10), Duration::from_secs(1), 0.0),
     }
 }
 
@@ -114,8 +105,6 @@ impl ChildSpecBuilder {
             severity: None,
             group: None,
             health_check: None,
-            readiness: None,
-            resource_limits: None,
             command_permissions: CommandPermissions::default(),
             environment: Vec::new(),
             secrets: Vec::new(),
@@ -189,8 +178,6 @@ impl ChildSpecBuilder {
             severity: None,
             group: None,
             health_check: None,
-            readiness: None,
-            resource_limits: None,
             command_permissions: CommandPermissions::default(),
             environment: Vec::new(),
             secrets: Vec::new(),
@@ -230,8 +217,6 @@ impl ChildSpecBuilder {
             severity: None,
             group: None,
             health_check: None,
-            readiness: None,
-            resource_limits: None,
             command_permissions: CommandPermissions::default(),
             environment: Vec::new(),
             secrets: Vec::new(),
@@ -573,62 +558,6 @@ impl ChildSpecBuilder {
     /// Returns the builder for chaining.
     pub fn without_health_check(mut self) -> Self {
         self.spec.health_check = None;
-        self
-    }
-
-    /// Sets the optional readiness check configuration block.
-    ///
-    /// # Arguments
-    ///
-    /// - `readiness`: Readiness check configuration.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn readiness(mut self, readiness: ReadinessConfig) -> Self {
-        self.spec.readiness = Some(readiness);
-        self
-    }
-
-    /// Clears the optional readiness check configuration block.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn without_readiness(mut self) -> Self {
-        self.spec.readiness = None;
-        self
-    }
-
-    /// Sets the optional resource limits.
-    ///
-    /// # Arguments
-    ///
-    /// - `resource_limits`: Resource limits for this child.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn resource_limits(mut self, resource_limits: ResourceLimits) -> Self {
-        self.spec.resource_limits = Some(resource_limits);
-        self
-    }
-
-    /// Clears the optional resource limits.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn without_resource_limits(mut self) -> Self {
-        self.spec.resource_limits = None;
         self
     }
 

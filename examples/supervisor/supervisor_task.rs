@@ -8,6 +8,7 @@ use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
 use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
+use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 // Import task context values.
 use rust_supervisor::task::context::TaskContext;
 // Import task factory helpers.
@@ -24,21 +25,21 @@ use tokio::sync::mpsc;
 pub enum SupervisorEvent {
     /// The supervisor role unit has initialized.
     Initialized {
-        /// Stable child identifier.
+        /// Child identifier.
         child_id: String,
         /// Supervisor tree path for this attempt.
         path: String,
     },
     /// The supervisor role unit emitted one running tick.
     Running {
-        /// Stable child identifier.
+        /// Child identifier.
         child_id: String,
         /// Monotonic example tick number.
         tick: u64,
     },
     /// The supervisor role unit observed cancellation and is stopping cooperatively.
     Stopping {
-        /// Stable child identifier.
+        /// Child identifier.
         child_id: String,
     },
 }
@@ -52,7 +53,9 @@ pub enum SupervisorEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Supervisor`].
-pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> Result<ChildSpec, SupervisorError> {
+pub fn supervisor_role_child(
+    events: mpsc::UnboundedSender<SupervisorEvent>,
+) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the supervisor role function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -62,7 +65,7 @@ pub fn supervisor_role_child(events: mpsc::UnboundedSender<SupervisorEvent>) -> 
     });
     // Build a runnable child that is classified by TaskRole::Supervisor.
     let mut child = ChildSpec::worker(
-        // Set the stable child identifier.
+        // Set the Child identifier.
         ChildId::new("nested-supervisor-unit"),
         // Set the display name.
         "Nested Supervisor Unit",

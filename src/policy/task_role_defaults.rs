@@ -6,6 +6,7 @@
 use crate::id::types::ChildId;
 use crate::spec::child::{BackoffPolicy, RestartPolicy};
 use crate::spec::supervisor::{EscalationPolicy, RestartLimit};
+use confique::Config;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -56,11 +57,13 @@ impl Display for TaskRole {
 }
 
 /// Configuration for sidecar attachment to a primary service.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SidecarConfig {
     /// Child ID of the primary service this sidecar attaches to.
+    #[config(nested)]
     pub primary_child_id: ChildId,
     /// Whether lifecycle events are linked.
+    #[config(default = false)]
     #[serde(default)]
     pub linked_lifecycle: bool,
 }

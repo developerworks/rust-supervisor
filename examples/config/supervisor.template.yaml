@@ -154,6 +154,22 @@ children:
     severity: Critical
     group: core
     restart_policy: transient
+    dependencies: []
+    health_check:
+      check_interval_secs: 10
+      timeout_secs: 5
+      max_retries: 3
+    readiness: explicit
+    command_permissions:
+      allow_shutdown: false
+      allow_restart: false
+    environment:
+      - name: LOG_LEVEL
+        value: info
+    secrets:
+      - name: API_KEY
+        key: vault/path/api-key
+        required: true
 
 # Optional target-side dashboard IPC configuration.
 dashboard:

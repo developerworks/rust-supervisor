@@ -7,11 +7,12 @@
 
 use crate::id::types::ChildId;
 use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
+use crate::readiness::signal::ReadinessPolicy;
 use crate::spec::child::{
     BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
-    HealthPolicy, ReadinessConfig, ResourceLimits, RestartPolicy, SecretRef, ShutdownPolicy,
-    TaskKind,
+    HealthPolicy, RestartPolicy, SecretRef, ShutdownPolicy, TaskKind,
 };
+use confique::Config;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -47,53 +48,64 @@ fn is_valid_secret_placeholder(s: &str) -> bool {
 }
 
 /// Declarative child specification loaded from YAML or received via add_child RPC.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct ChildDeclaration {
     /// Unique child name used for ChildId generation.
     pub name: String,
     /// Task kind.
+    #[config(default = "async_worker")]
     #[serde(default)]
     pub kind: TaskKind,
     /// Child criticality.
+    #[config(default = "optional")]
     #[serde(default)]
     pub criticality: Criticality,
     /// Low-cardinality tags used for grouping and diagnostics.
+    #[config(default = [])]
     #[serde(default)]
     pub tags: Vec<String>,
     /// Optional task role that selects default lifecycle semantics.
+    #[schemars(!default)]
     #[serde(default)]
     pub task_role: Option<TaskRole>,
     /// Optional sidecar binding used when the role is `sidecar`.
+    #[schemars(!default)]
     #[serde(default)]
     pub sidecar_config: Option<SidecarConfig>,
     /// Optional severity classification that overrides the role default.
+    #[schemars(!default)]
     #[serde(default)]
     pub severity: Option<SeverityClass>,
     /// Optional group name for group-level isolation and budget tracking.
+    #[schemars(!default)]
     #[serde(default)]
     pub group: Option<String>,
     /// Restart policy.
+    #[config(default = "permanent")]
     #[serde(default)]
     pub restart_policy: RestartPolicy,
     /// Child dependencies by name.
+    #[config(default = [])]
     #[serde(default)]
     pub dependencies: Vec<String>,
     /// Optional health check configuration.
+    #[schemars(!default)]
     #[serde(default)]
     pub health_check: Option<HealthCheckConfig>,
-    /// Optional readiness check configuration.
+    /// Optional readiness policy; defaults to immediate readiness.
+    #[schemars(!default)]
     #[serde(default)]
-    pub readiness: Option<ReadinessConfig>,
-    /// Optional resource limits.
-    #[serde(default)]
-    pub resource_limits: Option<ResourceLimits>,
+    pub readiness: Option<ReadinessPolicy>,
     /// Optional command permissions.
+    #[schemars(!default)]
     #[serde(default)]
     pub command_permissions: Option<CommandPermissions>,
     /// Environment variables.
+    #[config(default = [])]
     #[serde(default)]
     pub environment: Vec<EnvVar>,
     /// Secret references.
+    #[config(default = [])]
     #[serde(default)]
     pub secrets: Vec<SecretRef>,
 }
@@ -219,13 +231,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             ),
         };
 
-        // Map readiness: when ReadinessConfig is present, use Explicit
-        // so the child must report readiness before being marked ready;
-        // otherwise Immediate.
-        let readiness_policy = match &decl.readiness {
-            Some(_) => crate::readiness::signal::ReadinessPolicy::Explicit,
-            None => crate::readiness::signal::ReadinessPolicy::Immediate,
-        };
+        let readiness_policy = decl.readiness.unwrap_or(ReadinessPolicy::Immediate);
 
         let command_permissions = decl.command_permissions.unwrap_or_default();
 
@@ -254,8 +260,6 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             severity: decl.severity,
             group: decl.group,
             health_check: decl.health_check,
-            readiness: decl.readiness,
-            resource_limits: decl.resource_limits,
             command_permissions,
             environment: decl.environment,
             secrets: decl.secrets,

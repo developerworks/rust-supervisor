@@ -6,9 +6,7 @@ use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
 use rust_supervisor::readiness::signal::ReadinessPolicy;
-use rust_supervisor::spec::child::{
-    ChildSpec, Criticality, RestartPolicy, TaskKind,
-};
+use rust_supervisor::spec::child::{ChildSpec, Criticality, RestartPolicy, TaskKind};
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
@@ -39,8 +37,6 @@ fn assert_worker_fields_match(builder_spec: &ChildSpec, worker_spec: &ChildSpec)
     assert_eq!(builder_spec.severity, worker_spec.severity);
     assert_eq!(builder_spec.group, worker_spec.group);
     assert_eq!(builder_spec.health_check, worker_spec.health_check);
-    assert_eq!(builder_spec.readiness, worker_spec.readiness);
-    assert_eq!(builder_spec.resource_limits, worker_spec.resource_limits);
     assert_eq!(
         builder_spec.command_permissions,
         worker_spec.command_permissions
@@ -55,13 +51,9 @@ fn assert_worker_fields_match(builder_spec: &ChildSpec, worker_spec: &ChildSpec)
 fn worker_builder_matches_child_spec_worker_defaults() -> Result<(), SupervisorError> {
     let factory = test_factory();
     let id = ChildId::new("worker");
-    let builder_spec = ChildSpecBuilder::worker(
-        id.clone(),
-        "worker",
-        TaskKind::AsyncWorker,
-        factory.clone(),
-    )
-    .build()?;
+    let builder_spec =
+        ChildSpecBuilder::worker(id.clone(), "worker", TaskKind::AsyncWorker, factory.clone())
+            .build()?;
     let worker_spec = ChildSpec::worker(id, "worker", TaskKind::AsyncWorker, factory)?;
 
     assert_worker_fields_match(&builder_spec, &worker_spec);

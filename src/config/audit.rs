@@ -23,6 +23,7 @@ pub struct AuditConfig {
     pub backend: String,
 
     /// File path for file backend. Required when backend is "file".
+    #[schemars(!default)]
     #[serde(default)]
     pub file_path: Option<String>,
 

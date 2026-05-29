@@ -13,6 +13,8 @@ use rust_supervisor::config::{
         RestartLimitConfig, SeverityDefaultConfig, SupervisionPipelineConfig,
     },
 };
+use rust_supervisor::spec::child::{CommandPermissions, EnvVar, HealthCheckConfig, SecretRef};
+use rust_supervisor::spec::child_declaration::ChildDeclaration;
 use rust_supervisor::spec::supervisor::BackpressureConfig;
 
 /// Accepts any type that implements `confique::Config`.
@@ -46,6 +48,11 @@ fn nested_config_structs_implement_confique_config() {
     assert_confique_config::<GroupDependencyConfig>();
     assert_confique_config::<ChildStrategyOverrideConfig>();
     assert_confique_config::<SeverityDefaultConfig>();
+    assert_confique_config::<ChildDeclaration>();
+    assert_confique_config::<HealthCheckConfig>();
+    assert_confique_config::<CommandPermissions>();
+    assert_confique_config::<EnvVar>();
+    assert_confique_config::<SecretRef>();
 }
 
 /// Verifies that the root configuration metadata contains all public sections.

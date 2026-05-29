@@ -252,6 +252,7 @@ pub struct DynamicSupervisorConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
     /// Optional maximum number of declared and dynamic children.
+    #[schemars(!default)]
     #[serde(default)]
     pub child_limit: Option<usize>,
 }
@@ -318,6 +319,7 @@ pub struct GroupConfig {
     #[serde(default)]
     pub children: Vec<String>,
     /// Optional group-specific restart budget override.
+    #[schemars(!default)]
     #[serde(default)]
     pub budget: Option<RestartBudgetConfig>,
 }
@@ -349,9 +351,11 @@ pub struct GroupStrategyConfig {
     /// Restart strategy used when a member child fails.
     pub strategy: SupervisionStrategy,
     /// Optional group-level restart limit.
+    #[schemars(!default)]
     #[serde(default)]
     pub restart_limit: Option<RestartLimitConfig>,
     /// Optional escalation policy for this group.
+    #[schemars(!default)]
     #[serde(default)]
     pub escalation_policy: Option<EscalationPolicy>,
 }
@@ -385,9 +389,11 @@ pub struct ChildStrategyOverrideConfig {
     /// Restart strategy used for this child.
     pub strategy: SupervisionStrategy,
     /// Optional child-level restart limit.
+    #[schemars(!default)]
     #[serde(default)]
     pub restart_limit: Option<RestartLimitConfig>,
     /// Optional escalation policy for this child.
+    #[schemars(!default)]
     #[serde(default)]
     pub escalation_policy: Option<EscalationPolicy>,
 }

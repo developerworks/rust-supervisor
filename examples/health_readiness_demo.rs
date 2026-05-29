@@ -10,8 +10,8 @@
 
 // Import readiness policy and signal types.
 use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadySignal};
-// Import health and readiness configuration types.
-use rust_supervisor::spec::child::{HealthCheckConfig, HealthPolicy, ReadinessConfig};
+// Import health configuration types.
+use rust_supervisor::spec::child::{HealthCheckConfig, HealthPolicy};
 // Import duration values for deterministic configuration.
 use std::time::Duration;
 
@@ -112,26 +112,6 @@ fn main() {
     signal.mark_ready();
     // Print the readiness state after the transition.
     println!("  after mark_ready() = {:?}", *receiver.borrow());
-
-    // Readiness Config
-    println!();
-    // Print the readiness config section title.
-    println!("--- Readiness Config ---");
-    // Add spacing before readiness config values.
-    println!();
-
-    // Build a readiness configuration.
-    let rc = ReadinessConfig {
-        // Set the readiness check interval.
-        check_interval_secs: 5,
-        // Set the readiness timeout.
-        timeout_secs: 3,
-    };
-
-    // Print the readiness check interval.
-    println!("  check_interval  = {}s", rc.check_interval_secs);
-    // Print the readiness timeout.
-    println!("  timeout         = {}s", rc.timeout_secs);
 
     // Child lifecycle phases.
     println!();

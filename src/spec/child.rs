@@ -8,6 +8,7 @@ use crate::id::types::ChildId;
 use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::task::factory::TaskFactory;
+use confique::Config;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
@@ -159,13 +160,19 @@ impl HealthPolicy {
 }
 
 /// Health check configuration for a child declaration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct HealthCheckConfig {
     /// Interval between health checks in seconds.
+    #[config(default = 10)]
+    #[serde(default = "default_health_check_interval_secs")]
     pub check_interval_secs: u64,
     /// Timeout for each health check in seconds.
+    #[config(default = 5)]
+    #[serde(default = "default_health_check_timeout_secs")]
     pub timeout_secs: u64,
     /// Maximum retries before marking the child as unhealthy.
+    #[config(default = 3)]
+    #[serde(default = "default_health_check_max_retries")]
     pub max_retries: u32,
 }
 
@@ -173,51 +180,42 @@ impl Default for HealthCheckConfig {
     /// Returns the default health check config: 10s interval, 5s timeout, 3 retries.
     fn default() -> Self {
         Self {
-            check_interval_secs: 10,
-            timeout_secs: 5,
-            max_retries: 3,
+            check_interval_secs: default_health_check_interval_secs(),
+            timeout_secs: default_health_check_timeout_secs(),
+            max_retries: default_health_check_max_retries(),
         }
     }
 }
 
-/// Readiness check configuration for a child declaration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct ReadinessConfig {
-    /// Interval between readiness checks in seconds.
-    pub check_interval_secs: u64,
-    /// Timeout for each readiness check in seconds.
-    pub timeout_secs: u64,
+/// Returns the default health check interval in seconds.
+fn default_health_check_interval_secs() -> u64 {
+    10
 }
 
-impl Default for ReadinessConfig {
-    /// Returns the default readiness config: 5s interval, 3s timeout.
-    fn default() -> Self {
-        Self {
-            check_interval_secs: 5,
-            timeout_secs: 3,
-        }
-    }
+/// Returns the default health check timeout in seconds.
+fn default_health_check_timeout_secs() -> u64 {
+    5
 }
 
-/// Resource limits for a child process.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct ResourceLimits {
-    /// Maximum memory in megabytes.
-    pub max_memory_mb: Option<u64>,
-    /// Maximum CPU usage as a percentage.
-    pub max_cpu_percent: Option<u8>,
-    /// Maximum number of open file descriptors.
-    pub max_file_descriptors: Option<u64>,
+/// Returns the default health check retry count.
+fn default_health_check_max_retries() -> u32 {
+    3
 }
 
 /// Command permissions granted to a child.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct CommandPermissions {
     /// Whether the child may trigger supervisor shutdown.
+    #[config(default = false)]
+    #[serde(default)]
     pub allow_shutdown: bool,
     /// Whether the child may request its own restart.
+    #[config(default = false)]
+    #[serde(default)]
     pub allow_restart: bool,
     /// Signals the child is allowed to send.
+    #[config(default = [])]
+    #[serde(default = "default_command_permission_signals")]
     pub allowed_signals: Vec<String>,
 }
 
@@ -227,13 +225,18 @@ impl Default for CommandPermissions {
         Self {
             allow_shutdown: false,
             allow_restart: false,
-            allowed_signals: vec!["SIGTERM".to_string()],
+            allowed_signals: default_command_permission_signals(),
         }
     }
 }
 
+/// Returns the default allowed signal list for command permissions.
+fn default_command_permission_signals() -> Vec<String> {
+    vec!["SIGTERM".to_string()]
+}
+
 /// Environment variable for a child.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct EnvVar {
     /// Environment variable name.
     pub name: String,
@@ -244,13 +247,15 @@ pub struct EnvVar {
 }
 
 /// Secret reference for a child.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SecretRef {
     /// Secret name used as an identifier.
     pub name: String,
     /// Key path within the vault.
     pub key: String,
     /// Whether the secret is required (vault offline treated as rejection when true).
+    #[config(default = false)]
+    #[serde(default)]
     pub required: bool,
 }
 
@@ -333,12 +338,6 @@ pub struct ChildSpec {
     /// Optional health check configuration.
     #[serde(default)]
     pub health_check: Option<HealthCheckConfig>,
-    /// Optional readiness check configuration.
-    #[serde(default)]
-    pub readiness: Option<ReadinessConfig>,
-    /// Optional resource limits.
-    #[serde(default)]
-    pub resource_limits: Option<ResourceLimits>,
     /// Command permissions granted to this child.
     #[serde(default)]
     pub command_permissions: CommandPermissions,
@@ -377,8 +376,6 @@ impl Debug for ChildSpec {
             .field("severity", &self.severity)
             .field("group", &self.group)
             .field("health_check", &self.health_check)
-            .field("readiness", &self.readiness)
-            .field("resource_limits", &self.resource_limits)
             .field("command_permissions", &self.command_permissions)
             .field("environment", &self.environment)
             .field("secrets", &self.secrets)
