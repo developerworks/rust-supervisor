@@ -685,6 +685,8 @@ version = "0.1.3"
 dependencies = [
  "clap",
  "confique",
+ "dotenvy",
+ "figment",
  "libc",
  "metrics",
  "rand",

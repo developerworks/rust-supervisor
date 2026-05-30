@@ -98,12 +98,12 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         validate_lower_policy(&config.policy)?;
         validate_supervisor_root(&config.supervisor)?;
         validate_group_inputs(
-            &config.groups,
+            config.groups.as_slice(),
             &config.group_strategies,
             &config.group_dependencies,
             &config.child_strategy_overrides,
             &config.severity_defaults,
-            &config.children,
+            config.children.as_slice(),
         )?;
         let dashboard = dashboard_with_default_security(config.dashboard);
         validate_dashboard(dashboard.as_ref())?;
@@ -113,10 +113,15 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         use crate::tree::order::kahn_sort;
 
         // Collect all child names for validation.
-        let all_names: HashSet<String> = config.children.iter().map(|c| c.name.clone()).collect();
+        let all_names: HashSet<String> = config
+            .children
+            .as_slice()
+            .iter()
+            .map(|c| c.name.clone())
+            .collect();
 
         // Validate each declaration.
-        for child in &config.children {
+        for child in config.children.as_slice() {
             validate_child_declaration(child, &all_names).map_err(|e| {
                 crate::error::types::SupervisorError::fatal_config(format!(
                     "Child declaration validation failed at {}: {}",
@@ -126,8 +131,8 @@ impl TryFrom<SupervisorConfig> for ConfigState {
         }
 
         // Convert to ChildSpec list.
-        let child_specs: Vec<ChildSpec> = config
-            .children
+        let declarations: Vec<ChildDeclaration> = config.children.into();
+        let child_specs: Vec<ChildSpec> = declarations
             .into_iter()
             .map(ChildSpec::try_from)
             .collect::<Result<Vec<_>, _>>()
@@ -155,7 +160,7 @@ impl TryFrom<SupervisorConfig> for ConfigState {
             observability: config.observability,
             audit: config.audit,
             backpressure: config.backpressure,
-            groups: config.groups,
+            groups: config.groups.into(),
             group_strategies: config.group_strategies,
             group_dependencies: config.group_dependencies,
             child_strategy_overrides: config.child_strategy_overrides,

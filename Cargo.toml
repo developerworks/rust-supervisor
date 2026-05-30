@@ -39,6 +39,8 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
 confique = { version = "0.4.0", features = ["yaml"] }
+figment = { version = "0.10.19", features = ["yaml", "toml", "json"] }
+dotenvy = "0.15"
 libc = "0.2"
 metrics = "0.24"
 rand = "0.10"
@@ -266,6 +268,10 @@ path = "src/config/tests/configurable_confique_test.rs"
 [[test]]
 name = "configurable_template_test"
 path = "src/config/tests/configurable_template_test.rs"
+
+[[test]]
+name = "split_section_test"
+path = "src/config/tests/split_section_test.rs"
 
 [[test]]
 name = "no_baked_in_tree_split_test"

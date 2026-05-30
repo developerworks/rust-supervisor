@@ -309,6 +309,73 @@ impl RestartLimitConfig {
     }
 }
 
+/// Split-friendly nested section for group policy declarations.
+///
+/// Single-file configs use `groups: [...]`. Split `groups.yaml` files contain
+/// only the group entry sequence for this section.
+#[derive(Debug, Clone, PartialEq, Config, Default)]
+pub struct GroupsConfigSection {
+    /// Group entries loaded from the `groups` configuration section.
+    #[config(default = [])]
+    pub items: Vec<GroupConfig>,
+}
+
+impl JsonSchema for GroupsConfigSection {
+    /// Returns the schema name for this transparent section wrapper.
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("GroupsConfigSection")
+    }
+
+    /// Delegates schema generation to the group entry sequence.
+    fn json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::Schema {
+        Vec::<GroupConfig>::json_schema(generator)
+    }
+}
+
+impl Serialize for GroupsConfigSection {
+    /// Serializes this section as a group entry sequence.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.items.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for GroupsConfigSection {
+    /// Deserializes a group entry sequence into this section wrapper.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self {
+            items: Vec::<GroupConfig>::deserialize(deserializer)?,
+        })
+    }
+}
+
+impl GroupsConfigSection {
+    /// Returns group entries as a slice.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the group entries declared in this section.
+    pub fn as_slice(&self) -> &[GroupConfig] {
+        &self.items
+    }
+}
+
+impl From<GroupsConfigSection> for Vec<GroupConfig> {
+    /// Converts a split-friendly section into a plain group vector.
+    fn from(section: GroupsConfigSection) -> Self {
+        section.items
+    }
+}
+
 /// Group-level configuration loaded from YAML.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct GroupConfig {

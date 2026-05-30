@@ -14,13 +14,13 @@ use crate::{
         audit::AuditConfig,
         ipc_security::IpcSecurityConfig,
         policy::{
-            ChildStrategyOverrideConfig, DynamicSupervisorConfig, FailureWindowConfig, GroupConfig,
-            GroupDependencyConfig, GroupStrategyConfig, MeltdownConfig, RestartBudgetConfig,
-            SeverityDefaultConfig, SupervisionPipelineConfig,
+            ChildStrategyOverrideConfig, DynamicSupervisorConfig, FailureWindowConfig,
+            GroupDependencyConfig, GroupStrategyConfig, GroupsConfigSection, MeltdownConfig,
+            RestartBudgetConfig, SeverityDefaultConfig, SupervisionPipelineConfig,
         },
     },
     spec::{
-        child_declaration::ChildDeclaration,
+        child_declaration::ChildrenConfigSection,
         supervisor::{BackpressureConfig, EscalationPolicy, SupervisionStrategy},
     },
 };
@@ -57,9 +57,10 @@ pub struct SupervisorConfig {
     #[serde(default)]
     pub backpressure: BackpressureConfig,
     /// Group-level restart budgets and group policy declarations.
-    #[config(default = [])]
+    #[config(nested)]
     #[serde(default)]
-    pub groups: Vec<GroupConfig>,
+    #[schemars(extend("x-tree-split" = true))]
+    pub groups: GroupsConfigSection,
     /// Group-level strategy overrides.
     #[config(default = [])]
     #[serde(default)]
@@ -78,10 +79,11 @@ pub struct SupervisorConfig {
     pub severity_defaults: Vec<SeverityDefaultConfig>,
     /// Optional target-side dashboard IPC configuration.
     pub dashboard: Option<DashboardIpcConfig>,
-    /// Child declarations loaded from YAML children array.
-    #[config(default = [])]
+    /// Child declarations loaded from YAML.
+    #[config(nested)]
     #[serde(default)]
-    pub children: Vec<ChildDeclaration>,
+    #[schemars(extend("x-tree-split" = true))]
+    pub children: ChildrenConfigSection,
 }
 
 impl ConfigSchema for SupervisorConfig {

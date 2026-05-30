@@ -140,7 +140,7 @@ severity_defaults:
   - task_role: service
     severity: Critical
 
-# Child declarations loaded from YAML children array.
+# Child declarations loaded from YAML.
 children:
   - name: api
     kind: supervisor

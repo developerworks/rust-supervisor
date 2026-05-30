@@ -130,7 +130,6 @@ fn child_optional_fields_do_not_emit_null_defaults() {
         .expect("child field schemas");
 
     for field in [
-        "task_role",
         "sidecar_config",
         "severity",
         "group",
@@ -145,6 +144,15 @@ fn child_optional_fields_do_not_emit_null_defaults() {
             "{field} schema must not emit default: null"
         );
     }
+
+    let task_role_schema = child_properties
+        .get("task_role")
+        .expect("child task_role schema");
+    assert_eq!(
+        task_role_schema.get("default"),
+        Some(&Value::String("worker".into())),
+        "task_role schema should document the worker fallback default"
+    );
 }
 
 /// Verifies that health check completion stays field-by-field.

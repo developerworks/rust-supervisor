@@ -4,9 +4,9 @@ use rust_config_tree::config::template_targets_for_paths;
 use rust_supervisor::config::configurable::SupervisorConfig;
 use std::path::Path;
 
-/// Verifies that official template generation produces one root YAML target.
+/// Verifies that official template generation produces root, groups, and children targets.
 #[test]
-fn supervisor_config_generates_single_root_template_target() {
+fn supervisor_config_generates_split_template_targets() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let targets = template_targets_for_paths::<SupervisorConfig>(
         root.join("examples/config/supervisor.yaml"),
@@ -14,11 +14,20 @@ fn supervisor_config_generates_single_root_template_target() {
     )
     .expect("generate template targets");
 
-    assert_eq!(targets.len(), 1);
-    assert_eq!(
-        targets[0].path,
-        root.join("examples/config/supervisor.template.yaml")
-    );
+    assert_eq!(targets.len(), 3);
+    let file_names = targets
+        .iter()
+        .map(|target| {
+            target
+                .path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("template target file name")
+        })
+        .collect::<Vec<_>>();
+    assert!(file_names.contains(&"supervisor.template.yaml"));
+    assert!(file_names.contains(&"groups.yaml"));
+    assert!(file_names.contains(&"children.yaml"));
 }
 
 /// Verifies that the generated root template covers all runtime tunables.

@@ -9,12 +9,12 @@ use rust_supervisor::config::{
     },
     policy::{
         ChildStrategyOverrideConfig, DynamicSupervisorConfig, FailureWindowConfig, GroupConfig,
-        GroupDependencyConfig, GroupStrategyConfig, MeltdownConfig, RestartBudgetConfig,
-        RestartLimitConfig, SeverityDefaultConfig, SupervisionPipelineConfig,
+        GroupDependencyConfig, GroupStrategyConfig, GroupsConfigSection, MeltdownConfig,
+        RestartBudgetConfig, RestartLimitConfig, SeverityDefaultConfig, SupervisionPipelineConfig,
     },
 };
 use rust_supervisor::spec::child::{CommandPermissions, EnvVar, HealthCheckConfig, SecretRef};
-use rust_supervisor::spec::child_declaration::ChildDeclaration;
+use rust_supervisor::spec::child_declaration::{ChildDeclaration, ChildrenConfigSection};
 use rust_supervisor::spec::supervisor::BackpressureConfig;
 
 /// Accepts any type that implements `confique::Config`.
@@ -44,11 +44,13 @@ fn nested_config_structs_implement_confique_config() {
     assert_confique_config::<DynamicSupervisorConfig>();
     assert_confique_config::<RestartLimitConfig>();
     assert_confique_config::<GroupConfig>();
+    assert_confique_config::<GroupsConfigSection>();
     assert_confique_config::<GroupStrategyConfig>();
     assert_confique_config::<GroupDependencyConfig>();
     assert_confique_config::<ChildStrategyOverrideConfig>();
     assert_confique_config::<SeverityDefaultConfig>();
     assert_confique_config::<ChildDeclaration>();
+    assert_confique_config::<ChildrenConfigSection>();
     assert_confique_config::<HealthCheckConfig>();
     assert_confique_config::<CommandPermissions>();
     assert_confique_config::<EnvVar>();

@@ -65,8 +65,10 @@ pub struct ChildDeclaration {
     #[serde(default)]
     pub tags: Vec<String>,
     /// Optional task role that selects default lifecycle semantics.
-    #[schemars(!default)]
+    ///
+    /// Defaults to `worker` when omitted.
     #[serde(default)]
+    #[schemars(default = "default_task_role_for_schema")]
     pub task_role: Option<TaskRole>,
     /// Optional sidecar binding used when the role is `sidecar`.
     #[schemars(!default)]
@@ -108,6 +110,91 @@ pub struct ChildDeclaration {
     #[config(default = [])]
     #[serde(default)]
     pub secrets: Vec<SecretRef>,
+}
+
+/// Returns the schema default shown for omitted child `task_role` values.
+fn default_task_role_for_schema() -> Option<TaskRole> {
+    Some(TaskRole::Worker)
+}
+
+/// Split-friendly nested section for child declarations.
+///
+/// Single-file configs use `children: [...]`. Split `children.yaml` files contain
+/// only the child declaration sequence for this section.
+#[derive(Debug, Clone, PartialEq, Config, Default)]
+pub struct ChildrenConfigSection {
+    /// Child declarations loaded from the `children` configuration section.
+    #[config(default = [])]
+    pub items: Vec<ChildDeclaration>,
+}
+
+impl JsonSchema for ChildrenConfigSection {
+    /// Returns the schema name for this transparent section wrapper.
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("ChildrenConfigSection")
+    }
+
+    /// Delegates schema generation to the child declaration sequence.
+    fn json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::Schema {
+        Vec::<ChildDeclaration>::json_schema(generator)
+    }
+}
+
+impl Serialize for ChildrenConfigSection {
+    /// Serializes this section as a child declaration sequence.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.items.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ChildrenConfigSection {
+    /// Deserializes a child declaration sequence into this section wrapper.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self {
+            items: Vec::<ChildDeclaration>::deserialize(deserializer)?,
+        })
+    }
+}
+
+impl ChildrenConfigSection {
+    /// Returns child declarations as a slice.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the child declarations declared in this section.
+    pub fn as_slice(&self) -> &[ChildDeclaration] {
+        &self.items
+    }
+
+    /// Returns the number of child declarations in this section.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns the child declaration count.
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+}
+
+impl From<ChildrenConfigSection> for Vec<ChildDeclaration> {
+    /// Converts a split-friendly section into a plain child declaration vector.
+    fn from(section: ChildrenConfigSection) -> Self {
+        section.items
+    }
 }
 
 /// Phase of an add_child transaction.

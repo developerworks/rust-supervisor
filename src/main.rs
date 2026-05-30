@@ -8,7 +8,10 @@ use rust_config_tree::{
     cli::{ConfigCommand, handle_config_command},
     config::load_config,
 };
-use rust_supervisor::config::configurable::SupervisorConfig;
+use rust_supervisor::config::{
+    configurable::SupervisorConfig,
+    split_section::{default_generated_config_dir, normalize_generated_split_templates},
+};
 use std::path::PathBuf;
 
 const DEFAULT_CONFIG_PATH: &str = "examples/config/supervisor.yaml";
@@ -69,7 +72,20 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             println!("children: {}", config.children.len());
         }
         Command::Config(command) => {
+            let normalize_dir = match &command {
+                ConfigCommand::GenerateTemplate { output, .. } => Some(
+                    output
+                        .as_ref()
+                        .and_then(|path| path.parent().map(PathBuf::from))
+                        .filter(|dir| !dir.as_os_str().is_empty())
+                        .unwrap_or_else(default_generated_config_dir),
+                ),
+                _ => None,
+            };
             handle_config_command::<Cli, SupervisorConfig>(command, &config_path)?;
+            if let Some(dir) = normalize_dir {
+                normalize_generated_split_templates(&dir)?;
+            }
         }
     }
 
