@@ -140,21 +140,25 @@ impl AuditBackend {
     /// when no file path is provided.
     pub fn from_config(config: &AuditConfig) -> Self {
         match config.backend.as_str() {
-            "file" => match &config.file_path {
-                Some(p) => match AuditBackend::new_file(p.as_str().to_owned()) {
-                    Ok(backend) => backend,
-                    Err(error) => {
-                        tracing::error!(
-                            target: "rust_supervisor::ipc::security::audit",
-                            path = %p.as_str(),
-                            ?error,
-                            "failed to open file audit backend, falling back to memory"
-                        );
-                        AuditBackend::new_memory(4096)
+            "file" => {
+                let path = config.file_path.trim();
+                if path.is_empty() {
+                    AuditBackend::new_memory(4096)
+                } else {
+                    match AuditBackend::new_file(path.to_owned()) {
+                        Ok(backend) => backend,
+                        Err(error) => {
+                            tracing::error!(
+                                target: "rust_supervisor::ipc::security::audit",
+                                path = %path,
+                                ?error,
+                                "failed to open file audit backend, falling back to memory"
+                            );
+                            AuditBackend::new_memory(4096)
+                        }
                     }
-                },
-                None => AuditBackend::new_memory(4096),
-            },
+                }
+            }
             _ => AuditBackend::new_memory(4096),
         }
     }

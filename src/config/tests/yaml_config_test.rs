@@ -217,10 +217,15 @@ fn yaml_config_rejects_invalid_supervision_strategy() {
     assert!(result.is_err());
 }
 
-/// Verifies that JSON Lines audit storage requires an explicit file path.
+/// Verifies that JSON Lines audit storage rejects an empty file path.
 #[test]
 fn yaml_config_rejects_file_audit_without_path() {
-    let yaml = valid_yaml().replace("backend: memory", "backend: file");
+    let yaml = valid_yaml()
+        .replace("backend: memory", "backend: file")
+        .replace(
+            "failure_strategy: fail_closed",
+            "file_path: \"\"\n  failure_strategy: fail_closed",
+        );
     let result = parse_config_state(&yaml);
 
     assert!(result.is_err());

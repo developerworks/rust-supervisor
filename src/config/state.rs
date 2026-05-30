@@ -858,7 +858,7 @@ fn validate_audit(audit: &AuditConfig) -> Result<(), crate::error::types::Superv
     match audit.backend.as_str() {
         "memory" => {}
         "file" => {
-            let path = audit.file_path.as_deref().unwrap_or_default().trim();
+            let path = audit.file_path.trim();
             if path.is_empty() {
                 return Err(crate::error::types::SupervisorError::fatal_config(
                     "audit.file_path is required when audit.backend is file",

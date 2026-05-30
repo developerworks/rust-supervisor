@@ -24,8 +24,8 @@ pub struct AuditConfig {
 
     /// File path for file backend. Required when backend is "file".
     #[schemars(!default)]
-    #[serde(default)]
-    pub file_path: Option<String>,
+    #[serde(default = "default_file_path")]
+    pub file_path: String,
 
     /// Failure strategy when audit backend is unavailable.
     /// - "fail_closed": reject write commands when audit cannot be written.
@@ -47,7 +47,7 @@ impl Default for AuditConfig {
         Self {
             enabled: true,
             backend: "memory".into(),
-            file_path: None,
+            file_path: "/tmp/rust-supervisor-demo/audit.jsonl".to_string(),
             failure_strategy: "fail_closed".into(),
             max_defer_queue: 1000,
         }
@@ -62,6 +62,10 @@ fn default_true() -> bool {
 /// Serde default helper: returns "memory".
 fn default_audit_backend() -> String {
     "memory".into()
+}
+
+fn default_file_path() -> String {
+    "/tmp/rust-supervisor-demo/audit.jsonl".to_string()
 }
 
 /// Serde default helper: returns "fail_closed".
