@@ -14,7 +14,7 @@ use figment::{
     providers::{Format, Json, Serialized, Toml, Yaml},
 };
 use rust_config_tree::{
-    config::{load_config_from_figment, ConfigFormat, ConfigResult, ConfigSchema},
+    config::{ConfigFormat, ConfigResult, ConfigSchema, load_config_from_figment},
     path::absolutize_lexical,
     tree::{ConfigSource, ConfigTree, ConfigTreeOptions, IncludeOrder},
 };
@@ -23,7 +23,8 @@ use serde_yaml::{Mapping, Value};
 use crate::config::configurable::SupervisorConfig;
 
 /// Maps default split template file names to their root config field names.
-const SPLIT_SECTION_FILES: [(&str, &str); 2] = [("groups.yaml", "groups"), ("children.yaml", "children")];
+const SPLIT_SECTION_FILES: [(&str, &str); 2] =
+    [("groups.yaml", "groups"), ("children.yaml", "children")];
 
 /// Section field names that serialize as transparent arrays in YAML.
 const TRANSPARENT_SECTION_FIELDS: [&str; 2] = ["groups", "children"];
@@ -45,9 +46,9 @@ pub fn build_supervisor_config_figment(path: impl AsRef<Path>) -> ConfigResult<F
     }
 
     Ok(
-        figment.merge(
-            rust_config_tree::config::ConfiqueEnvProvider::new::<SupervisorConfig>(),
-        ),
+        figment.merge(rust_config_tree::config::ConfiqueEnvProvider::new::<
+            SupervisorConfig,
+        >()),
     )
 }
 
@@ -290,16 +291,19 @@ where
 {
     Ok(ConfigTreeOptions::default()
         .include_order(IncludeOrder::Reverse)
-        .load(path, |path| -> ConfigResult<ConfigSource<<S as Config>::Layer>> {
-            if split_section_for_path(path).is_some() {
-                let layer: <S as Config>::Layer = Figment::new().extract()?;
-                return Ok(ConfigSource::new(layer, Vec::new()));
-            }
+        .load(
+            path,
+            |path| -> ConfigResult<ConfigSource<<S as Config>::Layer>> {
+                if split_section_for_path(path).is_some() {
+                    let layer: <S as Config>::Layer = Figment::new().extract()?;
+                    return Ok(ConfigSource::new(layer, Vec::new()));
+                }
 
-            let layer = load_layer::<S>(path)?;
-            let include_paths = S::include_paths(&layer);
-            Ok(ConfigSource::new(layer, include_paths))
-        })?)
+                let layer = load_layer::<S>(path)?;
+                let include_paths = S::include_paths(&layer);
+                Ok(ConfigSource::new(layer, include_paths))
+            },
+        )?)
 }
 
 /// Loads the nearest ancestor `.env` file for a config path when it exists.
