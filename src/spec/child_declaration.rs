@@ -188,6 +188,19 @@ impl ChildrenConfigSection {
     pub fn len(&self) -> usize {
         self.items.len()
     }
+
+    /// Returns whether this section contains no child declarations.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` when this section contains no child declarations.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
 }
 
 impl From<ChildrenConfigSection> for Vec<ChildDeclaration> {

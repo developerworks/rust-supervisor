@@ -6,7 +6,11 @@
 //! Transparent section serialization is handled in Rust; this module adapts YAML
 //! arrays back to `confique` nested `{ items: [...] }` form at load time.
 
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use confique::Config;
 use figment::{
@@ -69,7 +73,7 @@ pub fn normalize_generated_split_templates(output_dir: &Path) -> ConfigResult<()
         let content = std::fs::read_to_string(&path)?;
         let normalized = normalize_split_section_template(&content, section);
         if normalized != content {
-            std::fs::write(path, normalized)?;
+            write_text_file(&path, &normalized)?;
         }
     }
 
@@ -106,13 +110,7 @@ fn strip_section_root_key(content: &str, section: &str) -> String {
     lines.remove(section_line);
     let normalized = lines
         .into_iter()
-        .map(|line| {
-            if line.starts_with("  ") {
-                &line[2..]
-            } else {
-                line
-            }
-        })
+        .map(|line| line.strip_prefix("  ").unwrap_or(line))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -153,13 +151,7 @@ fn strip_items_wrapper(content: &str) -> String {
 
     let normalized = lines
         .into_iter()
-        .map(|line| {
-            if line.starts_with("  ") {
-                &line[2..]
-            } else {
-                line
-            }
-        })
+        .map(|line| line.strip_prefix("  ").unwrap_or(line))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -328,6 +320,13 @@ fn ensure_trailing_newline(content: &str) -> String {
     let mut normalized = content.trim_end().to_owned();
     normalized.push('\n');
     normalized
+}
+
+/// Writes UTF-8 text to one generated config file.
+fn write_text_file(path: &Path, content: &str) -> ConfigResult<()> {
+    let mut file = File::create(path)?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
 }
 
 /// Resolves the default generated template directory for supervisor configuration.
