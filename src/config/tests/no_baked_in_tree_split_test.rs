@@ -1,5 +1,6 @@
 //! Tests that keep tree split decisions outside this crate.
 
+use rust_config_tree::config::template_targets_for_paths;
 use rust_supervisor::config::configurable::SupervisorConfig;
 use std::fs;
 use std::path::Path;
@@ -27,7 +28,7 @@ fn generated_schema_does_not_contain_tree_split_marker() {
 #[test]
 fn generated_template_does_not_contain_tree_split_marker() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let targets = rust_config_tree::template_targets_for_paths::<SupervisorConfig>(
+    let targets = template_targets_for_paths::<SupervisorConfig>(
         root.join("examples/config/supervisor.yaml"),
         root.join("examples/config/supervisor.template.yaml"),
     )

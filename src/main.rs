@@ -4,7 +4,10 @@
 //! binding the command handlers to the public `SupervisorConfig` type.
 
 use clap::{Parser, Subcommand};
-use rust_config_tree::{ConfigCommand, handle_config_command, load_config};
+use rust_config_tree::{
+    cli::{ConfigCommand, handle_config_command},
+    config::load_config,
+};
 use rust_supervisor::config::configurable::SupervisorConfig;
 use std::path::PathBuf;
 

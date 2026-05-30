@@ -664,9 +664,9 @@ dependencies = [
 
 [[package]]
 name = "rust-config-tree"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1942c8c7f032f73858e2fe7a0a5069797fe13be91208195c76dbee90fff31d76"
+checksum = "a07c717739d63b48f875d078c490eadf9b90d1b85203f0a6cf10693c87825acb"
 dependencies = [
  "clap",
  "clap_complete",

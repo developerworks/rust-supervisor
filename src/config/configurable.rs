@@ -4,7 +4,7 @@
 //! YAML loading, template rendering, and JSON Schema generation.
 
 use confique::Config;
-use rust_config_tree::ConfigSchema;
+use rust_config_tree::config::ConfigSchema;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -38,12 +38,15 @@ pub struct SupervisorConfig {
     pub supervisor: SupervisorRootConfig,
     /// Runtime policy values.
     #[config(nested)]
+    #[serde(default)]
     pub policy: PolicyConfig,
     /// Shutdown budget values.
     #[config(nested)]
+    #[serde(default)]
     pub shutdown: ShutdownConfig,
     /// Observability switches and capacities.
     #[config(nested)]
+    #[serde(default)]
     pub observability: ObservabilityConfig,
     /// Command audit persistence configuration.
     #[config(nested)]
@@ -100,6 +103,8 @@ impl ConfigSchema for SupervisorConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct SupervisorRootConfig {
     /// Restart scope strategy for child failures.
+    #[config(default = "OneForAll")]
+    #[serde(default = "default_supervision_strategy")]
     pub strategy: SupervisionStrategy,
     /// Optional supervisor-level escalation policy.
     #[schemars(!default)]
@@ -115,22 +120,40 @@ pub struct SupervisorRootConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct PolicyConfig {
     /// Maximum child restarts within the child restart window.
+    #[config(default = 10)]
+    #[serde(default = "default_child_restart_limit")]
     pub child_restart_limit: u32,
     /// Child restart window in milliseconds.
+    #[config(default = 60000)]
+    #[serde(default = "default_child_restart_window_ms")]
     pub child_restart_window_ms: u64,
     /// Maximum supervisor failures within the supervisor failure window.
+    #[config(default = 30)]
+    #[serde(default = "default_supervisor_failure_limit")]
     pub supervisor_failure_limit: u32,
     /// Supervisor failure window in milliseconds.
+    #[config(default = 60000)]
+    #[serde(default = "default_supervisor_failure_window_ms")]
     pub supervisor_failure_window_ms: u64,
     /// Initial backoff in milliseconds.
+    #[config(default = 100)]
+    #[serde(default = "default_initial_backoff_ms")]
     pub initial_backoff_ms: u64,
     /// Maximum backoff in milliseconds.
+    #[config(default = 5000)]
+    #[serde(default = "default_max_backoff_ms")]
     pub max_backoff_ms: u64,
     /// Jitter ratio expressed as a fraction between zero and one.
+    #[config(default = 0.10)]
+    #[serde(default = "default_jitter_ratio")]
     pub jitter_ratio: f64,
     /// Heartbeat interval in milliseconds.
+    #[config(default = 1000)]
+    #[serde(default = "default_heartbeat_interval_ms")]
     pub heartbeat_interval_ms: u64,
     /// Stale heartbeat threshold in milliseconds.
+    #[config(default = 3000)]
+    #[serde(default = "default_stale_after_ms")]
     pub stale_after_ms: u64,
     /// Restart budget used by the supervision pipeline.
     #[config(nested)]
@@ -154,8 +177,12 @@ pub struct PolicyConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct ShutdownConfig {
     /// Graceful drain timeout in milliseconds.
+    #[config(default = 5000)]
+    #[serde(default = "default_graceful_timeout_ms")]
     pub graceful_timeout_ms: u64,
     /// Abort wait timeout in milliseconds.
+    #[config(default = 1000)]
+    #[serde(default = "default_abort_wait_ms")]
     pub abort_wait_ms: u64,
 }
 
@@ -163,11 +190,129 @@ pub struct ShutdownConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
 pub struct ObservabilityConfig {
     /// Event journal capacity.
+    #[config(default = 256)]
+    #[serde(default = "default_event_journal_capacity")]
     pub event_journal_capacity: usize,
     /// Whether metrics recording is enabled.
+    #[config(default = true)]
+    #[serde(default = "default_true")]
     pub metrics_enabled: bool,
     /// Whether command audit recording is enabled.
+    #[config(default = true)]
+    #[serde(default = "default_true")]
     pub audit_enabled: bool,
+}
+
+impl Default for PolicyConfig {
+    /// Returns the default runtime policy configuration.
+    fn default() -> Self {
+        Self {
+            child_restart_limit: default_child_restart_limit(),
+            child_restart_window_ms: default_child_restart_window_ms(),
+            supervisor_failure_limit: default_supervisor_failure_limit(),
+            supervisor_failure_window_ms: default_supervisor_failure_window_ms(),
+            initial_backoff_ms: default_initial_backoff_ms(),
+            max_backoff_ms: default_max_backoff_ms(),
+            jitter_ratio: default_jitter_ratio(),
+            heartbeat_interval_ms: default_heartbeat_interval_ms(),
+            stale_after_ms: default_stale_after_ms(),
+            restart_budget: RestartBudgetConfig::default(),
+            failure_window: FailureWindowConfig::default(),
+            meltdown: MeltdownConfig::default(),
+            supervision_pipeline: SupervisionPipelineConfig::default(),
+        }
+    }
+}
+
+impl Default for ShutdownConfig {
+    /// Returns the default shutdown coordination configuration.
+    fn default() -> Self {
+        Self {
+            graceful_timeout_ms: default_graceful_timeout_ms(),
+            abort_wait_ms: default_abort_wait_ms(),
+        }
+    }
+}
+
+impl Default for ObservabilityConfig {
+    /// Returns the default observability configuration.
+    fn default() -> Self {
+        Self {
+            event_journal_capacity: default_event_journal_capacity(),
+            metrics_enabled: default_true(),
+            audit_enabled: default_true(),
+        }
+    }
+}
+
+/// Returns the default supervision strategy.
+fn default_supervision_strategy() -> SupervisionStrategy {
+    SupervisionStrategy::OneForAll
+}
+
+/// Returns the default child restart limit.
+fn default_child_restart_limit() -> u32 {
+    10
+}
+
+/// Returns the default child restart window in milliseconds.
+fn default_child_restart_window_ms() -> u64 {
+    60000
+}
+
+/// Returns the default supervisor failure limit.
+fn default_supervisor_failure_limit() -> u32 {
+    30
+}
+
+/// Returns the default supervisor failure window in milliseconds.
+fn default_supervisor_failure_window_ms() -> u64 {
+    60000
+}
+
+/// Returns the default initial backoff in milliseconds.
+fn default_initial_backoff_ms() -> u64 {
+    100
+}
+
+/// Returns the default maximum backoff in milliseconds.
+fn default_max_backoff_ms() -> u64 {
+    5000
+}
+
+/// Returns the default jitter ratio.
+fn default_jitter_ratio() -> f64 {
+    0.10
+}
+
+/// Returns the default heartbeat interval in milliseconds.
+fn default_heartbeat_interval_ms() -> u64 {
+    1000
+}
+
+/// Returns the default stale heartbeat threshold in milliseconds.
+fn default_stale_after_ms() -> u64 {
+    3000
+}
+
+/// Returns the default graceful shutdown timeout in milliseconds.
+fn default_graceful_timeout_ms() -> u64 {
+    5000
+}
+
+/// Returns the default abort wait timeout in milliseconds.
+fn default_abort_wait_ms() -> u64 {
+    1000
+}
+
+/// Returns the default event journal capacity.
+fn default_event_journal_capacity() -> usize {
+    256
+}
+
+/// Serde default helper: returns true.
+fn default_true() -> bool {
+    true
 }
 
 /// Optional target-side dashboard IPC configuration.
