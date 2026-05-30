@@ -36,49 +36,61 @@ pub struct SupervisorConfig {
     /// Root supervisor declaration values.
     #[config(nested)]
     pub supervisor: SupervisorRootConfig,
+
     /// Runtime policy values.
     #[config(nested)]
     #[serde(default)]
     pub policy: PolicyConfig,
+
     /// Shutdown budget values.
     #[config(nested)]
     #[serde(default)]
     pub shutdown: ShutdownConfig,
+
     /// Observability switches and capacities.
     #[config(nested)]
     #[serde(default)]
     pub observability: ObservabilityConfig,
+
     /// Command audit persistence configuration.
     #[config(nested)]
     #[serde(default)]
     pub audit: AuditConfig,
+
     /// Backpressure policy for observability event subscribers.
     #[config(nested)]
     #[serde(default)]
     pub backpressure: BackpressureConfig,
+
     /// Group-level restart budgets and group policy declarations.
     #[config(nested)]
     #[serde(default)]
     #[schemars(extend("x-tree-split" = true))]
     pub groups: GroupsConfigSection,
+
     /// Group-level strategy overrides.
     #[config(default = [])]
     #[serde(default)]
     pub group_strategies: Vec<GroupStrategyConfig>,
+
     /// Cross-group failure propagation dependencies.
     #[config(default = [])]
     #[serde(default)]
     pub group_dependencies: Vec<GroupDependencyConfig>,
+
     /// Child-level strategy overrides.
     #[config(default = [])]
     #[serde(default)]
     pub child_strategy_overrides: Vec<ChildStrategyOverrideConfig>,
+
     /// Default severity class per task role.
     #[config(default = [])]
     #[serde(default)]
     pub severity_defaults: Vec<SeverityDefaultConfig>,
+
     /// Optional target-side dashboard IPC configuration.
     pub dashboard: Option<DashboardIpcConfig>,
+
     /// Child declarations loaded from YAML.
     #[config(nested)]
     #[serde(default)]

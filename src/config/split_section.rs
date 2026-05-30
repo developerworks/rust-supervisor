@@ -25,6 +25,7 @@ use rust_config_tree::{
 use serde_yaml::{Mapping, Value};
 
 use crate::config::configurable::SupervisorConfig;
+use crate::spec::child_declaration::ChildrenConfigSection;
 
 /// Maps default split template file names to their root config field names.
 const SPLIT_SECTION_FILES: [(&str, &str); 2] =
@@ -83,7 +84,105 @@ pub fn normalize_generated_split_templates(output_dir: &Path) -> ConfigResult<()
 /// Strips redundant section root keys and legacy `items` wrappers from split templates.
 pub fn normalize_split_section_template(content: &str, section: &str) -> String {
     let without_section = strip_section_root_key(content, section);
-    strip_items_wrapper(&without_section)
+    let without_items = strip_items_wrapper(&without_section);
+    rewrite_transparent_section_body(&without_items, section)
+}
+
+/// Rewrites split section bodies into readable block YAML where needed.
+fn rewrite_transparent_section_body(content: &str, section: &str) -> String {
+    match section {
+        "children" => rewrite_children_split_template(content),
+        _ => ensure_trailing_newline(content),
+    }
+}
+
+/// Replaces confique flow-style child templates with block YAML sample entries.
+fn rewrite_children_split_template(content: &str) -> String {
+    let (prefix, _) = split_template_prefix_and_body(content);
+    let prefix = strip_default_value_comments(&prefix);
+    let body = children_split_template_body();
+
+    if prefix.is_empty() {
+        return ensure_trailing_newline(&body);
+    }
+
+    ensure_trailing_newline(&format!("{prefix}\n{body}"))
+}
+
+/// Returns block YAML for the sample child declarations used in split templates.
+fn children_split_template_body() -> String {
+    let section = ChildrenConfigSection::builder()
+        .load()
+        .expect("default children section template values");
+    let value = serde_yaml::to_value(&section).expect("convert children split template");
+    let pruned = prune_template_yaml_value(value);
+    serde_yaml::to_string(&pruned)
+        .expect("serialize children split template")
+        .trim()
+        .to_string()
+}
+
+/// Removes null and empty collection nodes from generated template YAML values.
+fn prune_template_yaml_value(value: Value) -> Value {
+    match value {
+        Value::Mapping(map) => {
+            let mut pruned = Mapping::new();
+            for (key, child) in map {
+                let next = prune_template_yaml_value(child);
+                if should_omit_template_yaml_value(&next) {
+                    continue;
+                }
+                pruned.insert(key, next);
+            }
+            Value::Mapping(pruned)
+        }
+        Value::Sequence(items) => Value::Sequence(
+            items
+                .into_iter()
+                .map(prune_template_yaml_value)
+                .filter(|item| !should_omit_template_yaml_value(item))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+/// Returns whether one template YAML value should be omitted from split output.
+fn should_omit_template_yaml_value(value: &Value) -> bool {
+    match value {
+        Value::Null => true,
+        Value::Sequence(items) => items.is_empty(),
+        Value::Mapping(map) => map.is_empty(),
+        _ => false,
+    }
+}
+
+/// Splits one template file into comment or schema prefix lines and YAML body lines.
+fn split_template_prefix_and_body(content: &str) -> (String, String) {
+    let mut prefix = Vec::new();
+    let mut body = Vec::new();
+    let mut seen_body = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if !seen_body && (trimmed.is_empty() || trimmed.starts_with('#')) {
+            prefix.push(line);
+            continue;
+        }
+        seen_body = true;
+        body.push(line);
+    }
+
+    (prefix.join("\n"), body.join("\n"))
+}
+
+/// Removes confique inline default comments from generated split templates.
+fn strip_default_value_comments(prefix: &str) -> String {
+    prefix
+        .lines()
+        .filter(|line| !line.trim().starts_with("# Default value:"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Strips a redundant section root key from one generated split template.

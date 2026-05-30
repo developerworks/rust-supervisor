@@ -30,6 +30,41 @@ fn supervisor_config_generates_split_template_targets() {
     assert!(file_names.contains(&"children.yaml"));
 }
 
+/// Verifies that the generated children split template includes a sample entry.
+#[test]
+fn generated_children_template_includes_sample_child() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let targets = template_targets_for_paths::<SupervisorConfig>(
+        root.join("examples/config/supervisor.yaml"),
+        root.join("examples/config/supervisor.template.yaml"),
+    )
+    .expect("generate template targets");
+
+    let children_target = targets
+        .iter()
+        .find(|target| target.path.ends_with("children.yaml"))
+        .expect("children template target");
+
+    assert!(
+        children_target.content.contains("name: worker"),
+        "children template should include a sample child declaration"
+    );
+    assert!(
+        !children_target.content.trim_end().ends_with("[]"),
+        "children template should not be an empty array"
+    );
+
+    let normalized = rust_supervisor::config::split_section::normalize_split_section_template(
+        &children_target.content,
+        "children",
+    );
+    assert!(
+        !normalized.contains("[{"),
+        "normalized children template must not use flow-style arrays"
+    );
+    assert!(normalized.contains("- name: worker"));
+}
+
 /// Verifies that the generated root template covers all runtime tunables.
 #[test]
 fn generated_template_contains_all_runtime_tunables() {

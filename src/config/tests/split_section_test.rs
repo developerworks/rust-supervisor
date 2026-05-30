@@ -29,7 +29,20 @@ fn normalize_split_section_template_strips_section_root_key() {
 
     assert!(!output.contains("\nchildren:\n"));
     assert!(!output.contains("\nitems:\n"));
-    assert!(output.contains("[]"));
+    assert!(output.contains("- name: worker"));
+    assert!(!output.contains("[{"));
+}
+
+/// Verifies that confique flow-style child templates rewrite to block YAML.
+#[test]
+fn normalize_split_section_template_rewrites_flow_style_children() {
+    let input = "# yaml-language-server: $schema=./children.schema.json\n\n# Child declarations loaded from the `children` configuration section.\n# Default value: [{ name: worker }]\n[{ name: worker }]\n";
+    let output = normalize_split_section_template(input, "children");
+
+    assert!(!output.contains("# Default value:"));
+    assert!(!output.contains("[{"));
+    assert!(output.contains("- name: worker"));
+    assert!(output.contains("kind: async_worker"));
 }
 
 /// Verifies that body-only split files load through the section field name.

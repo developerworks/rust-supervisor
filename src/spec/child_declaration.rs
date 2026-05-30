@@ -121,11 +121,18 @@ fn default_task_role_for_schema() -> Option<TaskRole> {
 ///
 /// Single-file configs use `children: [...]`. Split `children.yaml` files contain
 /// only the child declaration sequence for this section.
-#[derive(Debug, Clone, PartialEq, Config, Default)]
+#[derive(Debug, Clone, PartialEq, Config)]
 pub struct ChildrenConfigSection {
     /// Child declarations loaded from the `children` configuration section.
-    #[config(default = [])]
+    #[config(default = [{ "name": "worker" }])]
     pub items: Vec<ChildDeclaration>,
+}
+
+impl Default for ChildrenConfigSection {
+    /// Returns an empty section for omitted runtime configuration values.
+    fn default() -> Self {
+        Self { items: Vec::new() }
+    }
 }
 
 impl JsonSchema for ChildrenConfigSection {

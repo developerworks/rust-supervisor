@@ -23,6 +23,7 @@ pub struct AuditConfig {
     pub backend: String,
 
     /// File path for file backend. Required when backend is "file".
+    #[config(default = "/tmp/rust-supervisor-demo/audit.jsonl")]
     #[schemars(!default)]
     #[serde(default = "default_file_path")]
     pub file_path: String,
