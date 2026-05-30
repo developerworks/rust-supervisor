@@ -7,7 +7,9 @@ use rust_supervisor::error::types::{SupervisorError, TaskFailure, TaskFailureKin
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
-use rust_supervisor::spec::supervisor::{GroupStrategy, SupervisionStrategy, SupervisorSpec};
+use rust_supervisor::spec::supervisor::{
+    GroupConfig, GroupStrategy, SupervisionStrategy, SupervisorSpec,
+};
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use rust_supervisor::test_support::test_time::{advance_test_clock, with_auto_clock_drive};
 use std::sync::Arc;
@@ -98,10 +100,15 @@ async fn group_strategy_restarts_only_group_members_after_failure() -> Result<()
     let mut second = counted_worker("second", true, second_start_counts.clone(), gate.clone())?;
     let mut third = counted_worker("third", false, third_start_counts.clone(), gate.clone())?;
     let fourth = counted_worker("fourth", false, fourth_start_counts.clone(), gate.clone())?;
-    second.tags.push("pipeline".to_owned());
-    third.tags.push("pipeline".to_owned());
-    let mut spec = SupervisorSpec::root(vec![first, second, third, fourth]);
+    second.group = Some("pipeline".to_owned());
+    third.group = Some("pipeline".to_owned());
+    let mut spec = SupervisorSpec::root(vec![first, second.clone(), third, fourth]);
     spec.strategy = SupervisionStrategy::OneForAll;
+    spec.group_configs = vec![GroupConfig::new(
+        "pipeline",
+        vec![second.id.clone(), ChildId::new("third")],
+        None,
+    )];
     spec.group_strategies = vec![GroupStrategy::new(
         "pipeline",
         SupervisionStrategy::OneForAll,

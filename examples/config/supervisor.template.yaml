@@ -102,17 +102,14 @@ backpressure:
   window_secs: 30
   audit_channel_capacity: 1024
 
-# Group-level restart budgets and membership declarations.
+# Group-level restart budgets and group policy declarations.
 groups:
   - name: core
-    children:
-      - api
     budget:
       window_secs: 60
       max_burst: 10
       recovery_rate_per_sec: 0.50
   - name: upstream
-    children: []
 
 # Group-level strategy overrides.
 group_strategies:
@@ -148,8 +145,6 @@ children:
   - name: api
     kind: supervisor
     criticality: critical
-    tags:
-      - core
     task_role: supervisor
     severity: Critical
     group: core

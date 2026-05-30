@@ -6,8 +6,8 @@ use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::{
-    ChildStrategyOverride, EscalationPolicy, GroupStrategy, RestartLimit, SupervisionStrategy,
-    SupervisorSpec,
+    ChildStrategyOverride, EscalationPolicy, GroupConfig, GroupStrategy, RestartLimit,
+    SupervisionStrategy, SupervisorSpec,
 };
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use rust_supervisor::tree::builder::SupervisorTree;
@@ -51,10 +51,18 @@ fn group_strategy_limits_restart_plan_to_group_members() -> Result<(), Superviso
     let mut second = child("second")?;
     let mut third = child("third")?;
     let mut fourth = child("fourth")?;
-    second.tags.push("pipeline".to_owned());
-    third.tags.push("pipeline".to_owned());
-    fourth.tags.push("other".to_owned());
+    second.group = Some("pipeline".to_owned());
+    third.group = Some("pipeline".to_owned());
+    fourth.group = Some("other".to_owned());
     let mut spec = SupervisorSpec::root(vec![first, second.clone(), third.clone(), fourth]);
+    spec.group_configs = vec![
+        GroupConfig::new(
+            "pipeline",
+            vec![second.id.clone(), third.id.clone()],
+            None,
+        ),
+        GroupConfig::new("other", vec![ChildId::new("fourth")], None),
+    ];
     spec.group_strategies = vec![GroupStrategy::new(
         "pipeline",
         SupervisionStrategy::RestForOne,
@@ -74,13 +82,18 @@ fn group_strategy_limits_restart_plan_to_group_members() -> Result<(), Superviso
 fn child_override_wins_over_group_strategy_and_selects_limit() -> Result<(), SupervisorError> {
     let mut first = child("first")?;
     let second = child("second")?;
-    first.tags.push("pipeline".to_owned());
+    first.group = Some("pipeline".to_owned());
     let limit = RestartLimit::new(3, Duration::from_secs(10));
     let mut override_strategy =
         ChildStrategyOverride::new(first.id.clone(), SupervisionStrategy::OneForAll);
     override_strategy.restart_limit = Some(limit);
     override_strategy.escalation_policy = Some(EscalationPolicy::ShutdownTree);
     let mut spec = SupervisorSpec::root(vec![first.clone(), second.clone()]);
+    spec.group_configs = vec![GroupConfig::new(
+        "pipeline",
+        vec![first.id.clone()],
+        None,
+    )];
     spec.group_strategies = vec![GroupStrategy::new(
         "pipeline",
         SupervisionStrategy::OneForOne,
@@ -95,24 +108,6 @@ fn child_override_wins_over_group_strategy_and_selects_limit() -> Result<(), Sup
     assert_eq!(plan.scope, vec![first.id, second.id]);
     assert_eq!(plan.restart_limit, Some(limit));
     assert_eq!(plan.escalation_policy, Some(EscalationPolicy::ShutdownTree));
-    Ok(())
-}
-
-/// Verifies that ambiguous strategy group membership is rejected.
-#[test]
-fn validation_rejects_child_with_ambiguous_strategy_groups() -> Result<(), SupervisorError> {
-    let mut child = child("worker")?;
-    child.tags.push("alpha".to_owned());
-    child.tags.push("beta".to_owned());
-    let mut spec = SupervisorSpec::root(vec![child]);
-    spec.group_strategies = vec![
-        GroupStrategy::new("alpha", SupervisionStrategy::OneForOne),
-        GroupStrategy::new("beta", SupervisionStrategy::OneForAll),
-    ];
-
-    let error = spec.validate().unwrap_err();
-
-    assert!(error.to_string().contains("ambiguous"));
     Ok(())
 }
 

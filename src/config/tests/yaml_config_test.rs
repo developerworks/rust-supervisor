@@ -67,14 +67,11 @@ backpressure:
   audit_channel_capacity: 1024
 groups:
   - name: core
-    children:
-      - api
     budget:
       window_secs: 30
       max_burst: 3
       recovery_rate_per_sec: 0.5
   - name: upstream
-    children: []
 group_strategies:
   - group: core
     strategy: OneForOne
@@ -100,8 +97,6 @@ children:
   - name: api
     kind: supervisor
     criticality: critical
-    tags:
-      - core
     task_role: supervisor
     severity: Critical
     group: core
@@ -181,6 +176,9 @@ fn supervisor_config_converts_into_config_state_and_spec() {
     assert_eq!(spec.concurrent_restart_limit, 3);
     assert_eq!(spec.children.len(), 1);
     assert_eq!(spec.group_configs.len(), 2);
+    assert_eq!(spec.group_configs[0].children.len(), 1);
+    assert_eq!(spec.group_configs[0].children[0].value, "api");
+    assert_eq!(spec.group_configs[1].children.len(), 0);
     assert_eq!(spec.group_strategies.len(), 1);
     assert_eq!(spec.group_dependencies.len(), 1);
     assert_eq!(spec.child_strategy_overrides.len(), 1);
@@ -246,11 +244,15 @@ fn yaml_config_rejects_invalid_restart_budget() {
     assert!(result.is_err());
 }
 
-/// Verifies that group-level YAML references must target declared children.
+/// Verifies that group membership is derived from child group assignments.
 #[test]
-fn yaml_config_rejects_unknown_group_child() {
-    let yaml = valid_yaml().replace("- api", "- missing-child");
-    let result = parse_config_state(&yaml);
+fn yaml_config_derives_group_members_from_child_group() {
+    let state = parse_config_state(valid_yaml()).expect("valid YAML should load");
+    let spec = state.to_supervisor_spec().expect("derive supervisor spec");
 
-    assert!(result.is_err());
+    assert_eq!(spec.group_configs[0].name, "core");
+    assert_eq!(spec.group_configs[0].children.len(), 1);
+    assert_eq!(spec.group_configs[0].children[0].value, "api");
+    assert_eq!(spec.group_configs[1].name, "upstream");
+    assert_eq!(spec.group_configs[1].children.len(), 0);
 }

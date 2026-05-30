@@ -17,7 +17,7 @@
 | `observability` | `ObservabilityConfig` | 事件日志容量和指标/审计开关 |
 | `audit` | `AuditConfig` | 审计存储后端, JSON Lines(逐行 JSON)文件路径和写入失败策略 |
 | `backpressure` | `BackpressureConfig` | 可观测性 subscriber(订阅者) 队列的背压策略, 阈值, 窗口和审计通道容量 |
-| `groups` | `Vec<GroupConfig>` | group(分组)成员和分组级 restart budget(重启预算) |
+| `groups` | `Vec<GroupConfig>` | group(分组)名称, 分组级 restart budget(重启预算); 成员由 `children[].group` 声明 |
 | `group_strategies` | `Vec<GroupStrategyConfig>` | group(分组)级监督策略, 重启限制和升级策略 |
 | `group_dependencies` | `Vec<GroupDependencyConfig>` | group(分组)之间的故障传播关系 |
 | `child_strategy_overrides` | `Vec<ChildStrategyOverrideConfig>` | child(子任务)级监督策略, 重启限制和升级策略 |
@@ -67,7 +67,7 @@
 - `kind: Supervisor` 的子任务不能有 factory(工厂); `kind: AsyncWorker` 或 `kind: BlockingWorker` 必须有 factory(工厂).
 - Sidecar(辅助进程)任务角色需要 `sidecar_config`, 反之亦然.
 - 依赖循环会被拒绝.
-- `groups.children` 引用的 child(子任务)名称必须存在.
+- 分组成员只在 `children[].group` 声明; `child.group` 引用的 group(分组)名称必须在 `groups` 中存在.
 - `group_strategies` 和 `group_dependencies` 引用的 group(分组)名称必须存在.
 - `child_strategy_overrides` 引用的 child(子任务)名称必须存在.
 - `severity_defaults` 不能为同一个 TaskRole(任务角色)声明多次默认值.

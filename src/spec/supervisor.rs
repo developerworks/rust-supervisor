@@ -607,36 +607,19 @@ fn validate_group_strategies(
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` when every configured group is used without ambiguity.
+/// Returns `Ok(())` when every configured group strategy has at least one member child.
 fn validate_group_membership(
     strategies: &[GroupStrategy],
     children: &[ChildSpec],
 ) -> Result<(), SupervisorError> {
-    let groups = strategies
-        .iter()
-        .map(|strategy| strategy.group.clone())
-        .collect::<HashSet<_>>();
     for strategy in strategies {
         if !children
             .iter()
-            .any(|child| child.tags.contains(&strategy.group))
+            .any(|child| child.group.as_deref() == Some(strategy.group.as_str()))
         {
             return Err(SupervisorError::fatal_config(format!(
                 "group strategy references unused group: {}",
                 strategy.group
-            )));
-        }
-    }
-    for child in children {
-        let configured_group_count = child
-            .tags
-            .iter()
-            .filter(|tag| groups.contains(*tag))
-            .count();
-        if configured_group_count > 1 {
-            return Err(SupervisorError::fatal_config(format!(
-                "child strategy groups are ambiguous for child: {}",
-                child.id
             )));
         }
     }

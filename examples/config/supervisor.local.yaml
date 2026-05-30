@@ -57,14 +57,11 @@ backpressure:
   audit_channel_capacity: 1024
 groups:
   - name: core
-    children:
-      - api
     budget:
       window_secs: 60
       max_burst: 10
       recovery_rate_per_sec: 0.50
   - name: upstream
-    children: []
 group_strategies:
   - group: core
     strategy: OneForOne
@@ -90,8 +87,6 @@ children:
   - name: api
     kind: supervisor
     criticality: critical
-    tags:
-      - core
     task_role: supervisor
     severity: Critical
     group: core

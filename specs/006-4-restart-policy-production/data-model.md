@@ -183,18 +183,20 @@ child 未归属任何 group(`group_name: None`) 时: 该 child 的故障仅影�
 
 ```
 SupervisorSpec
-  └─ groups: Vec<GroupConfig>
+  └─ group_configs: Vec<GroupConfig>       (运行时, 成员由 children[].group 汇总)
        ├─ name: String
-       ├─ children: Vec<ChildId>
-       └─ budget: Option<RestartBudgetConfig>   (可选, 未声明时继承 SupervisorSpec 级默认预算)
+       ├─ children: Vec<ChildId>           (加载期推导, YAML 不可手写)
+       └─ budget: Option<RestartBudgetConfig>
   └─ group_dependencies: Vec<GroupDependencyEdge>
   └─ severity_defaults: HashMap<TaskRole, SeverityClass>
 
 ChildSpec
   ├─ role: TaskRole
   ├─ severity: Option<SeverityClass>     (覆盖角色默认值)
-  └─ group: Option<String>               (所属分组)
+  └─ group: Option<String>               (YAML 中唯一成员声明入口)
 ```
+
+YAML `groups[]` 只声明 `name` 与可选 `budget`. `GroupConfig.children` 在 `ConfigState::to_supervisor_spec` 中由 `children[].group` 汇总写入运行时结构.
 
 GroupConfig 中 `budget` 为可选字段. 当 group 未显式声明 budget 时, 使用 `SupervisorSpec` 级默认 `RestartBudgetConfig`(从 `ConfigState.defaults` 派生). 若 supervisor 级也未配置默认预算, 则使用内置安全默认值: `window=60s, max_burst=10, recovery_rate_per_sec=0.5, max_tokens=10`.
 

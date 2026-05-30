@@ -56,7 +56,7 @@ pub struct SupervisorConfig {
     #[config(nested)]
     #[serde(default)]
     pub backpressure: BackpressureConfig,
-    /// Group-level restart budgets and membership declarations.
+    /// Group-level restart budgets and group policy declarations.
     #[config(default = [])]
     #[serde(default)]
     pub groups: Vec<GroupConfig>,

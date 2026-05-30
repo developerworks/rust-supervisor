@@ -187,7 +187,7 @@ fn child_override<'a>(
 ///
 /// # Arguments
 ///
-/// - `tree`: Tree that owns child tags.
+/// - `tree`: Tree that owns child group assignments.
 /// - `spec`: Supervisor specification that owns group strategies.
 /// - `failed_child`: Identifier of the failed child.
 ///
@@ -205,15 +205,15 @@ fn group_strategy<'a>(
         .find(|node| node.child.id == *failed_child)?;
     spec.group_strategies
         .iter()
-        .find(|strategy| child.child.tags.contains(&strategy.group))
+        .find(|strategy| child.child.group.as_deref() == Some(strategy.group.as_str()))
 }
 
 /// Selects a restart scope constrained to one group.
 ///
 /// # Arguments
 ///
-/// - `tree`: Tree that owns declaration order.
-/// - `group`: Group tag that constrains the scope.
+/// - `tree`: Tree that owns child group assignments.
+/// - `group`: Group name that constrains the scope.
 /// - `strategy`: Strategy applied inside the group.
 /// - `failed_child`: Identifier of the failed child.
 ///
@@ -241,8 +241,8 @@ fn group_restart_scope(
 ///
 /// # Arguments
 ///
-/// - `tree`: Tree that owns child tags.
-/// - `group`: Group tag to match.
+/// - `tree`: Tree that owns child group assignments.
+/// - `group`: Group name to match.
 ///
 /// # Returns
 ///
@@ -250,7 +250,7 @@ fn group_restart_scope(
 fn group_nodes<'a>(tree: &'a SupervisorTree, group: &str) -> Vec<&'a SupervisorTreeNode> {
     tree.nodes
         .iter()
-        .filter(|node| node.child.tags.iter().any(|tag| tag == group))
+        .filter(|node| node.child.group.as_deref() == Some(group))
         .collect()
 }
 

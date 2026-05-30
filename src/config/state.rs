@@ -13,6 +13,7 @@ use crate::config::policy::{
     ChildStrategyOverrideConfig, GroupConfig, GroupDependencyConfig, GroupStrategyConfig,
     SeverityDefaultConfig,
 };
+use crate::id::types::ChildId;
 use crate::spec::child::ChildSpec;
 use crate::spec::child_declaration::{ChildDeclaration, CompensatingRecord, PendingChild, Phase};
 use crate::spec::supervisor::BackpressureConfig;
@@ -36,7 +37,7 @@ pub struct ConfigState {
     pub audit: AuditConfig,
     /// Backpressure policy for observability event subscribers.
     pub backpressure: BackpressureConfig,
-    /// Group-level restart budgets and membership declarations.
+    /// Group-level restart budgets and group policy declarations.
     pub groups: Vec<GroupConfig>,
     /// Group-level strategy overrides.
     pub group_strategies: Vec<GroupStrategyConfig>,
@@ -390,10 +391,17 @@ impl ConfigState {
         spec.control_channel_capacity = self.observability.event_journal_capacity;
         spec.event_channel_capacity = self.observability.event_journal_capacity;
         spec.backpressure_config = self.backpressure.clone();
+        let group_members = derive_group_members(&self.children);
         spec.group_configs = self
             .groups
             .iter()
-            .map(GroupConfig::to_runtime)
+            .map(|group| {
+                let members = group_members
+                    .get(group.name.as_str())
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]);
+                group.to_runtime(members)
+            })
             .collect::<Vec<_>>();
         spec.group_strategies = self
             .group_strategies
@@ -618,6 +626,28 @@ fn validate_supervisor_root(
     Ok(())
 }
 
+/// Builds group membership rosters from child group assignments.
+///
+/// # Arguments
+///
+/// - `children`: Validated child specifications loaded from YAML.
+///
+/// # Returns
+///
+/// Returns a map from group name to member child identifiers.
+fn derive_group_members(children: &[ChildSpec]) -> HashMap<String, Vec<ChildId>> {
+    let mut members = HashMap::<String, Vec<ChildId>>::new();
+    for child in children {
+        if let Some(group) = child.group.as_deref() {
+            members
+                .entry(group.to_owned())
+                .or_default()
+                .push(child.id.clone());
+        }
+    }
+    members
+}
+
 /// Validates group and override inputs against declared child names.
 ///
 /// # Arguments
@@ -656,14 +686,6 @@ fn validate_group_inputs(
                 "duplicate group name '{}'",
                 group.name
             )));
-        }
-        for child in &group.children {
-            if !child_names.contains(child.as_str()) {
-                return Err(crate::error::types::SupervisorError::fatal_config(format!(
-                    "group '{}' references unknown child '{}'",
-                    group.name, child
-                )));
-            }
         }
     }
 

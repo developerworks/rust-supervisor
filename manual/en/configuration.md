@@ -17,7 +17,7 @@ The configuration struct `SupervisorConfig` contains these top-level groups:
 | `observability` | `ObservabilityConfig` | Event journal capacity and metric/audit switches |
 | `audit` | `AuditConfig` | Audit storage backend, JSON Lines file path, and write failure strategy |
 | `backpressure` | `BackpressureConfig` | Backpressure strategy, thresholds, window, and audit channel capacity for observability subscribers |
-| `groups` | `Vec<GroupConfig>` | Group membership and group-level restart budget overrides |
+| `groups` | `Vec<GroupConfig>` | Group name and group-level restart budget overrides; membership is declared on `children[].group` |
 | `group_strategies` | `Vec<GroupStrategyConfig>` | Group-level supervision strategies, restart limits, and escalation policies |
 | `group_dependencies` | `Vec<GroupDependencyConfig>` | Cross-group failure propagation edges |
 | `child_strategy_overrides` | `Vec<ChildStrategyOverrideConfig>` | Child-level supervision strategies, restart limits, and escalation policies |
@@ -67,7 +67,7 @@ Child declaration checks:
 - A child with `kind: Supervisor` must not have a factory; a child with `kind: AsyncWorker` or `kind: BlockingWorker` must have one.
 - Sidecar task role requires `sidecar_config`, and vice versa.
 - Dependency cycles are rejected.
-- Child names referenced by `groups.children` must exist.
+- Group membership is declared only on `children[].group`; referenced group names must exist in `groups`.
 - Group names referenced by `group_strategies` and `group_dependencies` must exist.
 - Child names referenced by `child_strategy_overrides` must exist.
 - `severity_defaults` must not declare the same task role more than once.

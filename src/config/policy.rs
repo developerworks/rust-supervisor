@@ -314,10 +314,6 @@ impl RestartLimitConfig {
 pub struct GroupConfig {
     /// Low-cardinality group name shared by member children.
     pub name: String,
-    /// Child names that belong to this group.
-    #[config(default = [])]
-    #[serde(default)]
-    pub children: Vec<String>,
     /// Optional group-specific restart budget override.
     #[schemars(!default)]
     #[serde(default)]
@@ -329,15 +325,15 @@ impl GroupConfig {
     ///
     /// # Arguments
     ///
-    /// This function has no arguments.
+    /// - `members`: Child identifiers derived from `children[].group` at load time.
     ///
     /// # Returns
     ///
     /// Returns a [`RuntimeGroupConfig`] value.
-    pub fn to_runtime(&self) -> RuntimeGroupConfig {
+    pub fn to_runtime(&self, members: &[ChildId]) -> RuntimeGroupConfig {
         RuntimeGroupConfig::new(
             self.name.clone(),
-            self.children.iter().map(ChildId::new).collect(),
+            members.to_vec(),
             self.budget.as_ref().map(RestartBudgetConfig::to_runtime),
         )
     }
