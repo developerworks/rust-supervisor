@@ -6,7 +6,7 @@ Language: [中文](../zh/index.html)
 
 `rust-supervisor` is a Rust task supervision core for Tokio services. It uses declarative models to manage child startup, stop, restart, quarantine, state query, event recording, health checks, and Shutdown Without Orphaned Tasks.
 
-The configuration boundary uses rust-config-tree v0.1.9 with YAML files. Runtime tunable values must enter the system through this centralized configuration path.
+The configuration boundary uses rust-config-tree 0.3.0 with YAML files. Runtime tunable values must enter the system through this centralized configuration path.
 
 This project has no legacy interface burden. Users should import public types from owning module paths, such as `rust_supervisor::runtime::supervisor::Supervisor`.
 
@@ -14,6 +14,7 @@ This project has no legacy interface burden. Users should import public types fr
 
 - [Getting Started](getting-started.md): start a minimal supervisor from YAML configuration.
 - [Configuration](configuration.md): understand `SupervisorConfig`, `ConfigState`, and startup rejection boundaries.
+- [Split Configuration and Transparent Array Sections](split-config.md): understand split `groups.yaml` / `children.yaml` layout and template CLI commands.
 - [Supervisor Tree](supervisor-tree.md): understand `SupervisorSpec`, `SupervisorTree`, and registry ownership.
 - [Task Model](task-model.md): understand `ChildSpec`, `TaskFactory`, `TaskContext`, and readiness.
 - [Policies](policies.md): understand restart decisions, backoff, fuse rules, quarantine, and task exit classification.

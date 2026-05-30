@@ -16,7 +16,15 @@ cargo run --example supervisor_quickstart
 cargo run --example config_tree_supervisor
 ```
 
-`config_tree_supervisor` 展示 rust-config-tree(集中配置树) v0.1.9 的 YAML(数据序列化格式)配置加载路径, 并打印派生后的 `SupervisorSpec`(监督器规格).
+`config_tree_supervisor` 展示 rust-config-tree(集中配置树) 0.3.0 的 YAML(数据序列化格式)配置加载路径, 并打印派生后的 `SupervisorSpec`(监督器规格).
+
+## 拆分配置
+
+```bash
+cargo run --example split_config_supervisor
+```
+
+`split_config_supervisor` 从 `examples/config/split/supervisor.yaml` 加载配置. 该根文件通过 `include` 引用 body-only(仅数组体) 的 `groups.yaml` 和 `children.yaml`. 详见 [拆分配置与透明数组 Section](split-config.md).
 
 ## 重启策略实验
 

@@ -4,6 +4,7 @@
 - [首页](index.md)
 - [快速开始](getting-started.md)
 - [配置模型和结构模式](configuration.md)
+- [拆分配置与透明数组 Section](split-config.md)
 - [监督树](supervisor-tree.md)
 - [任务模型](task-model.md)
 - [ChildSpec 与 ChildDeclaration](child-spec.md)

@@ -65,7 +65,7 @@ pub struct SupervisorConfig {
     /// Group-level restart budgets and group policy declarations.
     #[config(nested)]
     #[serde(default)]
-    #[schemars(extend("x-tree-split" = true))]
+    #[schemars(extend("x-tree-split" = true, "x-tree-transparent-array" = true))]
     pub groups: GroupsConfigSection,
 
     /// Group-level strategy overrides.
@@ -94,7 +94,7 @@ pub struct SupervisorConfig {
     /// Child declarations loaded from YAML.
     #[config(nested)]
     #[serde(default)]
-    #[schemars(extend("x-tree-split" = true))]
+    #[schemars(extend("x-tree-split" = true, "x-tree-transparent-array" = true))]
     pub children: ChildrenConfigSection,
 }
 

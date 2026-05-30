@@ -30,7 +30,7 @@
 
 ### YAML 配置中的 `children` 字段支持哪些子任务字段?
 
-`children` 是 `Vec<ChildDeclaration>`(子任务声明列表)类型. 每个声明支持以下 9 类字段:
+`children` 在 YAML(数据序列化格式) 里是数组, 在 Rust 里对应 `ChildrenConfigSection`(子任务配置段), 通过 `.as_slice()` 访问子项. 每个声明支持以下字段:
 
 | 类别     | 字段                  | 说明                                                     |
 | -------- | --------------------- | -------------------------------------------------------- |
@@ -49,6 +49,28 @@
 | 任务角色 | `task_role`           | `service`, `worker`, `job`, `sidecar`, `supervisor`      |
 
 完整配置示例见[配置模型](configuration.md#示例配置).
+
+### 如何把 `groups` 和 `children` 拆成独立 YAML 文件?
+
+在根配置里写 `include`, split 文件只写数组体:
+
+```yaml
+include:
+  - groups.yaml
+  - children.yaml
+```
+
+```yaml
+# children.yaml
+- name: worker
+  kind: async_worker
+```
+
+详见 [拆分配置与透明数组 Section](split-config.md). 可运行 `cargo run --example split_config_supervisor`.
+
+### 配置文件不写 `children` 会怎样?
+
+运行时是空列表 `[]`, 不会自动注入模板样例 `worker`. 模板生成命令才会写入样例条目.
 
 ### 配置校验会拒绝哪些情况?
 

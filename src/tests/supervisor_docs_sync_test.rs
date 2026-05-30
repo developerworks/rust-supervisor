@@ -15,11 +15,13 @@ fn docs_reference_current_config_and_examples() {
         "manual/zh/index.md",
         "manual/zh/getting-started.md",
         "manual/zh/configuration.md",
+        "manual/zh/split-config.md",
         "manual/zh/examples.md",
         "manual/zh/observability.md",
         "manual/en/index.md",
         "manual/en/getting-started.md",
         "manual/en/configuration.md",
+        "manual/en/split-config.md",
         "manual/en/examples.md",
         "docs/zh/index.md",
         "docs/en/index.md",
@@ -29,7 +31,10 @@ fn docs_reference_current_config_and_examples() {
     .collect::<Vec<_>>()
     .join("\n");
 
-    assert!(docs.contains("rust-config-tree(集中配置树) v0.2.0"));
+    assert!(docs.contains("rust-config-tree"));
+    assert!(docs.contains("0.3.0"));
+    assert!(docs.contains("split_config_supervisor"));
+    assert!(docs.contains("x-tree-transparent-array"));
     assert!(docs.contains("supervisor_quickstart"));
     assert!(docs.contains("supervisor_tree_story"));
     assert!(docs.contains("runtime_control_story"));

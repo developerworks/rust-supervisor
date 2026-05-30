@@ -8,10 +8,7 @@ use rust_config_tree::{
     cli::{ConfigCommand, handle_config_command},
     config::load_config,
 };
-use rust_supervisor::config::{
-    configurable::SupervisorConfig,
-    split_section::{default_generated_config_dir, normalize_generated_split_templates},
-};
+use rust_supervisor::config::configurable::SupervisorConfig;
 use std::path::PathBuf;
 
 const DEFAULT_CONFIG_PATH: &str = "examples/config/supervisor.yaml";
@@ -20,10 +17,6 @@ const DEFAULT_CONFIG_PATH: &str = "examples/config/supervisor.yaml";
 #[derive(Debug, Parser)]
 #[command(name = "rust-tokio-supervisor")]
 struct Cli {
-    /// Root config file used as the template source and validation input.
-    #[arg(long)]
-    config: Option<PathBuf>,
-
     /// Command to execute.
     #[command(subcommand)]
     command: Option<Command>,
@@ -33,7 +26,11 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Validate and print the loaded supervisor config summary.
-    Run,
+    Run {
+        /// Root config file to load.
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
 
     /// Flatten the reusable rust-config-tree config commands.
     #[command(flatten)]
@@ -60,32 +57,18 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let cli = Cli::parse();
-    let config_path = cli
-        .config
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_CONFIG_PATH));
+    let default_config_path = PathBuf::from(DEFAULT_CONFIG_PATH);
 
-    match cli.command.unwrap_or(Command::Run) {
-        Command::Run => {
+    match cli.command.unwrap_or(Command::Run { config: None }) {
+        Command::Run { config } => {
+            let config_path = config.unwrap_or(default_config_path);
             let config = load_config::<SupervisorConfig>(&config_path)?;
             println!("config path: {}", config_path.display());
             println!("strategy: {:?}", config.supervisor.strategy);
             println!("children: {}", config.children.len());
         }
         Command::Config(command) => {
-            let normalize_dir = match &command {
-                ConfigCommand::GenerateTemplate { output, .. } => Some(
-                    output
-                        .as_ref()
-                        .and_then(|path| path.parent().map(PathBuf::from))
-                        .filter(|dir| !dir.as_os_str().is_empty())
-                        .unwrap_or_else(default_generated_config_dir),
-                ),
-                _ => None,
-            };
-            handle_config_command::<Cli, SupervisorConfig>(command, &config_path)?;
-            if let Some(dir) = normalize_dir {
-                normalize_generated_split_templates(&dir)?;
-            }
+            handle_config_command::<Cli, SupervisorConfig>(command, &default_config_path)?;
         }
     }
 

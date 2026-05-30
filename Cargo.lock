@@ -664,9 +664,9 @@ dependencies = [
 
 [[package]]
 name = "rust-config-tree"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07c717739d63b48f875d078c490eadf9b90d1b85203f0a6cf10693c87825acb"
+checksum = "0bfd73d3c4373dfc60439aa691ce5f32256532641313a2be52095b7cc04a6d3d"
 dependencies = [
  "clap",
  "clap_complete",
@@ -674,6 +674,7 @@ dependencies = [
  "dotenvy",
  "figment",
  "schemars",
+ "serde",
  "serde_json",
  "serde_yaml",
  "tracing",

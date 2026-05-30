@@ -6,7 +6,7 @@
 
 ## Step 1 of 5: 前置条件
 
-主配置文件是 `examples/config/supervisor.yaml`. 配置必须通过 rust-config-tree(集中配置树) 加载 YAML(数据序列化格式), 然后形成 `ConfigState`(配置状态).
+主配置文件是 `examples/config/supervisor.yaml`. 配置必须通过 rust-config-tree(集中配置树) 0.3.0 加载 YAML(数据序列化格式), 然后形成 `ConfigState`(配置状态).
 
 ## Step 2 of 5: 最小运行命令
 
@@ -105,6 +105,21 @@ async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
 ```
 
 `load_config_from_yaml_file` 返回 `ConfigState`,其 `to_supervisor_spec()` 方法内部由 `start_from_config_state` 自动调用.
+
+#### 从 YAML 文件路径直接启动 — `start_from_config_file`
+
+一步式快捷方式, 内部调用 `load_config_from_yaml_file`:
+
+```rust
+use rust_supervisor::runtime::supervisor::Supervisor;
+
+#[tokio::main]
+async fn main() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    let handle = Supervisor::start_from_config_file("examples/config/supervisor.yaml").await?;
+    handle.shutdown_tree("operator", "done").await?;
+    Ok(())
+}
+```
 
 #### 编程式构建规格启动 — `start`
 

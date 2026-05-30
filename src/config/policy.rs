@@ -5,8 +5,9 @@
 //! strongly typed values.
 
 use confique::Config;
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::time::Duration;
 
 use crate::id::types::ChildId;
@@ -313,40 +314,42 @@ impl RestartLimitConfig {
 ///
 /// Single-file configs use `groups: [...]`. Split `groups.yaml` files contain
 /// only the group entry sequence for this section.
-#[derive(Debug, Clone, PartialEq, Config, Default)]
+#[derive(Debug, Clone, PartialEq, Config)]
 pub struct GroupsConfigSection {
     /// Group entries loaded from the `groups` configuration section.
     #[config(default = [])]
     pub items: Vec<GroupConfig>,
 }
 
+impl Default for GroupsConfigSection {
+    fn default() -> Self {
+        Self { items: Vec::new() }
+    }
+}
+
 impl JsonSchema for GroupsConfigSection {
-    /// Returns the schema name for this transparent section wrapper.
-    fn schema_name() -> std::borrow::Cow<'static, str> {
-        std::borrow::Cow::Borrowed("GroupsConfigSection")
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("GroupsConfigSection")
     }
 
-    /// Delegates schema generation to the group entry sequence.
-    fn json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::Schema {
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         Vec::<GroupConfig>::json_schema(generator)
     }
 }
 
 impl Serialize for GroupsConfigSection {
-    /// Serializes this section as a group entry sequence.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: confique::serde::Serializer,
     {
         self.items.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for GroupsConfigSection {
-    /// Deserializes a group entry sequence into this section wrapper.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: confique::serde::Deserializer<'de>,
     {
         Ok(Self {
             items: Vec::<GroupConfig>::deserialize(deserializer)?,
@@ -356,21 +359,22 @@ impl<'de> Deserialize<'de> for GroupsConfigSection {
 
 impl GroupsConfigSection {
     /// Returns group entries as a slice.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the group entries declared in this section.
     pub fn as_slice(&self) -> &[GroupConfig] {
         &self.items
+    }
+
+    /// Returns the number of group entries.
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Returns whether this section contains no group entries.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
 }
 
 impl From<GroupsConfigSection> for Vec<GroupConfig> {
-    /// Converts a split-friendly section into a plain group vector.
     fn from(section: GroupsConfigSection) -> Self {
         section.items
     }

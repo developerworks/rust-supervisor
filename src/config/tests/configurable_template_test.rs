@@ -50,19 +50,39 @@ fn generated_children_template_includes_sample_child() {
         "children template should include a sample child declaration"
     );
     assert!(
-        !children_target.content.trim_end().ends_with("[]"),
-        "children template should not be an empty array"
-    );
-
-    let normalized = rust_supervisor::config::split_section::normalize_split_section_template(
-        &children_target.content,
-        "children",
+        !children_target.content.contains("[{"),
+        "children template must not use flow-style arrays"
     );
     assert!(
-        !normalized.contains("[{"),
-        "normalized children template must not use flow-style arrays"
+        !children_target.content.contains("\nchildren:\n"),
+        "children split template must be body-only"
     );
-    assert!(normalized.contains("- name: worker"));
+    assert!(children_target.content.contains("- name: worker"));
+}
+
+/// Verifies that the generated children split template uses block YAML body-only shape.
+#[test]
+fn generated_children_template_uses_block_yaml_body() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let targets = template_targets_for_paths::<SupervisorConfig>(
+        root.join("examples/config/supervisor.yaml"),
+        root.join("examples/config/supervisor.template.yaml"),
+    )
+    .expect("generate template targets");
+
+    let children_target = targets
+        .iter()
+        .find(|target| target.path.ends_with("children.yaml"))
+        .expect("children template target");
+
+    assert!(
+        !children_target.content.contains("[{"),
+        "children template must not use flow-style arrays"
+    );
+    assert!(
+        !children_target.content.contains("\nchildren:\n"),
+        "children split template must be body-only"
+    );
 }
 
 /// Verifies that the generated root template covers all runtime tunables.

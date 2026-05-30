@@ -6,7 +6,7 @@
 
 `rust-supervisor` 是 Rust(编程语言) 任务监督核心库. 它面向 Tokio(异步运行时) 服务, 用声明式模型管理 child(子任务) 的启动, 停止, 重启, 隔离, 状态查询, 事件记录, 健康检查和 Shutdown Without Orphaned Tasks(关闭后不留下孤儿任务).
 
-配置边界使用 rust-config-tree v0.1.9 与 YAML(数据序列化格式) 文件. 运行时可调参数必须通过这条集中配置路径进入系统.
+配置边界使用 rust-config-tree(集中配置树) 0.3.0 与 YAML(数据序列化格式) 文件. 运行时可调参数必须通过这条集中配置路径进入系统.
 
 本项目没有旧接口负担. 使用者应该通过拥有模块路径读取公开类型, 例如 `rust_supervisor::runtime::supervisor::Supervisor`.
 
@@ -14,6 +14,7 @@
 
 - [快速开始](getting-started.md): 从 YAML(数据序列化格式)配置启动最小 supervisor(监督器).
 - [配置模型](configuration.md): 理解 `SupervisorConfig`, `ConfigState` 和配置拒绝启动边界.
+- [拆分配置与透明数组 Section](split-config.md): 理解 `groups.yaml` / `children.yaml` 的 split 写法与 CLI(命令行)生成模板.
 - [监督树](supervisor-tree.md): 理解 `SupervisorSpec`, `SupervisorTree` 和注册表关系.
 - [任务模型](task-model.md): 理解 `ChildSpec`, `TaskFactory`, `TaskContext` 和 readiness(就绪).
 - [策略模型](policies.md): 理解重启, 退避, 熔断, 隔离和任务退出分类.

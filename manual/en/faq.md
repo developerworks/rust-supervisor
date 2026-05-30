@@ -30,7 +30,7 @@ This is the core shutdown goal of the project. After the root supervisor complet
 
 ### What child fields does the YAML `children` entry support?
 
-`children` is of type `Vec<ChildDeclaration>`. Each declaration supports these 9 categories of fields:
+`children` is a YAML array backed by `ChildrenConfigSection` in Rust. Access items with `.as_slice()`. Each declaration supports these fields:
 
 | Category            | Field                 | Description                                         |
 | ------------------- | --------------------- | --------------------------------------------------- |
@@ -49,6 +49,28 @@ This is the core shutdown goal of the project. After the root supervisor complet
 | Task role           | `task_role`           | `service`, `worker`, `job`, `sidecar`, `supervisor` |
 
 See [Configuration](configuration.md#example-configuration) for a complete config sample.
+
+### How do I split `groups` and `children` into separate YAML files?
+
+Add `include` in the root config and write body-only split files:
+
+```yaml
+include:
+  - groups.yaml
+  - children.yaml
+```
+
+```yaml
+# children.yaml
+- name: worker
+  kind: async_worker
+```
+
+See [Split Configuration and Transparent Array Sections](split-config.md). Run `cargo run --example split_config_supervisor`.
+
+### What happens when `children` is omitted from a config file?
+
+Runtime loading yields an empty list `[]`. Template sample entries such as `worker` are not injected at runtime. Only `generate-template` writes sample entries.
 
 ### What configurations cause rejection at startup?
 

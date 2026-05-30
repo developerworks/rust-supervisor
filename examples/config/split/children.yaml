@@ -1,0 +1,5 @@
+- name: worker
+  kind: async_worker
+  criticality: optional
+  restart_policy: permanent
+  group: core

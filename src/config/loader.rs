@@ -5,9 +5,9 @@
 //! `rust-config-tree` — no hard-coded format check is needed.
 
 use crate::config::configurable::SupervisorConfig;
-use crate::config::split_section::load_supervisor_config;
 use crate::config::state::ConfigState;
 use crate::error::types::SupervisorError;
+use rust_config_tree::config::load_config;
 use std::path::Path;
 
 /// Loads validated supervisor configuration from a YAML file,
@@ -33,7 +33,7 @@ pub fn load_config_from_yaml_file(path: impl AsRef<Path>) -> Result<ConfigState,
     // Use rust-config-tree to resolve include directives and merge
     // multiple YAML files. This ensures the `include: [..]` field
     // in SupervisorConfig is consumed per the README design principle.
-    let config: SupervisorConfig = load_supervisor_config(path).map_err(|error| {
+    let config: SupervisorConfig = load_config(path).map_err(|error| {
         SupervisorError::fatal_config(format!("rust-config-tree load failed: {error}"))
     })?;
 

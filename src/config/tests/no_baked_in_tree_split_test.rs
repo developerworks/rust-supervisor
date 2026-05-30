@@ -22,6 +22,7 @@ fn generated_schema_marks_split_sections_for_tree_split() {
         serde_json::to_string(&schema).expect("serialize generated supervisor schema");
 
     assert!(schema_text.contains("x-tree-split"));
+    assert!(schema_text.contains("x-tree-transparent-array"));
     assert!(schema_text.contains("GroupsConfigSection"));
     assert!(schema_text.contains("ChildrenConfigSection"));
 }

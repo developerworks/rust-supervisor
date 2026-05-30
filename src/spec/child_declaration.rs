@@ -13,8 +13,9 @@ use crate::spec::child::{
     HealthPolicy, RestartPolicy, SecretRef, ShutdownPolicy, TaskKind,
 };
 use confique::Config;
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -129,39 +130,34 @@ pub struct ChildrenConfigSection {
 }
 
 impl Default for ChildrenConfigSection {
-    /// Returns an empty section for omitted runtime configuration values.
     fn default() -> Self {
         Self { items: Vec::new() }
     }
 }
 
 impl JsonSchema for ChildrenConfigSection {
-    /// Returns the schema name for this transparent section wrapper.
-    fn schema_name() -> std::borrow::Cow<'static, str> {
-        std::borrow::Cow::Borrowed("ChildrenConfigSection")
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("ChildrenConfigSection")
     }
 
-    /// Delegates schema generation to the child declaration sequence.
-    fn json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::Schema {
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         Vec::<ChildDeclaration>::json_schema(generator)
     }
 }
 
 impl Serialize for ChildrenConfigSection {
-    /// Serializes this section as a child declaration sequence.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer,
+        S: confique::serde::Serializer,
     {
         self.items.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for ChildrenConfigSection {
-    /// Deserializes a child declaration sequence into this section wrapper.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: confique::serde::Deserializer<'de>,
     {
         Ok(Self {
             items: Vec::<ChildDeclaration>::deserialize(deserializer)?,
@@ -171,47 +167,22 @@ impl<'de> Deserialize<'de> for ChildrenConfigSection {
 
 impl ChildrenConfigSection {
     /// Returns child declarations as a slice.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the child declarations declared in this section.
     pub fn as_slice(&self) -> &[ChildDeclaration] {
         &self.items
     }
 
-    /// Returns the number of child declarations in this section.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns the child declaration count.
+    /// Returns the number of child declarations.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
     /// Returns whether this section contains no child declarations.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// Returns `true` when this section contains no child declarations.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 }
 
 impl From<ChildrenConfigSection> for Vec<ChildDeclaration> {
-    /// Converts a split-friendly section into a plain child declaration vector.
     fn from(section: ChildrenConfigSection) -> Self {
         section.items
     }

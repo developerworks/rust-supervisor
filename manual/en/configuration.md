@@ -17,13 +17,13 @@ The configuration struct `SupervisorConfig` contains these top-level groups:
 | `observability` | `ObservabilityConfig` | Event journal capacity and metric/audit switches |
 | `audit` | `AuditConfig` | Audit storage backend, JSON Lines file path, and write failure strategy |
 | `backpressure` | `BackpressureConfig` | Backpressure strategy, thresholds, window, and audit channel capacity for observability subscribers |
-| `groups` | `Vec<GroupConfig>` | Group name and group-level restart budget overrides; membership is declared on `children[].group` |
+| `groups` | `GroupsConfigSection` | Group name and group-level restart budget overrides; membership is declared on `children[].group`; supports split file `groups.yaml` |
 | `group_strategies` | `Vec<GroupStrategyConfig>` | Group-level supervision strategies, restart limits, and escalation policies |
 | `group_dependencies` | `Vec<GroupDependencyConfig>` | Cross-group failure propagation edges |
 | `child_strategy_overrides` | `Vec<ChildStrategyOverrideConfig>` | Child-level supervision strategies, restart limits, and escalation policies |
 | `severity_defaults` | `Vec<SeverityDefaultConfig>` | Default severity class per task role |
 | `dashboard` | `Option<DashboardIpcConfig>` | Optional dashboard IPC socket (Unix only) |
-| `children` | `Vec<ChildDeclaration>` | Declarative child specifications |
+| `children` | `ChildrenConfigSection` | Declarative child specifications; serialized as a YAML array; supports split file `children.yaml` |
 
 ## Configuration State
 
@@ -33,11 +33,29 @@ The configuration struct `SupervisorConfig` contains these top-level groups:
 
 `ConfigState::to_supervisor_spec` derives `SupervisorSpec`. The implementation fills the supervision strategy, policy defaults, shutdown budgets, health timing, observability capacity, backpressure policy, dynamic supervisor policy, restart budget, failure window, meltdown fuse, supervision pipeline capacities, group policies, and child strategy overrides from configuration values.
 
-## Template Boundary
+## Templates and Split Configuration
 
-The official template is `examples/config/supervisor.template.yaml`. It covers `supervisor`, `policy`, `shutdown`, `observability`, `audit`, `backpressure`, `groups`, `group_strategies`, `group_dependencies`, `child_strategy_overrides`, `severity_defaults`, `dashboard`, and `children`.
+The official single-file template is `examples/config/supervisor.template.yaml`.
 
-This crate does not add `x-tree-split` to the public configuration structs, official schema, or official template. Projects that want split configuration files can wrap or reuse `SupervisorConfig` in their own crate and decide their own tree split layout.
+`groups` and `children` use transparent array sections. They can live in the root file or be split into `groups.yaml` and `children.yaml` through `include`. Split files contain only the array body, not an `items:` wrapper.
+
+- Details: [Split Configuration and Transparent Array Sections](split-config.md)
+- Generated template tree: `config/supervisor_config/`
+- Runnable split example: `cargo run --example split_config_supervisor`
+
+Generate templates and schemas. CLI subcommands are top-level without a `config` prefix. `--config` belongs to the `run` and `validate-config` subcommands; `generate-template` and `generate-schema` use `examples/config/supervisor.yaml` as the default template source:
+
+```bash
+cargo run -- run --config examples/config/supervisor.yaml
+
+cargo run -- validate-config --config examples/config/split/supervisor.yaml
+
+cargo run -- generate-template \
+  --output config/supervisor_config/supervisor_config.example.yaml
+
+cargo run -- generate-schema \
+  --output config/supervisor_config/supervisor.schema.json
+```
 
 ## Error Boundary
 

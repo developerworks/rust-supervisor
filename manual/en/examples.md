@@ -16,7 +16,15 @@ cargo run --example supervisor_quickstart
 cargo run --example config_tree_supervisor
 ```
 
-`config_tree_supervisor` shows the rust-config-tree v0.1.9 YAML loading path and prints the derived `SupervisorSpec`.
+`config_tree_supervisor` shows the rust-config-tree 0.3.0 YAML loading path and prints the derived `SupervisorSpec`.
+
+## Split Configuration
+
+```bash
+cargo run --example split_config_supervisor
+```
+
+`split_config_supervisor` loads `examples/config/split/supervisor.yaml`, which includes body-only `groups.yaml` and `children.yaml`. See [Split Configuration and Transparent Array Sections](split-config.md).
 
 ## Restart Policy Lab
 

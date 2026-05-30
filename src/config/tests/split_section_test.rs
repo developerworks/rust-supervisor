@@ -1,8 +1,9 @@
-//! Tests for split-section template normalization and loading.
+//! Tests for transparent split-section loading.
 
+use rust_config_tree::config::load_config;
 use rust_supervisor::config::{
+    configurable::SupervisorConfig,
     loader::load_config_from_yaml_file,
-    split_section::{load_supervisor_config, normalize_split_section_template},
 };
 use std::fs;
 use std::path::PathBuf;
@@ -19,30 +20,6 @@ fn temp_dir(name: &str) -> PathBuf {
     ));
     fs::create_dir_all(&dir).expect("create temp dir");
     dir
-}
-
-/// Verifies that body-only split templates normalize away the section root key.
-#[test]
-fn normalize_split_section_template_strips_section_root_key() {
-    let input = "# yaml-language-server: $schema=./children.schema.json\n\nchildren:\n  # Default value: []\n  items: []\n";
-    let output = normalize_split_section_template(input, "children");
-
-    assert!(!output.contains("\nchildren:\n"));
-    assert!(!output.contains("\nitems:\n"));
-    assert!(output.contains("- name: worker"));
-    assert!(!output.contains("[{"));
-}
-
-/// Verifies that confique flow-style child templates rewrite to block YAML.
-#[test]
-fn normalize_split_section_template_rewrites_flow_style_children() {
-    let input = "# yaml-language-server: $schema=./children.schema.json\n\n# Child declarations loaded from the `children` configuration section.\n# Default value: [{ name: worker }]\n[{ name: worker }]\n";
-    let output = normalize_split_section_template(input, "children");
-
-    assert!(!output.contains("# Default value:"));
-    assert!(!output.contains("[{"));
-    assert!(output.contains("- name: worker"));
-    assert!(output.contains("kind: async_worker"));
 }
 
 /// Verifies that body-only split files load through the section field name.
@@ -63,7 +40,7 @@ fn load_supervisor_config_accepts_body_only_split_files() {
     )
     .expect("write children");
 
-    let config = load_supervisor_config(&root).expect("load split config");
+    let config = load_config::<SupervisorConfig>(&root).expect("load split config");
     assert_eq!(config.children.len(), 1);
     assert_eq!(config.children.as_slice()[0].name, "api");
 
@@ -88,7 +65,7 @@ fn load_supervisor_config_accepts_wrapped_split_files() {
     )
     .expect("write children");
 
-    let config = load_supervisor_config(&root).expect("load wrapped split config");
+    let config = load_config::<SupervisorConfig>(&root).expect("load wrapped split config");
     assert_eq!(config.children.len(), 1);
 
     let _ = fs::remove_dir_all(dir);

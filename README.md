@@ -2,7 +2,7 @@
 
 `rust-tokio-supervisor` is the crates.io package for the rust-supervisor project. It is a Rust task supervision core for Tokio services. It provides declarative supervisor trees, child lifecycle governance, restart policies, four-stage shutdown, current state queries, event journal storage, and observability signals.
 
-Terminology: rust-config-tree v0.2.0 is the centralized configuration loader, and Shutdown Without Orphaned Tasks is the formal shutdown term.
+Terminology: rust-config-tree 0.3.0 is the centralized configuration loader, and Shutdown Without Orphaned Tasks is the formal shutdown term.
 
 Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 
@@ -19,7 +19,7 @@ Package name: `rust-tokio-supervisor`. Library crate name: `rust_supervisor`.
 - Public API models come only from this project.
 - No Compatibility: this crate has no legacy aliases or transition API surfaces.
 - `current_state` answers only the current runtime state. It does not replace lifecycle event history.
-- Configuration must be loaded through rust-config-tree v0.2.0, and runtime-tunable constants must not be scattered across internal modules.
+- Configuration must be loaded through rust-config-tree 0.3.0, and runtime-tunable constants must not be scattered across internal modules.
 - `SupervisorConfig` is the public root configuration struct. It supports `confique::Config`, `schemars::JsonSchema`, `serde::Serialize`, and `serde::Deserialize`.
 - Dashboard IPC belongs only to the target process local entry point. This repository implements Unix domain socket IPC, snapshot generation, event records, log records, command mapping, and shared contracts.
 - Shutdown must run request stop, graceful drain, abort stragglers, and reconcile. `ShutdownTree` delivers `CancellationToken` to running child tasks, waits for tasks to return in shutdown order, uses `AbortHandle` for stragglers after timeouts, and returns per-child outcomes plus a reconcile report inside `ShutdownResult`.

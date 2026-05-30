@@ -1,0 +1,5 @@
+- name: core
+  budget:
+    window_secs: 60
+    max_burst: 10
+    recovery_rate_per_sec: 0.5

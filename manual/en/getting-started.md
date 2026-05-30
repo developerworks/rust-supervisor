@@ -9,7 +9,7 @@ Language: [中文](../zh/getting-started.html)
 
 This project is a Rust library. The examples require Cargo and a Tokio application environment. Repository examples include their required dependencies.
 
-The primary configuration file is `examples/config/supervisor.yaml`. The loader uses rust-config-tree v0.1.9, reads YAML, and produces `ConfigState`.
+The primary configuration file is `examples/config/supervisor.yaml`. The loader uses rust-config-tree 0.3.0, reads YAML, and produces `ConfigState`.
 
 ## Step 2 of 5: Minimal Command
 

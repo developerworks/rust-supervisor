@@ -1,4 +1,5 @@
 //! Demonstrates loading centralized YAML configuration into a supervisor spec.
+//! For split body-only `groups.yaml` / `children.yaml`, see `split_config_supervisor`.
 
 // Import the YAML configuration loader.
 use rust_supervisor::config::loader::load_config_from_yaml_file;

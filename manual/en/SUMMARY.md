@@ -4,6 +4,7 @@
 - [Home](index.md)
 - [Getting Started](getting-started.md)
 - [Configuration and Schema](configuration.md)
+- [Split Configuration and Transparent Array Sections](split-config.md)
 - [Supervisor Tree](supervisor-tree.md)
 - [Task Model](task-model.md)
 - [ChildSpec and ChildDeclaration](child-spec.md)

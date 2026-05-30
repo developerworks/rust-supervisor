@@ -65,6 +65,7 @@ fn default_audit_backend() -> String {
     "memory".into()
 }
 
+/// Serde default helper: returns the demo audit file path.
 fn default_file_path() -> String {
     "/tmp/rust-supervisor-demo/audit.jsonl".to_string()
 }

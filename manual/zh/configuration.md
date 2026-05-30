@@ -17,13 +17,13 @@
 | `observability` | `ObservabilityConfig` | 事件日志容量和指标/审计开关 |
 | `audit` | `AuditConfig` | 审计存储后端, JSON Lines(逐行 JSON)文件路径和写入失败策略 |
 | `backpressure` | `BackpressureConfig` | 可观测性 subscriber(订阅者) 队列的背压策略, 阈值, 窗口和审计通道容量 |
-| `groups` | `Vec<GroupConfig>` | group(分组)名称, 分组级 restart budget(重启预算); 成员由 `children[].group` 声明 |
+| `groups` | `GroupsConfigSection` | group(分组)名称与 group-level restart budget(分组级重启预算); 成员由 `children[].group` 声明; 支持 split 文件 `groups.yaml` |
 | `group_strategies` | `Vec<GroupStrategyConfig>` | group(分组)级监督策略, 重启限制和升级策略 |
 | `group_dependencies` | `Vec<GroupDependencyConfig>` | group(分组)之间的故障传播关系 |
 | `child_strategy_overrides` | `Vec<ChildStrategyOverrideConfig>` | child(子任务)级监督策略, 重启限制和升级策略 |
 | `severity_defaults` | `Vec<SeverityDefaultConfig>` | TaskRole(任务角色)到 SeverityClass(严重级别)的默认映射 |
 | `dashboard` | `Option<DashboardIpcConfig>` | 可选的 dashboard IPC(看板进程间通信) socket(仅 Unix) |
-| `children` | `Vec<ChildDeclaration>` | 声明式子任务规格 |
+| `children` | `ChildrenConfigSection` | 声明式子任务规格; YAML 中为数组; 支持 split 文件 `children.yaml` |
 
 ## 配置状态
 
@@ -33,11 +33,29 @@
 
 `ConfigState::to_supervisor_spec` 会派生 `SupervisorSpec`(监督器规格). 当前实现用配置值填充 supervision strategy(监督策略), 策略默认值, 关闭预算, 健康检查时间, 可观测性容量, backpressure(背压)策略, dynamic supervisor(动态监督器)策略, restart budget(重启预算), failure window(失败窗口), meltdown fuse(故障熔断), supervision pipeline(监督流水线)容量, group(分组)策略和 child(子任务)策略覆盖.
 
-## 模板边界
+## 模板与拆分配置
 
-官方 template(模板) 是 `examples/config/supervisor.template.yaml`. 它覆盖 `supervisor`, `policy`, `shutdown`, `observability`, `audit`, `backpressure`, `groups`, `group_strategies`, `group_dependencies`, `child_strategy_overrides`, `severity_defaults`, `dashboard` 和 `children`.
+官方单文件 template(模板) 是 `examples/config/supervisor.template.yaml`.
 
-本 crate(包) 不会在公开配置结构体, 官方 schema(结构模式) 或官方 template(模板) 中添加 `x-tree-split`(树形拆分扩展). 如果使用者项目需要拆分配置文件, 可以在自己的项目中包装或复用 `SupervisorConfig`(监督器配置), 并自行决定 tree split layout(树形拆分布局).
+`groups` 和 `children` 使用透明数组 Section(配置段). 它们可以写在根文件里, 也可以通过 `include` 拆到 `groups.yaml` 和 `children.yaml`. split 文件只写数组体, 不写 `items:`.
+
+- 详细说明: [拆分配置与透明数组 Section](split-config.md)
+- 生成模板目录: `config/supervisor_config/`
+- 可运行 split 示例: `cargo run --example split_config_supervisor`
+
+生成模板与 schema(结构定义). CLI(命令行) 子命令在顶层, 没有 `config` 前缀. `--config` 是 `run` 与 `validate-config` 子命令的参数; `generate-template` 与 `generate-schema` 以默认路径 `examples/config/supervisor.yaml` 作为模板来源:
+
+```bash
+cargo run -- run --config examples/config/supervisor.yaml
+
+cargo run -- validate-config --config examples/config/split/supervisor.yaml
+
+cargo run -- generate-template \
+  --output config/supervisor_config/supervisor_config.example.yaml
+
+cargo run -- generate-schema \
+  --output config/supervisor_config/supervisor.schema.json
+```
 
 ## 错误边界
 
