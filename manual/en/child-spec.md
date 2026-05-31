@@ -91,6 +91,9 @@ Entry methods:
 | Method                              | Purpose                                                                 |
 | ----------------------------------- | ----------------------------------------------------------------------- |
 | `ChildSpecBuilder::worker(...)`     | Async or blocking worker; defaults match `ChildSpec::worker`            |
+| `ChildSpecBuilder::service(...)`    | Long-running service; sets `TaskRole::Service`                          |
+| `ChildSpecBuilder::job(...)`        | Finite job; sets `TaskRole::Job`                                         |
+| `ChildSpecBuilder::sidecar(...)`    | Sidecar; sets sidecar binding and the primary child dependency           |
 | `ChildSpecBuilder::supervisor(...)` | Nested supervisor; no factory                                           |
 | `ChildSpecBuilder::new(...)`        | Minimal skeleton; caller must set `kind` and, for workers, `factory`    |
 

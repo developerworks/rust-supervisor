@@ -31,6 +31,9 @@ use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 | 方法 | 用途 | 默认值要点 |
 |---|---|---|
 | `worker(id, name, kind, factory)` | 异步或阻塞 worker | 与 `ChildSpec::worker` 一致: `Transient` 重启, `Critical` 关键性, `TaskRole::Worker` 等 |
+| `service(id, name, kind, factory)` | 常驻 service(服务) | 基于 worker 默认值: `TaskRole::Service`, `Critical` 关键性 |
+| `job(id, name, kind, factory)` | 有限生命周期 job(一次性任务) | 基于 worker 默认值: `TaskRole::Job`, `Optional` 关键性 |
+| `sidecar(id, name, kind, factory, sidecar_config)` | 跟随 primary child(主子任务) 的 sidecar(边车) | 基于 worker 默认值: `TaskRole::Sidecar`, 写入 `sidecar_config`, 并自动加入 primary child 依赖 |
 | `supervisor(id, name)` | 嵌套 supervisor(监督器) | `kind = Supervisor`, `factory = None`, `task_role = Supervisor`, `criticality = Critical` |
 | `new(id, name)` | 最小骨架 | 仅填 `id` / `name` 与 baseline(基线) 策略; 调用方需自行补 `kind`, 以及 worker 所需的 `factory` |
 
@@ -39,6 +42,8 @@ use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 | 方法 | 行为 |
 |---|---|
 | `build()` | 取出内部 `ChildSpec`, 调用 `validate()`, 成功返回 `Ok(spec)`, 失败返回 `SupervisorError` |
+
+所有入口方法和 setter(设置器) 都返回 `ChildSpecBuilder`, 只表示"还在构造中". 只有 `build()` 会消费 builder(构建器), 并返回最终 `ChildSpec`.
 
 **没有** `build_validated()`. 校验统一在 `build()` 内完成.
 
@@ -87,30 +92,44 @@ fn build_worker() -> Result<ChildSpec, SupervisorError> {
 
 ## 常见组合示例
 
-### Job (一次性任务) 覆盖
+### Service (服务)
 
-在 worker 基座上改 `task_role` 与 `restart_policy`:
+常驻服务优先使用 `service(...)`, 不需要手动设置 `TaskRole::Service`:
 
 ```rust
-ChildSpecBuilder::worker(id, "Nightly Export", TaskKind::AsyncWorker, factory)
-    .task_role(TaskRole::Job)
+ChildSpecBuilder::service(id, "API Service", TaskKind::AsyncWorker, factory)
+    .tag("service")
+    .build()?;
+```
+
+### Job (一次性任务)
+
+有限生命周期任务优先使用 `job(...)`. 如果需要一次运行后停止, 可以继续覆盖 `restart_policy`:
+
+```rust
+ChildSpecBuilder::job(id, "Nightly Export", TaskKind::AsyncWorker, factory)
     .restart_policy(RestartPolicy::Temporary)
     .build()?;
 ```
 
 ### Sidecar (边车)
 
-`task_role = Sidecar` 时必须同时设置 `sidecar_config`, 否则 `build()` 校验失败:
+跟随主任务的边车优先使用 `sidecar(...)`. 这个入口会写入 `sidecar_config`, 并把 primary child 自动加入依赖:
 
 ```rust
-use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
+use rust_supervisor::policy::task_role_defaults::SidecarConfig;
 
-ChildSpecBuilder::worker(id, "Metrics Sidecar", TaskKind::AsyncWorker, factory)
-    .task_role(TaskRole::Sidecar)
-    .sidecar_config(SidecarConfig::new(primary_id.clone(), false))
-    .dependency(primary_id)
-    .build()?;
+ChildSpecBuilder::sidecar(
+    id,
+    "Metrics Sidecar",
+    TaskKind::AsyncWorker,
+    factory,
+    SidecarConfig::new(primary_id.clone(), false),
+)
+.build()?;
 ```
+
+如果仍然用 setter(设置器) 手动设置 `task_role = Sidecar`, 就必须同时设置 `sidecar_config`, 否则 `build()` 校验失败.
 
 ### 从 `new()` 拼出 worker
 
@@ -124,7 +143,7 @@ ChildSpecBuilder::new(ChildId::new("custom"), "custom")
 ## 数据流 (简图)
 
 ```text
-ChildSpecBuilder::worker / supervisor / new
+ChildSpecBuilder::worker / service / job / sidecar / supervisor / new
         |
         v
    链式 setter (policy, role, deps, env, ...)
@@ -144,7 +163,7 @@ ChildSpecBuilder::worker / supervisor / new
 cargo run --example child_spec_builder
 ```
 
-源码: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). 覆盖 worker, job 覆盖, supervisor, `new()` + sidecar, 以及故意失败的 sidecar 组合.
+源码: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). 覆盖 worker, service, job, sidecar, supervisor, `new()` 路径, 以及故意失败的 sidecar 组合.
 
 ## 测试与回归
 
@@ -154,6 +173,9 @@ cargo run --example child_spec_builder
 |---|---|
 | `worker_builder_matches_child_spec_worker_defaults` | Builder 与 `ChildSpec::worker` 字段一致 |
 | `supervisor_builder_produces_valid_supervisor_child` | supervisor 入口无 factory 且可校验 |
+| `service_builder_sets_service_role` | service 入口设置 `TaskRole::Service` 与 `Critical` 关键性 |
+| `job_builder_sets_job_role_and_optional_criticality` | job 入口设置 `TaskRole::Job` 与 `Optional` 关键性 |
+| `sidecar_builder_sets_sidecar_role_binding_and_dependency` | sidecar 入口设置绑定并自动加入 primary child 依赖 |
 | `builder_setters_apply_expected_fields` | sidecar, dependency, tag 等 setter |
 | `build_rejects_invalid_sidecar_combination` | 缺 `sidecar_config` 时 `build()` 失败 |
 | `new_builder_can_build_valid_worker_with_factory` | `new()` 路径补全后可构建 |

@@ -21,11 +21,15 @@ fn main() -> Result<(), SupervisorError> {
 
     // Build and print a worker child with fluent setters.
     demo_worker_builder()?;
-    // Build and print a one-shot job override on a worker base.
+    // Build and print a service child with service role defaults.
+    demo_service_builder()?;
+    // Build and print a job child with job role defaults.
     demo_job_builder()?;
     // Build and print a nested supervisor child.
     demo_supervisor_builder()?;
-    // Build and print a sidecar from the minimal `new` entry point.
+    // Build and print a sidecar child with sidecar role defaults.
+    demo_sidecar_builder()?;
+    // Build and print a worker from the minimal `new` entry point.
     demo_minimal_new_builder()?;
     // Show that `build` rejects invalid sidecar combinations.
     demo_build_failure()?;
@@ -61,25 +65,47 @@ fn demo_worker_builder() -> Result<(), SupervisorError> {
     Ok(())
 }
 
-/// Builds a one-shot job child by overriding role and restart policy on a worker base.
+/// Builds a service child with the `service` entry point.
+fn demo_service_builder() -> Result<(), SupervisorError> {
+    // Create a no-op async worker factory.
+    let factory = Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded }));
+
+    // Build a service child with service role defaults.
+    let spec = ChildSpecBuilder::service(
+        ChildId::new("api-service"),
+        "API Service",
+        TaskKind::AsyncWorker,
+        factory,
+    )
+    .tag("service")
+    .group("api")
+    .build()?;
+
+    // Print the service summary.
+    println!("--- service entry ---");
+    print_spec_summary(&spec);
+    println!();
+    Ok(())
+}
+
+/// Builds a one-shot job child with the `job` entry point.
 fn demo_job_builder() -> Result<(), SupervisorError> {
     // Create a no-op async worker factory.
     let factory = Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded }));
 
-    // Build a job child by overriding role and restart policy on a worker base.
-    let spec = ChildSpecBuilder::worker(
+    // Build a job child with job role defaults and a temporary restart policy.
+    let spec = ChildSpecBuilder::job(
         ChildId::new("nightly-export"),
         "Nightly Export",
         TaskKind::AsyncWorker,
         factory,
     )
-    .task_role(TaskRole::Job)
     .restart_policy(RestartPolicy::Temporary)
     .tag("job")
     .build()?;
 
     // Print the job summary.
-    println!("--- job override on worker base ---");
+    println!("--- job entry ---");
     print_spec_summary(&spec);
     println!();
     Ok(())
@@ -99,27 +125,47 @@ fn demo_supervisor_builder() -> Result<(), SupervisorError> {
     Ok(())
 }
 
-/// Builds a sidecar from the minimal `new` entry point plus required fields.
-fn demo_minimal_new_builder() -> Result<(), SupervisorError> {
+/// Builds a sidecar child with the `sidecar` entry point.
+fn demo_sidecar_builder() -> Result<(), SupervisorError> {
     // Identify the primary child that the sidecar follows.
     let primary_id = ChildId::new("api");
     // Create a no-op async worker factory.
     let factory = Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded }));
 
-    // Build a sidecar from the minimal `new` entry point plus required fields.
-    let spec = ChildSpecBuilder::new(ChildId::new("metrics-sidecar"), "Metrics Sidecar")
-        .kind(TaskKind::AsyncWorker)
-        .factory(factory)
-        .task_role(TaskRole::Sidecar)
-        .sidecar_config(SidecarConfig::new(primary_id.clone(), false))
-        .dependency(primary_id)
-        .tag("sidecar")
-        .build()?;
+    // Build a sidecar whose primary child is also added as a dependency.
+    let spec = ChildSpecBuilder::sidecar(
+        ChildId::new("metrics-sidecar"),
+        "Metrics Sidecar",
+        TaskKind::AsyncWorker,
+        factory,
+        SidecarConfig::new(primary_id, false),
+    )
+    .tag("sidecar")
+    .build()?;
 
     // Print the sidecar summary including dependency ids.
-    println!("--- new entry + setters ---");
+    println!("--- sidecar entry ---");
     print_spec_summary(&spec);
     println!("  dependencies      = {:?}", spec.dependencies);
+    println!();
+    Ok(())
+}
+
+/// Builds a worker from the minimal `new` entry point plus required fields.
+fn demo_minimal_new_builder() -> Result<(), SupervisorError> {
+    // Create a no-op async worker factory.
+    let factory = Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded }));
+
+    // Build a worker from the minimal `new` entry point plus required fields.
+    let spec = ChildSpecBuilder::new(ChildId::new("custom-worker"), "Custom Worker")
+        .kind(TaskKind::AsyncWorker)
+        .factory(factory)
+        .tag("custom")
+        .build()?;
+
+    // Print the custom worker summary.
+    println!("--- new entry + setters ---");
+    print_spec_summary(&spec);
     println!();
     Ok(())
 }

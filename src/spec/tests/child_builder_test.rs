@@ -6,10 +6,11 @@ use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
 use rust_supervisor::readiness::signal::ReadinessPolicy;
-use rust_supervisor::spec::child::{ChildSpec, Criticality, RestartPolicy, TaskKind};
+use rust_supervisor::spec::child::{ChildSpec, Criticality, Isolation, RestartPolicy, TaskKind};
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Returns a no-op worker factory for builder tests.
 fn test_factory() -> Arc<dyn rust_supervisor::task::factory::TaskFactory> {
@@ -62,6 +63,36 @@ fn worker_builder_matches_child_spec_worker_defaults() -> Result<(), SupervisorE
     Ok(())
 }
 
+/// Verifies worker builder preserves role-specific policy defaults.
+#[test]
+fn worker_builder_applies_worker_policy_defaults() -> Result<(), SupervisorError> {
+    let spec = ChildSpecBuilder::worker(
+        ChildId::new("worker"),
+        "worker",
+        TaskKind::AsyncWorker,
+        test_factory(),
+    )
+    .build()?;
+
+    assert_eq!(spec.isolation, Isolation::AsyncWorker);
+    assert_eq!(spec.restart_policy, RestartPolicy::Transient);
+    assert_eq!(
+        spec.shutdown_policy.graceful_timeout,
+        Duration::from_secs(5)
+    );
+    assert_eq!(spec.shutdown_policy.abort_wait, Duration::from_secs(1));
+    assert_eq!(
+        spec.health_policy.heartbeat_interval,
+        Duration::from_secs(1)
+    );
+    assert_eq!(spec.health_policy.stale_after, Duration::from_secs(3));
+    assert_eq!(spec.readiness_policy, ReadinessPolicy::Immediate);
+    assert_eq!(spec.backoff_policy.initial_delay, Duration::from_millis(10));
+    assert_eq!(spec.backoff_policy.max_delay, Duration::from_secs(1));
+    assert_eq!(spec.backoff_policy.jitter_ratio, 0.0);
+    Ok(())
+}
+
 /// Verifies supervisor builder produces a valid nested supervisor child.
 #[test]
 fn supervisor_builder_produces_valid_supervisor_child() -> Result<(), SupervisorError> {
@@ -71,6 +102,90 @@ fn supervisor_builder_produces_valid_supervisor_child() -> Result<(), Supervisor
     assert!(spec.factory.is_none());
     assert_eq!(spec.task_role, Some(TaskRole::Supervisor));
     assert_eq!(spec.criticality, Criticality::Critical);
+    assert!(spec.validate().is_ok());
+    Ok(())
+}
+
+/// Verifies supervisor builder preserves baseline policy defaults.
+#[test]
+fn supervisor_builder_applies_baseline_policy_defaults() -> Result<(), SupervisorError> {
+    let spec = ChildSpecBuilder::supervisor(ChildId::new("nested"), "Nested Supervisor").build()?;
+
+    assert_eq!(spec.isolation, Isolation::AsyncWorker);
+    assert_eq!(spec.restart_policy, RestartPolicy::Permanent);
+    assert_eq!(
+        spec.shutdown_policy.graceful_timeout,
+        Duration::from_secs(5)
+    );
+    assert_eq!(spec.shutdown_policy.abort_wait, Duration::from_secs(1));
+    assert_eq!(
+        spec.health_policy.heartbeat_interval,
+        Duration::from_secs(10)
+    );
+    assert_eq!(spec.health_policy.stale_after, Duration::from_secs(5));
+    assert_eq!(spec.readiness_policy, ReadinessPolicy::Immediate);
+    assert_eq!(spec.backoff_policy.initial_delay, Duration::from_millis(10));
+    assert_eq!(spec.backoff_policy.max_delay, Duration::from_secs(1));
+    assert_eq!(spec.backoff_policy.jitter_ratio, 0.0);
+    Ok(())
+}
+
+/// Verifies service builder applies service role defaults.
+#[test]
+fn service_builder_sets_service_role() -> Result<(), SupervisorError> {
+    let spec = ChildSpecBuilder::service(
+        ChildId::new("api-service"),
+        "API Service",
+        TaskKind::AsyncWorker,
+        test_factory(),
+    )
+    .build()?;
+
+    assert_eq!(spec.kind, TaskKind::AsyncWorker);
+    assert_eq!(spec.task_role, Some(TaskRole::Service));
+    assert_eq!(spec.criticality, Criticality::Critical);
+    assert!(spec.sidecar_config.is_none());
+    assert!(spec.validate().is_ok());
+    Ok(())
+}
+
+/// Verifies job builder applies job role defaults.
+#[test]
+fn job_builder_sets_job_role_and_optional_criticality() -> Result<(), SupervisorError> {
+    let spec = ChildSpecBuilder::job(
+        ChildId::new("daily-report"),
+        "Daily Report",
+        TaskKind::AsyncWorker,
+        test_factory(),
+    )
+    .build()?;
+
+    assert_eq!(spec.kind, TaskKind::AsyncWorker);
+    assert_eq!(spec.task_role, Some(TaskRole::Job));
+    assert_eq!(spec.criticality, Criticality::Optional);
+    assert!(spec.sidecar_config.is_none());
+    assert!(spec.validate().is_ok());
+    Ok(())
+}
+
+/// Verifies sidecar builder applies sidecar binding and dependency.
+#[test]
+fn sidecar_builder_sets_sidecar_role_binding_and_dependency() -> Result<(), SupervisorError> {
+    let primary_id = ChildId::new("api-service");
+    let spec = ChildSpecBuilder::sidecar(
+        ChildId::new("metrics-sidecar"),
+        "Metrics Sidecar",
+        TaskKind::AsyncWorker,
+        test_factory(),
+        SidecarConfig::new(primary_id.clone(), true),
+    )
+    .build()?;
+
+    assert_eq!(spec.kind, TaskKind::AsyncWorker);
+    assert_eq!(spec.task_role, Some(TaskRole::Sidecar));
+    assert_eq!(spec.dependencies, vec![primary_id]);
+    assert_eq!(spec.criticality, Criticality::Critical);
+    assert!(spec.sidecar_config.is_some());
     assert!(spec.validate().is_ok());
     Ok(())
 }

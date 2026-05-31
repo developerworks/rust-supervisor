@@ -17,23 +17,23 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Default policy values shared by worker child construction.
-struct WorkerPolicyDefaults {
-    /// Restart policy for worker children.
+/// Default policy values shared by child construction.
+struct PolicyDefaults {
+    /// Restart policy for child construction.
     restart_policy: RestartPolicy,
-    /// Shutdown policy for worker children.
+    /// Shutdown policy for child construction.
     shutdown_policy: ShutdownPolicy,
-    /// Health policy for worker children.
+    /// Health policy for child construction.
     health_policy: HealthPolicy,
-    /// Readiness policy for worker children.
+    /// Readiness policy for child construction.
     readiness_policy: ReadinessPolicy,
-    /// Backoff policy for worker children.
+    /// Backoff policy for child construction.
     backoff_policy: BackoffPolicy,
 }
 
 /// Returns the default policy bundle used by [`ChildSpecBuilder::worker`].
-fn worker_policy_defaults() -> WorkerPolicyDefaults {
-    WorkerPolicyDefaults {
+fn worker_policy_defaults() -> PolicyDefaults {
+    PolicyDefaults {
         restart_policy: RestartPolicy::Transient,
         shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(1), Duration::from_secs(3)),
@@ -43,8 +43,8 @@ fn worker_policy_defaults() -> WorkerPolicyDefaults {
 }
 
 /// Returns baseline policy values for minimal or supervisor child construction.
-fn baseline_policy_defaults() -> WorkerPolicyDefaults {
-    WorkerPolicyDefaults {
+fn baseline_policy_defaults() -> PolicyDefaults {
+    PolicyDefaults {
         restart_policy: RestartPolicy::Permanent,
         shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(10), Duration::from_secs(5)),
@@ -54,7 +54,7 @@ fn baseline_policy_defaults() -> WorkerPolicyDefaults {
 }
 
 /// Applies a policy bundle to a child specification.
-fn apply_policy_defaults(spec: &mut ChildSpec, defaults: WorkerPolicyDefaults) {
+fn apply_policy_defaults(spec: &mut ChildSpec, defaults: PolicyDefaults) {
     spec.restart_policy = defaults.restart_policy;
     spec.shutdown_policy = defaults.shutdown_policy;
     spec.health_policy = defaults.health_policy;
@@ -63,6 +63,10 @@ fn apply_policy_defaults(spec: &mut ChildSpec, defaults: WorkerPolicyDefaults) {
 }
 
 /// Builder for [`ChildSpec`](crate::spec::child::ChildSpec).
+///
+/// Public constructors and setters keep returning [`ChildSpecBuilder`] for
+/// chaining. Call [`build`](ChildSpecBuilder::build) to consume the builder,
+/// validate local invariants, and receive the final [`ChildSpec`].
 #[derive(Debug, Clone)]
 pub struct ChildSpecBuilder {
     /// Child specification under construction.
@@ -82,7 +86,7 @@ impl ChildSpecBuilder {
     /// Returns a builder with baseline policy defaults. Callers must set `kind`
     /// and, for worker children, `factory` before validation.
     pub fn new(id: ChildId, name: impl Into<String>) -> Self {
-        let mut spec = ChildSpec {
+        let spec = ChildSpec {
             id,
             name: name.into(),
             kind: TaskKind::default(),
@@ -111,8 +115,7 @@ impl ChildSpecBuilder {
             secrets: Vec::new(),
             cleanup_paths: Vec::new(),
         };
-        apply_policy_defaults(&mut spec, baseline_policy_defaults());
-        Self { spec }
+        Self { spec }.with_policy_defaults(baseline_policy_defaults())
     }
 
     /// Creates a worker child specification builder.
@@ -159,33 +162,166 @@ impl ChildSpecBuilder {
         kind: TaskKind,
         factory: Arc<dyn TaskFactory>,
     ) -> Self {
-        let defaults = worker_policy_defaults();
-        let spec = ChildSpec {
-            id,
-            name: name.into(),
-            kind,
-            isolation: Isolation::AsyncWorker,
-            factory: Some(factory),
-            factory_key: None,
-            restart_policy: defaults.restart_policy,
-            shutdown_policy: defaults.shutdown_policy,
-            health_policy: defaults.health_policy,
-            readiness_policy: defaults.readiness_policy,
-            backoff_policy: defaults.backoff_policy,
-            dependencies: Vec::new(),
-            tags: Vec::new(),
-            criticality: Criticality::Critical,
-            task_role: Some(TaskRole::Worker),
-            sidecar_config: None,
-            severity: None,
-            group: None,
-            health_check: None,
-            command_permissions: CommandPermissions::default(),
-            environment: Vec::new(),
-            secrets: Vec::new(),
-            cleanup_paths: Vec::new(),
-        };
-        Self { spec }
+        Self::new(id, name)
+            .kind(kind)
+            .isolation(Isolation::AsyncWorker)
+            .factory(factory)
+            .criticality(Criticality::Critical)
+            .task_role(TaskRole::Worker)
+            .with_policy_defaults(worker_policy_defaults())
+    }
+
+    /// Creates a service role child specification builder.
+    ///
+    /// # Arguments
+    ///
+    /// - `id`: Stable child identifier.
+    /// - `name`: Human-readable child name.
+    /// - `kind`: Worker task kind used to run the service body.
+    /// - `factory`: Task factory used to build each child attempt.
+    ///
+    /// # Returns
+    ///
+    /// Returns a builder with worker execution defaults and service role
+    /// classification.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_supervisor::id::types::ChildId;
+    /// use rust_supervisor::policy::task_role_defaults::TaskRole;
+    /// use rust_supervisor::spec::child::TaskKind;
+    /// use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+    /// use rust_supervisor::task::factory::{TaskResult, service_fn};
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    /// let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
+    /// let spec = ChildSpecBuilder::service(
+    ///     ChildId::new("api-service"),
+    ///     "API Service",
+    ///     TaskKind::AsyncWorker,
+    ///     Arc::new(factory),
+    /// )
+    /// .build()?;
+    /// assert_eq!(spec.task_role, Some(TaskRole::Service));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn service(
+        id: ChildId,
+        name: impl Into<String>,
+        kind: TaskKind,
+        factory: Arc<dyn TaskFactory>,
+    ) -> Self {
+        Self::worker(id, name, kind, factory)
+            .task_role(TaskRole::Service)
+            .criticality(Criticality::Critical)
+    }
+
+    /// Creates a job role child specification builder.
+    ///
+    /// # Arguments
+    ///
+    /// - `id`: Stable child identifier.
+    /// - `name`: Human-readable child name.
+    /// - `kind`: Worker task kind used to run the job body.
+    /// - `factory`: Task factory used to build each child attempt.
+    ///
+    /// # Returns
+    ///
+    /// Returns a builder with worker execution defaults, job role
+    /// classification, and optional criticality.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_supervisor::id::types::ChildId;
+    /// use rust_supervisor::policy::task_role_defaults::TaskRole;
+    /// use rust_supervisor::spec::child::{Criticality, TaskKind};
+    /// use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+    /// use rust_supervisor::task::factory::{TaskResult, service_fn};
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    /// let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
+    /// let spec = ChildSpecBuilder::job(
+    ///     ChildId::new("daily-report"),
+    ///     "Daily Report",
+    ///     TaskKind::AsyncWorker,
+    ///     Arc::new(factory),
+    /// )
+    /// .build()?;
+    /// assert_eq!(spec.task_role, Some(TaskRole::Job));
+    /// assert_eq!(spec.criticality, Criticality::Optional);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn job(
+        id: ChildId,
+        name: impl Into<String>,
+        kind: TaskKind,
+        factory: Arc<dyn TaskFactory>,
+    ) -> Self {
+        Self::worker(id, name, kind, factory)
+            .task_role(TaskRole::Job)
+            .criticality(Criticality::Optional)
+    }
+
+    /// Creates a sidecar role child specification builder.
+    ///
+    /// # Arguments
+    ///
+    /// - `id`: Stable child identifier.
+    /// - `name`: Human-readable child name.
+    /// - `kind`: Worker task kind used to run the sidecar body.
+    /// - `factory`: Task factory used to build each child attempt.
+    /// - `sidecar_config`: Binding that points at the primary child.
+    ///
+    /// # Returns
+    ///
+    /// Returns a builder with worker execution defaults, sidecar role
+    /// classification, sidecar binding, and a primary child dependency.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_supervisor::id::types::ChildId;
+    /// use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
+    /// use rust_supervisor::spec::child::TaskKind;
+    /// use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+    /// use rust_supervisor::task::factory::{TaskResult, service_fn};
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    /// let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
+    /// let primary = ChildId::new("api-service");
+    /// let spec = ChildSpecBuilder::sidecar(
+    ///     ChildId::new("metrics-sidecar"),
+    ///     "Metrics Sidecar",
+    ///     TaskKind::AsyncWorker,
+    ///     Arc::new(factory),
+    ///     SidecarConfig::new(primary.clone(), true),
+    /// )
+    /// .build()?;
+    /// assert_eq!(spec.task_role, Some(TaskRole::Sidecar));
+    /// assert_eq!(spec.dependencies, vec![primary]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn sidecar(
+        id: ChildId,
+        name: impl Into<String>,
+        kind: TaskKind,
+        factory: Arc<dyn TaskFactory>,
+        sidecar_config: SidecarConfig,
+    ) -> Self {
+        let primary_child_id = sidecar_config.primary_child_id.clone();
+        Self::worker(id, name, kind, factory)
+            .task_role(TaskRole::Sidecar)
+            .sidecar_config(sidecar_config)
+            .dependency(primary_child_id)
+            .criticality(Criticality::Critical)
     }
 
     /// Creates a nested supervisor child specification builder.
@@ -199,33 +335,25 @@ impl ChildSpecBuilder {
     ///
     /// Returns a builder with supervisor kind, no factory, and critical role.
     pub fn supervisor(id: ChildId, name: impl Into<String>) -> Self {
-        let defaults = baseline_policy_defaults();
-        let spec = ChildSpec {
-            id,
-            name: name.into(),
-            kind: TaskKind::Supervisor,
-            isolation: Isolation::default(),
-            factory: None,
-            factory_key: None,
-            restart_policy: defaults.restart_policy,
-            shutdown_policy: defaults.shutdown_policy,
-            health_policy: defaults.health_policy,
-            readiness_policy: defaults.readiness_policy,
-            backoff_policy: defaults.backoff_policy,
-            dependencies: Vec::new(),
-            tags: Vec::new(),
-            criticality: Criticality::Critical,
-            task_role: Some(TaskRole::Supervisor),
-            sidecar_config: None,
-            severity: None,
-            group: None,
-            health_check: None,
-            command_permissions: CommandPermissions::default(),
-            environment: Vec::new(),
-            secrets: Vec::new(),
-            cleanup_paths: Vec::new(),
-        };
-        Self { spec }
+        Self::new(id, name)
+            .kind(TaskKind::Supervisor)
+            .without_factory()
+            .criticality(Criticality::Critical)
+            .task_role(TaskRole::Supervisor)
+    }
+
+    /// Applies policy defaults to the inner child specification.
+    ///
+    /// # Arguments
+    ///
+    /// - `defaults`: Policy defaults applied to this builder.
+    ///
+    /// # Returns
+    ///
+    /// Returns the builder for chaining.
+    fn with_policy_defaults(mut self, defaults: PolicyDefaults) -> Self {
+        apply_policy_defaults(&mut self.spec, defaults);
+        self
     }
 
     /// Sets the child task kind.
@@ -678,6 +806,10 @@ impl ChildSpecBuilder {
 
     /// Builds and validates the child specification.
     ///
+    /// Public constructors and setters return [`ChildSpecBuilder`]. This method
+    /// is the public exit that consumes the builder and returns the final
+    /// [`ChildSpec`].
+    ///
     /// # Arguments
     ///
     /// This function has no arguments.
@@ -689,6 +821,38 @@ impl ChildSpecBuilder {
     /// # Errors
     ///
     /// Returns [`SupervisorError`] when validation fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rust_supervisor::id::types::ChildId;
+    /// use rust_supervisor::spec::child::TaskKind;
+    /// use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+    /// use rust_supervisor::task::factory::{TaskResult, service_fn};
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+    /// let factory = service_fn(|_ctx| async { TaskResult::Succeeded });
+    /// let spec = ChildSpecBuilder::worker(
+    ///     ChildId::new("worker"),
+    ///     "worker",
+    ///     TaskKind::AsyncWorker,
+    ///     Arc::new(factory),
+    /// )
+    /// .build()?;
+    /// assert_eq!(spec.name, "worker");
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// ```compile_fail
+    /// use rust_supervisor::id::types::ChildId;
+    /// use rust_supervisor::spec::child::ChildSpec;
+    /// use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+    ///
+    /// let builder = ChildSpecBuilder::new(ChildId::new("worker"), "worker");
+    /// let _spec: ChildSpec = builder;
+    /// ```
     pub fn build(self) -> Result<ChildSpec, SupervisorError> {
         let spec = self.spec;
         spec.validate()?;

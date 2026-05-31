@@ -89,6 +89,9 @@ let spec = ChildSpecBuilder::worker(
 | 方法                                | 用途                                                 |
 | ----------------------------------- | ---------------------------------------------------- |
 | `ChildSpecBuilder::worker(...)`     | 异步或阻塞 worker, 默认值与 `ChildSpec::worker` 一致 |
+| `ChildSpecBuilder::service(...)`    | 常驻 service(服务), 自动设置 `TaskRole::Service`     |
+| `ChildSpecBuilder::job(...)`        | 有限生命周期 job(一次性任务), 自动设置 `TaskRole::Job` |
+| `ChildSpecBuilder::sidecar(...)`    | sidecar(边车), 自动设置绑定和主子任务依赖            |
 | `ChildSpecBuilder::supervisor(...)` | 嵌套 supervisor, 无 factory                          |
 | `ChildSpecBuilder::new(...)`        | 最小骨架, 需自行补 `kind` 和 `factory`               |
 

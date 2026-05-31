@@ -31,6 +31,9 @@ Legacy code may still mutate fields after construction. New code should prefer t
 | Method | Purpose | Default highlights |
 | --- | --- | --- |
 | `worker(id, name, kind, factory)` | Async or blocking worker | Matches `ChildSpec::worker`: `Transient` restart, `Critical` criticality, `TaskRole::Worker`, and so on |
+| `service(id, name, kind, factory)` | Long-running service | Based on worker defaults: `TaskRole::Service`, `Critical` criticality |
+| `job(id, name, kind, factory)` | Finite job | Based on worker defaults: `TaskRole::Job`, `Optional` criticality |
+| `sidecar(id, name, kind, factory, sidecar_config)` | Sidecar attached to a primary child | Based on worker defaults: `TaskRole::Sidecar`, writes `sidecar_config`, and automatically adds the primary child dependency |
 | `supervisor(id, name)` | Nested supervisor | `kind = Supervisor`, `factory = None`, `task_role = Supervisor`, `criticality = Critical` |
 | `new(id, name)` | Minimal skeleton | Sets only `id` / `name` plus baseline policies; caller must add `kind` and, for workers, `factory` |
 
@@ -39,6 +42,8 @@ Legacy code may still mutate fields after construction. New code should prefer t
 | Method | Behavior |
 | --- | --- |
 | `build()` | Takes the inner `ChildSpec`, calls `validate()`, returns `Ok(spec)` or `SupervisorError` |
+
+All entry methods and setters return `ChildSpecBuilder`, which means construction is still in progress. Only `build()` consumes the builder and returns the final `ChildSpec`.
 
 There is **no** `build_validated()`. Validation is always performed inside `build()`.
 
@@ -87,30 +92,44 @@ Naming convention: plural fields use `dependencies(...)`, `tags(...)`; singular 
 
 ## Common combinations
 
-### Job override
+### Service
 
-Override `task_role` and `restart_policy` on a worker base:
+Long-running services should prefer `service(...)`; callers do not need to set `TaskRole::Service` by hand:
 
 ```rust
-ChildSpecBuilder::worker(id, "Nightly Export", TaskKind::AsyncWorker, factory)
-    .task_role(TaskRole::Job)
+ChildSpecBuilder::service(id, "API Service", TaskKind::AsyncWorker, factory)
+    .tag("service")
+    .build()?;
+```
+
+### Job
+
+Finite work should prefer `job(...)`. You can still override `restart_policy` for one-shot behavior:
+
+```rust
+ChildSpecBuilder::job(id, "Nightly Export", TaskKind::AsyncWorker, factory)
     .restart_policy(RestartPolicy::Temporary)
     .build()?;
 ```
 
 ### Sidecar
 
-When `task_role = Sidecar`, you must also set `sidecar_config`, or `build()` validation fails:
+Sidecars attached to a primary child should prefer `sidecar(...)`. This entry writes `sidecar_config` and automatically adds the primary child dependency:
 
 ```rust
-use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
+use rust_supervisor::policy::task_role_defaults::SidecarConfig;
 
-ChildSpecBuilder::worker(id, "Metrics Sidecar", TaskKind::AsyncWorker, factory)
-    .task_role(TaskRole::Sidecar)
-    .sidecar_config(SidecarConfig::new(primary_id.clone(), false))
-    .dependency(primary_id)
-    .build()?;
+ChildSpecBuilder::sidecar(
+    id,
+    "Metrics Sidecar",
+    TaskKind::AsyncWorker,
+    factory,
+    SidecarConfig::new(primary_id.clone(), false),
+)
+.build()?;
 ```
+
+If you still configure `task_role = Sidecar` manually with setters, you must also set `sidecar_config`, or `build()` validation fails.
 
 ### Worker from `new()`
 
@@ -124,7 +143,7 @@ ChildSpecBuilder::new(ChildId::new("custom"), "custom")
 ## Data flow (short)
 
 ```text
-ChildSpecBuilder::worker / supervisor / new
+ChildSpecBuilder::worker / service / job / sidecar / supervisor / new
         |
         v
    fluent setters (policy, role, deps, env, ...)
@@ -144,7 +163,7 @@ Runnable demo:
 cargo run --example child_spec_builder
 ```
 
-Source: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). Covers worker, job override, supervisor, `new()` + sidecar, and an intentionally invalid sidecar combination.
+Source: [`examples/child_spec_builder.rs`](../../examples/child_spec_builder.rs). Covers worker, service, job, sidecar, supervisor, the `new()` path, and an intentionally invalid sidecar combination.
 
 ## Tests and regression
 
@@ -154,6 +173,9 @@ External tests: [`src/spec/tests/child_builder_test.rs`](../../src/spec/tests/ch
 | --- | --- |
 | `worker_builder_matches_child_spec_worker_defaults` | Builder output matches `ChildSpec::worker` field-for-field |
 | `supervisor_builder_produces_valid_supervisor_child` | Supervisor entry has no factory and validates |
+| `service_builder_sets_service_role` | Service entry sets `TaskRole::Service` and `Critical` criticality |
+| `job_builder_sets_job_role_and_optional_criticality` | Job entry sets `TaskRole::Job` and `Optional` criticality |
+| `sidecar_builder_sets_sidecar_role_binding_and_dependency` | Sidecar entry sets the binding and automatically adds the primary child dependency |
 | `builder_setters_apply_expected_fields` | Sidecar, dependency, tag, and related setters |
 | `build_rejects_invalid_sidecar_combination` | Missing `sidecar_config` makes `build()` fail |
 | `new_builder_can_build_valid_worker_with_factory` | `new()` path works after required fields are set |
