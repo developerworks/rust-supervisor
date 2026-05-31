@@ -24,6 +24,7 @@ fn assert_worker_fields_match(builder_spec: &ChildSpec, worker_spec: &ChildSpec)
     assert_eq!(builder_spec.isolation, worker_spec.isolation);
     assert!(builder_spec.factory.is_some());
     assert!(worker_spec.factory.is_some());
+    assert_eq!(builder_spec.factory_key, worker_spec.factory_key);
     assert_eq!(builder_spec.restart_policy, worker_spec.restart_policy);
     assert_eq!(builder_spec.shutdown_policy, worker_spec.shutdown_policy);
     assert_eq!(builder_spec.health_policy, worker_spec.health_policy);

@@ -388,6 +388,46 @@ impl ConfigState {
     pub fn to_supervisor_spec(
         &self,
     ) -> Result<crate::spec::supervisor::SupervisorSpec, crate::error::types::SupervisorError> {
+        let spec = self.build_supervisor_spec();
+        spec.validate()?;
+        Ok(spec)
+    }
+
+    /// Converts validated configuration into a supervisor declaration and binds factories.
+    ///
+    /// # Arguments
+    ///
+    /// - `registry`: Task factory registry used to resolve worker `factory_key` values.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`crate::spec::supervisor::SupervisorSpec`] with executable
+    /// task factories assigned to worker children.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::error::types::SupervisorError`] when factory binding or
+    /// supervisor validation fails.
+    pub fn to_supervisor_spec_with_factories(
+        &self,
+        registry: &crate::task::factory_registry::TaskFactoryRegistry,
+    ) -> Result<crate::spec::supervisor::SupervisorSpec, crate::error::types::SupervisorError> {
+        let mut spec = self.build_supervisor_spec();
+        crate::config::factory_binding::bind_task_factories(&mut spec.children, registry)?;
+        spec.validate()?;
+        Ok(spec)
+    }
+
+    /// Builds a supervisor specification before final validation.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns a supervisor specification assembled from validated config state.
+    fn build_supervisor_spec(&self) -> crate::spec::supervisor::SupervisorSpec {
         let mut spec = crate::spec::supervisor::SupervisorSpec::root(self.children.clone());
         spec.strategy = self.supervisor.strategy;
         spec.config_version = self.config_version();
@@ -454,8 +494,7 @@ impl ConfigState {
         ));
         spec.metrics_enabled = self.observability.metrics_enabled;
         spec.audit_enabled = self.observability.audit_enabled;
-        spec.validate()?;
-        Ok(spec)
+        spec
     }
 
     /// Builds a stable configuration version string from configured values.

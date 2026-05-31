@@ -1,7 +1,12 @@
 //! Schema generation tests for public supervisor configuration.
 
 use rust_supervisor::config::configurable::SupervisorConfig;
+use rust_supervisor::config::factory_schema::supervisor_schema_with_factory_registry;
+use rust_supervisor::spec::child::TaskKind;
+use rust_supervisor::task::factory::{TaskResult, service_fn};
+use rust_supervisor::task::factory_registry::{TaskFactoryDescriptor, TaskFactoryRegistry};
 use serde_json::Value;
+use std::sync::Arc;
 
 /// Verifies that the public root configuration struct can generate JSON Schema.
 #[test]
@@ -77,6 +82,7 @@ fn supervisor_config_generates_schema_for_all_public_fields() {
         "secrets",
         "tags",
         "task_role",
+        "factory_key",
         "sidecar_config",
         "severity",
         "group",
@@ -130,6 +136,7 @@ fn child_optional_fields_do_not_emit_null_defaults() {
         .expect("child field schemas");
 
     for field in [
+        "factory_key",
         "sidecar_config",
         "severity",
         "group",
@@ -153,6 +160,48 @@ fn child_optional_fields_do_not_emit_null_defaults() {
         Some(&Value::String("worker".into())),
         "task_role schema should document the worker fallback default"
     );
+}
+
+/// Builds a test task factory registry for schema completion tests.
+fn registry() -> TaskFactoryRegistry {
+    let mut registry = TaskFactoryRegistry::new();
+    registry
+        .register(TaskFactoryDescriptor::new(
+            "api_server",
+            "API Server",
+            "Runs the API service.",
+            [TaskKind::AsyncWorker],
+            Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+        ))
+        .expect("register api factory");
+    registry
+        .register(TaskFactoryDescriptor::new(
+            "report_exporter",
+            "Report Exporter",
+            "Runs blocking export work.",
+            [TaskKind::BlockingWorker],
+            Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+        ))
+        .expect("register exporter factory");
+    registry
+}
+
+/// Verifies that registry-backed schema completion exposes factory keys.
+#[test]
+fn supervisor_schema_with_factory_registry_injects_factory_key_completion() {
+    let schema_value =
+        supervisor_schema_with_factory_registry(&registry()).expect("schema enrichment");
+    let factory_key_schema = schema_value
+        .pointer("/definitions/ChildDeclaration/properties/factory_key")
+        .or_else(|| schema_value.pointer("/$defs/ChildDeclaration/properties/factory_key"))
+        .expect("factory_key schema");
+    let completion_text =
+        serde_json::to_string(factory_key_schema).expect("stringify factory_key schema");
+
+    assert!(completion_text.contains("api_server"));
+    assert!(completion_text.contains("API Server"));
+    assert!(completion_text.contains("report_exporter"));
+    assert!(completion_text.contains("Report Exporter"));
 }
 
 /// Verifies that health check completion stays field-by-field.

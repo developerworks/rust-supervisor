@@ -88,6 +88,7 @@ impl ChildSpecBuilder {
             kind: TaskKind::default(),
             isolation: Isolation::default(),
             factory: None,
+            factory_key: None,
             restart_policy: RestartPolicy::default(),
             shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
             health_policy: HealthPolicy::new(Duration::from_secs(10), Duration::from_secs(5)),
@@ -165,6 +166,7 @@ impl ChildSpecBuilder {
             kind,
             isolation: Isolation::AsyncWorker,
             factory: Some(factory),
+            factory_key: None,
             restart_policy: defaults.restart_policy,
             shutdown_policy: defaults.shutdown_policy,
             health_policy: defaults.health_policy,
@@ -204,6 +206,7 @@ impl ChildSpecBuilder {
             kind: TaskKind::Supervisor,
             isolation: Isolation::default(),
             factory: None,
+            factory_key: None,
             restart_policy: defaults.restart_policy,
             shutdown_policy: defaults.shutdown_policy,
             health_policy: defaults.health_policy,
@@ -264,6 +267,20 @@ impl ChildSpecBuilder {
     /// Returns the builder for chaining.
     pub fn factory(mut self, factory: Arc<dyn TaskFactory>) -> Self {
         self.spec.factory = Some(factory);
+        self
+    }
+
+    /// Sets the task factory registry key for declarative worker children.
+    ///
+    /// # Arguments
+    ///
+    /// - `factory_key`: Registry key used to resolve a task factory before startup.
+    ///
+    /// # Returns
+    ///
+    /// Returns the builder for chaining.
+    pub fn factory_key(mut self, factory_key: impl Into<String>) -> Self {
+        self.spec.factory_key = Some(factory_key.into());
         self
     }
 

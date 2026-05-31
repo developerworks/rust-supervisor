@@ -71,6 +71,10 @@ pub struct ChildDeclaration {
     #[serde(default)]
     #[schemars(default = "default_task_role_for_schema")]
     pub task_role: Option<TaskRole>,
+    /// Optional task factory registry key used for worker children.
+    #[schemars(!default)]
+    #[serde(default)]
+    pub factory_key: Option<String>,
     /// Optional sidecar binding used when the role is `sidecar`.
     #[schemars(!default)]
     #[serde(default)]
@@ -130,22 +134,26 @@ pub struct ChildrenConfigSection {
 }
 
 impl Default for ChildrenConfigSection {
+    /// Returns an empty child declaration section.
     fn default() -> Self {
         Self { items: Vec::new() }
     }
 }
 
 impl JsonSchema for ChildrenConfigSection {
+    /// Returns the schema name used for split child sections.
     fn schema_name() -> Cow<'static, str> {
         Cow::Borrowed("ChildrenConfigSection")
     }
 
+    /// Returns the transparent array schema for child declarations.
     fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         Vec::<ChildDeclaration>::json_schema(generator)
     }
 }
 
 impl Serialize for ChildrenConfigSection {
+    /// Serializes child declarations as a transparent array.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: confique::serde::Serializer,
@@ -155,6 +163,7 @@ impl Serialize for ChildrenConfigSection {
 }
 
 impl<'de> Deserialize<'de> for ChildrenConfigSection {
+    /// Deserializes child declarations from a transparent array.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: confique::serde::Deserializer<'de>,
@@ -183,6 +192,7 @@ impl ChildrenConfigSection {
 }
 
 impl From<ChildrenConfigSection> for Vec<ChildDeclaration> {
+    /// Converts a child section into its transparent declaration vector.
     fn from(section: ChildrenConfigSection) -> Self {
         section.items
     }
@@ -318,6 +328,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             name: decl.name,
             kind,
             factory: None,
+            factory_key: decl.factory_key,
             restart_policy,
             shutdown_policy: ShutdownPolicy::new(
                 std::time::Duration::from_secs(5),
@@ -374,6 +385,17 @@ pub fn validate_child_declaration(
                 declaration.name
             ),
             hint: Some("Names must match ^[a-zA-Z_][a-zA-Z0-9_-]*$".to_string()),
+        });
+    }
+
+    // Rule 1b: factory_key uses the same stable identifier surface as child names.
+    if let Some(factory_key) = declaration.factory_key.as_deref()
+        && !is_valid_identifier(factory_key)
+    {
+        return Err(ValidationError {
+            field_path: "factory_key".to_string(),
+            reason: format!("Factory key '{factory_key}' contains invalid characters"),
+            hint: Some("Factory keys must match ^[a-zA-Z_][a-zA-Z0-9_-]*$".to_string()),
         });
     }
 

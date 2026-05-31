@@ -307,6 +307,9 @@ pub struct ChildSpec {
     #[serde(skip)]
     #[schemars(skip)]
     pub factory: Option<Arc<dyn TaskFactory>>,
+    /// Optional registry key used to resolve the worker factory before startup.
+    #[serde(default)]
+    pub factory_key: Option<String>,
     /// Restart policy for this child.
     pub restart_policy: RestartPolicy,
     /// Shutdown policy for this child.
@@ -364,6 +367,7 @@ impl Debug for ChildSpec {
             .field("name", &self.name)
             .field("kind", &self.kind)
             .field("restart_policy", &self.restart_policy)
+            .field("factory_key", &self.factory_key)
             .field("shutdown_policy", &self.shutdown_policy)
             .field("health_policy", &self.health_policy)
             .field("readiness_policy", &self.readiness_policy)

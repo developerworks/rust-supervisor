@@ -322,22 +322,26 @@ pub struct GroupsConfigSection {
 }
 
 impl Default for GroupsConfigSection {
+    /// Returns an empty group configuration section.
     fn default() -> Self {
         Self { items: Vec::new() }
     }
 }
 
 impl JsonSchema for GroupsConfigSection {
+    /// Returns the schema name used for split group sections.
     fn schema_name() -> Cow<'static, str> {
         Cow::Borrowed("GroupsConfigSection")
     }
 
+    /// Returns the transparent array schema for group declarations.
     fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         Vec::<GroupConfig>::json_schema(generator)
     }
 }
 
 impl Serialize for GroupsConfigSection {
+    /// Serializes group section entries as a transparent array.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: confique::serde::Serializer,
@@ -347,6 +351,7 @@ impl Serialize for GroupsConfigSection {
 }
 
 impl<'de> Deserialize<'de> for GroupsConfigSection {
+    /// Deserializes group section entries from a transparent array.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: confique::serde::Deserializer<'de>,
@@ -375,6 +380,7 @@ impl GroupsConfigSection {
 }
 
 impl From<GroupsConfigSection> for Vec<GroupConfig> {
+    /// Converts a group section into its transparent entry vector.
     fn from(section: GroupsConfigSection) -> Self {
         section.items
     }

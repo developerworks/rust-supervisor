@@ -1,5 +1,7 @@
 pub mod audit;
 pub mod configurable;
+pub mod factory_binding;
+pub mod factory_schema;
 pub mod ipc_security;
 pub mod loader;
 pub mod policy;

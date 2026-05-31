@@ -47,6 +47,7 @@ use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
 use crate::spec::child::{ChildSpec, RestartPolicy as ChildRestartPolicy};
 use crate::spec::child_declaration::{ChildDeclaration, validate_child_declaration};
 use crate::spec::supervisor::{RestartLimit, SupervisorSpec};
+use crate::task::factory_registry::TaskFactoryRegistry;
 use crate::tree::builder::SupervisorTree;
 use crate::tree::order::{restart_execution_plan, shutdown_order, startup_order};
 use std::collections::HashMap;
@@ -98,6 +99,8 @@ pub struct RuntimeControlState {
     fairness_probe: FairnessProbe,
     /// Dynamic child manifests accepted after startup.
     manifests: Vec<String>,
+    /// Registry used to resolve dynamic child task factories.
+    task_factory_registry: TaskFactoryRegistry,
     /// Registry that owns declared child runtime records.
     registry: RegistryStore,
     /// Built supervisor tree used for order and scope planning.
@@ -163,6 +166,35 @@ impl RuntimeControlState {
         command_sender: mpsc::Sender<RuntimeLoopMessage>,
         observability: Arc<Mutex<ObservabilityPipeline>>,
     ) -> Result<Self, SupervisorError> {
+        Self::new_with_factory_registry(
+            spec,
+            shutdown_policy,
+            command_sender,
+            observability,
+            TaskFactoryRegistry::new(),
+        )
+    }
+
+    /// Creates control state with a task factory registry for dynamic children.
+    ///
+    /// # Arguments
+    ///
+    /// - `spec`: Supervisor declaration that owns children and strategy.
+    /// - `shutdown_policy`: Policy used by the shutdown coordinator.
+    /// - `command_sender`: Sender used by child start_counts to report exits.
+    /// - `observability`: Shared observability pipeline.
+    /// - `task_factory_registry`: Registry used by `add_child` declarations.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`RuntimeControlState`] value.
+    pub fn new_with_factory_registry(
+        spec: SupervisorSpec,
+        shutdown_policy: ShutdownPolicy,
+        command_sender: mpsc::Sender<RuntimeLoopMessage>,
+        observability: Arc<Mutex<ObservabilityPipeline>>,
+        task_factory_registry: TaskFactoryRegistry,
+    ) -> Result<Self, SupervisorError> {
         let tree = SupervisorTree::build(&spec)?;
         let mut registry = RegistryStore::new();
         registry.register_tree(&tree)?;
@@ -204,6 +236,7 @@ impl RuntimeControlState {
             concurrent_gate,
             fairness_probe,
             manifests: Vec::new(),
+            task_factory_registry,
             registry,
             tree,
             spec,
@@ -432,6 +465,11 @@ impl RuntimeControlState {
                     crate::spec::child::ChildSpec::try_from(declaration).map_err(|e| {
                         SupervisorError::fatal_config(format!("Child conversion failed: {e:?}"))
                     })?;
+                let mut child_spec = child_spec;
+                crate::config::factory_binding::bind_child_factory(
+                    &mut child_spec,
+                    &self.task_factory_registry,
+                )?;
 
                 let child_id = child_spec.id.clone();
                 let path = crate::id::types::SupervisorPath::root().join(

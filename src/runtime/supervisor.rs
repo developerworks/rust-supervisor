@@ -17,6 +17,7 @@ use crate::runtime::lifecycle::RuntimeControlPlane;
 use crate::runtime::watchdog::RuntimeWatchdog;
 use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
+use crate::task::factory_registry::TaskFactoryRegistry;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{broadcast, mpsc};
@@ -77,6 +78,46 @@ impl Supervisor {
         Ok(handle)
     }
 
+    /// Starts a supervisor runtime from validated configuration and a factory registry.
+    ///
+    /// # Arguments
+    ///
+    /// - `state`: Validated configuration state owned by the caller.
+    /// - `task_factory_registry`: Registry used to bind worker `factory_key` values.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] only after configuration has produced a
+    /// valid supervisor specification with executable worker factories.
+    pub async fn start_from_config_state_with_factories(
+        state: ConfigState,
+        task_factory_registry: TaskFactoryRegistry,
+    ) -> Result<SupervisorHandle, SupervisorError> {
+        #[cfg(unix)]
+        let audit_config = state.audit.clone();
+        #[cfg(unix)]
+        let dashboard_config = state.dashboard.clone();
+        let spec = state.to_supervisor_spec_with_factories(&task_factory_registry)?;
+        #[cfg(unix)]
+        let handle =
+            Self::start_with_factory_registry(spec.clone(), task_factory_registry.clone()).await?;
+        #[cfg(not(unix))]
+        let handle = Self::start_with_factory_registry(spec, task_factory_registry).await?;
+        #[cfg(unix)]
+        let handle = if let Some(dashboard_config) =
+            validate_dashboard_ipc_config(dashboard_config.as_ref())
+                .map_err(dashboard_startup_error)?
+        {
+            let dashboard_runtime =
+                start_dashboard_ipc_runtime(dashboard_config, audit_config, spec, handle.clone())
+                    .map_err(dashboard_startup_error)?;
+            handle.with_dashboard_runtime(dashboard_runtime)
+        } else {
+            handle
+        };
+        Ok(handle)
+    }
+
     /// Starts a supervisor runtime from a YAML configuration file.
     ///
     /// # Arguments
@@ -94,6 +135,24 @@ impl Supervisor {
         Self::start_from_config_state(state).await
     }
 
+    /// Starts a supervisor runtime from a YAML file and a factory registry.
+    ///
+    /// # Arguments
+    ///
+    /// - `path`: Path to the YAML configuration file.
+    /// - `task_factory_registry`: Registry used to bind worker `factory_key` values.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] after configuration and factory binding succeed.
+    pub async fn start_from_config_file_with_factories(
+        path: impl AsRef<Path>,
+        task_factory_registry: TaskFactoryRegistry,
+    ) -> Result<SupervisorHandle, SupervisorError> {
+        let state = crate::config::loader::load_config_from_yaml_file(path)?;
+        Self::start_from_config_state_with_factories(state, task_factory_registry).await
+    }
+
     /// Starts a supervisor runtime with an explicit shutdown policy.
     ///
     /// # Arguments
@@ -108,6 +167,49 @@ impl Supervisor {
         spec: SupervisorSpec,
         shutdown_policy: ShutdownPolicy,
     ) -> Result<SupervisorHandle, SupervisorError> {
+        Self::start_with_policy_and_factory_registry(
+            spec,
+            shutdown_policy,
+            TaskFactoryRegistry::new(),
+        )
+        .await
+    }
+
+    /// Starts a supervisor runtime with an explicit task factory registry.
+    ///
+    /// # Arguments
+    ///
+    /// - `spec`: Supervisor specification owned by the caller.
+    /// - `task_factory_registry`: Registry used by dynamic child declarations.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
+    pub async fn start_with_factory_registry(
+        spec: SupervisorSpec,
+        task_factory_registry: TaskFactoryRegistry,
+    ) -> Result<SupervisorHandle, SupervisorError> {
+        let shutdown_policy = shutdown_policy_from_spec(&spec);
+        Self::start_with_policy_and_factory_registry(spec, shutdown_policy, task_factory_registry)
+            .await
+    }
+
+    /// Starts a supervisor runtime with explicit shutdown policy and factories.
+    ///
+    /// # Arguments
+    ///
+    /// - `spec`: Supervisor specification owned by the caller.
+    /// - `shutdown_policy`: Policy used by the control loop.
+    /// - `task_factory_registry`: Registry used by dynamic child declarations.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
+    pub async fn start_with_policy_and_factory_registry(
+        spec: SupervisorSpec,
+        shutdown_policy: ShutdownPolicy,
+        task_factory_registry: TaskFactoryRegistry,
+    ) -> Result<SupervisorHandle, SupervisorError> {
         spec.validate()?;
         let backpressure_config = spec.backpressure_config.clone();
         let (command_sender, command_receiver) = mpsc::channel(spec.control_channel_capacity);
@@ -120,11 +222,12 @@ impl Supervisor {
             spec.audit_enabled,
             backpressure_config,
         )));
-        let state = RuntimeControlState::new(
+        let state = RuntimeControlState::new_with_factory_registry(
             spec,
             shutdown_policy,
             command_sender.clone(),
             observability.clone(),
+            task_factory_registry,
         )?;
         let join_handle = tokio::spawn(run_control_loop(
             state,
