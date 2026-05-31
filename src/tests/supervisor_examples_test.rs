@@ -27,6 +27,8 @@ fn example_suite_contains_learning_programs() {
         "health_readiness_demo.rs",
         "shutdown_pipeline_demo.rs",
         "service/main.rs",
+        "step_01_create_supervisor/main.rs",
+        "step_02_supervisor_with_service/main.rs",
         "worker/main.rs",
         "job/main.rs",
         "sidecar/main.rs",
