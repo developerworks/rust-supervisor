@@ -99,6 +99,8 @@ fn generated_template_contains_all_runtime_tunables() {
     for field in [
         "strategy",
         "escalation_policy",
+        "control_channel_capacity",
+        "event_channel_capacity",
         "dynamic_supervisor",
         "enabled",
         "child_limit",
@@ -170,6 +172,8 @@ fn generated_template_writes_runtime_default_values() {
 
     for field in [
         "strategy: OneForAll",
+        "control_channel_capacity: 256",
+        "event_channel_capacity: 256",
         "child_restart_limit: 10",
         "child_restart_window_ms: 60000",
         "supervisor_failure_limit: 30",

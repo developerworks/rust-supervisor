@@ -17,6 +17,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
+/// Recommended default capacity for supervisor control and event channels.
+pub const RECOMMENDED_CHANNEL_CAPACITY: usize = 256;
+
 /// Strategy used when a child exits and a restart scope is needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SupervisionStrategy {
@@ -374,8 +377,14 @@ pub struct SupervisorSpec {
     /// Runtime policy for dynamic child additions.
     pub dynamic_supervisor_policy: DynamicSupervisorPolicy,
     /// Control command channel capacity.
+    ///
+    /// Runtime capacity for queued supervisor control commands.
+    /// Recommended default: [`RECOMMENDED_CHANNEL_CAPACITY`].
     pub control_channel_capacity: usize,
     /// Event broadcast channel capacity.
+    ///
+    /// Runtime capacity for supervisor event broadcast delivery.
+    /// Recommended default: [`RECOMMENDED_CHANNEL_CAPACITY`].
     pub event_channel_capacity: usize,
     /// Backpressure policy used by observability event subscribers.
     pub backpressure_config: BackpressureConfig,
@@ -423,7 +432,6 @@ impl SupervisorSpec {
     /// assert_eq!(spec.path.to_string(), "/");
     /// ```
     pub fn root(children: Vec<ChildSpec>) -> Self {
-        let channel_capacity = channel_capacity_for_children(children.len());
         Self {
             path: SupervisorPath::root(),
             strategy: SupervisionStrategy::OneForOne,
@@ -452,8 +460,8 @@ impl SupervisorSpec {
             severity_defaults: HashMap::new(),
             child_strategy_overrides: Vec::new(),
             dynamic_supervisor_policy: DynamicSupervisorPolicy::unbounded(),
-            control_channel_capacity: channel_capacity,
-            event_channel_capacity: channel_capacity.saturating_mul(2),
+            control_channel_capacity: RECOMMENDED_CHANNEL_CAPACITY,
+            event_channel_capacity: RECOMMENDED_CHANNEL_CAPACITY,
             backpressure_config: BackpressureConfig::default(),
             meltdown_policy: MeltdownPolicy::new(
                 3,
@@ -842,17 +850,4 @@ fn validate_backpressure_config(config: &BackpressureConfig) -> Result<(), Super
         ));
     }
     Ok(())
-}
-
-/// Derives a channel capacity from declared children.
-///
-/// # Arguments
-///
-/// - `child_count`: Number of children declared under the supervisor.
-///
-/// # Returns
-///
-/// Returns a non-zero channel capacity.
-pub(crate) fn channel_capacity_for_children(child_count: usize) -> usize {
-    child_count.saturating_add(1)
 }

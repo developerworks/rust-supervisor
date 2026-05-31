@@ -16,7 +16,6 @@ use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, 
 use crate::spec::supervisor::{
     BackpressureConfig, ChildStrategyOverride, DynamicSupervisorPolicy, EscalationPolicy,
     GroupConfig, GroupStrategy, RestartLimit, SupervisionStrategy, SupervisorSpec,
-    channel_capacity_for_children,
 };
 use std::collections::HashMap;
 use std::time::Duration;
@@ -30,16 +29,6 @@ use std::time::Duration;
 pub struct SupervisorSpecBuilder {
     /// Supervisor specification under construction.
     spec: SupervisorSpec,
-    /// Whether `control_channel_capacity` was explicitly overridden by the caller.
-    ///
-    /// This flag prevents later topology changes from replacing the caller's
-    /// chosen control channel capacity with a child-count-derived default.
-    control_channel_capacity_overridden: bool,
-    /// Whether `event_channel_capacity` was explicitly overridden by the caller.
-    ///
-    /// This flag prevents later topology changes from replacing the caller's
-    /// chosen event channel capacity with a child-count-derived default.
-    event_channel_capacity_overridden: bool,
 }
 
 impl SupervisorSpecBuilder {
@@ -67,8 +56,6 @@ impl SupervisorSpecBuilder {
     pub fn root(children: Vec<ChildSpec>) -> Self {
         Self {
             spec: SupervisorSpec::root(children),
-            control_channel_capacity_overridden: false,
-            event_channel_capacity_overridden: false,
         }
     }
 
@@ -124,7 +111,6 @@ impl SupervisorSpecBuilder {
     /// Returns the builder for chaining.
     pub fn children(mut self, children: Vec<ChildSpec>) -> Self {
         self.spec.children = children;
-        self.sync_channel_capacity_defaults();
         self
     }
 
@@ -139,7 +125,6 @@ impl SupervisorSpecBuilder {
     /// Returns the builder for chaining.
     pub fn child(mut self, child: ChildSpec) -> Self {
         self.spec.children.push(child);
-        self.sync_channel_capacity_defaults();
         self
     }
 
@@ -482,7 +467,6 @@ impl SupervisorSpecBuilder {
     /// Returns the builder for chaining.
     pub fn control_channel_capacity(mut self, control_channel_capacity: usize) -> Self {
         self.spec.control_channel_capacity = control_channel_capacity;
-        self.control_channel_capacity_overridden = true;
         self
     }
 
@@ -497,7 +481,6 @@ impl SupervisorSpecBuilder {
     /// Returns the builder for chaining.
     pub fn event_channel_capacity(mut self, event_channel_capacity: usize) -> Self {
         self.spec.event_channel_capacity = event_channel_capacity;
-        self.event_channel_capacity_overridden = true;
         self
     }
 
@@ -694,24 +677,5 @@ impl SupervisorSpecBuilder {
         let spec = self.spec;
         spec.validate()?;
         Ok(spec)
-    }
-
-    /// Updates default channel capacities after child topology changes.
-    ///
-    /// # Arguments
-    ///
-    /// This function has no arguments.
-    ///
-    /// # Returns
-    ///
-    /// This function does not return a value.
-    fn sync_channel_capacity_defaults(&mut self) {
-        let channel_capacity = channel_capacity_for_children(self.spec.children.len());
-        if !self.control_channel_capacity_overridden {
-            self.spec.control_channel_capacity = channel_capacity;
-        }
-        if !self.event_channel_capacity_overridden {
-            self.spec.event_channel_capacity = channel_capacity.saturating_mul(2);
-        }
     }
 }

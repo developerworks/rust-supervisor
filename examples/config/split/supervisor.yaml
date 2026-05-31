@@ -7,6 +7,8 @@ include:
 
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 
 policy:
   child_restart_limit: 10

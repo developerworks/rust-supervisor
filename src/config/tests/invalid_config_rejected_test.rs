@@ -12,6 +12,8 @@ fn valid_yaml() -> &'static str {
     r#"
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000
@@ -38,6 +40,8 @@ fn worker_yaml(factory_key_line: &str) -> String {
         r#"
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000
@@ -108,13 +112,25 @@ fn invalid_enum_value_is_rejected() {
     assert_fatal_config(result, "failed to parse YAML config");
 }
 
-/// Verifies that zero capacity values are rejected.
+/// Verifies that zero event journal capacity values are rejected.
 #[test]
-fn zero_capacity_is_rejected() {
+fn zero_event_journal_capacity_is_rejected() {
     let yaml = valid_yaml().replace("event_journal_capacity: 256", "event_journal_capacity: 0");
     let result = parse_config_state(&yaml).map(|_| ());
 
     assert_fatal_config(result, "observability.event_journal_capacity");
+}
+
+/// Verifies that zero supervisor channel capacity values are rejected.
+#[test]
+fn zero_supervisor_channel_capacity_is_rejected() {
+    let yaml = valid_yaml().replace(
+        "control_channel_capacity: 256",
+        "control_channel_capacity: 0",
+    );
+    let result = parse_config_state(&yaml).map(|_| ());
+
+    assert_fatal_config(result, "supervisor.control_channel_capacity");
 }
 
 /// Verifies that zero timeout values are rejected.

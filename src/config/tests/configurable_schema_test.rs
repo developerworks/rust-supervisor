@@ -21,6 +21,8 @@ fn supervisor_config_generates_schema_for_all_public_fields() {
         "supervisor",
         "strategy",
         "escalation_policy",
+        "control_channel_capacity",
+        "event_channel_capacity",
         "dynamic_supervisor",
         "enabled",
         "child_limit",

@@ -70,6 +70,8 @@ fn docs_reference_supervisor_config_fields() {
     for field in [
         "supervisor",
         "strategy",
+        "control_channel_capacity",
+        "event_channel_capacity",
         "policy",
         "child_restart_limit",
         "child_restart_window_ms",

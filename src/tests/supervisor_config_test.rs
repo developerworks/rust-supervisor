@@ -67,7 +67,7 @@ async fn supervisor_starts_from_config_file() {
 #[tokio::test(start_paused = true)]
 async fn invalid_config_state_does_not_return_handle() {
     let mut state = no_ipc_startup_state();
-    state.observability.event_journal_capacity = 0;
+    state.supervisor.control_channel_capacity = 0;
 
     let result = Supervisor::start_from_config_state(state).await;
 
@@ -88,6 +88,8 @@ async fn invalid_config_file_does_not_return_handle() {
         r#"
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000
@@ -130,6 +132,8 @@ fn no_ipc_startup_yaml() -> &'static str {
     r#"
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000

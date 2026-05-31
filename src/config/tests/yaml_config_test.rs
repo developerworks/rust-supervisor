@@ -13,6 +13,8 @@ const VALID_YAML: &str = r#"
 supervisor:
   strategy: RestForOne
   escalation_policy: escalate_to_parent
+  control_channel_capacity: 512
+  event_channel_capacity: 1024
   dynamic_supervisor:
     enabled: true
     child_limit: 16
@@ -115,6 +117,8 @@ fn yaml_config_loads_required_runtime_tunables() {
     let state = parse_config_state(valid_yaml()).expect("valid YAML should load");
 
     assert_eq!(state.supervisor.strategy, SupervisionStrategy::RestForOne);
+    assert_eq!(state.supervisor.control_channel_capacity, 512);
+    assert_eq!(state.supervisor.event_channel_capacity, 1024);
     assert_eq!(state.policy.child_restart_limit, 10);
     assert_eq!(state.policy.supervisor_failure_limit, 30);
     assert_eq!(state.shutdown.graceful_timeout_ms, 1000);
@@ -155,6 +159,8 @@ fn supervisor_config_converts_into_config_state_and_spec() {
 
     assert_eq!(state.supervisor.strategy, SupervisionStrategy::RestForOne);
     assert_eq!(spec.strategy, SupervisionStrategy::RestForOne);
+    assert_eq!(spec.control_channel_capacity, 512);
+    assert_eq!(spec.event_channel_capacity, 1024);
     assert_eq!(spec.supervisor_failure_limit, 30);
     assert_eq!(
         spec.backpressure_config.strategy,

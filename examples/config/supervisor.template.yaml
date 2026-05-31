@@ -8,8 +8,17 @@ supervisor:
   # Restart scope strategy for child failures.
   strategy: OneForAll
 
-  # Optional supervisor-level escalation policy.
+  # Optional fallback escalation policy used when child and group policies do
+  # not define a more specific policy.
   escalation_policy: escalate_to_parent
+
+  # Control command channel capacity.
+  # Recommended default: 256
+  control_channel_capacity: 256
+
+  # Event broadcast channel capacity.
+  # Recommended default: 256
+  event_channel_capacity: 256
 
   # Runtime dynamic child acceptance policy.
   dynamic_supervisor:

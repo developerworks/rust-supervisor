@@ -21,7 +21,9 @@ use crate::{
     },
     spec::{
         child_declaration::ChildrenConfigSection,
-        supervisor::{BackpressureConfig, EscalationPolicy, SupervisionStrategy},
+        supervisor::{
+            BackpressureConfig, EscalationPolicy, RECOMMENDED_CHANNEL_CAPACITY, SupervisionStrategy,
+        },
     },
 };
 
@@ -128,6 +130,20 @@ pub struct SupervisorRootConfig {
     #[schemars(!default)]
     #[serde(default)]
     pub escalation_policy: Option<EscalationPolicy>,
+    /// Control command channel capacity.
+    ///
+    /// Runtime capacity for queued supervisor control commands.
+    /// Recommended default: 256.
+    #[config(default = 256)]
+    #[serde(default = "default_channel_capacity")]
+    pub control_channel_capacity: usize,
+    /// Event broadcast channel capacity.
+    ///
+    /// Runtime capacity for supervisor event broadcast delivery.
+    /// Recommended default: 256.
+    #[config(default = 256)]
+    #[serde(default = "default_channel_capacity")]
+    pub event_channel_capacity: usize,
     /// Runtime dynamic child acceptance policy.
     #[config(nested)]
     #[serde(default)]
@@ -321,6 +337,11 @@ fn default_graceful_timeout_ms() -> u64 {
 /// Returns the default abort wait timeout in milliseconds.
 fn default_abort_wait_ms() -> u64 {
     1000
+}
+
+/// Returns the recommended channel capacity.
+fn default_channel_capacity() -> usize {
+    RECOMMENDED_CHANNEL_CAPACITY
 }
 
 /// Returns the default event journal capacity.

@@ -362,6 +362,8 @@ impl ConfigState {
     /// let yaml = r#"
     /// supervisor:
     ///   strategy: OneForAll
+    ///   control_channel_capacity: 256
+    ///   event_channel_capacity: 256
     /// policy:
     ///   child_restart_limit: 10
     ///   child_restart_window_ms: 60000
@@ -433,8 +435,8 @@ impl ConfigState {
         spec.config_version = self.config_version();
         spec.supervisor_failure_limit = self.policy.supervisor_failure_limit;
         spec.escalation_policy = self.supervisor.escalation_policy;
-        spec.control_channel_capacity = self.observability.event_journal_capacity;
-        spec.event_channel_capacity = self.observability.event_journal_capacity;
+        spec.control_channel_capacity = self.supervisor.control_channel_capacity;
+        spec.event_channel_capacity = self.supervisor.event_channel_capacity;
         spec.backpressure_config = self.backpressure.clone();
         let group_members = derive_group_members(&self.children);
         spec.group_configs = self
@@ -508,8 +510,10 @@ impl ConfigState {
     /// Returns a deterministic version string for diagnostics.
     fn config_version(&self) -> String {
         format!(
-            "supervisor-{:?}-policy-{}-{}-shutdown-{}-observe-{}-backpressure-{:?}-{}-{}",
+            "supervisor-{:?}-channels-{}-{}-policy-{}-{}-shutdown-{}-observe-{}-backpressure-{:?}-{}-{}",
             self.supervisor.strategy,
+            self.supervisor.control_channel_capacity,
+            self.supervisor.event_channel_capacity,
             self.policy.child_restart_limit,
             self.policy.supervisor_failure_limit,
             self.shutdown.graceful_timeout_ms,
@@ -662,6 +666,14 @@ fn validate_lower_policy(
 fn validate_supervisor_root(
     supervisor: &SupervisorRootConfig,
 ) -> Result<(), crate::error::types::SupervisorError> {
+    validate_positive(
+        supervisor.control_channel_capacity as u64,
+        "supervisor.control_channel_capacity",
+    )?;
+    validate_positive(
+        supervisor.event_channel_capacity as u64,
+        "supervisor.event_channel_capacity",
+    )?;
     if supervisor.dynamic_supervisor.child_limit == Some(0) {
         return Err(crate::error::types::SupervisorError::fatal_config(
             "supervisor.dynamic_supervisor.child_limit must be greater than zero",

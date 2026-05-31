@@ -16,8 +16,8 @@ use rust_supervisor::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, Resta
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 use rust_supervisor::spec::supervisor::{
     BackpressureConfig, BackpressureStrategy, ChildStrategyOverride, DynamicSupervisorPolicy,
-    EscalationPolicy, GroupConfig, GroupStrategy, RestartLimit, SupervisionStrategy,
-    SupervisorSpec,
+    EscalationPolicy, GroupConfig, GroupStrategy, RECOMMENDED_CHANNEL_CAPACITY, RestartLimit,
+    SupervisionStrategy, SupervisorSpec,
 };
 use rust_supervisor::spec::supervisor_builder::SupervisorSpecBuilder;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
@@ -140,16 +140,16 @@ fn root_builder_matches_supervisor_spec_root_defaults() -> Result<(), Supervisor
     Ok(())
 }
 
-/// Verifies appending children refreshes derived default channel capacities.
+/// Verifies appending children keeps the recommended channel capacities.
 #[test]
-fn child_setter_updates_default_channel_capacities() -> Result<(), SupervisorError> {
+fn child_setter_keeps_recommended_channel_capacities() -> Result<(), SupervisorError> {
     let spec = SupervisorSpecBuilder::root(Vec::new())
         .child(service_child("api")?)
         .build()?;
 
     assert_eq!(spec.children.len(), 1);
-    assert_eq!(spec.control_channel_capacity, 2);
-    assert_eq!(spec.event_channel_capacity, 4);
+    assert_eq!(spec.control_channel_capacity, RECOMMENDED_CHANNEL_CAPACITY);
+    assert_eq!(spec.event_channel_capacity, RECOMMENDED_CHANNEL_CAPACITY);
     Ok(())
 }
 

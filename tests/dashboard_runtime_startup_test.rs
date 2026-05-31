@@ -34,6 +34,8 @@ fn dashboard_yaml(
         r#"
 supervisor:
   strategy: OneForAll
+  control_channel_capacity: 256
+  event_channel_capacity: 256
 policy:
   child_restart_limit: 10
   child_restart_window_ms: 60000

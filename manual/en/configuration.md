@@ -105,6 +105,8 @@ IPC checks (when `dashboard.enabled = true`):
 supervisor:
   strategy: OneForAll
   escalation_policy: escalate_to_parent
+  control_channel_capacity: 256
+  event_channel_capacity: 256
   dynamic_supervisor:
     enabled: true
     child_limit: 16
