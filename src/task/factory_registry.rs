@@ -1,6 +1,6 @@
 //! Task factory registry for declarative worker configuration.
 //!
-//! This module owns the mapping from stable configuration keys to executable
+//! This module owns the mapping from task factory keys to executable
 //! [`TaskFactory`](crate::task::factory::TaskFactory) values. Configuration
 //! code uses the same registry to validate `factory_key` declarations and to
 //! generate editor completion metadata.
@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// Metadata and executable factory for one registered task kind.
 #[derive(Clone)]
 pub struct TaskFactoryDescriptor {
-    /// Stable key used in YAML `factory_key` fields.
+    /// Task factory key used in YAML `factory_key` fields.
     pub key: String,
     /// Short display title used by schema completion.
     pub title: String,
@@ -32,7 +32,7 @@ impl TaskFactoryDescriptor {
     ///
     /// # Arguments
     ///
-    /// - `key`: Stable key used in YAML `factory_key` fields.
+    /// - `key`: Task factory key used in YAML `factory_key` fields.
     /// - `title`: Short display title used by schema completion.
     /// - `description`: Human-readable description used by schema completion.
     /// - `allowed_kinds`: Task kinds that may use this factory.
@@ -196,7 +196,7 @@ impl TaskFactoryRegistry {
         Ok(descriptor.factory.clone())
     }
 
-    /// Returns descriptors in stable key order.
+    /// Returns descriptors in sorted key order.
     ///
     /// # Arguments
     ///

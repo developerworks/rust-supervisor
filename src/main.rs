@@ -5,10 +5,21 @@
 
 use clap::{Parser, Subcommand};
 use rust_config_tree::cli::{ConfigCommand, handle_config_command};
+use rust_config_tree::config::write_config_templates_with_schema;
 use rust_supervisor::config::configurable::SupervisorConfig;
-use std::path::PathBuf;
+use rust_supervisor::config::factory_schema::supervisor_schema_targets_with_factory_registry;
+use rust_supervisor::spec::child::TaskKind;
+use rust_supervisor::task::factory::{TaskResult, service_fn};
+use rust_supervisor::task::factory_registry::{TaskFactoryDescriptor, TaskFactoryRegistry};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 const DEFAULT_CONFIG_PATH: &str = "examples/config/supervisor.yaml";
+const DEFAULT_TEMPLATE_OUTPUT: &str = "config/supervisor_config/supervisor_config.example.yaml";
+const DEFAULT_SCHEMA_OUTPUT: &str = "config/supervisor_config/supervisor_config.schema.json";
+
+type CliResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Supervisor configuration CLI.
 #[derive(Debug, Parser)]
@@ -44,7 +55,7 @@ enum Command {
 ///
 /// Returns an error when config loading, template rendering, or file writing
 /// fails.
-fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+fn main() -> CliResult<()> {
     if std::env::args_os().len() == 1 {
         let program = std::env::args_os()
             .next()
@@ -65,9 +76,124 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             println!("children: {}", config.children.len());
         }
         Command::Config(command) => {
-            handle_config_command::<Cli, SupervisorConfig>(command, &default_config_path)?;
+            handle_supervisor_config_command(command, &default_config_path)?;
         }
     }
 
     Ok(())
+}
+
+/// Handles config commands that need supervisor-specific schema enrichment.
+///
+/// # Arguments
+///
+/// - `command`: Selected config command.
+/// - `default_config_path`: Root config file used as the template source.
+///
+/// # Returns
+///
+/// Returns `Ok(())` after the selected command completes.
+///
+/// # Errors
+///
+/// Returns an error when schema generation, template generation, config
+/// validation, or file writing fails.
+fn handle_supervisor_config_command(
+    command: ConfigCommand,
+    default_config_path: &Path,
+) -> CliResult<()> {
+    match command {
+        ConfigCommand::GenerateTemplate { output, schema } => {
+            let output = output.unwrap_or_else(|| PathBuf::from(DEFAULT_TEMPLATE_OUTPUT));
+            let schema = schema.unwrap_or_else(|| PathBuf::from(DEFAULT_SCHEMA_OUTPUT));
+            let registry = default_task_factory_registry()?;
+            write_supervisor_config_schemas(&schema, &registry)?;
+            write_config_templates_with_schema::<SupervisorConfig>(
+                default_config_path,
+                output,
+                schema,
+            )?;
+            Ok(())
+        }
+        ConfigCommand::GenerateSchema { output } => {
+            let output = output.unwrap_or_else(|| PathBuf::from(DEFAULT_SCHEMA_OUTPUT));
+            let registry = default_task_factory_registry()?;
+            write_supervisor_config_schemas(&output, &registry)
+        }
+        other => {
+            handle_config_command::<Cli, SupervisorConfig>(other, default_config_path)?;
+            Ok(())
+        }
+    }
+}
+
+/// Writes supervisor config schemas with registry-backed completion values.
+///
+/// # Arguments
+///
+/// - `output_path`: Root JSON Schema output path.
+/// - `registry`: Registry that provides `factory_key` completion candidates.
+///
+/// # Returns
+///
+/// Returns `Ok(())` after all schema targets have been written.
+///
+/// # Errors
+///
+/// Returns an error when schema rendering, JSON serialization, directory
+/// creation, or file writing fails.
+fn write_supervisor_config_schemas(
+    output_path: &Path,
+    registry: &TaskFactoryRegistry,
+) -> CliResult<()> {
+    for target in supervisor_schema_targets_with_factory_registry(output_path, registry)? {
+        if let Some(parent) = target
+            .path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&target.path, target.content)?;
+    }
+    Ok(())
+}
+
+/// Builds the built-in factory registry used for generated config completion.
+///
+/// # Arguments
+///
+/// This function has no arguments.
+///
+/// # Returns
+///
+/// Returns a registry whose keys are available to generated JSON Schemas.
+///
+/// # Errors
+///
+/// Returns an error when a built-in descriptor is invalid or duplicated.
+fn default_task_factory_registry() -> CliResult<TaskFactoryRegistry> {
+    let mut registry = TaskFactoryRegistry::new();
+    registry.register(TaskFactoryDescriptor::new(
+        "api_server",
+        "API Server",
+        "Runs the API service.",
+        [TaskKind::AsyncWorker],
+        Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+    ))?;
+    registry.register(TaskFactoryDescriptor::new(
+        "report_exporter",
+        "Report Exporter",
+        "Runs blocking export work.",
+        [TaskKind::BlockingWorker],
+        Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+    ))?;
+    registry.register(TaskFactoryDescriptor::new(
+        "worker_factory",
+        "Worker Factory",
+        "Runs a generic asynchronous worker.",
+        [TaskKind::AsyncWorker],
+        Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+    ))?;
+    Ok(registry)
 }

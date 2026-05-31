@@ -1,7 +1,9 @@
 //! Schema generation tests for public supervisor configuration.
 
 use rust_supervisor::config::configurable::SupervisorConfig;
-use rust_supervisor::config::factory_schema::supervisor_schema_with_factory_registry;
+use rust_supervisor::config::factory_schema::{
+    supervisor_schema_targets_with_factory_registry, supervisor_schema_with_factory_registry,
+};
 use rust_supervisor::spec::child::TaskKind;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use rust_supervisor::task::factory_registry::{TaskFactoryDescriptor, TaskFactoryRegistry};
@@ -202,6 +204,30 @@ fn supervisor_schema_with_factory_registry_injects_factory_key_completion() {
     assert!(completion_text.contains("API Server"));
     assert!(completion_text.contains("report_exporter"));
     assert!(completion_text.contains("Report Exporter"));
+}
+
+/// Verifies that split children schemas receive factory key completion.
+#[test]
+fn split_children_schema_receives_factory_key_completion() {
+    let targets = supervisor_schema_targets_with_factory_registry(
+        "config/supervisor_config.schema.json",
+        &registry(),
+    )
+    .expect("schema targets");
+    let children_target = targets
+        .into_iter()
+        .find(|target| target.path.ends_with("children.schema.json"))
+        .expect("children schema target");
+    let schema_value =
+        serde_json::from_str::<Value>(&children_target.content).expect("children schema json");
+    let factory_key_schema = schema_value
+        .pointer("/items/properties/factory_key")
+        .expect("factory_key schema");
+    let completion_text =
+        serde_json::to_string(factory_key_schema).expect("stringify factory_key schema");
+
+    assert!(completion_text.contains("api_server"));
+    assert!(completion_text.contains("report_exporter"));
 }
 
 /// Verifies that health check completion stays field-by-field.
