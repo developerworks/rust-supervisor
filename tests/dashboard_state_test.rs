@@ -1,7 +1,7 @@
-use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::dashboard::state::{
     DashboardStateInput, build_dashboard_state, declared_state_from_spec,
 };
+use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::journal::ring::EventJournal;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};

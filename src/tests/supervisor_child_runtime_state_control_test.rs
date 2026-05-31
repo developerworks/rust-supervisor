@@ -59,8 +59,8 @@ async fn current_state_exposes_full_runtime_state_fields_test() -> Result<(), Su
 
 /// Verifies that readiness distinguishes unreported and not-ready values.
 #[tokio::test(start_paused = true)]
-async fn current_state_distinguishes_unreported_from_degraded_readiness_test(
-) -> Result<(), SupervisorError> {
+async fn current_state_distinguishes_unreported_from_degraded_readiness_test()
+-> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let degrade = Arc::new(Notify::new());
     let spec = SupervisorSpec::root(vec![degradable_child(
@@ -225,7 +225,8 @@ async fn pause_child_delivers_real_cancellation_test() -> Result<(), SupervisorE
 
 /// Verifies that removing a running child cancels and removes its runtime record.
 #[tokio::test(start_paused = true)]
-async fn remove_child_cancels_and_eventually_removes_runtime_state_test() -> Result<(), SupervisorError> {
+async fn remove_child_cancels_and_eventually_removes_runtime_state_test()
+-> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -387,8 +388,8 @@ async fn control_command_targets_current_instance_test() -> Result<(), Superviso
 
 /// Verifies idempotent repeated stop commands after cancellation delivery.
 #[tokio::test(start_paused = true)]
-async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test(
-) -> Result<(), SupervisorError> {
+async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test()
+-> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(3);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(3);
     let release = Arc::new(Notify::new());
@@ -454,8 +455,8 @@ async fn repeated_stop_commands_are_idempotent_after_cancel_delivery_test(
 
 /// Verifies removing a registered child without an active attempt.
 #[tokio::test(start_paused = true)]
-async fn remove_without_active_instance_returns_no_active_instance_test(
-) -> Result<(), SupervisorError> {
+async fn remove_without_active_instance_returns_no_active_instance_test()
+-> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let spec = SupervisorSpec::root(vec![temporary_success_child("worker", started_sender)?]);
     let handle = Supervisor::start(spec).await.expect("start supervisor");

@@ -2,8 +2,8 @@
 
 // Import the supervisor runtime entry point.
 use rust_supervisor::runtime::supervisor::Supervisor;
-// Import supervisor specification values.
-use rust_supervisor::spec::supervisor::SupervisorSpec;
+// Import supervisor specification builder values.
+use rust_supervisor::spec::supervisor_builder::SupervisorSpecBuilder;
 
 // Define the shared example result type.
 type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
@@ -13,7 +13,7 @@ type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
 /// Runs the step 01 supervisor creation example.
 async fn main() -> ExampleResult {
     // Build an empty root supervisor specification.
-    let spec = SupervisorSpec::root(Vec::new());
+    let spec = SupervisorSpecBuilder::root(Vec::new()).build()?;
 
     // Start the supervisor runtime from the root specification.
     let handle = Supervisor::start(spec).await?;

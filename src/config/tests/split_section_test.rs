@@ -1,10 +1,7 @@
 //! Tests for transparent split-section loading.
 
 use rust_config_tree::config::load_config;
-use rust_supervisor::config::{
-    configurable::SupervisorConfig,
-    loader::load_config_from_yaml_file,
-};
+use rust_supervisor::config::{configurable::SupervisorConfig, loader::load_config_from_yaml_file};
 use std::fs;
 use std::path::PathBuf;
 
@@ -34,11 +31,7 @@ fn load_supervisor_config_accepts_body_only_split_files() {
         "include:\n  - children.yaml\nsupervisor:\n  strategy: OneForAll\n",
     )
     .expect("write root");
-    fs::write(
-        &children,
-        "- name: api\n  kind: async_worker\n",
-    )
-    .expect("write children");
+    fs::write(&children, "- name: api\n  kind: async_worker\n").expect("write children");
 
     let config = load_config::<SupervisorConfig>(&root).expect("load split config");
     assert_eq!(config.children.len(), 1);

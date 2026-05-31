@@ -56,11 +56,7 @@ fn group_strategy_limits_restart_plan_to_group_members() -> Result<(), Superviso
     fourth.group = Some("other".to_owned());
     let mut spec = SupervisorSpec::root(vec![first, second.clone(), third.clone(), fourth]);
     spec.group_configs = vec![
-        GroupConfig::new(
-            "pipeline",
-            vec![second.id.clone(), third.id.clone()],
-            None,
-        ),
+        GroupConfig::new("pipeline", vec![second.id.clone(), third.id.clone()], None),
         GroupConfig::new("other", vec![ChildId::new("fourth")], None),
     ];
     spec.group_strategies = vec![GroupStrategy::new(
@@ -89,11 +85,7 @@ fn child_override_wins_over_group_strategy_and_selects_limit() -> Result<(), Sup
     override_strategy.restart_limit = Some(limit);
     override_strategy.escalation_policy = Some(EscalationPolicy::ShutdownTree);
     let mut spec = SupervisorSpec::root(vec![first.clone(), second.clone()]);
-    spec.group_configs = vec![GroupConfig::new(
-        "pipeline",
-        vec![first.id.clone()],
-        None,
-    )];
+    spec.group_configs = vec![GroupConfig::new("pipeline", vec![first.id.clone()], None)];
     spec.group_strategies = vec![GroupStrategy::new(
         "pipeline",
         SupervisionStrategy::OneForOne,

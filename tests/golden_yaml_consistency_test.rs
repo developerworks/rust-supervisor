@@ -125,7 +125,8 @@ fn test_dag_cycle_detection() -> Result<(), rust_supervisor::error::types::Super
 
 /// Tests that kahn_sort produces a valid topological order for a linear chain.
 #[test]
-fn test_dag_valid_topological_order() -> Result<(), rust_supervisor::error::types::SupervisorError> {
+fn test_dag_valid_topological_order() -> Result<(), rust_supervisor::error::types::SupervisorError>
+{
     use rust_supervisor::id::types::ChildId;
     use rust_supervisor::spec::child::ChildSpec;
 

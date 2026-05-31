@@ -50,7 +50,9 @@ pub enum WorkerEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Worker`].
-pub fn worker_child(events: mpsc::UnboundedSender<WorkerEvent>) -> Result<ChildSpec, SupervisorError> {
+pub fn worker_child(
+    events: mpsc::UnboundedSender<WorkerEvent>,
+) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the worker function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.

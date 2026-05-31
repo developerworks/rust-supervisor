@@ -198,7 +198,8 @@ async fn repeated_shutdown_tree_returns_cached_idempotent_report() -> Result<(),
 
 /// Verifies that abort-disabled policy records a late report.
 #[tokio::test(start_paused = true)]
-async fn shutdown_tree_records_late_child_report_when_abort_is_disabled() -> Result<(), SupervisorError> {
+async fn shutdown_tree_records_late_child_report_when_abort_is_disabled()
+-> Result<(), SupervisorError> {
     let spec = SupervisorSpec::root(vec![late_reporting_child("late")?]);
     let handle = start_with_short_policy(spec, false).await;
 
@@ -265,7 +266,8 @@ async fn shutdown_pipeline_waits_for_paused_runtime_state_report() -> Result<(),
 
 /// Verifies that quarantined runtime state still waits for the active report.
 #[tokio::test(start_paused = true)]
-async fn shutdown_pipeline_waits_for_quarantined_runtime_state_report() -> Result<(), SupervisorError> {
+async fn shutdown_pipeline_waits_for_quarantined_runtime_state_report()
+-> Result<(), SupervisorError> {
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let (cancelled_sender, mut cancelled_receiver) = mpsc::channel(1);
     let release = Arc::new(Notify::new());
@@ -510,7 +512,10 @@ fn late_reporting_child(name: &'static str) -> Result<ChildSpec, SupervisorError
 }
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> Result<ChildSpec, SupervisorError> {
+fn worker_child(
+    name: &'static str,
+    factory: impl TaskFactory,
+) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,

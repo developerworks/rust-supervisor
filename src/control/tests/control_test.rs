@@ -124,10 +124,7 @@ async fn add_child_during_shutdown_tree_is_rejected() {
     // First, start shutdown in the background.
     let shutdown_handle = handle.clone();
     let shutdown_task = tokio::spawn(async move {
-        with_auto_clock_drive(
-            shutdown_handle.shutdown_tree("operator", "concurrent test"),
-        )
-        .await
+        with_auto_clock_drive(shutdown_handle.shutdown_tree("operator", "concurrent test")).await
     });
 
     // Give shutdown a moment to start.

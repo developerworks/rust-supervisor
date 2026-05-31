@@ -52,7 +52,9 @@ pub enum ServiceEvent {
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Service`].
-pub fn service_child(events: mpsc::UnboundedSender<ServiceEvent>) -> Result<ChildSpec, SupervisorError> {
+pub fn service_child(
+    events: mpsc::UnboundedSender<ServiceEvent>,
+) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the service function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.

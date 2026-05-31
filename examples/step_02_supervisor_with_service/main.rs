@@ -10,8 +10,8 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 // Import child specification builder values.
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
-// Import supervisor specification values.
-use rust_supervisor::spec::supervisor::SupervisorSpec;
+// Import supervisor specification builder values.
+use rust_supervisor::spec::supervisor_builder::SupervisorSpecBuilder;
 // Import task context values.
 use rust_supervisor::task::context::TaskContext;
 // Import task factory helpers.
@@ -33,7 +33,11 @@ async fn main() -> ExampleResult {
     // Build one service child before creating the supervisor tree.
     let service_child = service_child(service_event_sender)?;
     // Mount the service child under the root supervisor specification.
-    let spec = SupervisorSpec::root(vec![service_child]);
+    let spec = SupervisorSpecBuilder::root(Vec::new())
+        // Append the service child under the supervisor.
+        .child(service_child)
+        // Validate and finish the supervisor specification.
+        .build()?;
     // Start the supervisor runtime with the mounted service.
     let handle = Supervisor::start(spec).await?;
     // Wait until the service reports readiness.

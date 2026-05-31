@@ -56,7 +56,9 @@ pub enum SidecarEvent {
 /// # Returns
 ///
 /// Returns a primary service [`ChildSpec`].
-pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Result<ChildSpec, SupervisorError> {
+pub fn primary_service_child(
+    events: mpsc::UnboundedSender<SidecarEvent>,
+) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the primary service function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.
@@ -97,7 +99,9 @@ pub fn primary_service_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Res
 /// # Returns
 ///
 /// Returns a [`ChildSpec`] whose `task_role` is [`TaskRole::Sidecar`].
-pub fn sidecar_child(events: mpsc::UnboundedSender<SidecarEvent>) -> Result<ChildSpec, SupervisorError> {
+pub fn sidecar_child(
+    events: mpsc::UnboundedSender<SidecarEvent>,
+) -> Result<ChildSpec, SupervisorError> {
     // Build a task factory from the sidecar function.
     let factory = service_fn(move |ctx: TaskContext| {
         // Clone the event sender for this attempt.

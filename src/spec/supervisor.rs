@@ -333,7 +333,7 @@ impl Default for BackpressureConfig {
 /// Declarative specification for one supervisor node.
 #[derive(Debug, Clone)]
 pub struct SupervisorSpec {
-    /// Stable path for this supervisor.
+    /// Path for this supervisor.
     pub path: SupervisorPath,
     /// Restart scope strategy for child exits.
     pub strategy: SupervisionStrategy,
@@ -349,11 +349,17 @@ pub struct SupervisorSpec {
     pub default_health_policy: HealthPolicy,
     /// Shutdown policy inherited by children that do not override it.
     pub default_shutdown_policy: ShutdownPolicy,
-    /// Maximum supervisor failures before parent escalation.
+    /// Maximum supervisor failures before the supervisor-level escalation path is selected.
     pub supervisor_failure_limit: u32,
     /// Optional supervisor-level restart limit.
     pub restart_limit: Option<RestartLimit>,
-    /// Optional supervisor-level escalation policy.
+    /// Optional fallback escalation policy for execution plans that do not define
+    /// a child-level or group-level policy.
+    ///
+    /// Root supervisors do not have a parent supervisor at runtime. When this
+    /// field is set on a root supervisor, `EscalateToParent` should be treated
+    /// as a configured policy label for planning and diagnostics, not as proof
+    /// that a parent supervisor exists.
     pub escalation_policy: Option<EscalationPolicy>,
     /// Group-level strategy overrides.
     pub group_strategies: Vec<GroupStrategy>,
@@ -847,6 +853,6 @@ fn validate_backpressure_config(config: &BackpressureConfig) -> Result<(), Super
 /// # Returns
 ///
 /// Returns a non-zero channel capacity.
-fn channel_capacity_for_children(child_count: usize) -> usize {
+pub(crate) fn channel_capacity_for_children(child_count: usize) -> usize {
     child_count.saturating_add(1)
 }

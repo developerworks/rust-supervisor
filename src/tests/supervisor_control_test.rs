@@ -78,7 +78,8 @@ async fn child_state_result_variant_is_replaced_by_child_control_test() {
 
 /// Verifies that child control results expose runtime state identity.
 #[tokio::test(start_paused = true)]
-async fn child_control_result_contains_runtime_state_identity_test() -> Result<(), SupervisorError> {
+async fn child_control_result_contains_runtime_state_identity_test() -> Result<(), SupervisorError>
+{
     let (started_sender, mut started_receiver) = mpsc::channel(1);
     let child_id = ChildId::new("worker");
     let spec = SupervisorSpec::root(vec![worker_child(
@@ -111,11 +112,10 @@ async fn child_control_result_contains_runtime_state_identity_test() -> Result<(
     assert_eq!(outcome.status, Some(ChildAttemptStatus::Cancelling));
     assert_eq!(outcome.stop_state, ChildStopState::CancelDelivered);
 
-    let _shutdown = with_auto_clock_drive(
-        handle.shutdown_tree("test", "finish control identity test"),
-    )
-    .await
-    .expect("shutdown supervisor");
+    let _shutdown =
+        with_auto_clock_drive(handle.shutdown_tree("test", "finish control identity test"))
+            .await
+            .expect("shutdown supervisor");
     Ok(())
 }
 
@@ -172,7 +172,10 @@ fn assert_invalid_transition(result: Result<CommandResult, SupervisorError>, exp
 }
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> Result<ChildSpec, SupervisorError> {
+fn worker_child(
+    name: &'static str,
+    factory: impl TaskFactory,
+) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,

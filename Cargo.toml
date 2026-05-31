@@ -194,6 +194,10 @@ name = "child_builder_test"
 path = "src/spec/tests/child_builder_test.rs"
 
 [[test]]
+name = "supervisor_builder_test"
+path = "src/spec/tests/supervisor_builder_test.rs"
+
+[[test]]
 name = "task_test"
 path = "src/task/tests/task_test.rs"
 

@@ -3,8 +3,8 @@
 //! The module owns stable IDs, paths, start_counts, and generations used across the
 //! supervisor runtime.
 
-use schemars::JsonSchema;
 use confique::Config;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;

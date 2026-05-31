@@ -64,7 +64,8 @@ async fn one_for_all_restarts_every_child_after_failure() -> Result<(), Supervis
 
 /// Verifies that `RestForOne` restarts the failed child and following children.
 #[tokio::test(start_paused = true)]
-async fn rest_for_one_restarts_failed_child_and_following_children() -> Result<(), SupervisorError> {
+async fn rest_for_one_restarts_failed_child_and_following_children() -> Result<(), SupervisorError>
+{
     let gate = Arc::new(AtomicBool::new(false));
     let first_start_counts = Arc::new(AtomicUsize::new(0));
     let second_start_counts = Arc::new(AtomicUsize::new(0));

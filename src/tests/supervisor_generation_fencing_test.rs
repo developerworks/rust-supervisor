@@ -25,7 +25,10 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 
 /// Creates a worker child from a task factory.
-fn worker_child(name: &'static str, factory: impl TaskFactory) -> Result<ChildSpec, SupervisorError> {
+fn worker_child(
+    name: &'static str,
+    factory: impl TaskFactory,
+) -> Result<ChildSpec, SupervisorError> {
     ChildSpec::worker(
         ChildId::new(name),
         name,
@@ -304,7 +307,8 @@ async fn restart_child_blocked_during_tree_shutdown_test() -> Result<(), Supervi
 
 /// Validates spawn failures after fencing retain the earlier exit verdict and expose the error.
 #[tokio::test(start_paused = true)]
-async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test() -> Result<(), SupervisorError> {
+async fn pending_restart_target_spawn_failure_retains_prior_outcomes_test()
+-> Result<(), SupervisorError> {
     const SPAWN_HOOK_CASE_CHILD: &str = "worker_spawn_hook_fence_case";
     let child_id = ChildId::new(SPAWN_HOOK_CASE_CHILD);
     let (boot_tx, mut boot_rx) = mpsc::channel(1);

@@ -120,7 +120,11 @@ pub struct SupervisorRootConfig {
     #[config(default = "OneForAll")]
     #[serde(default = "default_supervision_strategy")]
     pub strategy: SupervisionStrategy,
-    /// Optional supervisor-level escalation policy.
+    /// Optional fallback escalation policy used when child and group policies
+    /// do not define a more specific policy.
+    ///
+    /// Root supervisors do not have a parent supervisor at runtime, so
+    /// `escalate_to_parent` at root level is a planning and diagnostic label.
     #[schemars(!default)]
     #[serde(default)]
     pub escalation_policy: Option<EscalationPolicy>,

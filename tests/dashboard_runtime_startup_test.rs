@@ -187,12 +187,9 @@ async fn non_retryable_registration_ack_stops_fixed_heartbeat() {
             .await
             .expect("write ack");
         assert!(
-            with_auto_clock_drive(timeout(
-                Duration::from_millis(1200),
-                listener.accept(),
-            ))
-            .await
-            .is_err(),
+            with_auto_clock_drive(timeout(Duration::from_millis(1200), listener.accept(),))
+                .await
+                .is_err(),
             "heartbeat should stop after non-retryable ack"
         );
     });
