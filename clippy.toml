@@ -1,10 +1,8 @@
-# Disallow blocking I/O, synchronous locks, and raw OS process spawns in
-# asynchronous contexts. Subtask code must use tokio::fs, tokio::net,
-# tokio::sync::Mutex, tokio::time::sleep, and tokio::process::Command instead.
+# This lint is global and cannot detect whether a call is inside an async
+# runtime context. Keep only APIs that should be banned everywhere. Blocking
+# filesystem calls are intentionally not listed because sync CLI and test code
+# use them outside async runtime contexts.
 disallowed-methods = [
-    "std::fs::read",
-    "std::fs::write",
-    { path = "std::fs::File", allow-invalid = true },
     { path = "std::net::TcpStream", allow-invalid = true },
     "std::thread::sleep",
     { path = "std::sync::Mutex", allow-invalid = true },

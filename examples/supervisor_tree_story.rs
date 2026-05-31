@@ -100,7 +100,7 @@ fn worker(id: &str, name: &str) -> Result<ChildSpec, SupervisorError> {
     });
 
     // Create the worker child specification.
-    Ok(ChildSpec::worker(
+    ChildSpec::worker(
         // Set the child identifier.
         ChildId::new(id),
         // Set the child name.
@@ -110,7 +110,7 @@ fn worker(id: &str, name: &str) -> Result<ChildSpec, SupervisorError> {
         // Store the task factory behind shared ownership.
         Arc::new(factory),
         // Finish the worker child specification.
-    )?)
+    )
     // Finish the worker builder.
 }
 
