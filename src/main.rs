@@ -4,10 +4,7 @@
 //! binding the command handlers to the public `SupervisorConfig` type.
 
 use clap::{Parser, Subcommand};
-use rust_config_tree::{
-    cli::{ConfigCommand, handle_config_command},
-    config::load_config,
-};
+use rust_config_tree::cli::{ConfigCommand, handle_config_command};
 use rust_supervisor::config::configurable::SupervisorConfig;
 use std::path::PathBuf;
 
@@ -62,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cli.command.unwrap_or(Command::Run { config: None }) {
         Command::Run { config } => {
             let config_path = config.unwrap_or(default_config_path);
-            let config = load_config::<SupervisorConfig>(&config_path)?;
+            let config = rust_config_tree::config::load_config::<SupervisorConfig>(&config_path)?;
             println!("config path: {}", config_path.display());
             println!("strategy: {:?}", config.supervisor.strategy);
             println!("children: {}", config.children.len());
