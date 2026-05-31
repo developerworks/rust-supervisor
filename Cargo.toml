@@ -37,7 +37,7 @@ name = "rust-tokio-supervisor"
 path = "src/main.rs"
 
 [dependencies]
-rust-config-tree = "0.2.3"
+rust-config-tree = "0.2.5"
 clap = { version = "4.6.1", features = ["derive"] }
 confique = { version = "0.4.0", features = ["yaml"] }
 figment = { version = "0.10.19", features = ["yaml", "toml", "json"] }

@@ -664,20 +664,32 @@ dependencies = [
 
 [[package]]
 name = "rust-config-tree"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bfd73d3c4373dfc60439aa691ce5f32256532641313a2be52095b7cc04a6d3d"
+checksum = "d813392dcd3fe8d682b26389fe3dfdf3515f602b7c06965826f82512f5cf4f1e"
 dependencies = [
  "clap",
  "clap_complete",
  "confique",
  "dotenvy",
  "figment",
+ "rust-config-tree-macros",
  "schemars",
  "serde",
  "serde_json",
  "serde_yaml",
  "tracing",
+]
+
+[[package]]
+name = "rust-config-tree-macros"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bfcf38a9257dc7898826ed4dfc80054260cfe4ece93a499f30856dea1b50525"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

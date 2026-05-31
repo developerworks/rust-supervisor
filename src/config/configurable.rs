@@ -4,7 +4,7 @@
 //! YAML loading, template rendering, and JSON Schema generation.
 
 use confique::Config;
-use rust_config_tree::config::ConfigSchema;
+use rust_config_tree::ConfigSchema;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -26,7 +26,7 @@ use crate::{
 };
 
 /// Configuration file shape loaded from YAML.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema, ConfigSchema)]
 pub struct SupervisorConfig {
     /// Additional configuration files included by `rust-config-tree`.
     #[config(default = [])]
@@ -98,20 +98,20 @@ pub struct SupervisorConfig {
     pub children: ChildrenConfigSection,
 }
 
-impl ConfigSchema for SupervisorConfig {
-    /// Returns child configuration paths declared by one loaded layer.
-    ///
-    /// # Arguments
-    ///
-    /// - `layer`: Partially loaded supervisor configuration layer.
-    ///
-    /// # Returns
-    ///
-    /// Returns include paths declared by this configuration layer.
-    fn include_paths(layer: &<Self as Config>::Layer) -> Vec<PathBuf> {
-        layer.include.clone().unwrap_or_default()
-    }
-}
+// impl ConfigSchema for SupervisorConfig {
+//     /// Returns child configuration paths declared by one loaded layer.
+//     ///
+//     /// # Arguments
+//     ///
+//     /// - `layer`: Partially loaded supervisor configuration layer.
+//     ///
+//     /// # Returns
+//     ///
+//     /// Returns include paths declared by this configuration layer.
+//     fn include_paths(layer: &<Self as Config>::Layer) -> Vec<PathBuf> {
+//         layer.include.clone().unwrap_or_default()
+//     }
+// }
 
 /// Root supervisor configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Config, JsonSchema)]
