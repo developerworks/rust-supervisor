@@ -1,0 +1,5 @@
+error: missing required supervisor lifecycle method `build_tree`
+  --> tests/role_contracts/ui/supervisor_missing_build_tree.rs:19:6
+   |
+19 | impl MissingBuildTreeSupervisor {
+   |      ^^^^^^^^^^^^^^^^^^^^^^^^^^

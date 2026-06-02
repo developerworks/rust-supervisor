@@ -1,0 +1,5 @@
+error: missing required sidecar lifecycle method `run`
+  --> tests/role_contracts/ui/sidecar_missing_run.rs:19:6
+   |
+19 | impl MissingRunSidecar {
+   |      ^^^^^^^^^^^^^^^^^

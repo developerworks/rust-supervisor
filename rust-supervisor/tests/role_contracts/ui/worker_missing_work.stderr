@@ -1,0 +1,5 @@
+error: missing required lifecycle method `work`
+  --> tests/role_contracts/ui/worker_missing_work.rs:15:6
+   |
+15 | impl MissingWorkWorker {
+   |      ^^^^^^^^^^^^^^^^^

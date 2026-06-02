@@ -22,6 +22,7 @@ pub mod platform;
 pub mod policy;
 pub mod readiness;
 pub mod registry;
+pub mod role;
 pub mod runtime;
 pub mod shutdown;
 pub mod spec;

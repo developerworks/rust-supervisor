@@ -1,0 +1,7 @@
+error: missing required sidecar argument `primary`
+  --> tests/role_contracts/ui/sidecar_missing_primary.rs:14:1
+   |
+14 | #[sidecar(id = "missing-primary-sidecar", name = "Missing Primary Sidecar")]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `sidecar` (in Nightly builds, run with -Z macro-backtrace for more info)

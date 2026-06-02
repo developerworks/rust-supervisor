@@ -1,0 +1,5 @@
+error: missing required job lifecycle method `run`
+  --> tests/role_contracts/ui/job_missing_run.rs:15:6
+   |
+15 | impl MissingRunJob {
+   |      ^^^^^^^^^^^^^

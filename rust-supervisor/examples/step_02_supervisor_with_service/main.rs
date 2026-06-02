@@ -2,20 +2,121 @@
 //! 演示 step 02: 在 supervisor(监督者) runtime(运行时) 下挂载一个 Service(服务).
 
 use rust_supervisor::error::types::SupervisorError;
-use rust_supervisor::id::types::ChildId;
+use rust_supervisor::role::context::service::ServiceContext;
+use rust_supervisor::role::result::service::ServiceResult;
 use rust_supervisor::runtime::supervisor::Supervisor;
-use rust_supervisor::spec::child::{ChildSpec, TaskKind};
-use rust_supervisor::spec::child_builder::ChildSpecBuilder;
+use rust_supervisor::spec::child::ChildSpec;
 use rust_supervisor::spec::supervisor_builder::SupervisorSpecBuilder;
-use rust_supervisor::task::context::TaskContext;
-use rust_supervisor::task::factory::{TaskResult, service_fn};
-use std::sync::Arc;
+use rust_supervisor_macros::service;
 use std::time::Duration;
 use tokio::sync::mpsc;
 
 // Define the shared example result type.
 // 定义本示例共用的结果类型.
 type ExampleResult = Result<(), rust_supervisor::error::types::SupervisorError>;
+
+/// Service contract used by the step 02 example.
+/// Step 02 uses the macro-generated runtime adapter.
+struct Step02Service {
+    /// Channel used to publish service lifecycle facts.
+    events: mpsc::UnboundedSender<String>,
+}
+
+// Attach the service role contract macro.
+// 使用 service role(服务角色) contract(契约) macro(宏).
+#[service(id = "step-02-service", name = "Step 02 Service")]
+impl Step02Service {
+    /// Initializes one service attempt.
+    ///
+    /// # Arguments
+    ///
+    /// - `ctx`: Service context used to report readiness and heartbeat state.
+    ///
+    /// # Returns
+    ///
+    /// Returns success after readiness is visible to the runtime.
+    async fn init(&mut self, ctx: &ServiceContext) -> ServiceResult<()> {
+        // Mark the service as ready for the supervisor.
+        // 向 supervisor(监督者) 标记 Service(服务) 已 ready(就绪).
+        ctx.ready();
+        // Emit a heartbeat for liveness observation.
+        // 发送 heartbeat(心跳) 供 liveness(存活) observation(观察) 使用.
+        ctx.heartbeat();
+        // Publish the service initialization fact.
+        // 发布 Service(服务) 初始化事实.
+        let _ignored = self
+            .events
+            .send(format!("service initialized: child={}", ctx.child_id()));
+        Ok(())
+    }
+
+    /// Runs one service attempt until shutdown is requested.
+    ///
+    /// # Arguments
+    ///
+    /// - `ctx`: Service context used to observe shutdown and emit heartbeat state.
+    ///
+    /// # Returns
+    ///
+    /// Returns success after the service observes cooperative shutdown.
+    async fn run(&mut self, ctx: &ServiceContext) -> ServiceResult<()> {
+        // Build a periodic running loop for the long-lived service.
+        // 为长期运行的 Service(服务) 构建周期性 running(运行) loop(循环).
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        // Track running ticks for observable output.
+        // 记录 running(运行) tick(节拍), 便于观察输出.
+        let mut tick = 0_u64;
+        // Keep the service alive until shutdown.
+        // 保持 Service(服务) 存活, 直到收到 shutdown(关闭) 信号.
+        loop {
+            // Wait for either shutdown or the next service tick.
+            // 等待 shutdown(关闭) 信号, 或下一次 Service(服务) tick(节拍).
+            tokio::select! {
+                // Stop cooperatively when the runtime cancels this attempt.
+                // 当 runtime(运行时) 取消本次 attempt(尝试) 时, 协作式停止.
+                _ = ctx.wait_shutdown() => {
+                    // Leave the lifecycle body and let the shutdown hook run.
+                    // 退出 lifecycle(生命周期) 主体, 并让 shutdown(关闭) hook(钩子) 运行.
+                    return Ok(());
+                }
+                // Emit one running tick.
+                // 发出一次 running(运行) tick(节拍).
+                _ = interval.tick() => {
+                    // Advance the tick counter.
+                    // 递增 tick(节拍) 计数器.
+                    tick += 1;
+                    // Emit heartbeat for liveness observation.
+                    // 发送 heartbeat(心跳) 供 liveness(存活) observation(观察) 使用.
+                    ctx.heartbeat();
+                    // Publish one running fact for the example observer.
+                    // 向示例 observer(观察者) 发布一条 running(运行) 事实.
+                    let _ignored = self.events.send(format!(
+                        "service running: child={} tick={tick}",
+                        ctx.child_id()
+                    ));
+                }
+            }
+        }
+    }
+
+    /// Shuts down one service attempt.
+    ///
+    /// # Arguments
+    ///
+    /// - `ctx`: Service context used to report final lifecycle facts.
+    ///
+    /// # Returns
+    ///
+    /// Returns success after the stopping fact has been published.
+    async fn shutdown(&mut self, ctx: &ServiceContext) -> ServiceResult<()> {
+        // Publish the service stopping fact.
+        // 发布 Service(服务) 正在 stopping(停止) 的事实.
+        let _ignored = self
+            .events
+            .send(format!("service stopping: child={}", ctx.child_id()));
+        Ok(())
+    }
+}
 
 // Use the Tokio runtime for the asynchronous example.
 // 使用 Tokio runtime(运行时) 运行这个 async(异步) 示例.
@@ -144,111 +245,15 @@ async fn main() -> ExampleResult {
 /// Returns a validated service [`ChildSpec`].
 /// 返回已校验的 Service(服务) [`ChildSpec`](子任务规格).
 fn service_child(events: mpsc::UnboundedSender<String>) -> Result<ChildSpec, SupervisorError> {
-    // Build a task factory from the service function.
-    // 用 Service(服务) 函数构建 task(任务) factory(工厂).
-    let factory = service_fn(move |ctx: TaskContext| {
-        // Clone the event sender for this service attempt.
-        // 为本次 Service(服务) attempt(尝试) 克隆 event(事件) sender(发送端).
-        let events = events.clone();
-        // Run one service attempt.
-        // 运行一次 Service(服务) attempt(尝试).
-        async move { run_service(ctx, events).await }
-    });
-    // Build a service child and finish construction with `build`.
-    // 构建 Service(服务) child(子任务), 并通过 `build` 完成构造.
-    ChildSpecBuilder::service(
-        // Set the stable child identifier.
-        // 设置稳定的 child(子任务) identifier(标识符).
-        ChildId::new("step-02-service"),
-        // Set the display name.
-        // 设置 display name(显示名称).
-        "Step 02 Service",
-        // Select async worker execution.
-        // 选择 async worker(异步工作者) 执行方式.
-        TaskKind::AsyncWorker,
-        // Store the factory behind shared ownership.
-        // 用 shared ownership(共享所有权) 保存 factory(工厂).
-        Arc::new(factory),
-    )
+    // Build the service role from the macro-generated child specification.
+    // 通过 macro(宏) 生成的 child specification(子任务规格) 构建 Service(服务) role(角色).
+    let mut child = Step02Service { events }.child_spec()?;
     // Add a diagnostic tag.
     // 添加 diagnostic(诊断) tag(标签).
-    .tag("step-02")
-    // Validate and return the final child specification.
-    // 校验并返回最终的 child(子任务) specification(规格).
-    .build()
-}
-
-/// Runs one service attempt until supervisor shutdown cancels it.
-/// 运行一次 Service(服务) attempt(尝试), 直到 supervisor(监督者) shutdown(关闭) 取消它.
-///
-/// # Arguments
-///
-/// # 参数
-///
-/// - `ctx`: Runtime context for the current child attempt.
-/// - `ctx`: 当前 child(子任务) attempt(尝试) 的 runtime(运行时) context(上下文).
-/// - `events`: Channel used to publish service lifecycle facts.
-/// - `events`: 用于发布 Service(服务) 生命周期事实的 channel(通道).
-///
-/// # Returns
-///
-/// # 返回值
-///
-/// Returns [`TaskResult::Cancelled`] after cooperative shutdown.
-/// 在 cooperative shutdown(协作式关闭) 后返回 [`TaskResult::Cancelled`](已取消).
-async fn run_service(ctx: TaskContext, events: mpsc::UnboundedSender<String>) -> TaskResult {
-    // Mark the service as ready for the supervisor.
-    // 向 supervisor(监督者) 标记 Service(服务) 已 ready(就绪).
-    ctx.mark_ready();
-    // Emit a heartbeat for liveness observation.
-    // 发送 heartbeat(心跳) 供 liveness(存活) observation(观察) 使用.
-    ctx.heartbeat();
-    // Publish the service initialization fact.
-    // 发布 Service(服务) 初始化事实.
-    let _ignored = events.send(format!("service initialized: child={}", ctx.child_id));
-    // Build a periodic running loop for the long-lived service.
-    // 为长期运行的 Service(服务) 构建周期性 running(运行) loop(循环).
-    let mut interval = tokio::time::interval(Duration::from_secs(1));
-    // Keep a cancellation token alive across select waits.
-    // 在 select(多路等待) 期间保持 cancellation token(取消令牌) 可用.
-    let cancellation_token = ctx.cancellation_token();
-    // Track running ticks for observable output.
-    // 记录 running(运行) tick(节拍), 便于观察输出.
-    let mut tick = 0_u64;
-    // Keep the service alive until cancellation.
-    // 保持 Service(服务) 存活, 直到收到 cancellation(取消) 信号.
-    loop {
-        // Wait for either cancellation or the next service tick.
-        // 等待 cancellation(取消) 信号, 或下一次 Service(服务) tick(节拍).
-        tokio::select! {
-            // Stop cooperatively when the runtime cancels this attempt.
-            // 当 runtime(运行时) 取消本次 attempt(尝试) 时, 协作式停止.
-            _ = cancellation_token.cancelled() => {
-                // Publish the service stopping fact.
-                // 发布 Service(服务) 正在 stopping(停止) 的事实.
-                let _ignored = events.send(format!("service stopping: child={}", ctx.child_id));
-                // Report cooperative cancellation to the supervisor runtime.
-                // 向 supervisor(监督者) runtime(运行时) 报告协作式 cancellation(取消).
-                return TaskResult::Cancelled;
-            }
-            // Emit one running tick.
-            // 发出一次 running(运行) tick(节拍).
-            _ = interval.tick() => {
-                // Advance the tick counter.
-                // 递增 tick(节拍) 计数器.
-                tick += 1;
-                // Emit heartbeat for liveness observation.
-                // 发送 heartbeat(心跳) 供 liveness(存活) observation(观察) 使用.
-                ctx.heartbeat();
-                // Publish one running fact for the example observer.
-                // 向示例 observer(观察者) 发布一条 running(运行) 事实.
-                let _ignored = events.send(format!(
-                    "run_service service running: child={} tick={tick}",
-                    ctx.child_id
-                ));
-            }
-        }
-    }
+    child.tags.push("step-02".to_owned());
+    // Return the final child specification.
+    // 返回最终的 child(子任务) specification(规格).
+    Ok(child)
 }
 
 /// Drains service lifecycle facts that are already available.
