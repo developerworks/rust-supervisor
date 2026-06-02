@@ -14,8 +14,3 @@ Thumbs.db
 .vscode/
 .idea/
 /config
-/_bmad-output
-/_bmad
-/.agent
-/.agents
-/.github/agents
