@@ -251,3 +251,45 @@ struct QuoteService;
 - 用于高级使用者或高度约定化场景.
 - 用于状态很少, 生命周期默认值很强的简单角色.
 - 不作为默认推荐路径, 因为它会隐藏部分 lifecycle(生命周期) 流程.
+
+## Specification(规格) 收敛结果
+
+基于前面的角色讨论, 当前已经创建 `specs/007-role-contracts/` 规格目录. 该目录用于把 macro entry(宏入口), trait entry(特征入口), template entry(模板入口), runtime adapter(运行时适配器) 和 5 个角色契约固定下来.
+
+新增规格文件如下:
+
+```text
+specs/007-role-contracts/
+├── spec.md
+├── api-draft.md
+├── data-model.md
+├── contracts/
+│   ├── service-contract.md
+│   ├── worker-contract.md
+│   ├── job-contract.md
+│   ├── sidecar-contract.md
+│   └── supervisor-contract.md
+└── tasks.md
+```
+
+该规格目录的收敛结论如下:
+
+- `spec.md` 固定 role contract(角色契约) 的需求, 用户故事, 边界情况和成功标准.
+- `api-draft.md` 固定使用者可见 API(应用程序接口), 包括 `#[service]`, `#[worker]`, `#[job]`, `#[sidecar]`, `#[supervisor_role]`.
+- `data-model.md` 固定 `RoleMetadata`(角色元数据), `RoleContext`(角色上下文), `RoleResult`(角色结果), `RoleLifecyclePhase`(角色生命周期阶段), `RoleAdapter`(角色适配器) 和 `MacroInput`(宏输入).
+- `contracts/` 目录按角色拆分 Service(服务), Worker(后台任务), Job(一次性任务), Sidecar(边车), Supervisor(监督器) 的生命周期契约.
+- `tasks.md` 将实现拆为 7 个阶段, 并以 Service(服务) 最小闭环作为 MVP(最小可用产品).
+
+实现顺序当前收敛为:
+
+```text
+Specification(规格)
+-> Service Runtime Contract(服务运行时契约)
+-> Service Macro Entry(服务宏入口)
+-> Service Tests and Example(服务测试和示例)
+-> Other Role Contracts(其他角色契约)
+-> Template Entry(模板入口)
+-> Quality Gates(质量门禁)
+```
+
+下一步如果进入实现, 应该先执行 `tasks.md` 中的 T005 到 T010, 即在 `rust-supervisor/src/role/` 中实现 `ServiceContext`(服务上下文), `ServiceRole`(服务角色特征), `ServiceResult`(服务结果) 和 `ServiceRoleAdapter`(服务角色适配器). 这一步先不写 macro(宏), 因为 trait entry(特征入口) 是宏入口的真实契约基础.
