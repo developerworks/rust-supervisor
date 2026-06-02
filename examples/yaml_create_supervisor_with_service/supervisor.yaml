@@ -1,0 +1,39 @@
+# Minimal supervisor tree for the yaml_create_supervisor_with_service example.
+# The executable child is declared here; its task logic is registered in main.rs
+# under factory_key `yaml_step_service`.
+
+supervisor:
+  strategy: OneForOne
+  control_channel_capacity: 64
+  event_channel_capacity: 64
+
+policy:
+  child_restart_limit: 10
+  child_restart_window_ms: 60000
+  supervisor_failure_limit: 10
+  supervisor_failure_window_ms: 60000
+  initial_backoff_ms: 100
+  max_backoff_ms: 5000
+  jitter_ratio: 0.10
+  heartbeat_interval_ms: 1000
+  stale_after_ms: 3000
+
+shutdown:
+  graceful_timeout_ms: 5000
+  abort_wait_ms: 1000
+
+observability:
+  event_journal_capacity: 64
+  metrics_enabled: true
+  audit_enabled: false
+
+children:
+  - name: yaml_step_service
+    kind: async_worker
+    task_role: service
+    factory_key: yaml_step_service
+    criticality: critical
+    restart_policy: permanent
+    dependencies: []
+    tags:
+      - yaml-example

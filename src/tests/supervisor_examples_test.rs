@@ -29,6 +29,7 @@ fn example_suite_contains_learning_programs() {
         "service/main.rs",
         "step_01_create_supervisor/main.rs",
         "step_02_supervisor_with_service/main.rs",
+        "yaml_create_supervisor_with_service/main.rs",
         "worker/main.rs",
         "job/main.rs",
         "sidecar/main.rs",
