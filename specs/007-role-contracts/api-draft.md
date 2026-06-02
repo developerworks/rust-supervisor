@@ -122,24 +122,19 @@ trait ServiceRole {
 | `Sidecar` | `SidecarRole` | `run` | `init`, `shutdown` |
 | `Supervisor` | `SupervisorRole` | `build_tree` | `run`, `shutdown` |
 
-## 4. 模板入口: abstract default implementation(抽象默认实现)
+## 4. 模板入口: template wrapper(模板包装器)
 
-模板入口用于减少重复空方法. 模板入口不得引入新生命周期名称, 只能为 trait(特征) 入口提供默认实现.
+模板入口用于减少重复装配代码. 模板入口不得引入新生命周期名称, 只能包装已经实现 trait(特征) 的角色值, 并提供 `adapter()` 和 `child_spec()` 便捷方法.
 
 ```rust
-struct SimpleService<T> {
-    inner: T,
-}
+use rust_supervisor::id::types::ChildId;
+use rust_supervisor::role::templates::service::ServiceTemplate;
 
-impl<T> ServiceTemplate for SimpleService<T>
-where
-    T: ServiceRun,
-{
-    async fn run(&mut self, ctx: &ServiceContext) -> ServiceResult<()> {
-        self.inner.run(ctx).await
-    }
-}
+let spec = ServiceTemplate::new(QuoteService)
+    .child_spec(ChildId::new("quote-service"), "Quote Service")?;
 ```
+
+5 个角色分别使用 `ServiceTemplate`(服务模板), `WorkerTemplate`(后台任务模板), `JobTemplate`(一次性任务模板), `SidecarTemplate`(边车模板) 和 `SupervisorTemplate`(监督器模板). 模板入口的认知模型是 "我已经有一个角色对象, 现在把它交给框架生成 adapter(适配器) 或 `ChildSpec`(子任务规格)".
 
 ## 5. 统一命名规则
 
@@ -180,11 +175,13 @@ macro(宏) 必须完成下列动作.
 1. 解析 `id`, `name`, `primary` 等 role metadata(角色元数据).
 2. 检查必选 lifecycle method(生命周期方法) 是否存在.
 3. 为目标类型生成对应 role trait(角色特征) 实现.
-4. 生成 adapter(适配器) 所需的桥接代码.
+4. 生成 adapter(适配器) 便捷方法, 例如 `service_adapter(self)`, `worker_adapter(self)`, `job_adapter(self)`, `sidecar_adapter(self)` 和 `supervisor_adapter(self)`.
 5. 生成 `child_spec()` 便捷方法.
 6. 设置 `ChildSpec.task_role` 为对应 `TaskRole`(任务角色).
-7. 对 `Job`(一次性任务) 禁止 permanent restart(永久重启).
+7. 对 `Job`(一次性任务) 生成 `ChildSpecBuilder::job(...)`, 让现有 runtime policy(运行时策略) 保持一次性任务的非 permanent restart(永久重启) 默认语义.
 8. 对 `Sidecar`(边车) 要求 `primary` 必填.
+
+`Supervisor`(监督器) 的 `child_spec()` 必须设置 `TaskRole::Supervisor`(任务角色: 监督器), 但运行形态使用 `TaskKind::AsyncWorker`(任务执行种类: 异步后台任务). 原因是 `SupervisorRoleAdapter`(监督器角色适配器) 自己启动 nested supervisor(嵌套监督器), 外层 runtime(运行时) 只需要把它当成一个可监督的 child(子任务) 执行.
 
 ## 8. runtime adapter(运行时适配器) 规则
 

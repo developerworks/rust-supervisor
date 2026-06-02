@@ -2,7 +2,7 @@
 
 **Feature Branch(功能分支)**: `[007-role-contracts]`
 **Created(创建日期)**: 2026-06-02
-**Status(状态)**: Draft(草案)
+**Status(状态)**: Frozen(已冻结)
 **Input(输入)**: 用户要求把 `Supervisor`(监督器), `Service`(服务), `Worker`(后台任务), `Job`(一次性任务), `Sidecar`(边车) 从自由函数接入改为显式契约, 并降低使用者的 cognitive complexity(认知复杂度).
 
 ## Dependency Note(依赖说明)
@@ -41,10 +41,10 @@
 
 - 当 `#[service]` 缺少 `run` 方法时, macro(宏) 必须产生可读的 compile error(编译错误), 并指出缺少的生命周期方法.
 - 当 `#[worker]` 缺少 `work` 方法时, macro(宏) 必须产生可读的 compile error(编译错误).
-- 当 `#[job]` 显式请求 permanent restart(永久重启) 时, 生成的契约必须拒绝或生成明确的配置冲突诊断.
+- 当 `Job`(一次性任务) 的 `child_spec()` 被额外配置为 permanent restart(永久重启) 语义时, 现有 runtime policy(运行时策略) 必须拒绝或生成明确的配置冲突诊断.
 - 当 `#[sidecar]` 缺少 `primary` 参数时, macro(宏) 必须产生可读的 compile error(编译错误).
 - 当 `#[supervisor_role]` 缺少 `build_tree` 方法时, macro(宏) 必须产生可读的 compile error(编译错误).
-- 当使用者同时在同一个 `impl block`(实现块) 上标记多个角色宏时, macro(宏) 必须拒绝该写法.
+- 后续如果支持多个 attribute macro(属性宏) 组合检查, 当使用者同时在同一个 `impl block`(实现块) 上标记多个角色宏时, macro(宏) 必须拒绝该写法.
 - 当 context(上下文) 暴露能力不足以支持角色生命周期时, 应优先扩展对应 role context(角色上下文), 不得把完整 `TaskContext`(任务上下文) 暴露给使用者.
 
 ## Requirements(需求)
@@ -97,7 +97,7 @@
 
 ## Assumptions(假设)
 
-- 第一批实现只覆盖 `Service`(服务) 的最小闭环, 其余角色在 `Service`(服务) 稳定后复制同一结构.
+- 当前实现已经覆盖 `Service`(服务), `Worker`(后台任务), `Job`(一次性任务), `Sidecar`(边车) 和 `Supervisor`(监督器) 5 个角色. `Service`(服务) 最小闭环只是实施顺序, 不是最终范围限制.
 - 形态 2 是默认 macro entry(宏入口), 即 attribute macro(属性宏) 标在 `impl block`(实现块) 上.
 - 形态 1 的自由函数宏和形态 3 的 derive macro(派生宏) 是 optional implementation(可选实现), 不进入第一批默认路径.
 - `TaskRole`(任务角色) 和 `TaskKind`(任务执行种类) 必须继续分开. 前者表达业务生命周期语义, 后者表达 runtime(运行时) 执行形态.

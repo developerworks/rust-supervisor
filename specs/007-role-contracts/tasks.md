@@ -19,10 +19,10 @@
 
 **Purpose(目的)**: 固定角色契约和 API(应用程序接口) 形态.
 
-- [ ] T001 [P] [US1] 在 `specs/007-role-contracts/spec.md` 中审阅并冻结 `Service`(服务) 用户故事, 功能需求和成功标准.
-- [ ] T002 [P] [US1] 在 `specs/007-role-contracts/api-draft.md` 中审阅并冻结 `#[service]` 和 `ServiceRole`(服务角色特征) 草案.
-- [ ] T003 [P] [US1] 在 `specs/007-role-contracts/contracts/service-contract.md` 中审阅并冻结 `Service`(服务) 生命周期规则.
-- [ ] T004 [P] [US2] 在 `specs/007-role-contracts/data-model.md` 中审阅并冻结 `RoleContext`(角色上下文), `RoleResult`(角色结果) 和 `RoleAdapter`(角色适配器) 模型.
+- [X] T001 [P] [US1] 在 `specs/007-role-contracts/spec.md` 中审阅并冻结 `Service`(服务) 用户故事, 功能需求和成功标准.
+- [X] T002 [P] [US1] 在 `specs/007-role-contracts/api-draft.md` 中审阅并冻结 `#[service]` 和 `ServiceRole`(服务角色特征) 草案.
+- [X] T003 [P] [US1] 在 `specs/007-role-contracts/contracts/service-contract.md` 中审阅并冻结 `Service`(服务) 生命周期规则.
+- [X] T004 [P] [US2] 在 `specs/007-role-contracts/data-model.md` 中审阅并冻结 `RoleContext`(角色上下文), `RoleResult`(角色结果) 和 `RoleAdapter`(角色适配器) 模型.
 
 ---
 
@@ -30,12 +30,12 @@
 
 **Purpose(目的)**: 先实现不依赖 macro(宏) 的显式契约.
 
-- [ ] T005 [US2] 在 `rust-supervisor/src/role/mod.rs` 中注册 `role` 模块入口.
-- [ ] T006 [P] [US2] 在 `rust-supervisor/src/role/context/service.rs` 中实现 `ServiceContext`(服务上下文).
-- [ ] T007 [P] [US2] 在 `rust-supervisor/src/role/traits/service.rs` 中实现 `ServiceRole`(服务角色特征) 和默认生命周期方法.
-- [ ] T008 [P] [US2] 在 `rust-supervisor/src/role/result/service.rs` 中实现 `ServiceResult`(服务结果) 与 `ServiceError`(服务错误).
-- [ ] T009 [US2] 在 `rust-supervisor/src/role/adapter/service.rs` 中实现 `ServiceRoleAdapter`(服务角色适配器).
-- [ ] T010 [US2] 在 `rust-supervisor/src/role/adapter/service.rs` 中把 `ServiceRoleAdapter`(服务角色适配器) 接入现有 `TaskFactory`(任务工厂).
+- [X] T005 [US2] 在 `rust-supervisor/src/role/mod.rs` 中注册 `role` 模块入口.
+- [X] T006 [P] [US2] 在 `rust-supervisor/src/role/context/service.rs` 中实现 `ServiceContext`(服务上下文).
+- [X] T007 [P] [US2] 在 `rust-supervisor/src/role/traits/service.rs` 中实现 `ServiceRole`(服务角色特征) 和默认生命周期方法.
+- [X] T008 [P] [US2] 在 `rust-supervisor/src/role/result/service.rs` 中实现 `ServiceResult`(服务结果) 与 `ServiceError`(服务错误).
+- [X] T009 [US2] 在 `rust-supervisor/src/role/adapter/service.rs` 中实现 `ServiceRoleAdapter`(服务角色适配器).
+- [X] T010 [US2] 在 `rust-supervisor/src/role/adapter/service.rs` 中把 `ServiceRoleAdapter`(服务角色适配器) 接入现有 `TaskFactory`(任务工厂).
 
 ---
 
@@ -43,12 +43,12 @@
 
 **Purpose(目的)**: 实现 `#[service]` 默认入口.
 
-- [ ] T011 [US1] 在 `rust-supervisor/Cargo.toml` 中接入 `rust-supervisor-macros` 依赖, 并避免新增 compatibility exports(兼容导出).
-- [ ] T012 [US1] 在 `rust-supervisor-macros/Cargo.toml` 中添加 `syn`(Rust 语法解析库), `quote`(代码生成库) 和 `proc-macro2`(过程宏辅助库).
-- [ ] T013 [P] [US1] 在 `rust-supervisor-macros/src/parse/role_args.rs` 中解析 `#[service(id, name)]` 参数.
-- [ ] T014 [P] [US1] 在 `rust-supervisor-macros/src/parse/lifecycle_impl.rs` 中解析 `impl block`(实现块) 并检查 `run` 方法.
-- [ ] T015 [US1] 在 `rust-supervisor-macros/src/expand/service.rs` 中生成 `ServiceRole`(服务角色特征) 实现和 adapter(适配器) 桥接代码.
-- [ ] T016 [US1] 在 `rust-supervisor-macros/src/attribute/service.rs` 中注册 `#[service]` attribute macro(属性宏).
+- [X] T011 [US1] 在 `rust-supervisor/Cargo.toml` 中接入 `rust-supervisor-macros` 依赖, 并避免新增 compatibility exports(兼容导出).
+- [X] T012 [US1] 在 `rust-supervisor-macros/Cargo.toml` 中添加 `syn`(Rust 语法解析库), `quote`(代码生成库) 和 `proc-macro2`(过程宏辅助库).
+- [X] T013 [P] [US1] 在 `rust-supervisor-macros/src/parse/role_args.rs` 中解析 `#[service(id, name)]` 参数.
+- [X] T014 [P] [US1] 在 `rust-supervisor-macros/src/parse/lifecycle_impl.rs` 中解析 `impl block`(实现块) 并检查 `run` 方法.
+- [X] T015 [US1] 在 `rust-supervisor-macros/src/expand/service.rs` 中生成 `ServiceRole`(服务角色特征) 实现和 adapter(适配器) 桥接代码.
+- [X] T016 [US1] 在 `rust-supervisor-macros/src/attribute/service.rs` 中注册 `#[service]` attribute macro(属性宏).
 
 ---
 
@@ -56,11 +56,11 @@
 
 **Purpose(目的)**: 验证 `Service`(服务) 最小闭环.
 
-- [ ] T017 [US1] 在 `rust-supervisor/tests/role_contracts/service_macro_pass.rs` 中添加 `#[service]` compile-pass(编译通过) 测试.
-- [ ] T018 [US1] 在 `rust-supervisor/tests/role_contracts/service_macro_fail.rs` 中添加缺少 `run` 方法的 compile-fail(编译失败) 测试.
-- [ ] T019 [US1] 在 `rust-supervisor/examples/step_02_supervisor_with_service/main.rs` 中迁移自由函数 `run_service` 为 `#[service]` 角色契约示例.
-- [ ] T020 [US1] 运行 `cargo check --workspace --all-targets`, 确认主包和宏包能一起编译.
-- [ ] T021 [US1] 运行 `cargo test --workspace`, 确认现有测试和新增宏测试全部通过.
+- [X] T017 [US1] 在 `rust-supervisor/tests/role_contracts/service_macro_pass.rs` 中添加 `#[service]` compile-pass(编译通过) 测试.
+- [X] T018 [US1] 在 `rust-supervisor/tests/role_contracts/service_macro_fail.rs` 中添加缺少 `run` 方法的 compile-fail(编译失败) 测试.
+- [X] T019 [US1] 在 `rust-supervisor/examples/step_02_supervisor_with_service/main.rs` 中迁移自由函数 `run_service` 为 `#[service]` 角色契约示例.
+- [X] T020 [US1] 运行 `cargo check --workspace --all-targets`, 确认主包和宏包能一起编译.
+- [X] T021 [US1] 运行 `cargo test --workspace`, 确认现有测试和新增宏测试全部通过.
 
 ---
 
@@ -68,14 +68,14 @@
 
 **Purpose(目的)**: 在 `Service`(服务) 闭环稳定后复制结构到其他角色.
 
-- [ ] T022 [P] [US2] 在 `rust-supervisor/src/role/context/worker.rs`, `rust-supervisor/src/role/traits/worker.rs` 和 `rust-supervisor/src/role/adapter/worker.rs` 中实现 `Worker`(后台任务) 运行时契约.
-- [ ] T023 [P] [US2] 在 `rust-supervisor/src/role/context/job.rs`, `rust-supervisor/src/role/traits/job.rs` 和 `rust-supervisor/src/role/adapter/job.rs` 中实现 `Job`(一次性任务) 运行时契约.
-- [ ] T024 [P] [US2] 在 `rust-supervisor/src/role/context/sidecar.rs`, `rust-supervisor/src/role/traits/sidecar.rs` 和 `rust-supervisor/src/role/adapter/sidecar.rs` 中实现 `Sidecar`(边车) 运行时契约.
-- [ ] T025 [P] [US2] 在 `rust-supervisor/src/role/context/supervisor.rs`, `rust-supervisor/src/role/traits/supervisor.rs` 和 `rust-supervisor/src/role/adapter/supervisor.rs` 中实现 `Supervisor`(监督器) 运行时契约.
-- [ ] T026 [P] [US1] 在 `rust-supervisor-macros/src/attribute/worker.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[worker]`.
-- [ ] T027 [P] [US1] 在 `rust-supervisor-macros/src/attribute/job.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[job]`.
-- [ ] T028 [P] [US1] 在 `rust-supervisor-macros/src/attribute/sidecar.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[sidecar]`.
-- [ ] T029 [P] [US1] 在 `rust-supervisor-macros/src/attribute/supervisor_role.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[supervisor_role]`.
+- [X] T022 [P] [US2] 在 `rust-supervisor/src/role/context/worker.rs`, `rust-supervisor/src/role/traits/worker.rs` 和 `rust-supervisor/src/role/adapter/worker.rs` 中实现 `Worker`(后台任务) 运行时契约.
+- [X] T023 [P] [US2] 在 `rust-supervisor/src/role/context/job.rs`, `rust-supervisor/src/role/traits/job.rs` 和 `rust-supervisor/src/role/adapter/job.rs` 中实现 `Job`(一次性任务) 运行时契约.
+- [X] T024 [P] [US2] 在 `rust-supervisor/src/role/context/sidecar.rs`, `rust-supervisor/src/role/traits/sidecar.rs` 和 `rust-supervisor/src/role/adapter/sidecar.rs` 中实现 `Sidecar`(边车) 运行时契约.
+- [X] T025 [P] [US2] 在 `rust-supervisor/src/role/context/supervisor.rs`, `rust-supervisor/src/role/traits/supervisor.rs` 和 `rust-supervisor/src/role/adapter/supervisor.rs` 中实现 `Supervisor`(监督器) 运行时契约.
+- [X] T026 [P] [US1] 在 `rust-supervisor-macros/src/attribute/worker.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[worker]`.
+- [X] T027 [P] [US1] 在 `rust-supervisor-macros/src/attribute/job.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[job]`.
+- [X] T028 [P] [US1] 在 `rust-supervisor-macros/src/attribute/sidecar.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[sidecar]`.
+- [X] T029 [P] [US1] 在 `rust-supervisor-macros/src/attribute/supervisor_role.rs` 和对应 `parse/`, `expand/` 文件中实现 `#[supervisor_role]`.
 
 ---
 
@@ -83,11 +83,11 @@
 
 **Purpose(目的)**: 提供 abstract default implementation(抽象默认实现) 入口.
 
-- [ ] T030 [P] [US3] 在 `rust-supervisor/src/role/templates/service.rs` 中实现 `Service`(服务) 模板入口.
-- [ ] T031 [P] [US3] 在 `rust-supervisor/src/role/templates/worker.rs` 中实现 `Worker`(后台任务) 模板入口.
-- [ ] T032 [P] [US3] 在 `rust-supervisor/src/role/templates/job.rs` 中实现 `Job`(一次性任务) 模板入口.
-- [ ] T033 [P] [US3] 在 `rust-supervisor/src/role/templates/sidecar.rs` 中实现 `Sidecar`(边车) 模板入口.
-- [ ] T034 [P] [US3] 在 `rust-supervisor/src/role/templates/supervisor.rs` 中实现 `Supervisor`(监督器) 模板入口.
+- [X] T030 [P] [US3] 在 `rust-supervisor/src/role/templates/service.rs` 中实现 `Service`(服务) 模板入口.
+- [X] T031 [P] [US3] 在 `rust-supervisor/src/role/templates/worker.rs` 中实现 `Worker`(后台任务) 模板入口.
+- [X] T032 [P] [US3] 在 `rust-supervisor/src/role/templates/job.rs` 中实现 `Job`(一次性任务) 模板入口.
+- [X] T033 [P] [US3] 在 `rust-supervisor/src/role/templates/sidecar.rs` 中实现 `Sidecar`(边车) 模板入口.
+- [X] T034 [P] [US3] 在 `rust-supervisor/src/role/templates/supervisor.rs` 中实现 `Supervisor`(监督器) 模板入口.
 
 ---
 
@@ -95,12 +95,12 @@
 
 **Purpose(目的)**: 完成回归验证和文档同步.
 
-- [ ] T035 [P] 在 `rust-supervisor/tests/role_contracts/` 中补齐 5 个角色的 compile-pass(编译通过) 测试.
-- [ ] T036 [P] 在 `rust-supervisor/tests/role_contracts/` 中补齐 5 个角色的 compile-fail(编译失败) 测试.
-- [ ] T037 在 `rust-supervisor/src/tests/glossary_coverage_test.rs` 中确认新术语已经纳入 glossary(术语表) 或测试例外.
-- [ ] T038 运行 `cargo fmt --check --all`, 确认格式化无漂移.
-- [ ] T039 运行 `cargo check --workspace --all-targets`, 确认编译无回归.
-- [ ] T040 运行 `cargo test --workspace`, 确认全部测试通过.
+- [X] T035 [P] 在 `rust-supervisor/tests/role_contracts/` 中补齐 5 个角色的 compile-pass(编译通过) 测试.
+- [X] T036 [P] 在 `rust-supervisor/tests/role_contracts/` 中补齐 5 个角色的 compile-fail(编译失败) 测试.
+- [X] T037 在 `rust-supervisor/src/tests/glossary_coverage_test.rs` 中确认新术语已经纳入 glossary(术语表) 或测试例外.
+- [X] T038 运行 `cargo fmt --check --all`, 确认格式化无漂移.
+- [X] T039 运行 `cargo check --workspace --all-targets`, 确认编译无回归.
+- [X] T040 运行 `cargo test --workspace`, 确认全部测试通过.
 
 ## Dependencies(依赖关系)
 

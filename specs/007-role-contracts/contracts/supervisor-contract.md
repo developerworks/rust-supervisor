@@ -4,7 +4,7 @@
 
 ## Boundary(边界)
 
-`TaskRole::Supervisor`(任务角色: 监督器) 表示业务角色. `TaskKind::Supervisor`(任务执行种类: 监督器节点) 表示 runtime(运行时) 执行形态. 本契约必须同时尊重这 2 个概念, 但不得把它们混为一个字段.
+`TaskRole::Supervisor`(任务角色: 监督器) 表示业务角色. `TaskKind::Supervisor`(任务执行种类: 监督器节点) 表示 runtime(运行时) 中的纯监督器节点形态. 角色契约入口不直接使用 `TaskKind::Supervisor`(任务执行种类: 监督器节点), 而是使用 `TaskKind::AsyncWorker`(任务执行种类: 异步后台任务) 运行 `SupervisorRoleAdapter`(监督器角色适配器). adapter(适配器) 内部负责启动 nested supervisor(嵌套监督器).
 
 ## Lifecycle(生命周期)
 
@@ -35,7 +35,8 @@ async fn shutdown(&mut self, ctx: &SupervisorContext, tree: SupervisorHandle) ->
 
 - `ready` 报告 readiness(就绪).
 - `heartbeat` 报告 heartbeat(心跳).
-- `supervisor_id` 读取当前监督器标识.
+- `child_id` 读取当前监督器 child(子任务) 标识.
+- `path` 读取当前监督器在 supervisor tree(监督器树) 中的路径.
 - `is_shutdown_requested` 查询 shutdown(关闭) 是否已经请求.
 - `wait_shutdown` 等待 shutdown(关闭).
 
@@ -44,7 +45,8 @@ async fn shutdown(&mut self, ctx: &SupervisorContext, tree: SupervisorHandle) ->
 - `#[supervisor_role]` 必须要求 `id` 和 `name`.
 - `#[supervisor_role]` 必须检查 `build_tree` 方法存在.
 - `#[supervisor_role]` 必须生成 `TaskRole::Supervisor`(任务角色: 监督器).
-- `#[supervisor_role]` 必须生成或要求 `TaskKind::Supervisor`(任务执行种类: 监督器节点) 的运行形态.
+- `#[supervisor_role]` 必须生成 `TaskKind::AsyncWorker`(任务执行种类: 异步后台任务) 的外层运行形态.
+- `#[supervisor_role]` 生成的 `child_spec()` 必须使用 critical child(关键子任务) 设置, 并让 `SupervisorRoleAdapter`(监督器角色适配器) 启动 nested supervisor(嵌套监督器).
 
 ## Runtime Rules(运行时规则)
 

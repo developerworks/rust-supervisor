@@ -4,7 +4,7 @@
 
 ## 1. RoleMetadata(角色元数据)
 
-`RoleMetadata`(角色元数据) 保存宏参数和显式入口需要的基础声明.
+`RoleMetadata`(角色元数据) 保存 macro(宏) 参数和 `child_spec()` 生成需要的基础声明. 它不是 runtime adapter(运行时适配器) 的字段.
 
 ```rust
 pub struct RoleMetadata {
@@ -41,7 +41,8 @@ pub struct ServiceContext {
 | `wait_shutdown` | yes | no | no | yes | yes |
 | `wait_cancelled` | no | yes | yes | no | no |
 | `primary_id` | no | no | no | yes | no |
-| `supervisor_id` | no | no | no | no | yes |
+| `child_id` | yes | yes | yes | yes | yes |
+| `path` | yes | yes | yes | yes | yes |
 
 ## 3. RoleResult(角色结果)
 
@@ -97,8 +98,7 @@ pub enum RoleLifecyclePhase {
 
 ```rust
 pub struct ServiceRoleAdapter<T> {
-    role: T,
-    metadata: RoleMetadata,
+    role: Arc<Mutex<T>>,
 }
 ```
 
@@ -107,8 +107,10 @@ adapter(适配器) 必须完成下列职责.
 1. 创建对应 role context(角色上下文).
 2. 按角色生命周期调用用户方法.
 3. 把 role result(角色结果) 映射为 `TaskResult`(任务结果).
-4. 把 role metadata(角色元数据) 写入 `ChildSpec`(子任务规格).
-5. 保持 shutdown(关闭) 和 cancellation(取消) 的所有权清晰.
+4. 保持 shutdown(关闭) 和 cancellation(取消) 的所有权清晰.
+5. 只保存运行生命周期需要的状态, 例如被 `Arc<Mutex<T>>` 保护的角色实例, 以及 `Sidecar`(边车) 需要的 `primary_child_id`.
+
+`ChildSpec`(子任务规格) 写入由 macro(宏) 生成的 `child_spec()` 或 template(模板) 入口完成. 因此 adapter(适配器) 不直接持有 `RoleMetadata`(角色元数据).
 
 ## 6. MacroInput(宏输入)
 
