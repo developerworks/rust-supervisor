@@ -7,7 +7,8 @@ use rust_supervisor::id::types::ChildId;
 // Import task role defaults and sidecar configuration.
 use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
 // Import child specification values.
-use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
+use rust_supervisor::spec::child::{ChildSpec, Criticality, TaskKind};
+use rust_supervisor::spec::shutdown::ShutdownBudget;
 // Import task context values.
 use rust_supervisor::task::context::TaskContext;
 // Import task factory helpers.
@@ -84,8 +85,8 @@ pub fn primary_service_child(
     // Add stable diagnostic tags.
     child.tags = vec!["service".to_owned(), "api".to_owned()];
     // Use short child shutdown budgets for a fast example.
-    child.shutdown_policy =
-        ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
+    child.shutdown_budget =
+        ShutdownBudget::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the primary child declaration.
     Ok(child)
 }
@@ -131,8 +132,8 @@ pub fn sidecar_child(
     // Add stable diagnostic tags.
     child.tags = vec!["sidecar".to_owned(), "metrics".to_owned()];
     // Use short child shutdown budgets for a fast example.
-    child.shutdown_policy =
-        ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
+    child.shutdown_budget =
+        ShutdownBudget::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the sidecar child declaration.
     Ok(child)
 }

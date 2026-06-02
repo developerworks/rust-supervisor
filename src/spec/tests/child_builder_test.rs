@@ -27,7 +27,7 @@ fn assert_worker_fields_match(builder_spec: &ChildSpec, worker_spec: &ChildSpec)
     assert!(worker_spec.factory.is_some());
     assert_eq!(builder_spec.factory_key, worker_spec.factory_key);
     assert_eq!(builder_spec.restart_policy, worker_spec.restart_policy);
-    assert_eq!(builder_spec.shutdown_policy, worker_spec.shutdown_policy);
+    assert_eq!(builder_spec.shutdown_budget, worker_spec.shutdown_budget);
     assert_eq!(builder_spec.health_policy, worker_spec.health_policy);
     assert_eq!(builder_spec.readiness_policy, worker_spec.readiness_policy);
     assert_eq!(builder_spec.backoff_policy, worker_spec.backoff_policy);
@@ -77,10 +77,10 @@ fn worker_builder_applies_worker_policy_defaults() -> Result<(), SupervisorError
     assert_eq!(spec.isolation, Isolation::AsyncWorker);
     assert_eq!(spec.restart_policy, RestartPolicy::Transient);
     assert_eq!(
-        spec.shutdown_policy.graceful_timeout,
+        spec.shutdown_budget.graceful_timeout,
         Duration::from_secs(5)
     );
-    assert_eq!(spec.shutdown_policy.abort_wait, Duration::from_secs(1));
+    assert_eq!(spec.shutdown_budget.abort_wait, Duration::from_secs(1));
     assert_eq!(
         spec.health_policy.heartbeat_interval,
         Duration::from_secs(1)
@@ -114,10 +114,10 @@ fn supervisor_builder_applies_baseline_policy_defaults() -> Result<(), Superviso
     assert_eq!(spec.isolation, Isolation::AsyncWorker);
     assert_eq!(spec.restart_policy, RestartPolicy::Permanent);
     assert_eq!(
-        spec.shutdown_policy.graceful_timeout,
+        spec.shutdown_budget.graceful_timeout,
         Duration::from_secs(5)
     );
-    assert_eq!(spec.shutdown_policy.abort_wait, Duration::from_secs(1));
+    assert_eq!(spec.shutdown_budget.abort_wait, Duration::from_secs(1));
     assert_eq!(
         spec.health_policy.heartbeat_interval,
         Duration::from_secs(10)

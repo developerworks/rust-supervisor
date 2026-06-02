@@ -486,10 +486,13 @@ impl ConfigState {
             Duration::from_millis(self.policy.heartbeat_interval_ms),
             Duration::from_millis(self.policy.stale_after_ms),
         );
-        spec.default_shutdown_policy = crate::spec::child::ShutdownPolicy::new(
-            Duration::from_millis(self.shutdown.graceful_timeout_ms),
-            Duration::from_millis(self.shutdown.abort_wait_ms),
+        spec.tree_shutdown = crate::spec::shutdown::TreeShutdownPolicy::with_budget(
+            crate::spec::shutdown::ShutdownBudget::new(
+                Duration::from_millis(self.shutdown.graceful_timeout_ms),
+                Duration::from_millis(self.shutdown.abort_wait_ms),
+            ),
         );
+        spec.propagate_tree_shutdown_budget();
         spec.restart_limit = Some(crate::spec::supervisor::RestartLimit::new(
             self.policy.child_restart_limit,
             Duration::from_millis(self.policy.child_restart_window_ms),

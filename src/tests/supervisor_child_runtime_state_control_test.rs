@@ -15,8 +15,9 @@ use rust_supervisor::observe::metrics::SupervisorMetricName;
 use rust_supervisor::readiness::signal::{ReadinessPolicy, ReadinessState};
 use rust_supervisor::runtime::supervisor::Supervisor;
 use rust_supervisor::spec::child::{
-    BackoffPolicy, ChildSpec, RestartPolicy, ShutdownPolicy, TaskKind,
+    BackoffPolicy, ChildSpec, RestartPolicy, TaskKind,
 };
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use rust_supervisor::spec::supervisor::{RestartLimit, SupervisorSpec};
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
@@ -507,8 +508,11 @@ async fn stop_failure_outcome_carries_phase_and_reason_test() -> Result<(), Supe
         started_sender,
         release.clone(),
     )?]);
-    spec.default_shutdown_policy =
-        ShutdownPolicy::new(Duration::from_millis(20), Duration::from_millis(20));
+    spec.tree_shutdown = TreeShutdownPolicy::with_budget(ShutdownBudget::new(
+        Duration::from_millis(20),
+        Duration::from_millis(20),
+    ));
+    spec.propagate_tree_shutdown_budget();
     let handle = Supervisor::start(spec).await.expect("start supervisor");
     wait_for_started(&mut started_receiver, 1).await;
 

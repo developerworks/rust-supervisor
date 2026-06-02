@@ -4,7 +4,8 @@
 //! task cancellation and join behavior around these transitions.
 
 use crate::shutdown::report::ShutdownPipelineReport;
-use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
+use crate::spec::shutdown::TreeShutdownPolicy;
+use crate::shutdown::stage::{ShutdownCause, ShutdownPhase};
 use serde::{Deserialize, Serialize};
 
 /// Result returned after a shutdown transition.
@@ -24,7 +25,7 @@ pub struct ShutdownResult {
 #[derive(Debug, Clone)]
 pub struct ShutdownCoordinator {
     /// Policy that defines shutdown timing and abort behavior.
-    pub policy: ShutdownPolicy,
+    pub policy: TreeShutdownPolicy,
     /// Current phase of the shutdown state machine.
     phase: ShutdownPhase,
     /// Optional cause recorded when shutdown has been requested.
@@ -46,10 +47,10 @@ impl ShutdownCoordinator {
     ///
     /// ```
     /// use std::time::Duration;
+    /// use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
     ///
-    /// let policy = rust_supervisor::shutdown::stage::ShutdownPolicy::new(
-    ///     Duration::from_secs(1),
-    ///     Duration::from_secs(1),
+    /// let policy = TreeShutdownPolicy::new(
+    ///     ShutdownBudget::new(Duration::from_secs(1), Duration::from_secs(1)),
     ///     true,
     ///     Duration::from_secs(1),
     ///     0,
@@ -57,7 +58,7 @@ impl ShutdownCoordinator {
     /// let coordinator = rust_supervisor::shutdown::coordinator::ShutdownCoordinator::new(policy);
     /// assert_eq!(coordinator.phase(), rust_supervisor::shutdown::stage::ShutdownPhase::Idle);
     /// ```
-    pub fn new(policy: ShutdownPolicy) -> Self {
+    pub fn new(policy: TreeShutdownPolicy) -> Self {
         Self {
             policy,
             phase: ShutdownPhase::Idle,

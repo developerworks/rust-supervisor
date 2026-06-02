@@ -10,8 +10,9 @@ use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::spec::child::{
     BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
-    HealthPolicy, RestartPolicy, SecretRef, ShutdownPolicy, TaskKind,
+    HealthPolicy, RestartPolicy, SecretRef, TaskKind,
 };
+use crate::spec::shutdown::ShutdownBudget;
 use confique::Config;
 use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
@@ -330,7 +331,7 @@ impl TryFrom<ChildDeclaration> for ChildSpec {
             factory: None,
             factory_key: decl.factory_key,
             restart_policy,
-            shutdown_policy: ShutdownPolicy::new(
+            shutdown_budget: ShutdownBudget::new(
                 std::time::Duration::from_secs(5),
                 std::time::Duration::from_secs(1),
             ),

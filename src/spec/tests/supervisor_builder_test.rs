@@ -10,7 +10,7 @@ use rust_supervisor::policy::failure_window::FailureWindowConfig;
 use rust_supervisor::policy::group::{GroupDependencyEdge, PropagationPolicy};
 use rust_supervisor::policy::meltdown::MeltdownPolicy;
 use rust_supervisor::policy::task_role_defaults::{SeverityClass, TaskRole};
-use rust_supervisor::spec::child::ShutdownPolicy as ChildShutdownPolicy;
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use rust_supervisor::spec::child::TaskKind;
 use rust_supervisor::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy};
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
@@ -72,10 +72,7 @@ fn root_builder_matches_supervisor_spec_root_defaults() -> Result<(), Supervisor
         builder_spec.default_health_policy,
         root_spec.default_health_policy
     );
-    assert_eq!(
-        builder_spec.default_shutdown_policy,
-        root_spec.default_shutdown_policy
-    );
+    assert_eq!(builder_spec.tree_shutdown, root_spec.tree_shutdown);
     assert_eq!(
         builder_spec.supervisor_failure_limit,
         root_spec.supervisor_failure_limit
@@ -132,11 +129,6 @@ fn root_builder_matches_supervisor_spec_root_defaults() -> Result<(), Supervisor
     );
     assert_eq!(builder_spec.metrics_enabled, root_spec.metrics_enabled);
     assert_eq!(builder_spec.audit_enabled, root_spec.audit_enabled);
-    assert_eq!(builder_spec.force_kill_margin, root_spec.force_kill_margin);
-    assert_eq!(
-        builder_spec.max_orphan_threshold,
-        root_spec.max_orphan_threshold
-    );
     Ok(())
 }
 
@@ -168,32 +160,27 @@ fn explicit_channel_capacities_are_preserved_after_child_changes() -> Result<(),
     Ok(())
 }
 
-/// Verifies fluent setters update the constructed supervisor specification.
-#[test]
-fn builder_setters_apply_expected_fields() -> Result<(), SupervisorError> {
-    let child = grouped_service_child("api", "pipeline")?;
-    let restart_limit = RestartLimit::new(3, Duration::from_secs(30));
-    let group_config = GroupConfig::new(
-        "pipeline",
-        vec![child.id.clone()],
-        Some(RestartBudgetConfig::new(Duration::from_secs(30), 3, 1.0)),
-    );
-    let mut group_strategy = GroupStrategy::new("pipeline", SupervisionStrategy::OneForAll);
-    group_strategy.restart_limit = Some(restart_limit);
-    group_strategy.escalation_policy = Some(EscalationPolicy::EscalateToParent);
-    let child_override =
-        ChildStrategyOverride::new(child.id.clone(), SupervisionStrategy::RestForOne);
-    let backpressure_config = BackpressureConfig {
-        strategy: BackpressureStrategy::SampleAndAudit,
-        warn_threshold_pct: 70,
-        critical_threshold_pct: 90,
-        window_secs: 10,
-        audit_channel_capacity: 16,
-    };
-    let mut severity_defaults = HashMap::new();
-    severity_defaults.insert(TaskRole::Service, SeverityClass::Critical);
+/// Fixture for fluent supervisor builder setter coverage.
+struct FluentSetterFixture {
+    /// Child mounted on the built supervisor.
+    child: ChildSpec,
+    /// Restart limit applied at supervisor and group scope.
+    restart_limit: RestartLimit,
+    /// Supervisor specification built through fluent setters.
+    spec: SupervisorSpec,
+}
 
-    let spec = SupervisorSpecBuilder::root(Vec::new())
+/// Applies fluent builder setters and returns the constructed supervisor specification.
+fn build_supervisor_with_fluent_setters(
+    child: ChildSpec,
+    restart_limit: RestartLimit,
+    group_config: GroupConfig,
+    group_strategy: GroupStrategy,
+    child_override: ChildStrategyOverride,
+    backpressure_config: BackpressureConfig,
+    severity_defaults: HashMap<TaskRole, SeverityClass>,
+) -> Result<SupervisorSpec, SupervisorError> {
+    SupervisorSpecBuilder::root(Vec::new())
         .path(rust_supervisor::id::types::SupervisorPath::root())
         .child(child.clone())
         .config_version("builder-demo")
@@ -208,9 +195,11 @@ fn builder_setters_apply_expected_fields() -> Result<(), SupervisorError> {
             Duration::from_secs(2),
             Duration::from_secs(6),
         ))
-        .default_shutdown_policy(ChildShutdownPolicy::new(
-            Duration::from_secs(4),
-            Duration::from_secs(1),
+        .tree_shutdown(TreeShutdownPolicy::new(
+            ShutdownBudget::new(Duration::from_secs(4), Duration::from_secs(1)),
+            true,
+            Duration::from_secs(3),
+            2,
         ))
         .supervisor_failure_limit(2)
         .restart_limit(restart_limit)
@@ -246,9 +235,57 @@ fn builder_setters_apply_expected_fields() -> Result<(), SupervisorError> {
         .concurrent_restart_limit(2)
         .metrics_enabled(false)
         .audit_enabled(false)
-        .force_kill_margin(Duration::from_secs(3))
-        .max_orphan_threshold(2)
-        .build()?;
+        .build()
+}
+
+/// Builds a supervisor specification that exercises fluent builder setters.
+fn fluent_setter_fixture() -> Result<FluentSetterFixture, SupervisorError> {
+    let child = grouped_service_child("api", "pipeline")?;
+    let restart_limit = RestartLimit::new(3, Duration::from_secs(30));
+    let group_config = GroupConfig::new(
+        "pipeline",
+        vec![child.id.clone()],
+        Some(RestartBudgetConfig::new(Duration::from_secs(30), 3, 1.0)),
+    );
+    let mut group_strategy = GroupStrategy::new("pipeline", SupervisionStrategy::OneForAll);
+    group_strategy.restart_limit = Some(restart_limit);
+    group_strategy.escalation_policy = Some(EscalationPolicy::EscalateToParent);
+    let child_override =
+        ChildStrategyOverride::new(child.id.clone(), SupervisionStrategy::RestForOne);
+    let backpressure_config = BackpressureConfig {
+        strategy: BackpressureStrategy::SampleAndAudit,
+        warn_threshold_pct: 70,
+        critical_threshold_pct: 90,
+        window_secs: 10,
+        audit_channel_capacity: 16,
+    };
+    let mut severity_defaults = HashMap::new();
+    severity_defaults.insert(TaskRole::Service, SeverityClass::Critical);
+    let spec = build_supervisor_with_fluent_setters(
+        child.clone(),
+        restart_limit,
+        group_config,
+        group_strategy,
+        child_override,
+        backpressure_config,
+        severity_defaults,
+    )?;
+
+    Ok(FluentSetterFixture {
+        child,
+        restart_limit,
+        spec,
+    })
+}
+
+/// Verifies fluent setters update the constructed supervisor specification.
+#[test]
+fn builder_setters_apply_expected_fields() -> Result<(), SupervisorError> {
+    let FluentSetterFixture {
+        child,
+        restart_limit,
+        spec,
+    } = fluent_setter_fixture()?;
 
     assert_eq!(spec.children.len(), 1);
     assert_eq!(spec.children[0].id, child.id);
@@ -279,8 +316,12 @@ fn builder_setters_apply_expected_fields() -> Result<(), SupervisorError> {
     assert_eq!(spec.concurrent_restart_limit, 2);
     assert!(!spec.metrics_enabled);
     assert!(!spec.audit_enabled);
-    assert_eq!(spec.force_kill_margin, Duration::from_secs(3));
-    assert_eq!(spec.max_orphan_threshold, 2);
+    assert_eq!(spec.tree_shutdown.force_kill_margin, Duration::from_secs(3));
+    assert_eq!(spec.tree_shutdown.max_orphan_threshold, 2);
+    assert_eq!(
+        spec.tree_shutdown.budget.graceful_timeout,
+        Duration::from_secs(4)
+    );
     Ok(())
 }
 

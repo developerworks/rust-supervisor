@@ -10,7 +10,8 @@ use crate::runtime::child_slot::{ChildExitSummary, ChildSlot};
 use crate::shutdown::report::{
     ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus,
 };
-use crate::shutdown::stage::{ShutdownPhase, ShutdownPolicy};
+use crate::spec::shutdown::TreeShutdownPolicy;
+use crate::shutdown::stage::ShutdownPhase;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::{Instant, timeout};
@@ -39,12 +40,13 @@ use tokio::time::{Instant, timeout};
 /// Returns a vector of [`ChildShutdownOutcome`] values, one per slot.
 pub async fn shutdown_tree_fanout(
     slots: &mut HashMap<ChildId, ChildSlot>,
-    policy: &ShutdownPolicy,
+    policy: &TreeShutdownPolicy,
     admission: &mut AdmissionSet,
     orphan_count: &mut u64,
 ) -> Vec<ChildShutdownOutcome> {
-    let global_deadline = Instant::now() + policy.graceful_timeout + policy.abort_wait;
-    let graceful_deadline = Instant::now() + policy.graceful_timeout;
+    let global_deadline =
+        Instant::now() + policy.budget.graceful_timeout + policy.budget.abort_wait;
+    let graceful_deadline = Instant::now() + policy.budget.graceful_timeout;
 
     // Phase 1: deliver cancellation to every active slot.
     for slot in slots.values_mut() {
@@ -74,7 +76,7 @@ pub async fn shutdown_tree_fanout(
 
     // Phase 4: wait for aborted slots within abort_wait (bounded by global
     // deadline).
-    let abort_deadline = graceful_deadline + policy.abort_wait;
+    let abort_deadline = graceful_deadline + policy.budget.abort_wait;
     for child_id in &child_ids {
         let remaining = remaining_duration(abort_deadline.min(global_deadline));
         let completed = drain_one_slot(slots, child_id, remaining).await;

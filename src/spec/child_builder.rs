@@ -10,8 +10,9 @@ use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
 use crate::spec::child::{
     BackoffPolicy, ChildSpec, CommandPermissions, Criticality, EnvVar, HealthCheckConfig,
-    HealthPolicy, Isolation, RestartPolicy, SecretRef, ShutdownPolicy, TaskKind,
+    HealthPolicy, Isolation, RestartPolicy, SecretRef, TaskKind,
 };
+use crate::spec::shutdown::ShutdownBudget;
 use crate::task::factory::TaskFactory;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,7 +23,7 @@ struct PolicyDefaults {
     /// Restart policy for child construction.
     restart_policy: RestartPolicy,
     /// Shutdown policy for child construction.
-    shutdown_policy: ShutdownPolicy,
+    shutdown_budget: ShutdownBudget,
     /// Health policy for child construction.
     health_policy: HealthPolicy,
     /// Readiness policy for child construction.
@@ -35,7 +36,7 @@ struct PolicyDefaults {
 fn worker_policy_defaults() -> PolicyDefaults {
     PolicyDefaults {
         restart_policy: RestartPolicy::Transient,
-        shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
+        shutdown_budget: ShutdownBudget::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(1), Duration::from_secs(3)),
         readiness_policy: ReadinessPolicy::Immediate,
         backoff_policy: BackoffPolicy::new(Duration::from_millis(10), Duration::from_secs(1), 0.0),
@@ -46,7 +47,7 @@ fn worker_policy_defaults() -> PolicyDefaults {
 fn baseline_policy_defaults() -> PolicyDefaults {
     PolicyDefaults {
         restart_policy: RestartPolicy::Permanent,
-        shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
+        shutdown_budget: ShutdownBudget::new(Duration::from_secs(5), Duration::from_secs(1)),
         health_policy: HealthPolicy::new(Duration::from_secs(10), Duration::from_secs(5)),
         readiness_policy: ReadinessPolicy::Immediate,
         backoff_policy: BackoffPolicy::new(Duration::from_millis(10), Duration::from_secs(1), 0.0),
@@ -56,7 +57,7 @@ fn baseline_policy_defaults() -> PolicyDefaults {
 /// Applies a policy bundle to a child specification.
 fn apply_policy_defaults(spec: &mut ChildSpec, defaults: PolicyDefaults) {
     spec.restart_policy = defaults.restart_policy;
-    spec.shutdown_policy = defaults.shutdown_policy;
+    spec.shutdown_budget = defaults.shutdown_budget;
     spec.health_policy = defaults.health_policy;
     spec.readiness_policy = defaults.readiness_policy;
     spec.backoff_policy = defaults.backoff_policy;
@@ -94,7 +95,7 @@ impl ChildSpecBuilder {
             factory: None,
             factory_key: None,
             restart_policy: RestartPolicy::default(),
-            shutdown_policy: ShutdownPolicy::new(Duration::from_secs(5), Duration::from_secs(1)),
+            shutdown_budget: ShutdownBudget::new(Duration::from_secs(5), Duration::from_secs(1)),
             health_policy: HealthPolicy::new(Duration::from_secs(10), Duration::from_secs(5)),
             readiness_policy: ReadinessPolicy::Immediate,
             backoff_policy: BackoffPolicy::new(
@@ -444,13 +445,13 @@ impl ChildSpecBuilder {
     ///
     /// # Arguments
     ///
-    /// - `shutdown_policy`: Shutdown policy for this child.
+    /// - `shutdown_budget`: Shutdown budget for this child.
     ///
     /// # Returns
     ///
     /// Returns the builder for chaining.
-    pub fn shutdown_policy(mut self, shutdown_policy: ShutdownPolicy) -> Self {
-        self.spec.shutdown_policy = shutdown_policy;
+    pub fn shutdown_budget(mut self, shutdown_budget: ShutdownBudget) -> Self {
+        self.spec.shutdown_budget = shutdown_budget;
         self
     }
 

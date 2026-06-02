@@ -15,7 +15,6 @@ use crate::observe::pipeline::ObservabilityPipeline;
 use crate::runtime::control_loop::{RuntimeControlState, run_control_loop};
 use crate::runtime::lifecycle::RuntimeControlPlane;
 use crate::runtime::watchdog::RuntimeWatchdog;
-use crate::shutdown::stage::ShutdownPolicy;
 use crate::spec::supervisor::SupervisorSpec;
 use crate::task::factory_registry::TaskFactoryRegistry;
 use std::path::Path;
@@ -37,8 +36,7 @@ impl Supervisor {
     ///
     /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
     pub async fn start(spec: SupervisorSpec) -> Result<SupervisorHandle, SupervisorError> {
-        let shutdown_policy = shutdown_policy_from_spec(&spec);
-        Self::start_with_policy(spec, shutdown_policy).await
+        Self::start_with_factory_registry(spec, TaskFactoryRegistry::new()).await
     }
 
     /// Starts a supervisor runtime from validated configuration state.
@@ -153,28 +151,6 @@ impl Supervisor {
         Self::start_from_config_state_with_factories(state, task_factory_registry).await
     }
 
-    /// Starts a supervisor runtime with an explicit shutdown policy.
-    ///
-    /// # Arguments
-    ///
-    /// - `spec`: Supervisor specification owned by the caller.
-    /// - `shutdown_policy`: Policy used by the control loop.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
-    pub async fn start_with_policy(
-        spec: SupervisorSpec,
-        shutdown_policy: ShutdownPolicy,
-    ) -> Result<SupervisorHandle, SupervisorError> {
-        Self::start_with_policy_and_factory_registry(
-            spec,
-            shutdown_policy,
-            TaskFactoryRegistry::new(),
-        )
-        .await
-    }
-
     /// Starts a supervisor runtime with an explicit task factory registry.
     ///
     /// # Arguments
@@ -187,27 +163,6 @@ impl Supervisor {
     /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
     pub async fn start_with_factory_registry(
         spec: SupervisorSpec,
-        task_factory_registry: TaskFactoryRegistry,
-    ) -> Result<SupervisorHandle, SupervisorError> {
-        let shutdown_policy = shutdown_policy_from_spec(&spec);
-        Self::start_with_policy_and_factory_registry(spec, shutdown_policy, task_factory_registry)
-            .await
-    }
-
-    /// Starts a supervisor runtime with explicit shutdown policy and factories.
-    ///
-    /// # Arguments
-    ///
-    /// - `spec`: Supervisor specification owned by the caller.
-    /// - `shutdown_policy`: Policy used by the control loop.
-    /// - `task_factory_registry`: Registry used by dynamic child declarations.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`SupervisorHandle`] connected to the runtime control loop.
-    pub async fn start_with_policy_and_factory_registry(
-        spec: SupervisorSpec,
-        shutdown_policy: ShutdownPolicy,
         task_factory_registry: TaskFactoryRegistry,
     ) -> Result<SupervisorHandle, SupervisorError> {
         spec.validate()?;
@@ -224,7 +179,6 @@ impl Supervisor {
         )));
         let state = RuntimeControlState::new_with_factory_registry(
             spec,
-            shutdown_policy,
             command_sender.clone(),
             observability.clone(),
             task_factory_registry,
@@ -243,25 +197,6 @@ impl Supervisor {
             observability,
         ))
     }
-}
-
-/// Builds the shutdown policy from supervisor defaults.
-///
-/// # Arguments
-///
-/// - `spec`: Supervisor declaration that owns default shutdown values.
-///
-/// # Returns
-///
-/// Returns a [`ShutdownPolicy`] for runtime shutdown coordination.
-fn shutdown_policy_from_spec(spec: &SupervisorSpec) -> ShutdownPolicy {
-    ShutdownPolicy::new(
-        spec.default_shutdown_policy.graceful_timeout,
-        spec.default_shutdown_policy.abort_wait,
-        true,
-        spec.force_kill_margin,
-        spec.max_orphan_threshold,
-    )
 }
 
 /// Converts dashboard startup failures into supervisor startup errors.

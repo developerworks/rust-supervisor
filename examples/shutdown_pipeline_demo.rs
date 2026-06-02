@@ -16,7 +16,8 @@ use rust_supervisor::shutdown::report::{
     ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ResourceReconcileStatus,
     ShutdownPipelineReport, ShutdownReconcileReport,
 };
-use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
+use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase};
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use std::time::Duration;
 
 /// Runs the shutdown pipeline demonstration.
@@ -29,20 +30,25 @@ fn main() {
     println!();
 
     // Build the sample shutdown policy.
-    let policy = ShutdownPolicy::new(
-        Duration::from_secs(5), // graceful_timeout
-        Duration::from_secs(1), // abort_wait
+    let policy = TreeShutdownPolicy::new(
+        ShutdownBudget::new(
+            Duration::from_secs(5), // graceful_timeout
+            Duration::from_secs(1), // abort_wait
+        ),
         true,                   // abort_after_timeout
         Duration::from_secs(5), // force_kill_margin
         3,                      // max_orphan_threshold
     );
 
     // Print the shutdown policy values.
-    println!("  graceful_timeout = {:?}", policy.graceful_timeout);
-    println!("  abort_wait       = {:?}", policy.abort_wait);
+    println!(
+        "  graceful_timeout = {:?}",
+        policy.budget.graceful_timeout
+    );
+    println!("  abort_wait       = {:?}", policy.budget.abort_wait);
     println!(
         "  interpretation: wait {:?} for cooperative stop, then {:?} for abort",
-        policy.graceful_timeout, policy.abort_wait,
+        policy.budget.graceful_timeout, policy.budget.abort_wait,
     );
 
     // --- Shutdown Phases ---
@@ -92,9 +98,8 @@ fn main() {
     println!();
 
     // Build a coordinator-specific policy.
-    let coord_policy = ShutdownPolicy::new(
-        Duration::from_secs(5),
-        Duration::from_secs(1),
+    let coord_policy = TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_secs(5), Duration::from_secs(1)),
         true,
         Duration::from_secs(5),
         3,

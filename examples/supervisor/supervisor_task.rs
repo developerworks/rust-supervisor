@@ -7,7 +7,8 @@ use rust_supervisor::id::types::ChildId;
 // Import supervisor task role defaults.
 use rust_supervisor::policy::task_role_defaults::TaskRole;
 // Import child specification values.
-use rust_supervisor::spec::child::{ChildSpec, Criticality, ShutdownPolicy, TaskKind};
+use rust_supervisor::spec::child::{ChildSpec, Criticality, TaskKind};
+use rust_supervisor::spec::shutdown::ShutdownBudget;
 // Import task context values.
 use rust_supervisor::task::context::TaskContext;
 // Import task factory helpers.
@@ -80,8 +81,8 @@ pub fn supervisor_role_child(
     // Add stable diagnostic tags.
     child.tags = vec!["supervisor".to_owned(), "nested".to_owned()];
     // Use short child shutdown budgets for a fast example.
-    child.shutdown_policy =
-        ShutdownPolicy::new(Duration::from_millis(150), Duration::from_millis(50));
+    child.shutdown_budget =
+        ShutdownBudget::new(Duration::from_millis(150), Duration::from_millis(50));
     // Return the supervisor role child declaration.
     Ok(child)
 }

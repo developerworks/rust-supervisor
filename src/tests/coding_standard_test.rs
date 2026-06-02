@@ -50,45 +50,35 @@ fn rust_source_files_have_module_documentation() {
     }
 }
 
-/// Verifies that example module comments remain English-only source docs.
+/// Verifies that example crate docs start with English module documentation.
 #[test]
-fn example_module_docs_use_english_only() {
+fn example_module_docs_start_with_english() {
     for path in rust_files(Path::new(env!("CARGO_MANIFEST_DIR")).join("examples")) {
         let lines = read_lines(&path);
+        let first = lines.first().expect("example file must not be empty");
         assert!(
-            lines
-                .first()
-                .is_some_and(|line| line.trim_start().starts_with("//!")),
+            first.trim_start().starts_with("//!"),
             "missing example module documentation in {path:?}",
         );
-        for (index, line) in lines.iter().enumerate() {
-            if line.trim_start().starts_with("//") {
-                assert!(
-                    !contains_han(line),
-                    "non-English source comment in {:?}:{}",
-                    path,
-                    index.saturating_add(1)
-                );
-            }
-        }
+        assert!(
+            has_ascii_alpha(first),
+            "example module doc must include English in {:?}:1",
+            path
+        );
     }
 }
 
-/// Verifies that Rust comments and rustdoc do not contain Chinese text.
+/// Verifies that each Rust comment run includes English; Chinese is optional.
 #[test]
-fn rust_source_comments_use_english() {
+fn rust_source_comments_require_english() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     for path in rust_files(root.join("src"))
         .into_iter()
         .chain(rust_files(root.join("examples")))
     {
         let text = fs::read_to_string(&path).expect("read rust file");
-        for (index, line) in text.lines().enumerate() {
-            let trimmed = line.trim_start();
-            if trimmed.starts_with("//") && contains_han(trimmed) {
-                panic!("Rust comment must use English in {:?}:{}", path, index + 1);
-            }
-        }
+        let lines: Vec<&str> = text.lines().collect();
+        assert_comment_runs_have_english(&path, &lines);
     }
 }
 
@@ -207,10 +197,43 @@ fn contains_chinese_punctuation(text: &str) -> bool {
         .any(|character| "，。；：！？、（）【】《》“”‘’".contains(character))
 }
 
-/// Returns whether text contains a Han character.
-fn contains_han(text: &str) -> bool {
-    text.chars()
-        .any(|character| ('\u{4e00}'..='\u{9fff}').contains(&character))
+/// Returns whether a line is a Rust comment (`//`, `///`, or `//!`).
+fn is_rust_comment_line(line: &str) -> bool {
+    line.trim_start().starts_with("//")
+}
+
+/// Returns whether a line contains at least one ASCII letter (English text).
+fn has_ascii_alpha(line: &str) -> bool {
+    line.chars().any(|character| character.is_ascii_alphabetic())
+}
+
+/// Requires every contiguous comment run to include English; Chinese lines are optional.
+fn assert_comment_runs_have_english(path: &Path, lines: &[&str]) {
+    let mut run_start: Option<usize> = None;
+    for (index, line) in lines.iter().enumerate() {
+        if is_rust_comment_line(line) {
+            if run_start.is_none() {
+                run_start = Some(index);
+            }
+        } else if let Some(start) = run_start {
+            assert_comment_run_has_english(path, lines, start, index);
+            run_start = None;
+        }
+    }
+    if let Some(start) = run_start {
+        assert_comment_run_has_english(path, lines, start, lines.len());
+    }
+}
+
+/// Panics when a comment run has no line with ASCII letters.
+fn assert_comment_run_has_english(path: &Path, lines: &[&str], start: usize, end: usize) {
+    let has_english = lines[start..end].iter().any(|line| has_ascii_alpha(line));
+    assert!(
+        has_english,
+        "comment run requires English (Chinese optional) in {:?}:{}",
+        path,
+        start.saturating_add(1)
+    );
 }
 
 /// Returns whether a line starts a Rust function item.

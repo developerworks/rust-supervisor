@@ -43,8 +43,9 @@ use crate::shutdown::report::{
     ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ShutdownPipelineReport,
     ShutdownReconcileReport,
 };
-use crate::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
+use crate::shutdown::stage::{ShutdownCause, ShutdownPhase};
 use crate::spec::child::{ChildSpec, RestartPolicy as ChildRestartPolicy};
+use crate::spec::shutdown::ShutdownBudget;
 use crate::spec::child_declaration::{ChildDeclaration, validate_child_declaration};
 use crate::spec::supervisor::{RestartLimit, SupervisorSpec};
 use crate::task::factory_registry::TaskFactoryRegistry;
@@ -154,7 +155,6 @@ impl RuntimeControlState {
     /// # Arguments
     ///
     /// - `spec`: Supervisor declaration that owns children and strategy.
-    /// - `shutdown_policy`: Policy used by the shutdown coordinator.
     /// - `command_sender`: Sender used by child start_counts to report exits.
     ///
     /// # Returns
@@ -162,13 +162,11 @@ impl RuntimeControlState {
     /// Returns a [`RuntimeControlState`] value.
     pub fn new(
         spec: SupervisorSpec,
-        shutdown_policy: ShutdownPolicy,
         command_sender: mpsc::Sender<RuntimeLoopMessage>,
         observability: Arc<Mutex<ObservabilityPipeline>>,
     ) -> Result<Self, SupervisorError> {
         Self::new_with_factory_registry(
             spec,
-            shutdown_policy,
             command_sender,
             observability,
             TaskFactoryRegistry::new(),
@@ -180,7 +178,6 @@ impl RuntimeControlState {
     /// # Arguments
     ///
     /// - `spec`: Supervisor declaration that owns children and strategy.
-    /// - `shutdown_policy`: Policy used by the shutdown coordinator.
     /// - `command_sender`: Sender used by child start_counts to report exits.
     /// - `observability`: Shared observability pipeline.
     /// - `task_factory_registry`: Registry used by `add_child` declarations.
@@ -190,11 +187,11 @@ impl RuntimeControlState {
     /// Returns a [`RuntimeControlState`] value.
     pub fn new_with_factory_registry(
         spec: SupervisorSpec,
-        shutdown_policy: ShutdownPolicy,
         command_sender: mpsc::Sender<RuntimeLoopMessage>,
         observability: Arc<Mutex<ObservabilityPipeline>>,
         task_factory_registry: TaskFactoryRegistry,
     ) -> Result<Self, SupervisorError> {
+        let tree_shutdown = spec.tree_shutdown;
         let tree = SupervisorTree::build(&spec)?;
         let mut registry = RegistryStore::new();
         registry.register_tree(&tree)?;
@@ -225,7 +222,7 @@ impl RuntimeControlState {
         let fairness_probe = FairnessProbe::new(now_unix_nanos);
 
         Ok(Self {
-            shutdown: ShutdownCoordinator::new(shutdown_policy),
+            shutdown: ShutdownCoordinator::new(tree_shutdown),
             shutdown_pipeline: ShutdownPipeline::new(),
             slots,
             admission_set: AdmissionSet::new(),
@@ -246,6 +243,19 @@ impl RuntimeControlState {
             exit_handler: Arc::new(crate::exit_handler::DefaultExitHandler),
             active_gate_permits: HashMap::new(),
         })
+    }
+
+    /// Returns the shutdown budget for one child, falling back to the tree default.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child identifier.
+    ///
+    /// # Returns
+    ///
+    /// Returns the effective [`ShutdownBudget`] for shutdown and stop commands.
+    fn child_shutdown_budget(&self, child_id: &ChildId) -> ShutdownBudget {
+        self.spec.shutdown_budget_for(child_id)
     }
 
     /// Starts every declared child in supervisor startup order.
@@ -1221,11 +1231,12 @@ impl RuntimeControlState {
         outcomes: &mut HashMap<ChildId, ChildShutdownOutcome>,
         event_sender: &broadcast::Sender<String>,
     ) {
-        let deadline = Instant::now() + self.shutdown.policy.graceful_timeout;
         for child_id in wait_order {
             if outcomes.contains_key(child_id) {
                 continue;
             }
+            let budget = self.child_shutdown_budget(child_id);
+            let deadline = Instant::now() + budget.graceful_timeout;
             let Some(mut runtime_state) = self.slots.remove(child_id) else {
                 continue;
             };
@@ -1325,10 +1336,11 @@ impl RuntimeControlState {
                 continue;
             };
             if !policy.abort_after_timeout {
+                let budget = self.child_shutdown_budget(child_id);
                 self.wait_for_late_report(
                     child_id,
                     runtime_state,
-                    policy.abort_wait,
+                    budget.abort_wait,
                     outcomes,
                     event_sender,
                 )
@@ -1340,7 +1352,8 @@ impl RuntimeControlState {
                 "child_shutdown_abort_requested:{}",
                 runtime_state.child_id
             ));
-            match timeout(policy.abort_wait, runtime_state.wait_for_report()).await {
+            let budget = self.child_shutdown_budget(child_id);
+            match timeout(budget.abort_wait, runtime_state.wait_for_report()).await {
                 Ok(Ok(report)) => {
                     let outcome = outcome_from_report(
                         &runtime_state,
@@ -1644,6 +1657,7 @@ impl RuntimeControlState {
         let remove_after_outcome;
         let correlation_id = CorrelationId::from_uuid(meta.command_id.value);
         let mut pending_events = Vec::new();
+        let graceful_stop_budget = self.child_shutdown_budget(&child_id).graceful_timeout;
         let outcome = {
             let runtime_state = self
                 .slots
@@ -1657,7 +1671,7 @@ impl RuntimeControlState {
                 correlation_id,
                 self.time_base
                     .now_unix_nanos()
-                    .saturating_add(self.shutdown.policy.graceful_timeout.as_nanos()),
+                    .saturating_add(graceful_stop_budget.as_nanos()),
                 event_sender,
                 &mut pending_events,
             );
@@ -2154,6 +2168,7 @@ impl RuntimeControlState {
         }
 
         let restart_prep = {
+            let graceful_stop_budget = self.child_shutdown_budget(&child_id).graceful_timeout;
             let runtime_state = self
                 .slots
                 .get_mut(&child_id)
@@ -2216,7 +2231,7 @@ impl RuntimeControlState {
                 let deadline = self
                     .time_base
                     .now_unix_nanos()
-                    .saturating_add(self.shutdown.policy.graceful_timeout.as_nanos());
+                    .saturating_add(graceful_stop_budget.as_nanos());
                 runtime_state.stop_deadline_at_unix_nanos = Some(deadline);
                 if cancel_delivered {
                     runtime_state.stop_state = ChildStopState::CancelDelivered;

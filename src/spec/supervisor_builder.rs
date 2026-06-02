@@ -12,13 +12,13 @@ use crate::policy::failure_window::FailureWindowConfig;
 use crate::policy::group::GroupDependencyEdge;
 use crate::policy::meltdown::MeltdownPolicy;
 use crate::policy::task_role_defaults::{SeverityClass, TaskRole};
-use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
+use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy};
+use crate::spec::shutdown::TreeShutdownPolicy;
 use crate::spec::supervisor::{
     BackpressureConfig, ChildStrategyOverride, DynamicSupervisorPolicy, EscalationPolicy,
     GroupConfig, GroupStrategy, RestartLimit, SupervisionStrategy, SupervisorSpec,
 };
 use std::collections::HashMap;
-use std::time::Duration;
 
 /// Builder for [`SupervisorSpec`](crate::spec::supervisor::SupervisorSpec).
 ///
@@ -123,7 +123,8 @@ impl SupervisorSpecBuilder {
     /// # Returns
     ///
     /// Returns the builder for chaining.
-    pub fn child(mut self, child: ChildSpec) -> Self {
+    pub fn child(mut self, mut child: ChildSpec) -> Self {
+        child.shutdown_budget = self.spec.tree_shutdown.budget;
         self.spec.children.push(child);
         self
     }
@@ -184,17 +185,17 @@ impl SupervisorSpecBuilder {
         self
     }
 
-    /// Sets the default shutdown policy.
+    /// Sets the tree shutdown policy for this supervisor.
     ///
     /// # Arguments
     ///
-    /// - `default_shutdown_policy`: Shutdown policy inherited by children.
+    /// - `tree_shutdown`: Tree shutdown policy and default child budgets.
     ///
     /// # Returns
     ///
     /// Returns the builder for chaining.
-    pub fn default_shutdown_policy(mut self, default_shutdown_policy: ShutdownPolicy) -> Self {
-        self.spec.default_shutdown_policy = default_shutdown_policy;
+    pub fn tree_shutdown(mut self, tree_shutdown: TreeShutdownPolicy) -> Self {
+        self.spec.tree_shutdown = tree_shutdown;
         self
     }
 
@@ -609,35 +610,6 @@ impl SupervisorSpecBuilder {
         self.spec.audit_enabled = audit_enabled;
         self
     }
-
-    /// Sets the force-kill margin after graceful and abort shutdown windows.
-    ///
-    /// # Arguments
-    ///
-    /// - `force_kill_margin`: Extra hard-deadline margin.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn force_kill_margin(mut self, force_kill_margin: Duration) -> Self {
-        self.spec.force_kill_margin = force_kill_margin;
-        self
-    }
-
-    /// Sets the maximum orphaned child task threshold.
-    ///
-    /// # Arguments
-    ///
-    /// - `max_orphan_threshold`: Maximum orphaned child task count.
-    ///
-    /// # Returns
-    ///
-    /// Returns the builder for chaining.
-    pub fn max_orphan_threshold(mut self, max_orphan_threshold: u32) -> Self {
-        self.spec.max_orphan_threshold = max_orphan_threshold;
-        self
-    }
-
     /// Builds and validates the supervisor specification.
     ///
     /// # Arguments

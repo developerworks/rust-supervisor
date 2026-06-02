@@ -3,23 +3,53 @@
 //! These tests verify idempotent command behavior through the public runtime.
 
 use rust_supervisor::control::command::CommandResult;
+use rust_supervisor::control::handle::SupervisorHandle;
 use rust_supervisor::control::outcome::ChildControlOperation;
 use rust_supervisor::id::types::{ChildId, SupervisorPath};
 use rust_supervisor::runtime::supervisor::Supervisor;
+use rust_supervisor::spec::child::TaskKind;
 use rust_supervisor::spec::supervisor::{DynamicSupervisorPolicy, SupervisorSpec};
+use rust_supervisor::task::factory::{TaskResult, service_fn};
+use rust_supervisor::task::factory_registry::{TaskFactoryDescriptor, TaskFactoryRegistry};
 use rust_supervisor::test_support::test_time::with_auto_clock_drive;
+use std::sync::Arc;
+
+/// Returns a YAML manifest for a dynamic async worker child.
+fn worker_manifest(name: &str) -> String {
+    format!("name: {name}\nkind: async_worker\nfactory_key: worker_factory\n")
+}
+
+/// Returns the factory registry used by control handle tests.
+fn control_test_factory_registry() -> TaskFactoryRegistry {
+    let mut registry = TaskFactoryRegistry::new();
+    registry
+        .register(TaskFactoryDescriptor::new(
+            "worker_factory",
+            "Worker Factory",
+            "Runs a worker for control handle tests.",
+            [TaskKind::AsyncWorker],
+            Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+        ))
+        .expect("register worker factory");
+    registry
+}
+
+/// Starts a supervisor runtime with the control-test factory registry.
+async fn start_control_test_supervisor(spec: SupervisorSpec) -> SupervisorHandle {
+    Supervisor::start_with_factory_registry(spec, control_test_factory_registry())
+        .await
+        .expect("start supervisor")
+}
 
 /// Verifies that repeated child state commands are idempotent.
 #[tokio::test(start_paused = true)]
 async fn supervisor_handle_operations_are_idempotent() {
-    let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
-        .await
-        .unwrap();
+    let handle = start_control_test_supervisor(SupervisorSpec::root(Vec::new())).await;
     let child_id = ChildId::new("worker");
     let added = handle
         .add_child(
             SupervisorPath::root(),
-            "name: worker\nkind: async_worker\n",
+            &worker_manifest("worker"),
             "operator",
             "scale",
         )
@@ -55,13 +85,11 @@ async fn supervisor_handle_operations_are_idempotent() {
 /// Verifies that add and shutdown commands return typed results.
 #[tokio::test(start_paused = true)]
 async fn add_child_and_shutdown_tree_return_results() {
-    let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
-        .await
-        .unwrap();
+    let handle = start_control_test_supervisor(SupervisorSpec::root(Vec::new())).await;
 
-    let manifest = "name: worker\nkind: async_worker\n";
+    let manifest = worker_manifest("worker");
     let added = handle
-        .add_child(SupervisorPath::root(), manifest, "operator", "scale")
+        .add_child(SupervisorPath::root(), &manifest, "operator", "scale")
         .await
         .unwrap();
     let shutdown = with_auto_clock_drive(handle.shutdown_tree("operator", "done"))
@@ -71,7 +99,7 @@ async fn add_child_and_shutdown_tree_return_results() {
     assert_eq!(
         added,
         CommandResult::ChildAdded {
-            child_manifest: manifest.to_owned()
+            child_manifest: manifest
         }
     );
     assert!(matches!(shutdown, CommandResult::Shutdown { .. }));
@@ -82,12 +110,12 @@ async fn add_child_and_shutdown_tree_return_results() {
 async fn add_child_respects_dynamic_supervisor_limit() {
     let mut spec = SupervisorSpec::root(Vec::new());
     spec.dynamic_supervisor_policy = DynamicSupervisorPolicy::limited(1);
-    let handle = Supervisor::start(spec).await.unwrap();
+    let handle = start_control_test_supervisor(spec).await;
 
     let added = handle
         .add_child(
             SupervisorPath::root(),
-            "name: worker-one\nkind: async_worker\n",
+            &worker_manifest("worker-one"),
             "operator",
             "scale",
         )
@@ -96,7 +124,7 @@ async fn add_child_respects_dynamic_supervisor_limit() {
     let rejected = handle
         .add_child(
             SupervisorPath::root(),
-            "name: worker-two\nkind: async_worker\n",
+            &worker_manifest("worker-two"),
             "operator",
             "scale",
         )
@@ -117,9 +145,7 @@ async fn add_child_respects_dynamic_supervisor_limit() {
 /// Verifies that add_child is rejected when shutdown is in progress.
 #[tokio::test(start_paused = true)]
 async fn add_child_during_shutdown_tree_is_rejected() {
-    let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
-        .await
-        .unwrap();
+    let handle = start_control_test_supervisor(SupervisorSpec::root(Vec::new())).await;
 
     // First, start shutdown in the background.
     let shutdown_handle = handle.clone();
@@ -134,7 +160,7 @@ async fn add_child_during_shutdown_tree_is_rejected() {
     let result = handle
         .add_child(
             SupervisorPath::root(),
-            "name: worker\nkind: async_worker\n",
+            &worker_manifest("worker"),
             "operator",
             "during shutdown",
         )
@@ -164,12 +190,12 @@ async fn add_child_during_shutdown_tree_is_rejected() {
 async fn add_child_rejects_disabled_dynamic_supervisor() {
     let mut spec = SupervisorSpec::root(Vec::new());
     spec.dynamic_supervisor_policy.enabled = false;
-    let handle = Supervisor::start(spec).await.unwrap();
+    let handle = start_control_test_supervisor(spec).await;
 
     let rejected = handle
         .add_child(
             SupervisorPath::root(),
-            "name: worker\nkind: async_worker\n",
+            &worker_manifest("worker"),
             "operator",
             "scale",
         )

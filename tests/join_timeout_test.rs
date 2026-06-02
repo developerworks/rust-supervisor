@@ -17,16 +17,15 @@ use rust_supervisor::exit_handler::ExitHandler;
 use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
 use rust_supervisor::runtime::child_slot::{ChildExitSummary, ChildSlot};
 use rust_supervisor::runtime::shutdown::emergency_force_kill;
-use rust_supervisor::shutdown::stage::ShutdownPolicy;
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use rust_supervisor::test_support::test_time::advance_test_clock;
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// Helper to create a minimal ShutdownPolicy for timeout tests.
-fn timeout_policy() -> ShutdownPolicy {
-    ShutdownPolicy::new(
-        Duration::from_millis(100),
-        Duration::from_millis(50),
+/// Helper to create a minimal tree shutdown policy for timeout tests.
+fn timeout_policy() -> TreeShutdownPolicy {
+    TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_millis(100), Duration::from_millis(50)),
         true,
         Duration::from_millis(50),
         3,
@@ -95,7 +94,7 @@ fn spawn_child_slot(cancel_aware: bool) -> (ChildSlot, tokio::task::JoinHandle<(
 #[tokio::test(start_paused = true)]
 async fn test_join_timeout_respected_with_never_ending_task() {
     let policy = timeout_policy();
-    let global_timeout = policy.graceful_timeout + policy.abort_wait;
+    let global_timeout = policy.budget.graceful_timeout + policy.budget.abort_wait;
     let (mut slot, _task_handle) = spawn_child_slot(false); // never checks cancel
 
     let start = tokio::time::Instant::now();
@@ -105,14 +104,14 @@ async fn test_join_timeout_respected_with_never_ending_task() {
     slot.cancel();
 
     // Advance through graceful_timeout.
-    advance_test_clock(policy.graceful_timeout).await;
+    advance_test_clock(policy.budget.graceful_timeout).await;
 
     if slot.has_active_attempt() {
         slot.abort();
     }
 
     // Advance through abort_wait.
-    advance_test_clock(policy.abort_wait).await;
+    advance_test_clock(policy.budget.abort_wait).await;
 
     if slot.has_active_attempt() {
         slot.deactivate(ChildExitSummary {
@@ -216,11 +215,11 @@ async fn test_all_lifecycle_paths_join_to_terminal() {
         let (mut slot, _task_handle) = spawn_child_slot(false); // never checks cancel
         let policy = timeout_policy();
         slot.cancel();
-        advance_test_clock(policy.graceful_timeout).await;
+        advance_test_clock(policy.budget.graceful_timeout).await;
         if slot.has_active_attempt() {
             slot.abort();
         }
-        advance_test_clock(policy.abort_wait).await;
+        advance_test_clock(policy.budget.abort_wait).await;
         if slot.has_active_attempt() {
             slot.deactivate(ChildExitSummary {
                 exit_code: None,

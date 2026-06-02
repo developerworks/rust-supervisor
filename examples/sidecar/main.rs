@@ -12,7 +12,7 @@ use rust_supervisor::runtime::supervisor::Supervisor;
 // Import supervisor specification values.
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 // Import shutdown timing policy.
-use rust_supervisor::shutdown::stage::ShutdownPolicy;
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 // Import duration values for the example timing budget.
 use std::time::Duration;
 // Import asynchronous channel helpers.
@@ -37,15 +37,15 @@ async fn main() -> ExampleResult {
     // Keep enough event buffer for the full shutdown observation sequence.
     spec.event_channel_capacity = 64;
     // Use short shutdown windows so the example finishes quickly.
-    let shutdown_policy = ShutdownPolicy::new(
-        Duration::from_millis(250),
-        Duration::from_millis(50),
+    spec.tree_shutdown = TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_millis(250), Duration::from_millis(50)),
         true,
         Duration::from_millis(250),
         3,
     );
+    spec.propagate_tree_shutdown_budget();
     // Start the runtime with the primary service and sidecar.
-    let handle = Supervisor::start_with_policy(spec, shutdown_policy).await?;
+    let handle = Supervisor::start(spec).await?;
     // Subscribe to lifecycle event text before commands are sent.
     let mut runtime_events = handle.subscribe_events();
     // Wait until both children report initialization.

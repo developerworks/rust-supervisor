@@ -16,7 +16,8 @@
 #![cfg(kani)]
 
 use rust_supervisor::shutdown::coordinator::ShutdownCoordinator;
-use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPolicy};
+use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase};
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 
 /// Verifies that `ShutdownCoordinator` phase transitions are monotonic
 /// under all possible `Duration` inputs (using `kani::any()`).
@@ -29,9 +30,8 @@ use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase, ShutdownPol
 #[kani::proof]
 fn phase_transition_monotonic() {
     // Use kani::any() to symbolically exercise all Duration combinations.
-    let policy = ShutdownPolicy::new(
-        kani::any(),
-        kani::any(),
+    let policy = TreeShutdownPolicy::new(
+        ShutdownBudget::new(kani::any(), kani::any()),
         kani::any(),
         kani::any(),
         kani::any(),

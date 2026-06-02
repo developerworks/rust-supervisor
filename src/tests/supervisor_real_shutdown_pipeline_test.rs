@@ -10,7 +10,8 @@ use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::shutdown::coordinator::ShutdownResult;
 use rust_supervisor::shutdown::report::ChildShutdownStatus;
-use rust_supervisor::shutdown::stage::{ShutdownPhase, ShutdownPolicy};
+use rust_supervisor::shutdown::stage::ShutdownPhase;
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::task::context::TaskContext;
@@ -369,37 +370,33 @@ async fn shutdown_pipeline_skips_removed_runtime_state() -> Result<(), Superviso
 
 /// Starts a supervisor with short shutdown budgets.
 async fn start_with_short_policy(
-    spec: SupervisorSpec,
+    mut spec: SupervisorSpec,
     abort_after_timeout: bool,
 ) -> SupervisorHandle {
-    Supervisor::start_with_policy(
-        spec,
-        ShutdownPolicy::new(
-            Duration::from_millis(10),
-            Duration::from_millis(200),
-            abort_after_timeout,
-            Duration::from_millis(10),
-            3,
-        ),
-    )
-    .await
-    .expect("supervisor should start")
+    spec.tree_shutdown = TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_millis(10), Duration::from_millis(200)),
+        abort_after_timeout,
+        Duration::from_millis(10),
+        3,
+    );
+    spec.propagate_tree_shutdown_budget();
+    Supervisor::start(spec)
+        .await
+        .expect("supervisor should start")
 }
 
 /// Starts a supervisor with a wider graceful budget for T046 regression checks.
-async fn start_with_t046_policy(spec: SupervisorSpec) -> SupervisorHandle {
-    Supervisor::start_with_policy(
-        spec,
-        ShutdownPolicy::new(
-            Duration::from_millis(100),
-            Duration::from_millis(250),
-            true,
-            Duration::from_millis(100),
-            3,
-        ),
-    )
-    .await
-    .expect("supervisor should start")
+async fn start_with_t046_policy(mut spec: SupervisorSpec) -> SupervisorHandle {
+    spec.tree_shutdown = TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_millis(100), Duration::from_millis(250)),
+        true,
+        Duration::from_millis(100),
+        3,
+    );
+    spec.propagate_tree_shutdown_budget();
+    Supervisor::start(spec)
+        .await
+        .expect("supervisor should start")
 }
 
 /// Requests shutdown and unwraps the structured shutdown result.

@@ -285,7 +285,7 @@
 - **FR-052**: 系统必须在 `examples/` 目录提供学习和研究用示例程序,至少覆盖 quickstart(快速开始),rust-config-tree(集中配置树) 加载,重启策略,四阶段关闭和可观测性.
 - **FR-053**: 系统必须提供 complete manual(完整手册) 和 docs(文档),并支持 Chinese/English bilingual content(中英双语内容).中英文内容必须保持同构目录和同等语义.
 - **FR-054**: 系统必须提供 documentation sync check(文档同步检查),验证代码,public API(公开接口),configuration schema(配置模式),quickstart(快速开始),examples(示例程序),contracts(契约),manual(手册) 和 docs(文档) 不发生漂移.
-- **FR-055**: 系统必须在编码阶段要求完整 code documentation(代码文档).每个 module(模块),struct(结构体),struct field(结构体字段),public function(公共函数) 和 private function(私有函数) 都必须有文档.source comment(源码注释) 和 rustdoc(代码文档注释) 必须使用英文.公共函数在可运行时必须提供 doctest(文档测试).
+- **FR-055**: 系统必须在编码阶段要求完整 code documentation(代码文档).每个 module(模块),struct(结构体),struct field(结构体字段),public function(公共函数) 和 private function(私有函数) 都必须有文档.source comment(源码注释) 和 rustdoc(代码文档注释) 英文必须, 中文可选: 每段连续注释至少一行英文, 可另起中文补充行, 禁止仅中文注释.公共函数在可运行时必须提供 doctest(文档测试).
 - **FR-056**: 系统必须规定 `src/lib.rs` 只能包含 crate doc(包文档) 和顶层 `pub mod <mod_name>;` 声明,每个 `src/<module>/mod.rs`(模块入口文件) 只能包含 `pub mod <mod_name>;` 形式的模块声明,不得包含 `pub use`(公开重导出),类型定义,函数定义,常量定义或其它逻辑.
 - **FR-057**: 系统必须规定所有内部模块导入使用 `crate::` absolute path(绝对路径),外部依赖导入使用 crate name(软件包名) absolute path(绝对路径),不得使用 `super::` 或其它 relative path(相对路径) 表达模块关系.
 - **FR-058**: 系统必须符合 crates.io(软件包发布平台) 发布约定.`Cargo.toml` 必须包含 package metadata(软件包元数据),README(说明文档),license(许可证),repository(代码仓库),documentation(文档地址),keywords(关键词),categories(分类) 和明确 package include/exclude(打包包含或排除) 策略.
@@ -432,7 +432,7 @@
 - **SC-020**: examples smoke test(示例冒烟测试) 必须运行 `examples/` 中的 quickstart(快速开始),集中配置,重启策略,四阶段关闭和可观测性示例.
 - **SC-021**: bilingual documentation check(双语文档检查) 必须证明 `manual/zh`,`manual/en`,`docs/zh` 和 `docs/en` 的目录结构一致,并覆盖同一组公开概念.
 - **SC-022**: documentation sync check(文档同步检查) 必须在 public API(公开接口),configuration schema(配置模式),example behavior(示例行为) 或 observability signal(可观测性信号) 变化但文档未同步时失败.
-- **SC-023**: code documentation check(代码文档检查) 必须证明所有 module(模块),struct(结构体),struct field(结构体字段),public function(公共函数) 和 private function(私有函数) 已经有英文文档,所有 source comment(源码注释) 使用英文,并且 public doctest(公共文档测试) 可以运行.
+- **SC-023**: code documentation check(代码文档检查) 必须证明所有 module(模块),struct(结构体),struct field(结构体字段),public function(公共函数) 和 private function(私有函数) 已经有英文文档,所有 source comment(源码注释) 满足英文必须且中文可选,并且 public doctest(公共文档测试) 可以运行.
 - **SC-024**: module boundary check(模块边界检查) 必须证明 `src/lib.rs` 只包含 crate doc(包文档) 和顶层 `pub mod <mod_name>;` 声明,每个 `src/<module>/mod.rs`(模块入口文件) 只包含 `pub mod <mod_name>;` 声明,并且源码中不存在 `pub use`(公开重导出).
 - **SC-025**: import rule check(导入规则检查) 必须证明源码内部导入使用 `crate::` absolute path(绝对路径),并且源码中不存在 `super::` relative path(相对路径).
 - **SC-026**: release readiness check(发布就绪检查) 必须证明 crates.io(软件包发布平台) 必需 metadata(元数据),README(说明文档),LICENSE(许可证),CHANGELOG(变更日志),package contents(打包内容),package size(打包大小) 和 `cargo publish --dry-run` 均通过.

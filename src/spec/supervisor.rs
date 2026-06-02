@@ -10,7 +10,8 @@ use crate::policy::failure_window::FailureWindowConfig;
 use crate::policy::group::GroupDependencyEdge;
 use crate::policy::meltdown::MeltdownPolicy;
 use crate::policy::task_role_defaults::{SeverityClass, TaskRole, semantic_conflicts_for_child};
-use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy, ShutdownPolicy};
+use crate::spec::child::{BackoffPolicy, ChildSpec, HealthPolicy, RestartPolicy};
+use crate::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use confique::Config;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -350,8 +351,8 @@ pub struct SupervisorSpec {
     pub default_backoff_policy: BackoffPolicy,
     /// Health policy inherited by children that do not override it.
     pub default_health_policy: HealthPolicy,
-    /// Shutdown policy inherited by children that do not override it.
-    pub default_shutdown_policy: ShutdownPolicy,
+    /// Tree shutdown policy for this supervisor and default child budgets.
+    pub tree_shutdown: TreeShutdownPolicy,
     /// Maximum supervisor failures before the supervisor-level escalation path is selected.
     pub supervisor_failure_limit: u32,
     /// Optional supervisor-level restart limit.
@@ -404,14 +405,6 @@ pub struct SupervisorSpec {
     pub metrics_enabled: bool,
     /// Whether audit event recording is enabled.
     pub audit_enabled: bool,
-    /// Extra grace beyond graceful_timeout + abort_wait before the
-    /// global hard deadline is enforced.
-    /// Recommended default: 5 seconds.
-    pub force_kill_margin: Duration,
-    /// Maximum number of orphaned child tasks before the supervisor
-    /// triggers a controlled process exit.
-    /// Recommended default: 3.
-    pub max_orphan_threshold: u32,
 }
 
 impl SupervisorSpec {
@@ -432,7 +425,8 @@ impl SupervisorSpec {
     /// assert_eq!(spec.path.to_string(), "/");
     /// ```
     pub fn root(children: Vec<ChildSpec>) -> Self {
-        Self {
+        let tree_shutdown = TreeShutdownPolicy::default();
+        let mut spec = Self {
             path: SupervisorPath::root(),
             strategy: SupervisionStrategy::OneForOne,
             children,
@@ -447,10 +441,7 @@ impl SupervisorSpec {
                 Duration::from_secs(1),
                 Duration::from_secs(3),
             ),
-            default_shutdown_policy: ShutdownPolicy::new(
-                Duration::from_secs(5),
-                Duration::from_secs(1),
-            ),
+            tree_shutdown,
             supervisor_failure_limit: 1,
             restart_limit: None,
             escalation_policy: None,
@@ -479,9 +470,45 @@ impl SupervisorSpec {
             concurrent_restart_limit: 5,
             metrics_enabled: true,
             audit_enabled: true,
-            force_kill_margin: Duration::from_secs(5),
-            max_orphan_threshold: 3,
+        };
+        spec.propagate_tree_shutdown_budget();
+        spec
+    }
+
+    /// Copies the tree shutdown budget into every declared child.
+    ///
+    /// Call this after changing [`Self::tree_shutdown`] when children should
+    /// inherit the updated cooperative stop windows.
+    ///
+    /// # Arguments
+    ///
+    /// This function has no arguments.
+    ///
+    /// # Returns
+    ///
+    /// This function does not return a value.
+    pub fn propagate_tree_shutdown_budget(&mut self) {
+        let budget = self.tree_shutdown.budget;
+        for child in &mut self.children {
+            child.shutdown_budget = budget;
         }
+    }
+
+    /// Returns the shutdown budget for one declared child.
+    ///
+    /// # Arguments
+    ///
+    /// - `child_id`: Stable child identifier.
+    ///
+    /// # Returns
+    ///
+    /// Returns the child override when present, otherwise the tree default budget.
+    pub fn shutdown_budget_for(&self, child_id: &ChildId) -> ShutdownBudget {
+        self.children
+            .iter()
+            .find(|child| &child.id == child_id)
+            .map(|child| child.shutdown_budget)
+            .unwrap_or(self.tree_shutdown.budget)
     }
 
     /// Validates this supervisor and its direct children.

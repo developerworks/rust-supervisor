@@ -15,21 +15,45 @@ use rust_supervisor::spec::child::{ChildSpec, TaskKind};
 use rust_supervisor::spec::supervisor::SupervisorSpec;
 use rust_supervisor::task::context::TaskContext;
 use rust_supervisor::task::factory::{TaskFactory, TaskResult, service_fn};
+use rust_supervisor::task::factory_registry::{TaskFactoryDescriptor, TaskFactoryRegistry};
 use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
+/// Returns a YAML manifest for a dynamic async worker child.
+fn worker_manifest(name: &str) -> String {
+    format!("name: {name}\nkind: async_worker\nfactory_key: worker_factory\n")
+}
+
+/// Returns the factory registry used by supervisor control tests.
+fn supervisor_control_factory_registry() -> TaskFactoryRegistry {
+    let mut registry = TaskFactoryRegistry::new();
+    registry
+        .register(TaskFactoryDescriptor::new(
+            "worker_factory",
+            "Worker Factory",
+            "Runs a worker for supervisor control tests.",
+            [TaskKind::AsyncWorker],
+            Arc::new(service_fn(|_ctx| async { TaskResult::Succeeded })),
+        ))
+        .expect("register worker factory");
+    registry
+}
+
 /// Verifies that control commands mutate runtime state.
 #[tokio::test(start_paused = true)]
 async fn control_commands_update_child_state() {
-    let handle = Supervisor::start(SupervisorSpec::root(Vec::new()))
-        .await
-        .expect("start supervisor");
+    let handle = Supervisor::start_with_factory_registry(
+        SupervisorSpec::root(Vec::new()),
+        supervisor_control_factory_registry(),
+    )
+    .await
+    .expect("start supervisor");
     let child_id = ChildId::new("worker");
 
-    let manifest = "name: worker\nkind: async_worker\n";
+    let manifest = worker_manifest("worker");
     let added = handle
-        .add_child(SupervisorPath::root(), manifest, "operator", "test")
+        .add_child(SupervisorPath::root(), &manifest, "operator", "test")
         .await
         .expect("add child");
     assert!(matches!(added, CommandResult::ChildAdded { .. }));

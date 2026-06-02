@@ -8,7 +8,8 @@
 use rust_supervisor::error::types::SupervisorError;
 use rust_supervisor::id::types::ChildId;
 use rust_supervisor::policy::task_role_defaults::{SidecarConfig, TaskRole};
-use rust_supervisor::spec::child::{Criticality, RestartPolicy, ShutdownPolicy, TaskKind};
+use rust_supervisor::spec::child::{Criticality, RestartPolicy, TaskKind};
+use rust_supervisor::spec::shutdown::ShutdownBudget;
 use rust_supervisor::spec::child_builder::ChildSpecBuilder;
 use rust_supervisor::task::factory::{TaskResult, service_fn};
 use std::sync::Arc;
@@ -52,7 +53,7 @@ fn demo_worker_builder() -> Result<(), SupervisorError> {
     .tag("worker")
     .tag("invoice")
     .group("billing")
-    .shutdown_policy(ShutdownPolicy::new(
+    .shutdown_budget(ShutdownBudget::new(
         Duration::from_millis(150),
         Duration::from_millis(50),
     ))

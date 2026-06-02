@@ -7,6 +7,7 @@ use crate::error::types::SupervisorError;
 use crate::id::types::ChildId;
 use crate::policy::task_role_defaults::{SeverityClass, SidecarConfig, TaskRole};
 use crate::readiness::signal::ReadinessPolicy;
+use crate::spec::shutdown::ShutdownBudget;
 use crate::task::factory::TaskFactory;
 use confique::Config;
 use schemars::JsonSchema;
@@ -93,43 +94,6 @@ impl Default for RestartPolicy {
     }
 }
 
-/// Shutdown behavior attached to a child.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct ShutdownPolicy {
-    /// Graceful stop budget for cooperative shutdown.
-    pub graceful_timeout: Duration,
-    /// Wait budget after an abort request.
-    pub abort_wait: Duration,
-}
-
-impl ShutdownPolicy {
-    /// Creates a shutdown policy.
-    ///
-    /// # Arguments
-    ///
-    /// - `graceful_timeout`: Cooperative shutdown budget.
-    /// - `abort_wait`: Wait budget after abort escalation.
-    ///
-    /// # Returns
-    ///
-    /// Returns a [`ShutdownPolicy`] value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let policy = rust_supervisor::spec::child::ShutdownPolicy::new(
-    ///     std::time::Duration::from_secs(1),
-    ///     std::time::Duration::from_millis(100),
-    /// );
-    /// assert_eq!(policy.graceful_timeout.as_secs(), 1);
-    /// ```
-    pub fn new(graceful_timeout: Duration, abort_wait: Duration) -> Self {
-        Self {
-            graceful_timeout,
-            abort_wait,
-        }
-    }
-}
 
 /// Health behavior attached to a child.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -312,8 +276,8 @@ pub struct ChildSpec {
     pub factory_key: Option<String>,
     /// Restart policy for this child.
     pub restart_policy: RestartPolicy,
-    /// Shutdown policy for this child.
-    pub shutdown_policy: ShutdownPolicy,
+    /// Shutdown budget for this child.
+    pub shutdown_budget: ShutdownBudget,
     /// Health policy for this child.
     pub health_policy: HealthPolicy,
     /// Readiness policy for this child.
@@ -368,7 +332,7 @@ impl Debug for ChildSpec {
             .field("kind", &self.kind)
             .field("restart_policy", &self.restart_policy)
             .field("factory_key", &self.factory_key)
-            .field("shutdown_policy", &self.shutdown_policy)
+            .field("shutdown_budget", &self.shutdown_budget)
             .field("health_policy", &self.health_policy)
             .field("readiness_policy", &self.readiness_policy)
             .field("backoff_policy", &self.backoff_policy)

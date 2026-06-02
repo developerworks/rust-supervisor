@@ -12,16 +12,15 @@ use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, Superviso
 use rust_supervisor::runtime::admission::AdmissionSet;
 use rust_supervisor::runtime::child_slot::ChildSlot;
 use rust_supervisor::runtime::shutdown::{reconcile_shutdown_slots, shutdown_tree_fanout};
-use rust_supervisor::shutdown::stage::ShutdownPolicy;
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
 use rust_supervisor::test_support::test_time::with_auto_clock_drive;
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// Helper to create a ShutdownPolicy with short timeouts for fast tests.
-fn test_shutdown_policy() -> ShutdownPolicy {
-    ShutdownPolicy::new(
-        Duration::from_millis(200),
-        Duration::from_millis(100),
+/// Helper to create a tree shutdown policy with short timeouts for fast tests.
+fn test_shutdown_policy() -> TreeShutdownPolicy {
+    TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_millis(200), Duration::from_millis(100)),
         true,
         Duration::from_millis(200),
         3,
