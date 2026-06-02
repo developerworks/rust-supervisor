@@ -48,22 +48,26 @@ jobs:
 
       - name: Publish dry-run (publish_dry_run)
         id: publish_dry_run
-        run: cargo publish --dry-run
+        run: cargo publish -p rust-tokio-supervisor --dry-run
 
       - name: Coding standard check (coding_standard)
         id: coding_standard
+        working-directory: rust-supervisor
         run: bash scripts/check-coding-standard.sh
 
       - name: Maintainability check (maintainability)
         id: maintainability
+        working-directory: rust-supervisor
         run: bash scripts/check-maintainability.sh
 
       - name: Generate SBOM (generate_sbom)
         id: generate_sbom
+        working-directory: rust-supervisor
         run: bash scripts/generate-sbom.sh
 
       - name: Validate SBOM (validate_sbom)
         id: validate_sbom
+        working-directory: rust-supervisor
         run: bash scripts/validate-sbom.sh
 
   # ---- Cross-platform compile check (core supervision only on non-Unix) ----

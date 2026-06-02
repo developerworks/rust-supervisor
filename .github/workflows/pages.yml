@@ -31,12 +31,13 @@ jobs:
         run: cargo install mdbook --locked
 
       - name: Build manual
+        working-directory: rust-supervisor
         run: scripts/publish-pages.sh
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: target/mdbook
+          path: rust-supervisor/target/mdbook
 
   deploy:
     name: Deploy GitHub Pages

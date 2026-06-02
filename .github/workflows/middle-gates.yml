@@ -55,4 +55,5 @@ jobs:
 
       - name: MSRV verify (msrv_verify)
         id: msrv_verify
+        working-directory: rust-supervisor
         run: bash scripts/verify-msrv.sh

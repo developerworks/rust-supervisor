@@ -112,17 +112,17 @@ impl QuoteService {
 
 ### Workspace(工作区) 结构影响
 
-当前项目 `Cargo.toml` 是单 crate(包) 结构, package(包) 名称为 `rust-tokio-supervisor`, library crate(库包) 名称为 `rust_supervisor`.
+迁移前, 项目 `Cargo.toml` 是 single crate(单包) 结构, package(包) 名称为 `rust-tokio-supervisor`, library crate(库包) 名称为 `rust_supervisor`.
 
 如果实现 `#[service] impl QuoteService { ... }` 这种 attribute macro(属性宏), 或实现 `#[derive(ServiceRole)]` 这种 derive macro(派生宏), Rust(系统编程语言) 要求这些过程宏放在独立的 proc-macro crate(过程宏包) 中. proc-macro crate(过程宏包) 只负责在编译期生成代码, 不适合承载普通 runtime type(运行时类型), 例如 `ServiceContext`, `ServiceResult`, `ChildSpec`.
 
-因此, role contract(角色契约) 设计应当评估 workspace(工作区) 结构. 当前用户明确希望当前仓库 `rust-supervisor` 自身成为 workspace root(工作区根目录), 并在该仓库内部放置主库和过程宏库.
+因此, role contract(角色契约) 设计采用 workspace(工作区) 结构. 当前仓库 `rust-supervisor` 自身作为 workspace root(工作区根目录), 并在该仓库内部放置主库和过程宏库.
 
 用户最新澄清: 不是保留 root(根目录) 下的当前 Rust crate(包) 文件, 而是把当前主 crate(包) 内容整体下沉到 `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor/rust-supervisor`, 再在 `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor` 下新增 `rust-supervisor-macros`.
 
 工作流和 agent(代理) 相关目录不应该跟随主 crate(包) 下沉. 这些目录属于 workspace root(工作区根目录) 上下文, 例如 `_bmad`, `_bmad-output`, `.agent`, `.agents`, `.specify`, `AGENTS.md`. 它们应该服务整个 workspace(工作区), 而不是只服务 `rust-supervisor` 主 crate(包).
 
-目标结构如下:
+已采用结构如下:
 
 ```text
 /Users/0x00/Documents/rust-supervisor-tools/rust-supervisor/
@@ -134,12 +134,19 @@ impl QuoteService {
 ├── AGENTS.md
 ├── Cargo.toml
 ├── Cargo.lock
+├── clippy.toml
+├── deny.toml
 ├── specs/
 ├── rust-supervisor/
 │   ├── Cargo.toml
 │   ├── src/
 │   ├── examples/
 │   ├── tests/
+│   ├── docs/
+│   ├── manual/
+│   ├── scripts/
+│   ├── artifacts/
+│   ├── fixtures/
 │   ├── README.md
 │   └── README.zh.md
 ├── rust-supervisor-macros/
@@ -151,13 +158,14 @@ impl QuoteService {
 该结构表示:
 
 - `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor` 是 workspace root(工作区根目录).
-- `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor/rust-supervisor` 是主 library crate(库包) 目录, 并承载当前项目的 `src`, `examples`, `tests`, README(说明文档) 等主包内容.
+- `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor/rust-supervisor` 是主 library crate(库包) 目录, 并承载当前项目的 `src`, `examples`, `tests`, `docs`, `manual`, `scripts`, `artifacts`, `fixtures`, README(说明文档) 等主包内容.
 - `/Users/0x00/Documents/rust-supervisor-tools/rust-supervisor/rust-supervisor-macros` 是 proc-macro crate(过程宏包) 目录.
-- root `Cargo.toml` 只做 workspace(工作区) 成员声明和统一依赖管理, 不承载业务代码.
-- root(根目录) 保留 `_bmad`, `_bmad-output`, `.agent`, `.agents`, `.specify`, `AGENTS.md`, `specs` 等 workflow artifacts(工作流产物), 因为这些文件描述整个 workspace(工作区) 的开发流程, 规格和代理上下文.
+- root `Cargo.toml` 只做 workspace(工作区) 成员声明和 workspace package metadata(工作区包元数据), 不承载业务代码.
+- root(根目录) 保留 `_bmad`, `_bmad-output`, `.agent`, `.agents`, `.specify`, `AGENTS.md`, `specs`, `clippy.toml`, `deny.toml` 等 workflow artifacts(工作流产物) 和 tool configuration(工具配置), 因为这些文件描述整个 workspace(工作区) 的开发流程, 规格, 代理上下文和质量门禁.
 - 上一级 `/Users/0x00/Documents/rust-supervisor-tools` 不参与本次 workspace(工作区) 设计, 因此不会牵动其它独立 GitHub(代码托管平台) 仓库.
 - 当前仓库的 Git(版本控制系统) 历史保留在同一个仓库内. 文件移动后, Git(版本控制系统) 可以通过 `git log --follow` 追踪单个文件的历史.
 - 实际迁移时不能把目录本身移动到它自己的子目录中. 正确做法是先创建 `rust-supervisor/` 子目录, 再把当前主 crate(包) 相关文件和目录移动进去, 同时保留 `.git/` 和 workflow artifacts(工作流产物) 在 workspace root(工作区根目录).
+- CI(持续集成) 和本地脚本命令需要同步改为 workspace-aware(工作区感知) 形式. 例如 package-specific cargo command(指定包命令) 使用 `-p rust-tokio-supervisor`, 主包脚本使用 `working-directory: rust-supervisor`.
 
 下面两条路径是早期备选方案, 后续应以用户明确的目标结构为准.
 

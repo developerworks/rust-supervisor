@@ -1,0 +1,13 @@
+[package]
+name = "rust-supervisor-macros"
+version = "0.1.3"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Procedural macros for rust-tokio-supervisor role contracts."
+publish = false
+
+[lib]
+proc-macro = true
+path = "src/lib.rs"

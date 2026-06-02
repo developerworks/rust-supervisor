@@ -1,0 +1,242 @@
+//! Demonstrates the four-stage shutdown pipeline with phase transitions,
+//! timeout escalation, child shutdown outcomes, and the final reconcile report.
+//!
+//! The shutdown pipeline progresses through these phases:
+//!   1. RequestStop  — cancellation propagates to all children
+//!   2. GracefulDrain — runtime waits for cooperative child completion
+//!   3. AbortStragglers — runtime escalates stragglers to abort
+//!   4. Reconcile   — final state reconciliation and cleanup
+//!
+//! This example constructs shutdown phases, coordinator transitions, and a
+//! sample pipeline report to illustrate the lifecycle.
+
+use rust_supervisor::id::types::{ChildId, ChildStartCount, Generation, SupervisorPath};
+use rust_supervisor::shutdown::coordinator::ShutdownCoordinator;
+use rust_supervisor::shutdown::report::{
+    ChildShutdownOutcome, ChildShutdownOutcomeInput, ChildShutdownStatus, ResourceReconcileStatus,
+    ShutdownPipelineReport, ShutdownReconcileReport,
+};
+use rust_supervisor::shutdown::stage::{ShutdownCause, ShutdownPhase};
+use rust_supervisor::spec::shutdown::{ShutdownBudget, TreeShutdownPolicy};
+use std::time::Duration;
+
+/// Runs the shutdown pipeline demonstration.
+fn main() {
+    println!("=== Shutdown Pipeline Demo ===");
+    println!();
+
+    // --- Shutdown Policy ---
+    println!("--- Shutdown Policy ---");
+    println!();
+
+    // Build the sample shutdown policy.
+    let policy = TreeShutdownPolicy::new(
+        ShutdownBudget::new(
+            Duration::from_secs(5), // graceful_timeout
+            Duration::from_secs(1), // abort_wait
+        ),
+        true,                   // abort_after_timeout
+        Duration::from_secs(5), // force_kill_margin
+        3,                      // max_orphan_threshold
+    );
+
+    // Print the shutdown policy values.
+    println!("  graceful_timeout = {:?}", policy.budget.graceful_timeout);
+    println!("  abort_wait       = {:?}", policy.budget.abort_wait);
+    println!(
+        "  interpretation: wait {:?} for cooperative stop, then {:?} for abort",
+        policy.budget.graceful_timeout, policy.budget.abort_wait,
+    );
+
+    // --- Shutdown Phases ---
+    println!();
+    println!("--- Shutdown Phases ---");
+    println!();
+
+    // Print the idle phase.
+    let mut phase = ShutdownPhase::Idle;
+    println!("  Phase 0: {phase:?} - supervisor is running normally");
+
+    // Print the request-stop phase.
+    phase = ShutdownPhase::RequestStop;
+    println!("  Phase 1: {phase:?} - shutdown requested, cancellation sent to all children");
+
+    // Print the graceful-drain phase.
+    phase = ShutdownPhase::GracefulDrain;
+    println!("  Phase 2: {phase:?} - waiting for children to exit cooperatively");
+
+    // Print the abort-stragglers phase.
+    phase = ShutdownPhase::AbortStragglers;
+    println!("  Phase 3: {phase:?} - graceful timeout expired, stragglers aborted");
+
+    // Print the reconcile phase.
+    phase = ShutdownPhase::Reconcile;
+    println!("  Phase 4: {phase:?} - reconciling final state, cleaning up resources");
+
+    // Print the completed phase.
+    phase = ShutdownPhase::Completed;
+    println!("  Phase 5: {phase:?} - shutdown complete");
+
+    // --- Phase transitions ---
+    println!();
+    println!("--- Phase Transitions ---");
+    println!();
+
+    // Walk through all phase transitions.
+    let mut current = ShutdownPhase::Idle;
+    while let Some(next) = current.next() {
+        println!("  {current:?} -> {next:?}");
+        current = next;
+    }
+
+    // --- ShutdownCoordinator ---
+    println!();
+    println!("--- ShutdownCoordinator ---");
+    println!();
+
+    // Build a coordinator-specific policy.
+    let coord_policy = TreeShutdownPolicy::new(
+        ShutdownBudget::new(Duration::from_secs(5), Duration::from_secs(1)),
+        true,
+        Duration::from_secs(5),
+        3,
+    );
+    let mut coordinator = ShutdownCoordinator::new(coord_policy);
+
+    // Request shutdown through the coordinator.
+    let cause = ShutdownCause::new("operator", "scheduled maintenance");
+    let result = coordinator.request_stop(cause);
+
+    // Print the first coordinator result.
+    println!(
+        "  after request_stop: phase={:?} idempotent={}",
+        result.phase, result.idempotent
+    );
+    println!(
+        "  cause: requested_by={} reason={}",
+        result.cause.requested_by, result.cause.reason
+    );
+
+    // Idempotent shutdown request (same cause).
+    let result2 = coordinator.request_stop(ShutdownCause::new("operator", "scheduled maintenance"));
+    println!(
+        "  idempotent request: phase={:?} idempotent={}",
+        result2.phase, result2.idempotent
+    );
+
+    // --- Child Shutdown Outcomes ---
+    println!();
+    println!("--- Child Shutdown Outcomes ---");
+    println!();
+
+    // Build sample child shutdown outcomes.
+    let make_outcome = |name: &str, status: ChildShutdownStatus, phase: ShutdownPhase| {
+        ChildShutdownOutcome::new(ChildShutdownOutcomeInput {
+            child_id: ChildId::new(name),
+            path: SupervisorPath::root().join(name),
+            generation: Generation::initial(),
+            child_start_count: ChildStartCount::first(),
+            status,
+            cancel_delivered: true,
+            exit: None,
+            phase,
+            reason: format!("child completed during {phase:?}"),
+        })
+    };
+
+    // Collect the sample child shutdown outcomes.
+    let outcomes = vec![
+        make_outcome(
+            "feed_handler",
+            ChildShutdownStatus::Graceful,
+            ShutdownPhase::GracefulDrain,
+        ),
+        make_outcome(
+            "risk_engine",
+            ChildShutdownStatus::Aborted,
+            ShutdownPhase::AbortStragglers,
+        ),
+        make_outcome(
+            "audit_sink",
+            ChildShutdownStatus::LateReport,
+            ShutdownPhase::Reconcile,
+        ),
+    ];
+
+    // Print the sample child shutdown outcomes.
+    for outcome in &outcomes {
+        println!(
+            "  child={:12} status={:?} phase={:?}",
+            outcome.child_id.value, outcome.status, outcome.phase,
+        );
+    }
+
+    // --- Reconcile Report ---
+    println!();
+    println!("--- Reconcile Report ---");
+    println!();
+
+    // Build a sample reconcile report.
+    let reconcile = ShutdownReconcileReport {
+        registry_status: ResourceReconcileStatus::Cleaned,
+        runtime_handle_status: ResourceReconcileStatus::Cleaned,
+        journal_status: ResourceReconcileStatus::Recorded,
+        metrics_status: ResourceReconcileStatus::Recorded,
+        socket_status: ResourceReconcileStatus::NotOwned,
+        orphan_slots: vec![],
+        total_slots_checked: 5,
+        verified_clean: true,
+        warnings: vec![],
+    };
+
+    // Print the reconcile report values.
+    println!("  registry_status       = {:?}", reconcile.registry_status);
+    println!(
+        "  runtime_handle_status = {:?}",
+        reconcile.runtime_handle_status
+    );
+    println!("  journal_status        = {:?}", reconcile.journal_status);
+    println!("  metrics_status        = {:?}", reconcile.metrics_status);
+    println!("  socket_status         = {:?}", reconcile.socket_status);
+    println!("  orphan_slots          = {:?}", reconcile.orphan_slots);
+    println!(
+        "  total_slots_checked   = {}",
+        reconcile.total_slots_checked
+    );
+    println!("  verified_clean        = {}", reconcile.verified_clean);
+
+    // --- Full Pipeline Report ---
+    println!();
+    println!("--- Full Pipeline Report ---");
+    println!();
+
+    // Build a complete shutdown pipeline report.
+    let report = ShutdownPipelineReport {
+        cause: ShutdownCause::new("operator", "scheduled maintenance"),
+        started_at_unix_nanos: 1000,
+        completed_at_unix_nanos: 6123,
+        phase: ShutdownPhase::Completed,
+        outcomes,
+        reconcile,
+        idempotent: false,
+    };
+
+    // Print the complete report values.
+    println!("  cause.requested_by = {}", report.cause.requested_by);
+    println!("  cause.reason       = {}", report.cause.reason);
+    println!(
+        "  duration_ms        = {}ms",
+        report.completed_at_unix_nanos - report.started_at_unix_nanos
+    );
+    println!("  final_phase        = {:?}", report.phase);
+    println!("  child_outcomes     = {}", report.outcomes.len());
+
+    // Print the shutdown pipeline summary.
+    println!();
+    println!("=== Summary ===");
+    println!("Shutdown pipeline: 5 phases (Idle -> RequestStop -> GracefulDrain");
+    println!("                   -> AbortStragglers -> Reconcile -> Completed).");
+    println!("ShutdownCoordinator provides idempotent phase transitions.");
+    println!("Children exit with Graceful, Aborted, or LateReport status.");
+    println!("Reconcile verifies all runtime slots are clean before completion.");
+}
