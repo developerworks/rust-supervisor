@@ -78,6 +78,8 @@ async fn run_service(ctx: TaskContext, events: mpsc::UnboundedSender<String>) ->
     let mut interval = tokio::time::interval(Duration::from_secs(1));
     let cancellation_token = ctx.cancellation_token();
     let mut tick = 0_u64;
+    // Skip the immediate first interval tick so running output starts after one second.
+    interval.tick().await;
     loop {
         tokio::select! {
             _ = cancellation_token.cancelled() => {
@@ -168,11 +170,9 @@ async fn main() -> ExampleResult {
         config_path.display()
     );
 
-    // Build a periodic observation interval for service facts.
-    let mut observation_interval = tokio::time::interval(Duration::from_secs(1));
     // Keep the example alive until the operator sends Ctrl+C.
     loop {
-        // Wait for either an operator signal or an observation tick.
+        // Wait for either an operator signal or the next service fact.
         tokio::select! {
             signal = tokio::signal::ctrl_c() => {
                 // Convert Ctrl+C errors into supervisor errors.
@@ -186,9 +186,13 @@ async fn main() -> ExampleResult {
                 // Leave the long-running example loop.
                 break;
             }
-            _ = observation_interval.tick() => {
-                // Print any service facts that are already available.
-                drain_service_events(&mut service_events);
+            event = service_events.recv() => {
+                // Convert an unexpected event channel close into a supervisor error.
+                let event = event.ok_or_else(|| {
+                    SupervisorError::fatal_config("service event channel closed while running")
+                })?;
+                // Print the service fact immediately instead of batching it by observation tick.
+                println!("yaml_service {event}");
             }
         }
     }

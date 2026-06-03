@@ -1,9 +1,9 @@
 ---
 stepsCompleted: [1, 2]
 inputDocuments: []
-session_topic: 'Supervisor(监督器), Service(服务), Job(一次性任务) 等角色接入契约'
-session_goals: '方向清单, API(应用程序接口) 草案, specification(规格) 文档, 实现任务拆分'
-selected_approach: 'Progressive Technique Flow(渐进技巧流程)'
+session_topic: "Supervisor(监督器), Service(服务), Job(一次性任务) 等角色接入契约"
+session_goals: "方向清单, API(应用程序接口) 草案, specification(规格) 文档, 实现任务拆分"
+selected_approach: "Progressive Technique Flow(渐进技巧流程)"
 techniques_used:
   - What If Scenarios(如果场景)
   - Morphological Analysis(形态分析)
@@ -16,7 +16,7 @@ ideas_generated:
   - macro entry(宏入口) 默认使用形态 2, 即在 impl block(实现块) 上标记角色, 并通过生命周期方法表达角色流程.
   - macro entry(宏入口) 的形态 1 和形态 3 记录为 optional implementation(可选实现), 但不作为默认推荐路径.
   - 过程宏需要独立 proc-macro crate(过程宏包), 因此项目需要评估从单 crate(包) 结构升级为 workspace(工作区) 结构.
-context_file: ''
+context_file: ""
 ---
 
 # 头脑风暴会话结果
@@ -65,13 +65,13 @@ context_file: ''
 
 当前项目有 5 个 `TaskRole`(任务角色) variants(变体), 这些角色都必须纳入 role contract(角色契约) 工作范围.
 
-| Role(角色) | Current meaning(当前语义) | Contract focus(契约重点) | Existing anchors(现有锚点) |
-| --- | --- | --- | --- |
-| `Service` | Long-running service(长期运行服务), 需要保持在线. | 必须显式表达 initialization(初始化), readiness(就绪), heartbeat(心跳), long-running loop(长期运行循环), cancellation(取消), cooperative shutdown(协作关闭). | `TaskRole::Service`, `ChildSpecBuilder::service`, `examples/service/service_task.rs`, `examples/step_02_supervisor_with_service/main.rs`. |
-| `Worker` | Bounded background worker(有界后台任务), 完成有限工作后停止. | 必须显式表达 batch work(批量工作) 或 bounded work(有界工作), success completion(成功完成), retry on failure(失败重试), completion event(完成事件). | `TaskRole::Worker`, `ChildSpecBuilder::worker`, `examples/worker/worker_task.rs`. |
-| `Job` | One-shot job(一次性任务), 成功运行一次后保持停止. | 必须显式表达 one-shot execution(一次性执行), success stop(成功后停止), failure retry budget(失败重试预算), timeout escalation(超时升级), no permanent restart(禁止永久重启语义). | `TaskRole::Job`, `ChildSpecBuilder::job`, `examples/job/job_task.rs`, `semantic_conflicts_for_child`. |
-| `Sidecar` | Auxiliary sidecar(辅助边车), 绑定到 primary service(主服务). | 必须显式表达 primary binding(主任务绑定), linked lifecycle(绑定生命周期), dependency(依赖), own restart scope(自身重启范围), no sidecar chain(禁止边车链). | `TaskRole::Sidecar`, `SidecarConfig`, `ChildSpecBuilder::sidecar`, `examples/sidecar/sidecar_task.rs`, `validate_sidecar_local`. |
-| `Supervisor` | Nested supervisor unit(嵌套监督器单元), 外层把它当成一个受监督单元. | 必须把 role contract(角色契约) 与 `TaskKind::Supervisor`(监督器执行种类) 分开, 并显式表达 nested tree ownership(嵌套树归属), readiness(就绪), restart budget(重启预算), cancellation(取消), shutdown propagation(关闭传播). | `TaskRole::Supervisor`, `ChildSpecBuilder::supervisor`, `examples/supervisor/supervisor_task.rs`, `examples/task_role_demo.rs`. |
+| Role(角色)   | Current meaning(当前语义)                                           | Contract focus(契约重点)                                                                                                                                                                                                    | Existing anchors(现有锚点)                                                                                                                |
+| ------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `Service`    | Long-running service(长期运行服务), 需要保持在线.                   | 必须显式表达 initialization(初始化), readiness(就绪), heartbeat(心跳), long-running loop(长期运行循环), cancellation(取消), cooperative shutdown(协作关闭).                                                                 | `TaskRole::Service`, `ChildSpecBuilder::service`, `examples/service/service_task.rs`, `examples/step_02_supervisor_with_service/main.rs`. |
+| `Worker`     | Bounded background worker(有界后台任务), 完成有限工作后停止.        | 必须显式表达 batch work(批量工作) 或 bounded work(有界工作), success completion(成功完成), retry on failure(失败重试), completion event(完成事件).                                                                          | `TaskRole::Worker`, `ChildSpecBuilder::worker`, `examples/worker/worker_task.rs`.                                                         |
+| `Job`        | One-shot job(一次性任务), 成功运行一次后保持停止.                   | 必须显式表达 one-shot execution(一次性执行), success stop(成功后停止), failure retry budget(失败重试预算), timeout escalation(超时升级), no permanent restart(禁止永久重启语义).                                            | `TaskRole::Job`, `ChildSpecBuilder::job`, `examples/job/job_task.rs`, `semantic_conflicts_for_child`.                                     |
+| `Sidecar`    | Auxiliary sidecar(辅助边车), 绑定到 primary service(主服务).        | 必须显式表达 primary binding(主任务绑定), linked lifecycle(绑定生命周期), dependency(依赖), own restart scope(自身重启范围), no sidecar chain(禁止边车链).                                                                  | `TaskRole::Sidecar`, `SidecarConfig`, `ChildSpecBuilder::sidecar`, `examples/sidecar/sidecar_task.rs`, `validate_sidecar_local`.          |
+| `Supervisor` | Nested supervisor unit(嵌套监督器单元), 外层把它当成一个受监督单元. | 必须把 role contract(角色契约) 与 `TaskKind::Supervisor`(监督器执行种类) 分开, 并显式表达 nested tree ownership(嵌套树归属), readiness(就绪), restart budget(重启预算), cancellation(取消), shutdown propagation(关闭传播). | `TaskRole::Supervisor`, `ChildSpecBuilder::supervisor`, `examples/supervisor/supervisor_task.rs`, `examples/task_role_demo.rs`.           |
 
 ### 角色与执行种类边界
 
@@ -219,7 +219,7 @@ rust-supervisor/
 
 #### 形态 1: 函数标记
 
-形态 1 在 free function(自由函数) 上使用 role macro(角色宏). 这个形态最短, 适合极小示例或快速迁移, 但它会把 lifecycle(生命周期) 压缩到一个函数里, 因此不适合作为主要教学路径.
+形态 1 在 free function(自由函数) 上使用 role macro(角色宏). 这个形态最短, 适合极小示例或快速迁移, 但它会把 lifecycle(生命周期) 压缩到一个函数里, 因此不适合作为首要路径.
 
 ```rust
 #[service(id = "quote-service", name = "Quote Service")]

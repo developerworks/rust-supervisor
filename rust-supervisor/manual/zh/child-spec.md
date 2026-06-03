@@ -54,6 +54,36 @@ YAML / add_child RPC
 
 `RestartPolicy`、`TaskKind`、`HealthCheckConfig` 等**公共枚举/配置结构**定义在 `child.rs`, `ChildDeclaration` **复用**它们, 避免两套平行类型. 但**顶层容器**仍是两个: 声明容器 vs 规格容器.
 
+## `ChildSpec` 构造路径总览
+
+仓库中构造 `ChildSpec`(子任务规格) 的路径可以分成 6 类. 这些路径面向不同使用场景, 不应该混成一个入口.
+
+| 路径                    | 典型入口                                                                                      | 适用场景                                                                               | 校验方式                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Builder(构建器)         | `ChildSpecBuilder::worker`, `service`, `job`, `sidecar`, `supervisor`, `new`                  | Rust(编程语言) 代码里直接拼运行时规格                                                  | `build()` 调用 `ChildSpec::validate()`                                          |
+| Worker 便捷函数         | `ChildSpec::worker(...)`                                                                      | 只需要 worker(后台任务) 默认值包                                                       | 内部委托 `ChildSpecBuilder::worker(...).build()`                                |
+| 声明转换                | `TryFrom<ChildDeclaration> for ChildSpec`                                                     | YAML(配置文件), RPC(远程过程调用), dynamic add child(动态添加子任务)                   | 转换前走 `validate_child_declaration`, 转换后由 supervisor(监督器) 规格校验兜底 |
+| Role Template(角色模板) | `ServiceTemplate::child_spec`, `JobTemplate::child_spec` 等                                   | 已经手写 `ServiceRole`(服务角色特征) 等 trait(特征), 但不想手写 adapter(适配器) 和规格 | 内部调用对应 `ChildSpecBuilder`                                                 |
+| Macro(宏) 生成          | `#[service]`, `#[worker]`, `#[job]`, `#[sidecar]`, `#[supervisor_role]` 生成的 `child_spec()` | 默认角色接入路径, 使用者只写生命周期方法                                               | 宏生成代码调用对应 `ChildSpecBuilder`                                           |
+| Serde(序列化和反序列化) | `serde_json::from_value::<ChildSpec>(...)`                                                    | 主要用于测试反序列化默认值和非法枚举                                                   | 不经过 builder(构建器), 使用前必须显式校验或进入后续规格校验                    |
+
+几条关键边界:
+
+- `ChildSpecBuilder::build()` 是 Rust(编程语言) 代码构造路径的主要出口.
+- 配置和 RPC(远程过程调用) 不应该直接接收 `ChildSpec`, 应该先接收 `ChildDeclaration`(子任务声明), 再转换为 `ChildSpec`(子任务规格).
+- `Role Template`(角色模板) 和 `Macro`(宏) 都不是新的运行时模型. 它们只是把角色生命周期对象装配成 adapter(适配器), 再调用 `ChildSpecBuilder` 生成规格.
+- `Serde`(序列化和反序列化) 可以构造 `ChildSpec`, 因为 `ChildSpec` 派生了 `Deserialize`(反序列化特征). 这条路径不会自动调用 `ChildSpecBuilder::build()`.
+
+相邻但不算构造 `ChildSpec` 的路径:
+
+| 入口                                          | 为什么不算                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| `SupervisorSpec::root(Vec<ChildSpec>)`        | 它接收已经构造好的子任务规格列表, 只构造 supervisor(监督器) 规格                |
+| `SupervisorSpecBuilder::root(Vec<ChildSpec>)` | 它包装 supervisor(监督器) 规格构造, 不创建单个子任务规格                        |
+| `ConfigState::to_supervisor_spec()`           | 它把 `ConfigState` 中已经保存的 `Vec<ChildSpec>` 组装成 supervisor(监督器) 规格 |
+| `bind_child_factory(...)`                     | 它给已有 `ChildSpec` 绑定 factory(任务工厂), 不创建新的 `ChildSpec`             |
+| `clone()`                                     | 它复制已有 `ChildSpec`, 不从输入模型生成新规格                                  |
+
 ## 怎么记
 
 - 写配置、接 API、做声明校验 -> 想 **`ChildDeclaration`**
@@ -86,19 +116,19 @@ let spec = ChildSpecBuilder::worker(
 
 入口方法:
 
-| 方法                                | 用途                                                 |
-| ----------------------------------- | ---------------------------------------------------- |
-| `ChildSpecBuilder::worker(...)`     | 异步或阻塞 worker, 默认值与 `ChildSpec::worker` 一致 |
-| `ChildSpecBuilder::service(...)`    | 常驻 service(服务), 自动设置 `TaskRole::Service`     |
+| 方法                                | 用途                                                   |
+| ----------------------------------- | ------------------------------------------------------ |
+| `ChildSpecBuilder::worker(...)`     | 异步或阻塞 worker, 默认值与 `ChildSpec::worker` 一致   |
+| `ChildSpecBuilder::service(...)`    | 常驻 service(服务), 自动设置 `TaskRole::Service`       |
 | `ChildSpecBuilder::job(...)`        | 有限生命周期 job(一次性任务), 自动设置 `TaskRole::Job` |
-| `ChildSpecBuilder::sidecar(...)`    | sidecar(边车), 自动设置绑定和主子任务依赖            |
-| `ChildSpecBuilder::supervisor(...)` | 嵌套 supervisor, 无 factory                          |
-| `ChildSpecBuilder::new(...)`        | 最小骨架, 需自行补 `kind` 和 `factory`               |
+| `ChildSpecBuilder::sidecar(...)`    | sidecar(边车), 自动设置绑定和主子任务依赖              |
+| `ChildSpecBuilder::supervisor(...)` | 嵌套 supervisor, 无 factory                            |
+| `ChildSpecBuilder::new(...)`        | 最小骨架, 需自行补 `kind` 和 `factory`                 |
 
 构建出口:
 
-| 方法 | 行为 |
-|---|---|
+| 方法      | 行为                                                             |
+| --------- | ---------------------------------------------------------------- |
 | `build()` | 构造后调用 `ChildSpec::validate()`, 失败时返回 `SupervisorError` |
 
 `ChildSpec::worker(...)` 仍可使用, 内部委托 `ChildSpecBuilder::worker(...).build()`, 同样返回 `Result<ChildSpec, SupervisorError>`.
