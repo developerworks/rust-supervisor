@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Procedural macros for rust-tokio-supervisor role contracts."
-publish = false
+# publish = false
 
 [lib]
 proc-macro = true
