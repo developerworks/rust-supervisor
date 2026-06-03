@@ -1,7 +1,7 @@
 //! Task factory registry for declarative worker configuration.
 //!
 //! This module owns the mapping from task factory keys to executable
-//! [`TaskFactory`](crate::task::factory::TaskFactory) values. Configuration
+//! [`TaskFactory`] values. Configuration
 //! code uses the same registry to validate `factory_key` declarations and to
 //! generate editor completion metadata.
 

@@ -1,7 +1,7 @@
 //! Supervisor role adapter.
 //!
 //! The adapter owns the bridge from [`SupervisorRole`] lifecycle methods to the
-//! existing [`TaskFactory`] runtime contract.
+//! existing [`TaskFactory`](crate::task::factory::TaskFactory) runtime contract.
 
 use crate::role::context::supervisor::SupervisorContext;
 use crate::role::lifecycle::RoleLifecyclePhase;

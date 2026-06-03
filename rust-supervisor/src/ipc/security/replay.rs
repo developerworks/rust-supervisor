@@ -85,7 +85,7 @@ impl ReplayWindow {
 
     /// Returns true if request_id is already in the window (replay).
     ///
-    /// Does not record the entry — use [`check_and_record`] for atomic
+    /// Does not record the entry — use [`check_and_record`](ReplayWindow::check_and_record) for atomic
     /// check-and-record.
     pub fn is_replay(&self, request_id: &str) -> bool {
         self.entries.contains_key(request_id)

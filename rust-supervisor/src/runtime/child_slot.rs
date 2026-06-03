@@ -546,7 +546,7 @@ impl ChildSlot {
     }
 
     /// Updates restart limit state (migration compatibility with
-    /// [`ChildRuntimeState::update_restart_limit`]).
+    /// `ChildRuntimeState::update_restart_limit` (migrated into [`ChildSlot`])).
     ///
     /// # Arguments
     ///

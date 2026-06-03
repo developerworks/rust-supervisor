@@ -308,7 +308,7 @@ pub async fn runtime_control_plane_failed_handle() -> SupervisorHandle {
 ///
 /// # Returns
 ///
-/// Returns a [`BackoffPolicy`] configured with deterministic jitter mode.
+/// Returns a [`BackoffPolicy`](crate::policy::backoff::BackoffPolicy) configured with deterministic jitter mode.
 ///
 /// # Examples
 ///
@@ -349,7 +349,7 @@ pub fn deterministic_backoff_policy(
 ///
 /// # Returns
 ///
-/// Returns a [`BackoffPolicy`] configured with full jitter mode.
+/// Returns a [`BackoffPolicy`](crate::policy::backoff::BackoffPolicy) configured with full jitter mode.
 pub fn full_jitter_backoff_policy(
     initial: std::time::Duration,
     max: std::time::Duration,
@@ -375,7 +375,7 @@ pub fn full_jitter_backoff_policy(
 ///
 /// # Returns
 ///
-/// Returns a [`BackoffPolicy`] configured with decorrelated jitter mode.
+/// Returns a [`BackoffPolicy`](crate::policy::backoff::BackoffPolicy) configured with decorrelated jitter mode.
 pub fn decorrelated_jitter_backoff_policy(
     initial: std::time::Duration,
     max: std::time::Duration,

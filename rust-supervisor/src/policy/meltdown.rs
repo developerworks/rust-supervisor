@@ -164,7 +164,7 @@ impl MeltdownTracker {
 
     /// Records a child restart failure.
     ///
-    /// Delegates to [`record_child_restart_with_group`] with a default scope.
+    /// Delegates to [`record_child_restart_with_group`](MeltdownTracker::record_child_restart_with_group) with a default scope.
     #[allow(dead_code)]
     pub fn record_child_restart(&mut self, now: Instant) -> MeltdownOutcome {
         let synthetic_child = ChildId::new("_default".to_string());

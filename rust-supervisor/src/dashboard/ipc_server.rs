@@ -116,7 +116,7 @@ impl DashboardIpcService {
     ///
     /// When a security pipeline is configured with C5 request size limit
     /// enabled, returns the configured `max_bytes`. Otherwise falls back
-    /// to [`DEFAULT_MAX_FRAME_BYTES`] (1 MiB).
+    /// to `DEFAULT_MAX_FRAME_BYTES` (1 MiB).
     ///
     /// This ensures the frame reader rejects oversized frames **before**
     /// JSON deserialization, fulfilling C5's contract.
@@ -149,7 +149,7 @@ impl DashboardIpcService {
     /// **Control point ordering:**
     ///
     /// 1. C6 (rate limit) → C5 (size limit) → C2 (peer credentials) → C3
-    ///    (authorization) — via [`check()`].
+    ///    (authorization) — via `check`.
     /// 2. **C8 (idempotency) checked before C4 (replay)** — if a cached
     ///    response exists for the request_id, it is returned immediately
     ///    without recording in the replay window. This prevents C4 from

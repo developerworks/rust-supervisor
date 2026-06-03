@@ -130,7 +130,7 @@ pub struct AuthorizationConfig {
     pub high_risk_commands: Vec<String>,
 
     /// Allowed peer uids for high-risk commands. Empty means deny all.
-    /// Default: [0] (root only).
+    /// Default: `[0]` (root only).
     #[serde(default = "default_root_only")]
     pub allowed_uids: Vec<u32>,
 }

@@ -1,7 +1,7 @@
 //! Worker role adapter.
 //!
 //! The adapter owns the bridge from [`WorkerRole`] lifecycle methods to the
-//! existing [`TaskFactory`] runtime contract.
+//! existing [`TaskFactory`](crate::task::factory::TaskFactory) runtime contract.
 
 use crate::role::context::worker::WorkerContext;
 use crate::role::result::worker::WorkerError;

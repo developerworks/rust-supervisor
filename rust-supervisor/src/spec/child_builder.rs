@@ -1,4 +1,4 @@
-//! Builder for [`ChildSpec`](crate::spec::child::ChildSpec).
+//! Builder for [`ChildSpec`].
 //!
 //! Use this module when constructing child specifications in code. YAML and
 //! RPC inputs should still flow through [`ChildDeclaration`](crate::spec::child_declaration::ChildDeclaration)
@@ -63,7 +63,7 @@ fn apply_policy_defaults(spec: &mut ChildSpec, defaults: PolicyDefaults) {
     spec.backoff_policy = defaults.backoff_policy;
 }
 
-/// Builder for [`ChildSpec`](crate::spec::child::ChildSpec).
+/// Builder for [`ChildSpec`].
 ///
 /// Public constructors and setters keep returning [`ChildSpecBuilder`] for
 /// chaining. Call [`build`](ChildSpecBuilder::build) to consume the builder,

@@ -1,4 +1,4 @@
-//! Builder for [`SupervisorSpec`](crate::spec::supervisor::SupervisorSpec).
+//! Builder for [`SupervisorSpec`].
 //!
 //! Use this module when constructing supervisor specifications in code. The
 //! builder mirrors [`SupervisorSpec::root`](crate::spec::supervisor::SupervisorSpec::root)
@@ -20,7 +20,7 @@ use crate::spec::supervisor::{
 };
 use std::collections::HashMap;
 
-/// Builder for [`SupervisorSpec`](crate::spec::supervisor::SupervisorSpec).
+/// Builder for [`SupervisorSpec`].
 ///
 /// Public constructors and setters keep returning [`SupervisorSpecBuilder`] for
 /// chaining. Call [`build`](SupervisorSpecBuilder::build) to consume the

@@ -1,7 +1,7 @@
 //! Four-stage shutdown phase model and tree policy runtime helpers.
 //!
 //! This module owns shutdown causes, phase transitions, and runtime helpers for
-//! [`TreeShutdownPolicy`](crate::spec::shutdown::TreeShutdownPolicy). It does not
+//! [`TreeShutdownPolicy`]. It does not
 //! own task handles or cancellation tokens.
 
 use crate::spec::shutdown::TreeShutdownPolicy;

@@ -1,7 +1,7 @@
 //! Admission set that enforces at-most-one active attempt per child.
 //!
 //! The [`AdmissionSet`] is consulted before the control loop activates a new
-//! [`ChildSlot`] attempt. It rejects concurrent requests with a structured
+//! [`ChildSlot`](crate::runtime::child_slot::ChildSlot) attempt. It rejects concurrent requests with a structured
 //! [`AdmissionConflict`] error.
 
 use crate::id::types::{ChildId, ChildStartCount, Generation};
@@ -79,7 +79,7 @@ impl std::error::Error for AdmissionConflict {}
 ///
 /// The set enforces the invariant that at most one active attempt exists per
 /// [`ChildId`] at any moment. The control loop must acquire admission before
-/// activating a [`ChildSlot`] and must release when the attempt finishes.
+/// activating a [`ChildSlot`](crate::runtime::child_slot::ChildSlot) and must release when the attempt finishes.
 #[derive(Debug, Default)]
 pub struct AdmissionSet {
     /// Set of child identifiers with an active admitted attempt.

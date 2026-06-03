@@ -32,7 +32,7 @@ static SPAWN_FAILURE_HOOK: Mutex<Option<SpawnFailureHookState>> = Mutex::new(Non
 ///
 /// # Notes
 ///
-/// The hook scopes failures to [`ChildId`](crate::id::types::ChildId) because `cargo test` runs test targets
+/// The hook scopes failures to [`ChildId`] because `cargo test` runs test targets
 /// in parallel and an unscoped global spawn counter races with unrelated supervisors issuing `spawn_once`
 /// concurrently.
 ///

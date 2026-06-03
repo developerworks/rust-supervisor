@@ -1,7 +1,7 @@
 //! Job role adapter.
 //!
 //! The adapter owns the bridge from [`JobRole`] lifecycle methods to the
-//! existing [`TaskFactory`] runtime contract.
+//! existing [`TaskFactory`](crate::task::factory::TaskFactory) runtime contract.
 
 use crate::role::context::job::JobContext;
 use crate::role::result::job::JobError;

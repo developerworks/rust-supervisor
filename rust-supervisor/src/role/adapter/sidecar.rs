@@ -1,7 +1,7 @@
 //! Sidecar role adapter.
 //!
 //! The adapter owns the bridge from [`SidecarRole`] lifecycle methods to the
-//! existing [`TaskFactory`] runtime contract.
+//! existing [`TaskFactory`](crate::task::factory::TaskFactory) runtime contract.
 
 use crate::id::types::ChildId;
 use crate::role::context::sidecar::SidecarContext;

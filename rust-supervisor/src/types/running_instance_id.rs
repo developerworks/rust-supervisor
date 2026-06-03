@@ -1,7 +1,7 @@
 //! Running instance identifier for child runtime attempts.
 //!
 //! A [`RunningInstanceId`] pairs a [`Generation`] with a [`ChildStartCount`] to
-//! uniquely identify one active attempt within a [`ChildSlot`]. It is used in
+//! uniquely identify one active attempt within a [`ChildSlot`](crate::runtime::child_slot::ChildSlot). It is used in
 //! structured errors and audit events to pinpoint the exact execution context
 //! that was running when a conflict occurred.
 
