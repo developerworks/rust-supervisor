@@ -191,7 +191,7 @@ jobs:
           cat artifacts/nightly/summary.txt
 
       - name: Upload nightly artifact bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightly-gates-${{ github.run_id }}
           path: artifacts/nightly/
